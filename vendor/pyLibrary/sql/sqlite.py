@@ -38,7 +38,7 @@ FORMAT_COMMAND = "Running command\n{{command|limit(1000)|indent}}"
 DOUBLE_TRANSACTION_ERROR = "You can not query outside a transaction you have open already"
 TOO_LONG_TO_HOLD_TRANSACTION = 10
 
-sqlite3 = None
+_sqlite3 = None
 _load_extension_warning_sent = False
 _upgraded = False
 known_databases = {Null: None}
@@ -84,25 +84,25 @@ class Sqlite(DB):
         :param kwargs:
         """
         global _upgraded
-        global sqlite3
+        global _sqlite3
 
         self.settings = kwargs
         if not _upgraded:
             if upgrade:
                 _upgrade()
             _upgraded = True
-            import sqlite3
-            _ = sqlite3
+            import sqlite3 as _sqlite3
+            _ = _sqlite3
 
         self.filename = File(filename).abspath if filename else None
         if known_databases.get(self.filename):
             Log.error("Not allowed to create more than one Sqlite instance for {{file}}", file=self.filename)
 
         # SETUP DATABASE
-        DEBUG and Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
+        DEBUG and Log.note("Sqlite version {{version}}", version=_sqlite3.sqlite_version)
         try:
             if db == None:
-                self.db = sqlite3.connect(
+                self.db = _sqlite3.connect(
                     database=coalesce(self.filename, ":memory:"),
                     check_same_thread=False,
                     isolation_level=None
@@ -542,7 +542,7 @@ ROLLBACK = "ROLLBACK"
 
 def _upgrade():
     global _upgraded
-    global sqlite3
+    global _sqlite3
 
     try:
         Log.note("sqlite not upgraded")
@@ -565,8 +565,8 @@ def _upgrade():
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 
-    import sqlite3
-    _ = sqlite3
+    import sqlite3 as _sqlite3
+    _ = _sqlite3
     _upgraded = True
 
 

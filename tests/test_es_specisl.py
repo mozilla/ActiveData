@@ -12,6 +12,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import sqlite3
+
+from jx_python.meta import DB_FILE
+from mo_threads import Till
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -108,3 +112,31 @@ class TestESSpecial(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_db_is_busy(self):
+
+        self.db = sqlite3.connect(
+            database=DB_FILE,
+            check_same_thread=False,
+            isolation_level=None
+        )
+
+        self.db.execute("BEGIN")
+        self.db.execute('UPDATE "meta.columns" SET name=name')
+        try:
+
+            test = {
+                "data": [
+                    {"a": "b"}
+                ],
+                "query": {
+                    "from": TEST_TABLE
+                },
+                "expecting_list": {
+                    "meta": {"format": "list"}, "data": [{"a": "b"}]},
+            }
+            self.utils.execute_tests(test)
+            Till(seconds=10).wait()
+        finally:
+            self.db.execute("COMMIT")
+

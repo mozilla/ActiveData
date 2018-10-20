@@ -893,7 +893,7 @@ class Cluster(object):
             self.debug and Log.note("POST {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
-                Log.error(text_type(response.reason) + ": " + strings.limit(response.content.decode("latin1"), 100 if self.debug else 10000))
+                Log.error(text_type(response.reason) + ": " + strings.limit(response.content.decode("latin1"), 1000 if self.debug else 10000))
             self.debug and Log.note("response: {{response}}", response=utf82unicode(response.content)[:130])
             details = json2value(utf82unicode(response.content))
             if details.error:

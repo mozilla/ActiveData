@@ -33,7 +33,7 @@ from mo_times.dates import Date
 from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
 from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_value
 
-DEBUG = False
+DEBUG = True
 singlton = None
 DB_FILE = "activedata_metadata.sqlite"
 db_table_name = quote_column("meta.columns")
@@ -66,12 +66,11 @@ class ColumnList(Table, jx_base.Container):
         self.db.execute("BEGIN")
         try:
             yield
+            self.db.execute("COMMIT")
         except Exception as e:
             e = Except.wrap(e)
             self.db.execute("ROLLBACK")
             Log.error("Transaction failed", cause=e)
-        finally:
-            self.db.execute("COMMIT")
 
     def _query(self, query):
         result = Data()
@@ -82,8 +81,8 @@ class ColumnList(Table, jx_base.Container):
         return result
 
     def _create_db(self):
-        with self._transaction():
-            self.db.execute(
+        with self._transaction() as t:
+            t.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
                     [
@@ -128,7 +127,7 @@ class ColumnList(Table, jx_base.Container):
     def _update_database_worker(self, please_stop):
         while not please_stop:
             try:
-                with self._transaction():
+                with self._transaction() as t:
                     result = self._query(
                         SQL_SELECT + all_columns +
                         SQL_FROM + db_table_name +
@@ -146,34 +145,46 @@ class ColumnList(Table, jx_base.Container):
                 updates = self.todo.pop_all()
                 DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))
                 for action, column in updates:
-                    with self._transaction():
-                        DEBUG and Log.note("update db for {{table}}.{{column}}", table=column.es_index, column=column.es_column)
-                        if action is UPDATE:
-                            self.db.execute(
-                                "UPDATE" + db_table_name +
-                                "SET" + sql_list([
-                                    "count=" + quote_value(column.count),
-                                    "cardinality=" + quote_value(column.cardinality),
-                                    "multi=" + quote_value(column.multi),
-                                    "partitions=" + quote_value(value2json(column.partitions)),
-                                    "last_updated=" + quote_value(column.last_updated)
-                                ]) +
-                                SQL_WHERE + SQL_AND.join([
-                                    "es_index = " + quote_value(column.es_index),
-                                    "es_column = " + quote_value(column.es_column),
-                                    "last_updated < " + quote_value(column.last_updated)
-                                ])
-                            )
-                        elif action is DELETE:
-                            self.db.execute(
-                                "DELETE FROM" + db_table_name +
-                                SQL_WHERE + SQL_AND.join([
-                                    "es_index = " + quote_value(column.es_index),
-                                    "es_column = " + quote_value(column.es_column)
-                                ])
-                            )
-                        else:
-                            self._insert_column(column)
+                    while not please_stop:
+                        try:
+                            with self._transaction():
+                                DEBUG and Log.note("update db for {{table}}.{{column}}", table=column.es_index, column=column.es_column)
+                                if action is UPDATE:
+                                    self.db.execute(
+                                        "UPDATE" + db_table_name +
+                                        "SET" + sql_list([
+                                            "count=" + quote_value(column.count),
+                                            "cardinality=" + quote_value(column.cardinality),
+                                            "multi=" + quote_value(column.multi),
+                                            "partitions=" + quote_value(value2json(column.partitions)),
+                                            "last_updated=" + quote_value(column.last_updated)
+                                        ]) +
+                                        SQL_WHERE + SQL_AND.join([
+                                            "es_index = " + quote_value(column.es_index),
+                                            "es_column = " + quote_value(column.es_column),
+                                            "last_updated < " + quote_value(column.last_updated)
+                                        ])
+                                    )
+                                elif action is DELETE:
+                                    self.db.execute(
+                                        "DELETE FROM" + db_table_name +
+                                        SQL_WHERE + SQL_AND.join([
+                                            "es_index = " + quote_value(column.es_index),
+                                            "es_column = " + quote_value(column.es_column)
+                                        ])
+                                    )
+                                else:
+                                    self._insert_column(column)
+                            break
+                        except Exception as e:
+                            e = Except.wrap(e)
+                            if "database is locked" in e:
+                                Log.note("metadata database is locked")
+                                Till(seconds=1).wait()
+                                break
+                            else:
+                                Log.warning("problem updataing database", cause=e)
+
             except Exception as e:
                 Log.warning("problem updataing database", cause=e)
 
@@ -316,7 +327,7 @@ class ColumnList(Table, jx_base.Container):
                     if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                            with self._transaction():
+                            with self._transaction() as t:
                                 self.db.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
                             return
 
@@ -378,6 +389,7 @@ class ColumnList(Table, jx_base.Container):
                         #             Till(seconds=0.05).wait()
                         #     Thread.run("check", check)
                         col[k] = v
+                    self.todo.add((UPDATE, col))
         except Exception as e:
             Log.error("should not happen", cause=e)
 

@@ -30,7 +30,7 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
-from mo_times import HOUR, MINUTE, Timer, Date
+from mo_times import HOUR, MINUTE, Timer, Date, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import es_type_to_json_type, _get_best_type_from_mapping
 
@@ -353,19 +353,27 @@ class ElasticsearchMetadata(Namespace):
                 cardinality = 2
                 multi = 1
             else:
-                result = self.es_cluster.post("/" + es_index + "/_search", data={
+                es_query = {
                     "aggs": {
                         "count": _counting_query(column),
-                        "multi": {"max": {"script": "doc[" + quote(column.es_column) + "].values.size()"}}
+                        "_filter": {
+                            "aggs": {"multi": {"max": {"script": "doc[" + quote(column.es_column) + "].values.size()"}}},
+                            "filter": {"bool": {"should": [
+                                {"term": {"etl.timestamp.~n~": (Date.today() - WEEK)}},
+                                {"missing": {"field": "etl.timestamp.~n~"}}
+                            ]}}
+                        }
                     },
                     "size": 0
-                })
+                }
+
+                result = self.es_cluster.post("/" + es_index + "/_search", data=es_query)
                 agg_results = result.aggregations
                 count = result.hits.total
                 cardinality = coalesce(agg_results.count.value, agg_results.count._nested.value, agg_results.count.doc_count)
-                multi = int(coalesce(agg_results.multi.value, 1))
+                multi = int(coalesce(agg_results._filter.multi.value, 1))
                 if cardinality == None:
-                   Log.error("logic error")
+                    Log.error("logic error")
 
             query = Data(size=0)
 
@@ -473,7 +481,7 @@ class ElasticsearchMetadata(Namespace):
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated < Date.now()-TOO_OLD) and c.jx_type not in STRUCT
+                        if ((c.last_updated < Date.now() - MAX_COLUMN_METADATA_AGE) or c.cardinality == None) and c.jx_type not in STRUCT
                     ]
                     if old_columns:
                         DEBUG and Log.note(
@@ -482,10 +490,6 @@ class ElasticsearchMetadata(Namespace):
                             dates=[Date(t).format() for t in wrap(old_columns).last_updated]
                         )
                         self.todo.extend(old_columns)
-                        # TEST CONSISTENCY
-                        for c, d in product(list(self.todo.queue), list(self.todo.queue)):
-                            if c.es_column == d.es_column and c.es_index == d.es_index and c != d:
-                                Log.error("")
                     else:
                         DEBUG and Log.note("no more metatdata to update")
 

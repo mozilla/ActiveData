@@ -215,7 +215,7 @@ class TestTime(BaseTestCase):
         IF THIS FAILS, MAYBE THE JSON ROUNDING ENGINE IS ENABLED
         """
         today = Date("2018-10-20")
-        Log.note("Notice {{date}} is {{unix}}", date=today, unix=today.unix)
+        Log.note("Notice {{date}} is {{unix}} and rounding will affect that number", date=today, unix=today.unix)
         data = [
             {"a": today, "t": Date("2018-10-20").unix, "v": 2},
             {"a": today, "t": Date("2018-10-19").unix, "v": 2},

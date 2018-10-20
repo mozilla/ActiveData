@@ -33,7 +33,7 @@ from mo_times.dates import Date
 from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
 from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_value
 
-DEBUG = True
+DEBUG = False
 singlton = None
 DB_FILE = "activedata_metadata.sqlite"
 db_table_name = quote_column("meta.columns")

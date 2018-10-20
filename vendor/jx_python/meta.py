@@ -81,8 +81,8 @@ class ColumnList(Table, jx_base.Container):
         return result
 
     def _create_db(self):
-        with self._transaction() as t:
-            t.execute(
+        with self._transaction():
+            self.db.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
                     [

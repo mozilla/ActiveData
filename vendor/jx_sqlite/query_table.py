@@ -13,8 +13,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+
+
 import mo_json
-from jx_base import STRUCT
 from jx_base.domains import SimpleSetDomain
 from jx_base.expressions import jx_expression, Variable, TupleOp
 from jx_base.query import QueryOp
@@ -25,6 +26,7 @@ from jx_sqlite.groupby_table import GroupbyTable
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import listwrap, coalesce, Data, wrap, startswith_field, unwrap, unwraplist, concat_field, relative_field, Null
 from mo_future import text_type
+from mo_json.typed_encoder import STRUCT
 from mo_logs import Log
 from pyLibrary.sql import SQL, SQL_WHERE, SQL_FROM, SQL_SELECT, sql_list, sql_iso, SQL_ORDERBY, sql_count
 from pyLibrary.sql.sqlite import quote_column
@@ -32,7 +34,7 @@ from pyLibrary.sql.sqlite import quote_column
 
 class QueryTable(GroupbyTable):
     def get_column_name(self, column):
-        return column.names[self.sf.fact]
+        return relative_field(column.name, self.sf.fact)
 
     def __len__(self):
         counter = self.db.query(SQL_SELECT + sql_count("*") + SQL_FROM + quote_column(self.sf.fact))[0][0]
@@ -61,7 +63,7 @@ class QueryTable(GroupbyTable):
         select = []
         column_names = []
         for cname, cs in self.columns.items():
-            cs = [c for c in cs if c.es_type not in STRUCT and len(c.nested_path) == 1]
+            cs = [c for c in cs if c.jx_type not in STRUCT and len(c.nested_path) == 1]
             if len(cs) == 0:
                 continue
             column_names.append(cname)
@@ -91,7 +93,7 @@ class QueryTable(GroupbyTable):
         frum, query['from'] = query['from'], self
         table = self.sf.tables[relative_field(frum, self.sf.fact)]
         schema = table.schema
-        query = QueryOp.wrap(query, container=table, namespace=schema)
+        query = QueryOp.wrap(query, self, self.namespace)
         new_table = "temp_" + unique_name()
 
         if query.format == "container":
@@ -358,14 +360,13 @@ class QueryTable(GroupbyTable):
         else:
             Log.error("Only simple filters are expected like: \"eq\" on table and column name")
 
-        t = [i for i in columns[0].names.keys()]
-        tables = [concat_field(self.sf.fact, i) for i in t]
+        tables = [concat_field(self.sf.fact, i) for i in self.tables.keys()]
 
         metadata = []
         if columns[-1].es_column != GUID:
             columns.append(Column(
-                names={i: relative_field(GUID, i) for i in t},
-                es_type="string",
+                name=GUID,
+                jx_type="string",
                 es_column=GUID,
                 es_index=self.sf.fact,
                 nested_path=["."]
@@ -380,7 +381,7 @@ class QueryTable(GroupbyTable):
                 if column_name != None and column_name != cname:
                     continue
 
-                metadata.append((table, col.names[tname], col.type, unwraplist(col.nested_path)))
+                metadata.append((table, relative_field(col.name, tname), col.type, unwraplist(col.nested_path)))
 
         if query.format == "cube":
             num_rows = len(metadata)
@@ -439,7 +440,7 @@ class QueryTable(GroupbyTable):
         if select.value == ".":
             for cname, cs in self.columns.items():
                 for c in cs:
-                    if c.type in STRUCT:
+                    if c.jx_type in STRUCT:
                         continue
 
                     new_select = select.copy()

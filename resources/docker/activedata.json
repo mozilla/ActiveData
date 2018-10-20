@@ -6,8 +6,7 @@
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
-		"jx_elasticsearch.meta.DEBUG": true,
-		"jx_base.expressions.ALLOW_SCRIPTING": false
+		"jx_elasticsearch.meta.DEBUG": false
 	},
 	"dockerflow": true,
 	"request_logs": {
@@ -32,7 +31,7 @@
 		"port": {"$ref":"env://ES_PORT"},
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true,

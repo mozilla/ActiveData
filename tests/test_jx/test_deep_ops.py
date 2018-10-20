@@ -255,7 +255,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
     def test_select_whole_nested_document(self):
         test = {
             "data": [

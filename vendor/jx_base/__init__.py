@@ -11,50 +11,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import Mapping
 from uuid import uuid4
 
-from mo_dots import NullType, Data, FlatList, wrap, coalesce, listwrap
-from mo_future import text_type, none_type, PY2
+from mo_dots import wrap, coalesce, listwrap
+from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-from mo_times import Date
 
-IS_NULL = '0'
-BOOLEAN = 'boolean'
-INTEGER = 'integer'
-NUMBER = 'number'
-STRING = 'string'
-OBJECT = 'object'
-NESTED = "nested"
-EXISTS = "exists"
-
-JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
-PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
-STRUCT = [EXISTS, OBJECT, NESTED]
-
-
-python_type_to_json_type = {
-    int: NUMBER,
-    text_type: STRING,
-    float: NUMBER,
-    None: OBJECT,
-    bool: BOOLEAN,
-    NullType: OBJECT,
-    none_type: OBJECT,
-    Data: OBJECT,
-    dict: OBJECT,
-    object: OBJECT,
-    Mapping: OBJECT,
-    list: NESTED,
-    FlatList: NESTED,
-    Date: NUMBER
-}
-
-if PY2:
-    python_type_to_json_type[str]=STRING
-    python_type_to_json_type[long]=NUMBER
 
 def generateGuid():
     """Gets a random GUID.
@@ -115,7 +79,7 @@ def DataClass(name, columns, constraint=None):
     required = wrap(filter(lambda c: c.required and not c.nulls and not c.default, columns)).name
     nulls = wrap(filter(lambda c: c.nulls, columns)).name
     defaults = {c.name: coalesce(c.default, None) for c in columns}
-    types = {c.name: coalesce(c.type, object) for c in columns}
+    types = {c.name: coalesce(c.jx_type, object) for c in columns}
 
     code = expand_template(
 """
@@ -240,21 +204,21 @@ class TableDesc(DataClass(
 Column = DataClass(
     "Column",
     [
-        # "table",
-        "names",  # MAP FROM TABLE NAME TO COLUMN NAME (ONE COLUMN CAN HAVE MULTIPLE NAMES)
+        "name",
         "es_column",
         "es_index",
         "es_type",
-        {"name": "jx_type", "nulls": True},
+        "jx_type",
         {"name": "useSource", "default": False},
-        {"name": "nested_path", "nulls": True},  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
+        "nested_path",  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
         {"name": "multi", "nulls": True},
         {"name": "partitions", "nulls": True},
-        {"name": "last_updated", "nulls": True}
+        "last_updated"
     ],
     constraint={"and": [
+        {"not":{"eq":{"es_column":"string"}}},
         {"eq": [{"last": "nested_path"}, {"literal": "."}]}
     ]}
 )

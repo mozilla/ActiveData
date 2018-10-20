@@ -16,20 +16,21 @@ import flask
 from flask import Response
 from future.utils import text_type
 
-import jx_elasticsearch
 from active_data import record_request
 from active_data.actions import save_query
-from jx_base import STRUCT, container
-from jx_python import meta
+from jx_base import container
+from jx_elasticsearch.meta import ElasticsearchMetadata, TOO_OLD
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, join_field, split_field, set_default, startswith_field
+from mo_dots import coalesce, split_field, set_default
+from mo_json import STRUCT
 from mo_json import value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
 from mo_times.dates import Date
-from mo_times.durations import MINUTE
+from mo_times.durations import MINUTE, SECOND
 
+DEBUG = True
 QUERY_TOO_LARGE = "Query is too large"
 
 
@@ -94,39 +95,20 @@ def test_mode_wait(query):
         return
 
     try:
-        metadata_manager = find_container(query['from']).namespace
-        now = Date.now()
-        end_time = now + MINUTE
-
         if query["from"].startswith("meta."):
             return
 
+        now = Date.now()
         alias = split_field(query["from"])[0]
+        metadata_manager = find_container(alias).namespace
         metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
-        # MARK COLUMNS DIRTY
-        metadata_manager.meta.columns.update({
-            "clear": [
-                "partitions",
-                "count",
-                "cardinality",
-                "multi",
-                "last_updated"
-            ],
-            "where": {"eq": {"es_index": alias}}
-        })
-
-        # BE SURE THEY ARE ON THE todo QUEUE FOR RE-EVALUATION
-        cols = [c for c in metadata_manager.get_columns(table_name=query["from"], force=True) if c.jx_type not in STRUCT]
-        for c in cols:
-            Log.note("Mark {{column.names}} dirty at {{time}}", column=c, time=now)
-            metadata_manager.todo.push(c)
-
-        while end_time > now:
+        timeout = Till(seconds=MINUTE.seconds)
+        while not timeout:
             # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=query["from"]) if c.jx_type not in STRUCT]
+            cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now, timeout=timeout) if c.jx_type not in STRUCT]
             for c in cols:
-                if not c.last_updated or now >= c.last_updated or c.cardinality == None:
+                if now >= c.last_updated:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
                         col=c
@@ -135,41 +117,40 @@ def test_mode_wait(query):
             else:
                 break
             Till(seconds=1).wait()
-        for c in cols:
-            Log.note(
-                "fresh column name={{column.names}} updated={{column.last_updated|date}} parts={{column.partitions}}",
-                column=c
-            )
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 
 
-metadata = None
+namespace = None
+
+# TODO: The container cache is a hack until a global namespace/container is built
+container_cache = {}  # MAP NAME TO Container OBJECT
 
 
 def find_container(frum):
     """
     :param frum:
-    :param schema:
     :return:
     """
-    global metadata
-    if not metadata:
+    global namespace
+    if not namespace:
         if not container.config.default.settings:
             Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
-        metadata = jx_elasticsearch.new_instance(index=frum, kwargs=container.config.default.settings)
+        namespace = ElasticsearchMetadata(container.config.default.settings)
 
     if isinstance(frum, text_type):
+        if frum in container_cache:
+            return container_cache[frum]
 
         path = split_field(frum)
         if path[0] == "meta":
             if path[1] in ["columns", "tables"]:
-                return metadata.namespace.meta[path[1]].denormalized()
+                return namespace.meta[path[1]].denormalized()
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
 
         type_ = container.config.default.type
-        fact_table_name = split_field(frum)[0]
+        fact_table_name = path[0]
 
         settings = set_default(
             {
@@ -180,7 +161,9 @@ def find_container(frum):
             container.config.default.settings
         )
         settings.type = None
-        return container.type2container[type_](settings)
+        output = container.type2container[type_](settings)
+        container_cache[frum] = output
+        return output
     elif isinstance(frum, Mapping) and frum.type and container.type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
@@ -188,9 +171,9 @@ def find_container(frum):
         return container.type2container[frum.type](frum.settings)
     elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from jx_base.query import QueryOp
-        return QueryOp.wrap(frum, namespace=schema)
+        return QueryOp.wrap(frum)
     elif isinstance(frum, (list, set)):
-        return _ListContainer("test_list", frum)
+        return ListContainer("test_list", frum)
     else:
         return frum
 

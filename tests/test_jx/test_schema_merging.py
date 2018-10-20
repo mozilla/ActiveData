@@ -23,7 +23,6 @@ class TestSchemaMerging(BaseTestCase):
     TESTS THAT DEMONSTRATE DIFFERENT SCHEMAS
     """
 
-    @skipIf(True, "not implemented yet")
     def test_select(self):
         test = {
             "data": [
@@ -195,7 +194,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True, "not implemented yet")
     def test_dots_in_property_names3(self):
         test = {
             "data": [
@@ -237,7 +235,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True, "not implemented yet")
     def test_count(self):
         test = {
             "data": [
@@ -271,7 +268,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True, "not implemented yet")
     def test_sum(self):
         test = {
             "data": [
@@ -289,17 +285,17 @@ class TestSchemaMerging(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": 6
+                "data": 8
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a.b"],
-                "data": [[6]]
+                "data": [[8]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "data": {
-                    "a.b": 6
+                    "a.b": 8
                 }
             }
         }

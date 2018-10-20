@@ -20,8 +20,7 @@
 	"constants": {
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "ActiveDataTests"
-		},
-		"jx_base.expressions.ALLOW_SCRIPTING": true
+		}
 	},
 	"flask": {
 		"host": "0.0.0.0",

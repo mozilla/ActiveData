@@ -16,8 +16,9 @@ from time import time
 
 from mo_dots import coalesce, wrap
 from mo_logs import Log
-
 from mo_times.durations import Duration
+
+START = time()
 
 
 class Timer(object):

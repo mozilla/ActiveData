@@ -1,8 +1,8 @@
 FROM python:2.7
 
+ARG BUILD_URL=
 ARG REPO_CHECKOUT=
 ARG REPO_URL=https://github.com/mozilla/ActiveData
-ARG BUILD_URL=https://travis-ci.org/mozilla/ActiveData
 ARG HOME=/app
 ARG USER=app
 

@@ -21,8 +21,7 @@ http://www2.sqlite.org/cvstrac/wiki?p=UnsupportedSqlAnalyticalFunctions
 
 
 
-JSON Query Expressions vs SQL
------------------------------
+## JSON Query Expressions vs SQL
 
 A deliberate feature of a JSON expressions is it's JSON. It can be easily declared in Python and Javascript, and easily manipulated by code.  
 
@@ -33,6 +32,16 @@ Many of the SQL's shortcomings, which I touch on below, are overcome by string c
 JSON expressions are slightly better in this regard; It is its own AST, and does not require serialization to a complex intermediate language. Furthermore, an ORM library would be trivial to write, so trivial that it would provide negligible benefit over simply stating the JSON structure directly.
 
     JSON Expressions -> JSON -> network -> JSON -> JSON Expressions -> Query 
+
+
+### No joins
+
+SQL works with databases that advocate normalization. This is usually good for quick updates, but it demands some number of joins to get back the original data.  You will notice a pattern in your OLAP queries; the same tables are joined to get an overall view
+
+![](compare_SQL92_joins.png)
+
+
+Only a few of the conditions of the query are actually relevant; the majority of the conditions are responsible for the joins
 
 ### Splitting credit and debit
 

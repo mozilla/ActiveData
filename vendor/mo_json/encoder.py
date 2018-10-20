@@ -20,11 +20,12 @@ from decimal import Decimal
 from json.encoder import encode_basestring
 from math import floor
 
-from mo_dots import Data, FlatList, NullType, Null
+from mo_dots import Data, FlatList, NullType, Null, SLOT
 from mo_future import text_type, binary_type, long, utf8_json_encoder, sort_using_key, xrange, PYPY
 from mo_json import ESCAPE_DCT, scrub, float2json
 from mo_logs import Except
 from mo_logs.strings import utf82unicode, quote
+from mo_times import Timer
 from mo_times.dates import Date
 from mo_times.durations import Duration
 
@@ -108,8 +109,13 @@ class cPythonJSONEncoder(object):
             return pretty_json(value)
 
         try:
-            scrubbed = scrub(value)
-            return text_type(self.encoder(scrubbed))
+            with Timer("scrub", too_long=0.1):
+                scrubbed = scrub(value)
+            param = {"size": 0}
+            with Timer("encode {{size}} characters", param=param, too_long=0.1):
+                output = text_type(self.encoder(scrubbed))
+                param["size"] = len(output)
+                return output
         except Exception as e:
             from mo_logs.exceptions import Except
             from mo_logs import Log
@@ -171,7 +177,7 @@ def _value2json(value, _buffer):
                 _dict2json(value, _buffer)
             return
         elif type is Data:
-            d = _get(value, "_dict")  # MIGHT BE A VALUE NOT A DICT
+            d = _get(value, SLOT)  # MIGHT BE A VALUE NOT A DICT
             _value2json(d, _buffer)
             return
         elif type in (int, long, Decimal):
@@ -274,14 +280,14 @@ def pretty_json(value):
             return "true"
         elif isinstance(value, Mapping):
             try:
-                items = sort_using_key(list(value.items()), lambda r: r[0])
-                values = [encode_basestring(k) + PRETTY_COLON + indent(pretty_json(v)).strip() for k, v in items if v != None]
+                items = sort_using_key(value.items(), lambda r: r[0])
+                values = [encode_basestring(k) + PRETTY_COLON + pretty_json(v) for k, v in items if v != None]
                 if not values:
                     return "{}"
                 elif len(values) == 1:
                     return "{" + values[0] + "}"
                 else:
-                    return "{\n" + INDENT + (",\n" + INDENT).join(values) + "\n}"
+                    return "{\n" + ",\n".join(indent(v) for v in values) + "\n}"
             except Exception as e:
                 from mo_logs import Log
                 from mo_math import OR

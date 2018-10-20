@@ -18,8 +18,8 @@ from datetime import datetime, date, timedelta
 from decimal import Decimal
 from time import time as _time
 
-from mo_dots import Null
-from mo_future import unichr, text_type, long
+from mo_dots import Null, NullType
+from mo_future import unichr, text_type, long, none_type
 from mo_logs import Except
 from mo_logs.strings import deformat
 from mo_math import Math
@@ -98,6 +98,13 @@ class Date(object):
         """
         return int(int(self.unix)/60/60 % 24)
 
+    @property
+    def dow(self):
+        """
+        :return: DAY-OF-WEEK  MONDAY=0, SUNDAY=6
+        """
+        return int(self.unix / 60 / 60 / 24 / 7 + 5) % 7
+
     def addDay(self):
         return Date(unix2datetime(self.unix) + timedelta(days=1))
 
@@ -157,7 +164,7 @@ class Date(object):
         return str(unix2datetime(self.unix))
 
     def __repr__(self):
-        return unix2datetime(self.unix).__repr__()
+        unix2datetime(self.unix).__repr__()
 
     def __sub__(self, other):
         if other == None:
@@ -171,37 +178,73 @@ class Date(object):
 
     def __lt__(self, other):
         try:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
+                return False
+            elif type_ is Date:
+                return self.unix < other.unix
+            elif type_ in (float, int):
+                return self.unix < other
             other = Date(other)
+            return self.unix < other.unix
         except Exception:
             return False
 
-        return self.unix < other.unix
-
     def __eq__(self, other):
-        if other == None or other == '':
-            return Null
-
         try:
-            return other.unix == self.unix
-        except Exception:
-            pass
-
-        try:
-            return Date(other).unix == self.unix
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
+                return False
+            elif type_ is Date:
+                return self.unix == other.unix
+            elif type_ in (float, int):
+                return self.unix == other
+            other = Date(other)
+            return self.unix == other.unix
         except Exception:
             return False
 
     def __le__(self, other):
-        other = Date(other)
-        return self.unix <= other.unix
+        try:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
+                return False
+            elif type_ is Date:
+                return self.unix <= other.unix
+            elif type_ in (float, int):
+                return self.unix <= other
+            other = Date(other)
+            return self.unix <= other.unix
+        except Exception:
+            return False
 
     def __gt__(self, other):
-        other = Date(other)
-        return self.unix > other.unix
+        try:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
+                return False
+            elif type_ is Date:
+                return self.unix > other.unix
+            elif type_ in (float, int):
+                return self.unix > other
+            other = Date(other)
+            return self.unix > other.unix
+        except Exception:
+            return False
 
     def __ge__(self, other):
-        other = Date(other)
-        return self.unix >= other.unix
+        try:
+            type_ = other.__class__
+            if type_ in (none_type, NullType):
+                return False
+            elif type_ is Date:
+                return self.unix >= other.unix
+            elif type_ in (float, int):
+                return self.unix >= other
+            other = Date(other)
+            return self.unix >= other.unix
+        except Exception:
+            return False
 
     def __add__(self, other):
         return self.add(other)

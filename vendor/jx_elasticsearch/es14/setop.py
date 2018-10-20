@@ -13,18 +13,20 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import NESTED
+
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es14.expressions import Variable, LeavesOp
-from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_not, es_script
+from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
+from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
 from mo_math import AND
@@ -65,7 +67,7 @@ def es_setop(es, query):
     new_select = FlatList()
     schema = query.frum.schema
     # columns = schema.columns
-    # nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    # nested_columns = set(c.name for c in columns if c.nested_path[0] != ".")
 
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -76,7 +78,7 @@ def es_setop(es, query):
             term = select.value.term
             leaves = schema.leaves(term.var)
             for c in leaves:
-                full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+                full_name = concat_field(select.name, relative_field(untype_path(c.name), term.var))
                 if c.jx_type == NESTED:
                     es_query.fields = ["_source"]
                     new_select.append({
@@ -102,12 +104,12 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column == '.' or any(c.jx_type == NESTED for c in leaves):
+                if s_column == "." or any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.fields = ["_source"]
                     for c in leaves:
                         if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
@@ -118,7 +120,7 @@ def es_setop(es, query):
                     # PULL ONLY WHAT'S NEEDED
                     for c in leaves:
                         if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
                             if c.jx_type == NESTED:
                                 es_query.fields = ["_source"]
                                 new_select.append({
@@ -155,7 +157,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits._source = False
                                 where.nested.inner_hits.fields += [c.es_column]
 
-                                child = relative_field(untype_path(c.names[schema.query_path[0]]), s_column)
+                                child = relative_field(untype_path(relative_field(c.name, schema.query_path[0])), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,

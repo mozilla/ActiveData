@@ -18,6 +18,7 @@ from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
+from mo_threads.threads import RegisterThread
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
@@ -26,7 +27,7 @@ from active_data import record_request, OVERVIEW
 from active_data.actions import save_query
 from active_data.actions.contribute import send_contribute
 from active_data.actions.json import get_raw_json
-from active_data.actions.jx import jx_query
+from active_data.actions.query import jx_query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download
@@ -35,7 +36,7 @@ from mo_files import File
 from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
-from mo_threads import Thread
+from mo_threads import Thread, stop_main_thread
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -53,6 +54,7 @@ class ActiveDataApp(Flask):
                 Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
         finally:
             Log.stop()
+            stop_main_thread()
 
 
 flask_app = ActiveDataApp(__name__)
@@ -199,21 +201,22 @@ def setup_flask_ssl():
 
 
 def _exit():
-    Log.note("Got request to shutdown")
-    try:
-        return Response(
-            unicode2utf8(OVERVIEW),
-            status=400,
-            headers={
-                "Content-Type": "text/html"
-            }
-        )
-    finally:
-        shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-        if shutdown:
-            shutdown()
-        else:
-            Log.warning("werkzeug.server.shutdown does not exist")
+    with RegisterThread():
+        Log.note("Got request to shutdown")
+        try:
+            return Response(
+                unicode2utf8(OVERVIEW),
+                status=400,
+                headers={
+                    "Content-Type": "text/html"
+                }
+            )
+        finally:
+            shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+            if shutdown:
+                shutdown()
+            else:
+                Log.warning("werkzeug.server.shutdown does not exist")
 
 
 if __name__ in ("__main__", "active_data.app"):
@@ -223,7 +226,6 @@ if __name__ in ("__main__", "active_data.app"):
             run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
-    finally:
-        Log.stop()
+        stop_main_thread()
 
 

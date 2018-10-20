@@ -604,8 +604,24 @@ returns
 
 
 
-Set Operators (and Variables)
------------------------------
+## Set Operators (and Variables)
+
+
+### `count` Operator ###
+
+Return the number of elements in a list, set, or tuple.
+
+        {"count": expression}
+
+If the `expression` value is not a list, then `1` is returned. If list is empty, or if the expression is `null`, then `0` is returned.
+
+**Examples**
+
+     	{"count": {"literal": null}}             ⇒  0
+     	{"count": {"literal": 3}}                ⇒  1
+     	{"count": {"literal": ["a", "b", "c"]}}  ⇒  3
+
+
 
 ### `first` Operator ###
 

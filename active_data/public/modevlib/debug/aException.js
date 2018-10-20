@@ -50,13 +50,13 @@ importScript("../util/convert.js");
   function wrap(e){
     if (e===undefined || e instanceof Exception) return e;
     if (e instanceof Error){
-      var output=new Exception(e.message, e.cause);
+      let output=new Exception(e.message, e.cause);
       output.fileName= e.fileName;
       output.lineNumber = e.lineNumber;
       output.columnNumber = e.columnNumber;
       output.stack = parseStack(e.stack);
       return output;
-    } else if (e.type=="ERROR"){
+    } else if (e.type == "ERROR" || e.context == "ERROR") {
       return pythonExcept2Exception(e);
     }//endif
 

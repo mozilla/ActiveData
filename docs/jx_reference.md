@@ -64,7 +64,7 @@ Queries are complex operators over sets, tables, and lists. Technically,
 queries are `from` operators with a variety of optional clauses that 
 direct data transformation.
 
-`from` Operator
+`from` Clause
 ---------------
 
 The `from` operator accepts one parameter: the table, an index, or relation that 
@@ -89,12 +89,19 @@ Example: Pull review requests from BZ:
     "where":{"eq":{"request_status":"?"}}
     }
 
-`select` Clause
----------------
+## `select` Clause
 
-The select clause can be a single object, or an array of objects. The former 
-will result in nameless value inside each cell of the resulting cube. The 
-latter will result in an object, with given attributes, in each cell.
+The `select` clause can be a single object, or an array of objects. The former will result in nameless value. The latter will result in an object, with given attributes, in each cell.
+
+  - **value** – Expression to calculate the result value
+  - **name** – The name given to the resulting attribute. Optional if `value` is a simple variable name.
+  - **aggregate** – one of many aggregate operations
+  - **default** to replace null in the event there is no data
+  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only meaningful when the output of the query is a list, not a cube.
+
+[more documentation on `select`](jx_clause_select.md)
+
+### Examples
 
 Here is an example counting the current number of bugs (open and closed) in 
 the KOI project:
@@ -135,24 +142,15 @@ to rename the attribute, they can be replaced with simply the value:
     }
 
 
-
-  - **name** – The name given to the resulting attribute. Optional if `value` 
-  is a simple variable name.
-  - **value** – Expression to calculate the result value
-  - **aggregate** – one of many aggregate operations
-  - **default** to replace null in the event there is no data
-  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only 
-  meaningful when the output of the query is a list, not a cube.
-
 `select.aggregate` Subclause
 ----------------------------
 
 The `aggregate` sub-clause directs the particular aggregation 
 
-  - **none** – when expecting only one value
+  - **none** – when expecting only one value 
   - **one** – when expecting all values to be identical
   - **binary** – returns 1 if value found, 0 for no value
-  - **exists** – same as binary but returns boolean
+  - **exists** – same as binary but returns Boolean
   - **count** – count number of values
   - **sum** – mathematical summation of values
   - **average** – mathematical average of values
@@ -160,7 +158,7 @@ The `aggregate` sub-clause directs the particular aggregation
   - **minimum** – return minimum value observed
   - **maximum** – return maximum value observed
   - **first** - return first value observed (assuming ordered `from` clause)
-  - **any** - return any value observed (that is not null, of course)
+  - **any** - return one of any value observed
   - **percentile** – return given percentile
     - **select.percentile** defined from 0.0 to 1.0 (required)
     - **select.default** to replace null in the event there is no data
@@ -182,7 +180,6 @@ The `aggregate` sub-clause directs the particular aggregation
 
 All aggregates ignore the null values; If all values are null, it is the same 
 as having no data.
-
 
 `where` Clause
 ------------
@@ -266,8 +263,7 @@ defines the other domain attributes which can be assigned.
       - **edge.domain.partitions.N.min** - minimum value for this partition
       - **edge.domain.partitions.N.max** - supremum value for this partition
 
-`window` Clause
----------------
+## `window` Clause
 
 The `window` clause defines a sequence of window functions to be applied to 
 the result set. Each window function defines an additional attribute, and 
@@ -297,8 +293,7 @@ calculate the attribute value.
 
 **Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
 
-having
-------
+## `having` Clause (not implemented)
 
 The `having` clause is a filter that uses aggregates and partitions to 
 determine inclusion in the resultant cube.
@@ -308,6 +303,42 @@ determine inclusion in the resultant cube.
   - **sort** – a single attribute name, or array of attribute names, used to 
   declare the rank of every row in the group
   - **aggregate** - an aggregate function used to determine which row is selected
+
+## `sort` Clause
+
+`sort` is used to order the final result. It only makes sense when asking for one dimensional results; like lists, tables and 1D cubes. The `sort` clause will accept one sub-clause, or a list of sub-clauses.
+
+### Standard form
+
+Standard form is meant for automated composition
+
+  - **value** - expression to sort by
+  - **sort** - (optional) use `1` to sort in ascending order, `-1` in descending order. `asc` and `desc` have the same effect respectively. You can ignore this property, or set it to `null` or `0` for no sorting.  
+
+**Example**
+
+    {"sort": {"value": "build.date", "sort": 1}}
+
+### Short form
+
+Short form is more restrictive, but a bit more humane; it has `{field: ordering}` format
+
+  - **field** - the name of the attribute to sort by
+  - **ordering** - the direction of the sort: with the same options as standard form  
+
+**Example**
+
+    {"sort": {"build.date": "asc"}}
+
+### Shortest form
+
+`sort` will also accept a single string with name of the attribute to sort by; and assume the order is ascending
+
+**Example**
+
+    {"sort": "build.date"}
+
+
 
 Pre-Defined Dimensions
 ----------------------

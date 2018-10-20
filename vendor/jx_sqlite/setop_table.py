@@ -13,26 +13,25 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import STRUCT, OBJECT
 from jx_base.expressions import BooleanOp
 from jx_base.queries import get_property_name
 from jx_python.meta import Column
-from jx_sqlite import quoted_UID, quoted_GUID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER, GUID
+from jx_sqlite import quoted_UID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER
 from jx_sqlite.expressions import sql_type_to_json_type, LeavesOp
 from jx_sqlite.insert_table import InsertTable
-from mo_dots import listwrap, Data, unwraplist, split_field, join_field, startswith_field, unwrap, relative_field, concat_field, literal_field, Null
+from mo_dots import listwrap, Data, unwraplist, startswith_field, unwrap, relative_field, concat_field, literal_field, Null, tail_field
 from mo_future import text_type
 from mo_future import unichr
+from mo_json.typed_encoder import STRUCT
 from mo_math import UNION, MAX
-from pyLibrary.sql import SQL_UNION_ALL, SQL_LEFT_JOIN, SQL_FROM, SQL_WHERE, SQL_SELECT, SQL_ON, SQL_AND, SQL_LIMIT, SQL_ORDERBY, SQL_NULL, SQL_IS_NULL, SQL_IS_NOT_NULL, sql_iso, sql_list, sql_alias, SQL_TRUE, SQL
+from pyLibrary.sql import SQL_UNION_ALL, SQL_LEFT_JOIN, SQL_FROM, SQL_WHERE, SQL_SELECT, SQL_ON, SQL_AND, SQL_LIMIT, SQL_ORDERBY, SQL_NULL, SQL_IS_NULL, SQL_IS_NOT_NULL, sql_iso, sql_list, sql_alias, SQL_TRUE
 from pyLibrary.sql.sqlite import quote_value, quote_column, join_column
 
 
 class SetOpTable(InsertTable):
     def _set_op(self, query, frum):
         # GET LIST OF COLUMNS
-        frum_path = split_field(frum)
-        primary_nested_path = join_field(frum_path[1:])
+        base_name, primary_nested_path = tail_field(frum)
         vars_ = UNION([v.var for select in listwrap(query.select) for v in select.value.vars()])
         schema = self.sf.tables[primary_nested_path].schema
 
@@ -46,8 +45,8 @@ class SetOpTable(InsertTable):
         for v in vars_:
             if not any(startswith_field(cname, v) for cname in schema.keys()):
                 active_columns["."].add(Column(
-                    names={".": v},
-                    es_type="null",
+                    name=v,
+                    jx_type="null",
                     es_column=".",
                     es_index=".",
                     nested_path=["."]
@@ -238,17 +237,17 @@ class SetOpTable(InsertTable):
                             value = row[i]
                             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
-                                relative_path = concat_field(c.push_name, c.push_child)
+                                relative_field = concat_field(c.push_name, c.push_child)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
-                                relative_path = c.push_child
+                                relative_field = c.push_child
 
-                            if relative_path == ".":
+                            if relative_field == ".":
                                 if value == '':
                                     doc = Null
                                 else:
                                     doc = value
                             elif value != None and value != '':
-                                doc[relative_path] = value
+                                doc[relative_field] = value
 
                 for child_details in nested_doc_details['children']:
                     # EACH NESTED TABLE MUST BE ASSEMBLED INTO A LIST OF OBJECTS
@@ -259,16 +258,16 @@ class SetOpTable(InsertTable):
                             push_name = child_details['nested_path'][0]
                             if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
-                                relative_path = relative_field(push_name, curr_nested_path)
+                                relative_field = relative_field(push_name, curr_nested_path)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
-                                relative_path = "."
+                                relative_field = "."
 
-                            if relative_path == "." and doc is Null:
+                            if relative_field == "." and doc is Null:
                                 doc = nested_value
-                            elif relative_path == ".":
+                            elif relative_field == ".":
                                 doc = unwraplist(nested_value)
                             else:
-                                doc[relative_path] = unwraplist(nested_value)
+                                doc[relative_field] = unwraplist(nested_value)
 
                 output.append(doc)
 

@@ -30,8 +30,7 @@ You can query a nested object array by putting its full path in the `from` claus
 `unittest.result.subtests` is an array that holds metadata on the reasons a test failed. This particular query only shows the subtest metadata, but you can access parent table columns too.
 
 
-`format` Clause
----------------
+## `format` Clause
 
 The ActiveData Query Tool hides the formatting feature of the ActiveData service. Most responses you get back from the service are data cubes (aka pivot tables), and this may not be the best format for your application. You have three main formats to choose from:
 
@@ -45,6 +44,40 @@ The ActiveData Query Tool hides the formatting feature of the ActiveData service
     "format": "list"
 }
 ```
+
+### Examples
+
+**list**
+```json
+{"data": [
+    {"HeadingA":"row 1 Column A", "HeadingB":"row 1 Column B", "HeadingC":"row 1 Column C"}, 
+    {"HeadingA":"row 2 Column A", "HeadingB":"row 2 Column B", "HeadingC":"row 2 Column C"}, 
+    {"HeadingA":"row 3 Column A", "HeadingB":"row 3 Column B", "HeadingC":"row 3 Column C"}, 
+]}
+```
+
+**table**
+```json
+{
+    "header":["Heading A", "Heading B", "Heading C"],
+    "data":[
+        ["Row 1 Column A", "Row 1 Column B", "Row 1 Column C"],
+        ["Row 2 Column A", "Row 2 Column B", "Row 2 Column C"]
+    ]
+}
+```
+
+**cube** (default)
+```json
+{
+    "data":{
+        "Heading A": ["Row 1 Column A", "Row 2 Column A"],
+        "Heading B": ["Row 1 Column B", "Row 2 Column B"],
+        "Heading C": ["Row 1 Column C", "Row 2 Column C"]
+    }
+}
+```
+
 
 ### Inspecting Individual Records
 

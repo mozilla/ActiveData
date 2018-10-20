@@ -10,51 +10,50 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from collections import OrderedDict
 from copy import copy
 
-from jx_base import STRUCT, OBJECT, EXISTS, STRING
-from jx_base.container import Container
+import jx_base
+from jx_base import Column, Facts
 from jx_base.queries import get_property_name
-from jx_python import jx
-from jx_python.meta import Column
-from jx_sqlite import typed_column, UID, quoted_UID, quoted_GUID, sql_types, quoted_PARENT, quoted_ORDER, GUID, untyped_column
-from mo_dots import relative_field, listwrap, split_field, join_field, wrap, startswith_field, concat_field, Null, coalesce, set_default
+# from jx_python.meta import ColumnList
+from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, quoted_PARENT, quoted_ORDER
+from mo_dots import startswith_field, Null, relative_field, concat_field, set_default, wrap, tail_field, coalesce, listwrap
 from mo_future import text_type
+from mo_json import STRING, OBJECT, EXISTS, STRUCT
 from mo_logs import Log
 from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
-from pyLibrary.sql.sqlite import quote_column
+from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type
 
 
-class Snowflake(object):
+class Namespace(jx_base.Namespace):
     """
     MANAGE SQLITE DATABASE
     """
-    def __init__(self, fact, uid, db):
-        self.fact = fact  # THE CENTRAL FACT TABLE
-        self.uid = uid
+    def __init__(self, db):
         self.db = db
-        self._columns = []  # EVERY COLUMN IS ACCESSIBLE BY EVERY TABLE IN THE SNOWFLAKE
-        self.tables = OrderedDict()  # MAP FROM NESTED PATH TO Table OBJECT, PARENTS PROCEED CHILDREN
-        if not self.read_db():
-            self.create_fact(uid)
-
-    def read_db(self):
-        """
-        PULL SCHEMA FROM DATABASE, BUILD THE MODEL
-        :return: None
-        """
+        self._snowflakes = {}  # MAP FROM BASE TABLE TO LIST OF NESTED TABLES
+        self._columns = ColumnList()
 
         # FIND ALL TABLES
         result = self.db.query("SELECT * FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = wrap([{k: d[i] for i, k in enumerate(result.header)} for d in result.data])
-        tables_found = False
+        last_nested_path = []
         for table in tables:
             if table.name.startswith("__"):
                 continue
-            tables_found = True
-            nested_path = [join_field(split_field(tab.name)[1:]) for tab in jx.reverse(tables) if startswith_field(table.name, tab.name)]
-            self.add_table_to_schema(nested_path)
+            base_table, nested_path = tail_field(table.name)
+
+            # FIND COMMON NESTED PATH SUFFIX
+            for i, p in enumerate(last_nested_path):
+                if startswith_field(nested_path, p):
+                    last_nested_path = last_nested_path[i:]
+                    break
+            else:
+                last_nested_path = []
+
+            full_nested_path = [nested_path]+last_nested_path
+            nested_tables = self._snowflakes.setdefault(base_table, [nested_path]+last_nested_path)
+            nested_tables.append(jx_base.TableDesc(name=table.name, nested_path=full_nested_path))
 
             # LOAD THE COLUMNS
             command = "PRAGMA table_info"+sql_iso(quote_column(table.name))
@@ -64,23 +63,22 @@ class Snowflake(object):
                 if name.startswith("__"):
                     continue
                 cname, ctype = untyped_column(name)
-                column = Column(
-                    names={np: relative_field(cname, np) for np in nested_path},
-                    es_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
-                    nested_path=nested_path,
+                self._columns.add(Column(
+                    name=cname,  # I THINK COLUMNS HAVE THIER FULL PATH
+                    jx_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
+                    nested_path=full_nested_path,
+                    es_type=dtype,
                     es_column=name,
                     es_index=table.name
-                )
+                ))
+            last_nested_path = full_nested_path
 
-                self.add_column_to_schema(column)
-
-        return tables_found
-
-    def create_fact(self, uid=UID):
+    def create_snowflake(self, fact_name, uid=UID):
         """
         MAKE NEW TABLE WITH GIVEN guid
+        :param fact_name:  NAME FOR THE CENTRAL FACTS
         :param uid: name, or list of names, for the GUID
-        :return: None
+        :return: Facts
         """
         self.add_table_to_schema(["."])
 
@@ -91,19 +89,19 @@ class Snowflake(object):
                 pass
             else:
                 c = Column(
-                    names={".": u},
-                    es_type="string",
+                    name=u,
+                    jx_type="string",
                     es_column=typed_column(u, "string"),
-                    es_index=self.fact
+                    es_index=fact_name
                 )
                 self.add_column_to_schema(c)
                 new_columns.append(c)
 
         command = (
-            "CREATE TABLE " + quote_column(self.fact) + sql_iso(sql_list(
+            "CREATE TABLE " + quote_column(fact_name) + sql_iso(sql_list(
                 [quoted_GUID + " TEXT "] +
                 [quoted_UID + " INTEGER"] +
-                [quote_column(c.es_column) + " " + sql_types[c.type] for c in self.tables["."].schema.columns] +
+                [quote_column(c.es_column) + " " + json_type_to_sqlite_type[c.jx_type] for c in self.tables["."].schema.columns] +
                 ["PRIMARY KEY " + sql_iso(sql_list(
                     [quoted_GUID] +
                     [quoted_UID] +
@@ -113,6 +111,18 @@ class Snowflake(object):
         )
 
         self.db.execute(command)
+
+        snowflake = Snowflake(fact_name, self)
+        return Facts(self, snowflake)
+
+
+class Snowflake(jx_base.Snowflake):
+    """
+    MANAGE SQLITE DATABASE
+    """
+    def __init__(self, fact_name, namespace):
+        self.fact_name = fact_name  # THE CENTRAL FACT TABLE
+        self.namespace = namespace
 
     def change_schema(self, required_changes):
         """
@@ -131,23 +141,23 @@ class Snowflake(object):
                 # TODO: DELETE PARENT COLUMNS? : Done
 
     def _add_column(self, column):
-        cname = column.names["."]
+        cname = column.name
         if column.type == "nested":
             # WE ARE ALSO NESTING
             self._nest_column(column, [cname]+column.nested_path)
 
-        table = concat_field(self.fact, column.nested_path[0])
+        table = concat_field(self.fact_name, column.nested_path[0])
 
-        self.db.execute(
+        self.namespace.db.execute(
             "ALTER TABLE " + quote_column(table) +
-            " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
+            " ADD COLUMN " + quote_column(column.es_column) + " " + json_type_to_sqlite_type[column.type]
         )
 
         self.add_column_to_schema(column)
 
     def _nest_column(self, column, new_path):
-        destination_table = concat_field(self.fact, new_path[0])
-        existing_table = concat_field(self.fact, column.nested_path[0])
+        destination_table = concat_field(self.fact_name, new_path[0])
+        existing_table = concat_field(self.fact_name, column.nested_path[0])
 
         # FIND THE INNER COLUMNS WE WILL BE MOVING
         moving_columns = []
@@ -161,7 +171,7 @@ class Snowflake(object):
         # DEFINE A NEW TABLE?
         # LOAD THE COLUMNS
         command = "PRAGMA table_info"+sql_iso(quote_column(destination_table))
-        details = self.db.query(command)
+        details = self.namespace.db.query(command)
         if not details.data:
             command = (
                 "CREATE TABLE " + quote_column(destination_table) + sql_iso(sql_list([
@@ -172,7 +182,7 @@ class Snowflake(object):
                     "FOREIGN KEY " + sql_iso(quoted_PARENT) + " REFERENCES " + quote_column(existing_table) + sql_iso(quoted_UID)
                 ]))
             )
-            self.db.execute(command)
+            self.namespace.db.execute(command)
             self.add_table_to_schema(new_path)
 
         # TEST IF THERE IS ANY DATA IN THE NEW NESTED ARRAY
@@ -180,26 +190,26 @@ class Snowflake(object):
             return
 
         column.es_index = destination_table
-        self.db.execute(
+        self.namespace.db.execute(
             "ALTER TABLE " + quote_column(destination_table) +
-            " ADD COLUMN " + quote_column(column.es_column) + " " + sql_types[column.type]
+            " ADD COLUMN " + quote_column(column.es_column) + " " + json_type_to_sqlite_type[column.type]
         )
 
         # Deleting parent columns
         for col in moving_columns:
             column = col.es_column
             tmp_table = "tmp_" + existing_table
-            columns = list(map(text_type, self.db.query(SQL_SELECT + SQL_STAR + SQL_FROM + quote_column(existing_table) + SQL_LIMIT + SQL_ZERO).header))
-            self.db.execute(
+            columns = list(map(text_type, self.namespace.db.query(SQL_SELECT + SQL_STAR + SQL_FROM + quote_column(existing_table) + SQL_LIMIT + SQL_ZERO).header))
+            self.namespace.db.execute(
                 "ALTER TABLE " + quote_column(existing_table) +
                 " RENAME TO " + quote_column(tmp_table)
             )
-            self.db.execute(
+            self.namespace.db.execute(
                 "CREATE TABLE " + quote_column(existing_table) + " AS " +
                 SQL_SELECT + sql_list([quote_column(c) for c in columns if c != column]) +
                 SQL_FROM + quote_column(tmp_table)
             )
-            self.db.execute("DROP TABLE " + quote_column(tmp_table))
+            self.namespace.db.execute("DROP TABLE " + quote_column(tmp_table))
 
     def add_table_to_schema(self, nested_path):
         table = Table(nested_path)
@@ -207,7 +217,7 @@ class Snowflake(object):
         path = table.name
 
         for c in self._columns:
-            rel_name = c.names[path] = relative_field(c.names["."], path)
+            rel_name = relative_field(c.name, path)
             table.schema.add(rel_name, c)
         return table
 
@@ -217,15 +227,15 @@ class Snowflake(object):
 
     def add_column_to_schema(self, column):
         self._columns.append(column)
-        abs_name = column.names["."]
+        abs_name = column.name
 
         for table in self.tables.values():
-            rel_name = column.names[table.name] = relative_field(abs_name, table.name)
+            rel_name = relative_field(abs_name, table.name)
             table.schema.add(rel_name, column)
             table.columns.append(column)
 
 
-class Table(Container):
+class Table(jx_base.Table):
 
     def __init__(self, nested_path):
         self.nested_path = nested_path
@@ -255,18 +265,20 @@ class Schema(object):
     """
 
     def __init__(self, nested_path):
-        if nested_path[-1] != '.':
+        if nested_path[-1] != ".":
             Log.error("Expecting full nested path")
         source = Column(
-            names={".": "."},
+            name=".",
+            jx_type=OBJECT,
             es_type=OBJECT,
             es_column="_source",
             es_index=nested_path,
             nested_path=nested_path
         )
         guid = Column(
-            names={".": GUID},
-            es_type=STRING,
+            name=GUID,
+            jx_type=STRING,
+            es_type='TEXT',
             es_column=GUID,
             es_index=nested_path,
             nested_path=nested_path
@@ -276,13 +288,13 @@ class Schema(object):
         self.nested_path = nested_path
 
     def add(self, column_name, column):
-        if column_name != column.names[self.nested_path[0]]:
+        if column_name != relative_field(column.name, self.nested_path[0]):
             Log.error("Logic error")
 
         self._columns.append(column)
 
         for np in self.nested_path:
-            rel_name = column.names[np]
+            rel_name = relative_field(column.name, np)
             container = self.namespace.setdefault(rel_name, set())
             hidden = [
                 c
@@ -299,7 +311,7 @@ class Schema(object):
 
 
     def remove(self, column_name, column):
-        if column_name != column.names[self.nested_path[0]]:
+        if column_name != relative_field(column.name, self.nested_path[0]):
             Log.error("Logic error")
 
         self.namespace[column_name] = [c for c in self.namespace[column_name] if c != column]
@@ -320,7 +332,7 @@ class Schema(object):
         :param column:
         :return: NAME OF column
         """
-        return get_property_name(column.names[self.nested_path[0]])
+        return get_property_name(relative_field(column.name, self.nested_path[0]))
 
     def keys(self):
         return set(self.namespace.keys())
@@ -336,13 +348,13 @@ class Schema(object):
         head = self.namespace.get(prefix, None)
         if not head:
             return Null
-        full_name = list(head)[0].names['.']
+        full_name = list(head)[0].name
         return set(
             c
             for k, cs in self.namespace.items()
             if startswith_field(k, full_name) and k != GUID or k == full_name
             for c in cs
-            if c.type not in [OBJECT, EXISTS]
+            if c.jx_type not in [OBJECT, EXISTS]
         )
 
     def map_to_sql(self, var=""):
@@ -356,19 +368,19 @@ class Schema(object):
         origin_dict = {}
         for k, cs in self.namespace.items():
             for c in cs:
-                if c.type in STRUCT:
+                if c.jx_type in STRUCT:
                     continue
 
                 if startswith_field(get_property_name(k), var):
-                    origin_dict.setdefault(c.names[origin], []).append(c)
+                    origin_dict.setdefault(relative_field(c.name, origin), []).append(c)
 
                     if origin != c.nested_path[0]:
-                        fact_dict.setdefault(c.names["."], []).append(c)
+                        fact_dict.setdefault(c.name, []).append(c)
                 elif origin == var:
-                    origin_dict.setdefault(concat_field(var, c.names[origin]), []).append(c)
+                    origin_dict.setdefault(concat_field(var, relative_field(c.name, origin)), []).append(c)
 
                     if origin != c.nested_path[0]:
-                        fact_dict.setdefault(concat_field(var, c.names["."]), []).append(c)
+                        fact_dict.setdefault(concat_field(var, c.name), []).append(c)
 
         return set_default(origin_dict, fact_dict)
 

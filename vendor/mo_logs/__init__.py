@@ -13,15 +13,14 @@ from __future__ import unicode_literals
 
 import os
 import platform
+import sys
 from collections import Mapping
 from datetime import datetime
 
-import sys
-
-from mo_dots import coalesce, listwrap, wrap, unwrap, unwraplist, set_default, FlatList
-from mo_future import text_type, PY3, iteritems
+from mo_dots import coalesce, listwrap, wrap, unwraplist, FlatList, Data
+from mo_future import text_type, PY3
 from mo_logs import constants
-from mo_logs.exceptions import Except, suppress_exception
+from mo_logs.exceptions import Except, suppress_exception, LogItem
 from mo_logs.strings import indent
 
 _Thread = None
@@ -29,7 +28,6 @@ if PY3:
     STDOUT = sys.stdout.buffer
 else:
     STDOUT = sys.stdout
-
 
 
 class Log(object):
@@ -40,8 +38,6 @@ class Log(object):
     main_log = None
     logging_multi = None
     profiler = None   # simple pypy-friendly profiler
-    cprofiler = None  # screws up with pypy, but better than nothing
-    cprofiler_stats = None
     error_mode = False  # prevent error loops
 
     @classmethod
@@ -59,7 +55,6 @@ class Log(object):
         constants - UPDATE MODULE CONSTANTS AT STARTUP (PRIMARILY INTENDED TO CHANGE DEBUG STATE)
         """
         global _Thread
-
         if not settings:
             return
         settings = wrap(settings)
@@ -72,26 +67,26 @@ class Log(object):
             from mo_threads import Thread as _Thread
             _ = _Thread
 
+        # ENABLE CPROFILE
         if settings.cprofile is False:
             settings.cprofile = {"enabled": False}
-        elif settings.cprofile is True or (isinstance(settings.cprofile, Mapping) and settings.cprofile.enabled):
+        elif settings.cprofile is True:
             if isinstance(settings.cprofile, bool):
                 settings.cprofile = {"enabled": True, "filename": "cprofile.tab"}
-
-            import cProfile
-
-            cls.cprofiler = cProfile.Profile()
-            cls.cprofiler.enable()
+        if settings.cprofile.enabled:
+            from mo_threads import profiles
+            profiles.enable_profilers(settings.cprofile.filename)
 
         if settings.profile is True or (isinstance(settings.profile, Mapping) and settings.profile.enabled):
-            from mo_logs import profiles
-
-            if isinstance(settings.profile, bool):
-                profiles.ON = True
-                settings.profile = {"enabled": True, "filename": "profile.tab"}
-
-            if settings.profile.enabled:
-                profiles.ON = True
+            Log.error("REMOVED 2018-09-02, Activedata revision 3f30ff46f5971776f8ba18")
+            # from mo_logs import profiles
+            #
+            # if isinstance(settings.profile, bool):
+            #     profiles.ON = True
+            #     settings.profile = {"enabled": True, "filename": "profile.tab"}
+            #
+            # if settings.profile.enabled:
+            #     profiles.ON = True
 
         if settings.constants:
             constants.set(settings.constants)
@@ -104,9 +99,6 @@ class Log(object):
             from mo_logs.log_usingThread import StructuredLogger_usingThread
             cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
 
-        if settings.cprofile.enabled == True:
-            Log.alert("cprofiling is enabled, writing to {{filename}}", filename=os.path.abspath(settings.cprofile.filename))
-
     @classmethod
     def stop(cls):
         """
@@ -114,22 +106,6 @@ class Log(object):
         EXECUTING MULUTIPLE TIMES IN A ROW IS SAFE, IT HAS NO NET EFFECT, IT STILL LOGS TO stdout
         :return: NOTHING
         """
-
-        from mo_threads import profiles
-
-        if cls.cprofiler and hasattr(cls, "settings"):
-            if cls.cprofiler == None:
-                from mo_threads import Queue
-
-                cls.cprofiler_stats = Queue("cprofiler stats")  # ACCUMULATION OF STATS FROM ALL THREADS
-
-            import pstats
-            cls.cprofiler_stats.add(pstats.Stats(cls.cprofiler))
-            write_profile(cls.settings.cprofile, cls.cprofiler_stats.pop_all())
-
-        if profiles.ON and hasattr(cls, "settings"):
-            profiles.write(cls.settings.profile)
-
         main_log, cls.main_log = cls.main_log, StructuredLogger_usingStream(STDOUT)
         main_log.stop()
 
@@ -198,38 +174,20 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
+        timestamp = datetime.utcnow()
         if not isinstance(template, text_type):
             Log.error("Log.note was expecting a unicode template")
 
-        if len(template) > 10000:
-            template = template[:10000]
-
-        params = dict(unwrap(default_params), **more_params)
-
-        log_params = set_default({
-            "template": template,
-            "params": params,
-            "timestamp": datetime.utcnow(),
-            "machine": machine_metadata
-        }, log_context, {"context": exceptions.NOTE})
-
-        if not template.startswith("\n") and template.find("\n") > -1:
-            template = "\n" + template
-
-        if cls.trace:
-            log_template = "{{machine.name}} (pid {{machine.pid}}) - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" ({{location.method}}) - " + template.replace("{{", "{{params.")
-            f = sys._getframe(stack_depth + 1)
-            log_params.location = {
-                "line": f.f_lineno,
-                "file": text_type(f.f_code.co_filename.split(os.sep)[-1]),
-                "method": text_type(f.f_code.co_name)
-            }
-            thread = _Thread.current()
-            log_params.thread = {"name": thread.name, "id": thread.id}
-        else:
-            log_template = "{{timestamp|datetime}} - " + template.replace("{{", "{{params.")
-
-        cls.main_log.write(log_template, log_params)
+        Log._annotate(
+            LogItem(
+                context=exceptions.NOTE,
+                format=template,
+                template=template,
+                params=dict(default_params, **more_params)
+            ),
+            timestamp,
+            stack_depth+1
+        )
 
     @classmethod
     def unexpected(
@@ -250,22 +208,26 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
+        timestamp = datetime.utcnow()
+        if not isinstance(template, text_type):
+            Log.error("Log.warning was expecting a unicode template")
+
         if isinstance(default_params, BaseException):
             cause = default_params
             default_params = {}
 
-        params = dict(unwrap(default_params), **more_params)
+        if "values" in more_params.keys():
+            Log.error("Can not handle a logging parameter by name `values`")
 
-        if cause and not isinstance(cause, Except):
-            cause = Except(exceptions.UNEXPECTED, text_type(cause), trace=exceptions._extract_traceback(0))
+        params = Data(dict(default_params, **more_params))
+        cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
+        trace = exceptions.extract_stack(stack_depth + 1)
 
-        trace = exceptions.extract_stack(1)
-        e = Except(type=exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
-        Log.note(
-            "{{error}}",
-            error=e,
-            log_context=set_default({"context": exceptions.WARNING}, log_context),
-            stack_depth=stack_depth + 1
+        e = Except(exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
+        Log._annotate(
+            e,
+            timestamp,
+            stack_depth+1
         )
 
     @classmethod
@@ -282,44 +244,23 @@ class Log(object):
         :param default_params: *dict* parameters to fill in template
         :param stack_depth:  *int* how many calls you want popped off the stack to report the *true* caller
         :param log_context: *dict* extra key:value pairs for your convenience
-        :param more_params: *any more parameters (which will overwrite default_params)
+        :param more_params: more parameters (which will overwrite default_params)
         :return:
         """
-        # USE replace() AS POOR MAN'S CHILD TEMPLATE
-
-        template = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
-        Log.note(
-            template,
-            default_params=default_params,
-            stack_depth=stack_depth + 1,
-            log_context=set_default({"context": exceptions.ALARM}, log_context),
-            **more_params
+        timestamp = datetime.utcnow()
+        format = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
+        Log._annotate(
+            LogItem(
+                context=exceptions.ALARM,
+                format=format,
+                template=template,
+                params=dict(default_params, **more_params)
+            ),
+            timestamp,
+            stack_depth + 1
         )
 
-    @classmethod
-    def alert(
-        cls,
-        template,
-        default_params={},
-        stack_depth=0,
-        log_context=None,
-        **more_params
-    ):
-        """
-        :param template: *string* human readable string with placeholders for parameters
-        :param default_params: *dict* parameters to fill in template
-        :param stack_depth:  *int* how many calls you want popped off the stack to report the *true* caller
-        :param log_context: *dict* extra key:value pairs for your convenience
-        :param more_params: *any more parameters (which will overwrite default_params)
-        :return:
-        """
-        return Log.alarm(
-            template,
-            default_params=default_params,
-            stack_depth=stack_depth + 1,
-            log_context=set_default({"context": exceptions.ALARM}, log_context),
-            **more_params
-        )
+    alert = alarm
 
     @classmethod
     def warning(
@@ -340,6 +281,7 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
+        timestamp = datetime.utcnow()
         if not isinstance(template, text_type):
             Log.error("Log.warning was expecting a unicode template")
 
@@ -349,18 +291,17 @@ class Log(object):
 
         if "values" in more_params.keys():
             Log.error("Can not handle a logging parameter by name `values`")
-        params = dict(unwrap(default_params), **more_params)
+
+        params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
         trace = exceptions.extract_stack(stack_depth + 1)
 
-        e = Except(type=exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
-        Log.note(
-            "{{error|unicode}}",
-            error=e,
-            log_context=set_default({"context": exceptions.WARNING}, log_context),
-            stack_depth=stack_depth + 1
+        e = Except(exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
+        Log._annotate(
+            e,
+            timestamp,
+            stack_depth+1
         )
-
 
     @classmethod
     def error(
@@ -390,7 +331,7 @@ class Log(object):
             cause = default_params
             default_params = {}
 
-        params = dict(unwrap(default_params), **more_params)
+        params = Data(dict(default_params, **more_params))
 
         add_to_trace = False
         if cause == None:
@@ -411,83 +352,53 @@ class Log(object):
         if add_to_trace:
             cause[0].trace.extend(trace[1:])
 
-        e = Except(type=exceptions.ERROR, template=template, params=params, cause=causes, trace=trace)
+        e = Except(context=exceptions.ERROR, template=template, params=params, cause=causes, trace=trace)
         raise_from_none(e)
 
     @classmethod
-    def fatal(
+    def _annotate(
         cls,
-        template,  # human readable template
-        default_params={},  # parameters for template
-        cause=None,  # pausible cause
-        stack_depth=0,
-        log_context=None,
-        **more_params
+        item,
+        timestamp,
+        stack_depth
     ):
         """
-        SEND TO STDERR
-
-        :param template: *string* human readable string with placeholders for parameters
-        :param default_params: *dict* parameters to fill in template
-        :param cause: *Exception* for chaining
-        :param stack_depth:  *int* how many calls you want popped off the stack to report the *true* caller
-        :param log_context: *dict* extra key:value pairs for your convenience
-        :param more_params: *any more parameters (which will overwrite default_params)
+        :param context:  THE TYPE OF MESSAGE
+        :param format:   THE FORMAT FOR HUMANE TEXT MESSAGE
+        :param template: THE CALLERS template
+        :param params:   THE CALLERS PARAMETERS
+        :param stack_depth: FOR TRACKING WHAT LINE THIS CAME FROM
         :return:
         """
-        if default_params and isinstance(listwrap(default_params)[0], BaseException):
-            cause = default_params
-            default_params = {}
+        item.timestamp = timestamp
+        item.machine = machine_metadata
+        item.template = strings.limit(item.template, 10000)
 
-        params = dict(unwrap(default_params), **more_params)
+        item.format = strings.limit(item.format, 10000)
+        if item.format == None:
+            format = text_type(item)
+        else:
+            format = item.format.replace("{{", "{{params.")
+        if not format.startswith("\n") and format.find("\n") > -1:
+            format = "\n" + format
 
-        cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
-        trace = exceptions.extract_stack(stack_depth + 1)
+        if cls.trace:
+            log_format = item.format = "{{machine.name}} (pid {{machine.pid}}) - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" - ({{location.method}}) - " + format
+            f = sys._getframe(stack_depth + 1)
+            item.location = {
+                "line": f.f_lineno,
+                "file": text_type(f.f_code.co_filename),
+                "method": text_type(f.f_code.co_name)
+            }
+            thread = _Thread.current()
+            item.thread = {"name": thread.name, "id": thread.id}
+        else:
+            log_format = item.format = "{{timestamp|datetime}} - " + format
 
-        e = Except(type=exceptions.ERROR, template=template, params=params, cause=cause, trace=trace)
-
-        error_mode = cls.error_mode
-        with suppress_exception:
-            if not error_mode:
-                cls.error_mode = True
-                Log.note(
-                    "{{error|unicode}}",
-                    error=e,
-                    log_context=set_default({"context": exceptions.FATAL}, log_context),
-                    stack_depth=stack_depth + 1
-                )
-        cls.error_mode = error_mode
-
-        sys.stderr.write(str(e))
-
+        cls.main_log.write(log_format, item.__data__())
 
     def write(self):
         raise NotImplementedError
-
-
-def write_profile(profile_settings, stats):
-    from pyLibrary import convert
-    from mo_files import File
-
-    Log.note("aggregating {{num}} profile stats", num=len(stats))
-    acc = stats[0]
-    for s in stats[1:]:
-        acc.add(s)
-
-    stats = [{
-        "num_calls": d[1],
-        "self_time": d[2],
-        "total_time": d[3],
-        "self_time_per_call": d[2] / d[1],
-        "total_time_per_call": d[3] / d[1],
-        "file": (f[0] if f[0] != "~" else "").replace("\\", "/"),
-        "line": f[1],
-        "method": f[2].lstrip("<").rstrip(">")
-    }
-        for f, d, in iteritems(acc.stats)
-    ]
-    stats_file = File(profile_settings.filename, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
-    stats_file.write(convert.list2tab(stats))
 
 
 def _same_frame(frameA, frameB):

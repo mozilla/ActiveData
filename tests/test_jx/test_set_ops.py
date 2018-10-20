@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_math import Math
-from unittest import skipIf
+from unittest import skipIf, skip
 
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
@@ -1187,6 +1187,62 @@ class TestSetOps(BaseTestCase):
                         {"_a": {"k": [{"b": 1}, {"b": 2}]}}
                     ]
                 }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_select_typed_column(self):
+        test = {
+            "data": [
+                {"a": "test"}
+            ],
+            "query": {
+                "select": ["a.~s~"],
+                "from": TEST_TABLE,
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": {"~s~": "test"}}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.~s~"],
+                "data": [
+                    ["test"]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+        pass
+
+        # TODO: The timestamp.~s~ APPEARS TO RESULT IN {"":{"":{"":{"":"2018-09-26 12:41:19.575174"}}}}
+        # {
+        #
+        # 	"select":["machine.name","template","timestamp.~s~"],
+        # 	"from":"debug-etl",
+        # 	"where":{"exists":"timestamp.~s~"}
+        # }
+
+    def test_union_columns(self):
+        test = {
+            "data": [
+                {"a": [1, 2, 3], "b": [2, 3, 4], "c":1},
+                {"a": [4, 4, 4], "b": [2, 3, 4], "c":2}
+            ],
+            "query": {
+                "select": [{"name": "x", "value": {"union": ["a", "b"]}}],
+                "from": TEST_TABLE,
+                "sort": "c"  # USE sort TO ENSURE ORDER OF ROWS TO MATCH expecting_list
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"x": {1, 2, 3, 4}},
+                    {"x": {2, 3, 4}}
+                ]
             }
         }
         self.utils.execute_tests(test)

@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 import json
 import sys
 
+
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
 
@@ -29,12 +30,14 @@ none_type = type(None)
 boolean_type = type(True)
 
 if PY3:
+    import itertools
     import collections
     from functools import cmp_to_key
     from configparser import ConfigParser
     from itertools import zip_longest
 
     izip = zip
+    zip_longest = itertools.zip_longest
 
     text_type = str
     string_types = str
@@ -62,6 +65,9 @@ if PY3:
     from io import StringIO
     from io import BytesIO
     from _thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def items(d):
+        return list(d.items())
 
     def iteritems(d):
         return d.items()
@@ -127,6 +133,9 @@ else:
     from StringIO import StringIO
     from io import BytesIO
     from thread import allocate_lock, get_ident, start_new_thread, interrupt_main
+
+    def items(d):
+        return d.items()
 
     def iteritems(d):
         return d.iteritems()

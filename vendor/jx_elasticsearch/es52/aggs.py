@@ -11,10 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import EXISTS
+from operator import add
+
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
@@ -22,8 +23,9 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, split_field, FlatList, unwrap, unwraplist
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field
 from mo_future import text_type
+from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
@@ -34,8 +36,13 @@ COMPARE_TUPLE = """
 (a, b)->{
     int i=0;
     for (dummy in a){  //ONLY THIS FOR LOOP IS ACCEPTED (ALL OTHER FORMS THROW NullPointerException)
-        if (a[i]==null) return -1*({{dir}});
-        if (b[i]==null) return 1*({{dir}});
+        if (a[i]==null){
+            if (b[i]==null){
+                return 0; 
+            }else{
+                return -1*({{dir}});
+            }//endif
+        }else if (b[i]==null) return {{dir}};
 
         if (a[i]!=b[i]) {
             if (a[i] instanceof Boolean){
@@ -186,7 +193,10 @@ def es_aggsop(es, frum, query):
 
     for canonical_name, many in new_select.items():
         for s in many:
-            columns = frum.schema.values(s.value.var)
+            if s.aggregate in ("value_count", "count"):
+                columns = frum.schema.values(s.value.var, exclude_type=(OBJECT, NESTED))
+            else:
+                columns = frum.schema.values(s.value.var)
 
             if s.aggregate == "count":
                 canonical_names = []
@@ -196,7 +206,7 @@ def es_aggsop(es, frum, query):
                         canonical_names.append(cn + ".doc_count")
                         es_query.aggs[cn].filter.range = {column.es_column: {"gt": 0}}
                     else:
-                        canonical_names.append(cn+ ".value")
+                        canonical_names.append(cn + ".value")
                         es_query.aggs[cn].value_count.field = column.es_column
                 if len(canonical_names) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0])
@@ -273,16 +283,70 @@ def es_aggsop(es, frum, query):
                     s.pull = pulls[0]
                 else:
                     s.pull = lambda row: UNION(p(row) for p in pulls)
-            else:
-                if len(columns) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
-                elif len(columns) <1:
-                    # PULL VALUE OUT OF THE stats AGGREGATE
-                    s.pull = jx_expression_to_function({"null":{}})
+            elif s.aggregate == "count_values":
+                # RETURN MAP FROM VALUE TO THE NUMBER OF TIMES FOUND IN THE DOCUMENTS
+                # NOT A NESTED DOC, RATHER A MULTIVALUE FIELD
+                pulls = []
+                for column in columns:
+                    script = {"scripted_metric": {
+                        'params': {"_agg": {}},
+                        'init_script': 'params._agg.terms = new HashMap()',
+                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.put(v, Optional.ofNullable(params._agg.terms.get(v)).orElse(0)+1);',
+                        'combine_script': 'return params._agg.terms',
+                        'reduce_script': '''
+                            HashMap output = new HashMap(); 
+                            for (agg in params._aggs) {
+                                if (agg!=null){
+                                    for (e in agg.entrySet()) {
+                                        String key = String.valueOf(e.getKey());
+                                        output.put(key, e.getValue() + Optional.ofNullable(output.get(key)).orElse(0));
+                                    } 
+                                }
+                            } 
+                            return output;
+                        '''
+                    }}
+                    stats_name = encode_property(column.es_column)
+                    if column.nested_path[0] == ".":
+                        es_query.aggs[stats_name] = script
+                        pulls.append(jx_expression_to_function(stats_name + ".value"))
+                    else:
+                        es_query.aggs[stats_name] = {
+                            "nested": {"path": column.nested_path[0]},
+                            "aggs": {"_nested": script}
+                        }
+                        pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
+
+                if len(pulls) == 0:
+                    s.pull = NULL
+                elif len(pulls) == 1:
+                    s.pull = pulls[0]
                 else:
-                    # PULL VALUE OUT OF THE stats AGGREGATE
-                    es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
-                    s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
+                    s.pull = lambda row: add(p(row) for p in pulls)
+            else:
+                if not columns:
+                    s.pull = jx_expression_to_function(NULL)
+                else:
+                    pulls = []
+                    for c in columns:
+                        if relative_field(c.nested_path[0], schema.query_path[0]) == '.':
+                            # PULL VALUE OUT OF THE stats AGGREGATE
+                            es_query.aggs[literal_field(canonical_name)].extended_stats.field = c.es_column
+                            pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), s.default]})
+                        else:
+                            nest_name = literal_field(concat_field(c.nested_path[0], canonical_name))
+                            es_query.aggs[nest_name] = {
+                                "nested": {"path": c.nested_path[0]},
+                                "aggs": {canonical_name: {"extended_stats": {"field": c.es_column}}}
+                            }
+                            pulls.append({"coalesce": [
+                                concat_field(concat_field(nest_name, literal_field(canonical_name)), aggregates[s.aggregate]),
+                                s.default
+                            ]})
+                    if len(pulls) == 1:
+                        s.pull = jx_expression_to_function(pulls[0])
+                    else:
+                        s.pull = jx_expression_to_function({"sum": pulls})
 
     for i, s in enumerate(formula):
         canonical_name = literal_field(s.name)
@@ -306,7 +370,7 @@ def es_aggsop(es, frum, query):
                     'init_script': 'params._agg.best = ' + nully + ';',
                     'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
                     'combine_script': 'return params._agg.best',
-                    'reduce_script': 'return params._aggs.stream().max(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
+                    'reduce_script': 'return params._aggs.stream().'+op+'(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
                 }}
                 if schema.query_path[0] == ".":
                     es_query.aggs[canonical_name] = script
@@ -361,7 +425,7 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
-            s.pull = jx_expression_to_function(canonical_name + "." + aggregates[s.aggregate])
+            s.pull = jx_expression_to_function(concat_field(canonical_name, aggregates[s.aggregate]))
             es_query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)
@@ -370,7 +434,7 @@ def es_aggsop(es, frum, query):
     # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
     split_where = split_expression_by_depth(query.where, schema=frum.schema)
 
-    if len(split_field(frum.name)) > 1:
+    if (schema.multi and schema.multi.nested_path[0] != ".") or (not schema.multi and schema.query_path[0] != "."):
         if any(split_where[2::]):
             Log.error("Where clause is too deep")
 
@@ -379,7 +443,7 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
         if split_where[1]:
-            #TODO: INCLUDE FILTERS ON EDGES
+            # TODO: INCLUDE FILTERS ON EDGES
             filter_ = AndOp("and", split_where[1]).to_esfilter(schema)
             es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}
@@ -401,7 +465,7 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
     if split_where[0]:
-        #TODO: INCLUDE FILTERS ON EDGES
+        # TODO: INCLUDE FILTERS ON EDGES
         filter = AndOp("and", split_where[0]).to_esfilter(schema)
         es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}

@@ -395,7 +395,7 @@ class TestEdge2(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_edge_using_missing_between(self):
+    def test_edge_using_missing_between2(self):
         test = {
             "data": [
                 {"url": None},
@@ -425,7 +425,8 @@ class TestEdge2(BaseTestCase):
                         "value": {"between": {"url": ["https://hg.mozilla.org/", "/"]}}
                     }
                 ],
-                "where": {"prefix": {"url": "https://hg.mozilla.org/"}}
+                "where": {"prefix": {"url": "https://hg.mozilla.org/"}},
+                "limit": 100
             },
             "expecting_list": {
                 "meta": {"format": "list"},
@@ -436,6 +437,47 @@ class TestEdge2(BaseTestCase):
                     {"subdir": "a", "count": 1},
                     {"subdir": "b", "count": 4},
                     {"subdir": "c", "count": 1}
+                ]}
+
+        }
+        self.utils.execute_tests(test)
+
+    def test_edge_using_missing_between1(self):
+        test = {
+            "data": [
+                {"url": None},
+                {"url": "/"},
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": [
+                    {
+                        "name": "filename",
+                        "value": {
+                            "when": {"missing": {"between": {"url": ["https://hg.mozilla.org/", "/"]}}},
+                            "then": "url"
+                        }
+                    }
+                ],
+                "where": {"prefix": {"url": "https://hg.mozilla.org/"}},
+                "limit": 100
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"filename": "https://hg.mozilla.org/d", "subdir": NULL, "count": 1},
+                    {"filename": "https://hg.mozilla.org/e", "subdir": NULL, "count": 1},
+                    {"filename": "https://hg.mozilla.org/", "subdir": NULL, "count": 1},
+                    {"count": 6}
                 ]}
 
         }

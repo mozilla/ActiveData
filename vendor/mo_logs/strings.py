@@ -22,8 +22,8 @@ from datetime import datetime as builtin_datetime
 from datetime import timedelta, date
 from json.encoder import encode_basestring
 
-from mo_dots import coalesce, wrap, get_module, Data, Null
-from mo_future import text_type, xrange, binary_type, round as _round, PY3, get_function_name, zip_longest, transpose
+from mo_dots import coalesce, wrap, get_module, Data
+from mo_future import text_type, xrange, binary_type, round as _round, get_function_name, zip_longest, transpose, PY3
 from mo_logs.convert import datetime2unix, datetime2string, value2json, milli2datetime, unix2datetime
 
 # from mo_files.url import value2url_param
@@ -78,7 +78,7 @@ def datetime(value):
     else:
         value = milli2datetime(value)
 
-    return datetime2string(value, "%Y-%m-%d %H:%M:%S")
+    return datetime2string(value, "%Y-%m-%d %H:%M:%S.%f")
 
 
 @formatter
@@ -489,6 +489,8 @@ _SNIP = "...<snip>..."
 
 @formatter
 def limit(value, length):
+    if value == None:
+        return None
     try:
         # LIMIT THE STRING value TO GIVEN LENGTH, CHOPPING OUT THE MIDDLE IF REQUIRED
         if len(value) <= length:
@@ -592,6 +594,8 @@ def _expand(template, seq):
     if isinstance(template, text_type):
         return _simple_expand(template, seq)
     elif isinstance(template, Mapping):
+        # EXPAND LISTS OF ITEMS USING THIS FORM
+        # {"from":from, "template":template, "separator":separator}
         template = wrap(template)
         assert template["from"], "Expecting template to have 'from' attribute"
         assert template.template, "Expecting template to have 'template' attribute"
@@ -754,15 +758,12 @@ def apply_diff(text, diff, reverse=False, verify=True):
     if not diff:
         return text
     output = text
-    diff = [d for d in diff if d and d != "\\ No newline at end of file"] + ["@@"]  # ANOTHER REPAIR
     hunks = [
-        (diff[start_hunk], diff[start_hunk+1:end_hunk])
-        for start_hunk, end_hunk in pairwise(i for i, l in enumerate(diff) if l.startswith('@@'))
+        (new_diff[start_hunk], new_diff[start_hunk+1:end_hunk])
+        for new_diff in [[d.lstrip() for d in diff if d.lstrip() and d != "\\ No newline at end of file"] + ["@@"]]  # ANOTHER REPAIR
+        for start_hunk, end_hunk in pairwise(i for i, l in enumerate(new_diff) if l.startswith('@@'))
     ]
-    if reverse:
-        hunks = reversed(hunks)
-
-    for header, hunk_body in hunks:
+    for header, hunk_body in (reversed(hunks) if reverse else hunks):
         matches = DIFF_PREFIX.match(header.strip())
         if not matches:
             if not _Log:
@@ -784,7 +785,15 @@ def apply_diff(text, diff, reverse=False, verify=True):
             # EXAMPLE: -kward has the details.+kward has the details.
             # DETECT THIS PROBLEM FOR THIS HUNK AND FIX THE DIFF
             if reverse:
-                last_line = hunk_body[-1]
+                last_lines = [
+                    o
+                    for b, o in zip(reversed(hunk_body), reversed(output))
+                    if b != "+" + o
+                ]
+                if not last_lines:
+                    return hunk_body
+
+                last_line = last_lines[0]
                 for problem_index, problem_line in enumerate(hunk_body):
                     if problem_line.startswith('-') and problem_line.endswith('+' + last_line):
                         split_point = len(problem_line) - (len(last_line) + 1)
@@ -795,7 +804,9 @@ def apply_diff(text, diff, reverse=False, verify=True):
                 else:
                     return hunk_body
             else:
-                last_line = hunk_body[-1]
+                if not output:
+                    return hunk_body
+                last_line = output[-1]
                 for problem_index, problem_line in enumerate(hunk_body):
                     if problem_line.startswith('+') and problem_line.endswith('-' + last_line):
                         split_point = len(problem_line) - (len(last_line) + 1)

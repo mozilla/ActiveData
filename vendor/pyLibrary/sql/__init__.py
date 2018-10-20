@@ -60,12 +60,20 @@ class SQL(text_type):
         return SQL(self.sql.join(list_))
 
     if PY3:
+        def __str__(self):
+            return self.sql
+
         def __bytes__(self):
             Log.error("do not do this")
     else:
+        def __unicode__(self):
+            return self.sql
+
         def __str__(self):
             Log.error("do not do this")
 
+    def __data__(self):
+        return self.sql
 
 
 SQL_STAR = SQL(" * ")
@@ -117,7 +125,7 @@ def sql_list(list_):
     list_ = list(list_)
     if not all(isinstance(s, SQL) for s in list_):
         Log.error("Can only join other SQL")
-    return SQL(", ".join(l.template for l in list_))
+    return SQL(" " + ", ".join(l.template for l in list_) + " ")
 
 
 def sql_iso(sql):

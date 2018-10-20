@@ -24,6 +24,7 @@ from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 from jx_python import jx
 from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_files.url import URL
 from mo_future import text_type
 from mo_json import value2json, json2value
 from mo_kwargs import override
@@ -50,7 +51,7 @@ class ESUtils(object):
     BASIC TEST FORMAT:
     {
         "name": "EXAMPLE TEMPLATE",
-        "metadata": {},             # OPTIONAL DATA SHAPE REQUIRED FOR NESTED DOCUMENT QUERIES
+        "schema": {},                # OPTIONAL ES SCHEMA FOR SPECIAL TESTS
         "data": [],                  # THE DOCUMENTS NEEDED FOR THIS TEST
         "query": {                   # THE JSON QUERY EXPRESSION
             "from": TEST_TABLE,      # TEST_TABLE WILL BE REPLACED WITH DATASTORE FILLED WITH data
@@ -110,18 +111,27 @@ class ESUtils(object):
 
         self._es_test_settings = self.backend_es.copy()
         self._es_test_settings.index = index_name
-        self._es_test_settings.alias = None
         self._es_cluster = elasticsearch.Cluster(self._es_test_settings)
-        self._index = self._es_cluster.get_or_create_index(self._es_test_settings)
 
-        ESUtils.indexes.append(self._index)
 
     def tearDown(self):
-        if self._index in ESUtils.indexes:
-            self._es_cluster.delete_index(self._index.settings.index)
-            ESUtils.indexes.remove(self._index)
+        if self._es_test_settings.index in ESUtils.indexes:
+            self._es_cluster.delete_index(self._es_test_settings.index)
+            ESUtils.indexes.remove(self._es_test_settings.index)
 
     def setUpClass(self):
+        while True:
+            try:
+                es = test_jx.global_settings.backend_es
+                http.get_json(URL(es.host, port=es.port))
+                break
+            except Exception as e:
+                e = Except.wrap(e)
+                if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
+                    Log.alert("Problem connecting")
+                else:
+                    Log.error("Server raised exception", e)
+
         # REMOVE OLD INDEXES
         cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         aliases = cluster.get_aliases()
@@ -138,7 +148,7 @@ class ESUtils(object):
         cluster = elasticsearch.Cluster(test_jx.global_settings.backend_es)
         for i in ESUtils.indexes:
             try:
-                cluster.delete_index(i.settings.index)
+                cluster.delete_index(i)
                 Log.note("remove index {{index}}", index=i)
             except Exception as e:
                 pass
@@ -160,8 +170,6 @@ class ESUtils(object):
         """
         subtest = wrap(subtest)
         _settings = self._es_test_settings  # ALREADY COPIED AT setUp()
-        # _settings.index = "testing_" + Random.hex(10).lower()
-        # settings.type = "test_result"
 
         try:
             url = "file://resources/schema/basic_schema.json.template?{{.|url}}"
@@ -172,8 +180,16 @@ class ESUtils(object):
             _settings.schema = mo_json_config.get(url)
 
             # MAKE CONTAINER
-            container = self._es_cluster.get_or_create_index(typed=typed, kwargs=_settings)
+            container = self._es_cluster.get_or_create_index(
+                typed=typed,
+                schema=subtest.schema,
+                kwargs=_settings
+            )
             container.add_alias(_settings.index)
+
+            _settings.alias = container.settings.alias
+            _settings.index = container.settings.index
+            ESUtils.indexes.append(_settings.index)
 
             # INSERT DATA
             container.extend({"value": d} for d in subtest.data)
@@ -211,7 +227,7 @@ class ESUtils(object):
                 expected = v
 
                 subtest.query.format = format
-                subtest.query.meta.testing = (i == 0)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
+                subtest.query.meta.testing = (num_expectations == 1)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
                 query = unicode2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
@@ -255,7 +271,7 @@ class ESUtils(object):
                 return response
             except Exception as e:
                 e = Except.wrap(e)
-                if "No connection could be made because the target machine actively refused it" in e:
+                if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
                     Log.alert("Problem connecting")
                 else:
                     Log.error("Server raised exception", e)

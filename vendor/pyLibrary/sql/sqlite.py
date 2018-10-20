@@ -17,32 +17,54 @@ import re
 import sys
 from collections import Mapping, namedtuple
 
-from jx_base.expressions import jx_expression
 from mo_dots import Data, coalesce, unwraplist, Null
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type
+from mo_json import INTEGER, NUMBER, BOOLEAN, STRING, OBJECT, NESTED
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, extract_stack, ERROR, format_trace
 from mo_logs.strings import quote
 from mo_math.stats import percentile
 from mo_threads import Queue, Thread, Lock, Till
-from mo_times import Date, Duration
-from mo_times.timer import Timer
+from mo_times import Date, Duration, Timer
 from pyLibrary import convert
 from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL, SQL_SELECT, sql_iso, sql_list
 
 DEBUG = False
 TRACE = True
 
-FORMAT_COMMAND = "Running command\n{{command|limit(100)|indent}}"
+FORMAT_COMMAND = "Running command\n{{command|limit(1000)|indent}}"
 DOUBLE_TRANSACTION_ERROR = "You can not query outside a transaction you have open already"
 TOO_LONG_TO_HOLD_TRANSACTION = 10
 
-sqlite3 = None
+_sqlite3 = None
 _load_extension_warning_sent = False
 _upgraded = False
 known_databases = {Null: None}
+
+
+def _upgrade():
+    try:
+        Log.note("sqlite not upgraded")
+        # return
+        #
+        # import sys
+        # import platform
+        # if "windows" in platform.system().lower():
+        #     original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+        #     if platform.architecture()[0]=='32bit':
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
+        #     else:
+        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
+        #
+        #     if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
+        #         original_dll.backup()
+        #         File.copy(source_dll, original_dll)
+        # else:
+        #     pass
+    except Exception as e:
+        Log.warning("could not upgrade python's sqlite", cause=e)
 
 
 class Sqlite(DB):
@@ -61,19 +83,26 @@ class Sqlite(DB):
         :param load_functions: LOAD EXTENDED MATH FUNCTIONS (MAY REQUIRE upgrade)
         :param kwargs:
         """
-        if upgrade and not _upgraded:
-            _upgrade()
+        global _upgraded
+        global _sqlite3
 
         self.settings = kwargs
-        self.filename = File(filename).abspath
+        if not _upgraded:
+            if upgrade:
+                _upgrade()
+            _upgraded = True
+            import sqlite3 as _sqlite3
+            _ = _sqlite3
+
+        self.filename = File(filename).abspath if filename else None
         if known_databases.get(self.filename):
             Log.error("Not allowed to create more than one Sqlite instance for {{file}}", file=self.filename)
 
         # SETUP DATABASE
-        DEBUG and Log.note("Sqlite version {{version}}", version=sqlite3.sqlite_version)
+        DEBUG and Log.note("Sqlite version {{version}}", version=_sqlite3.sqlite_version)
         try:
             if db == None:
-                self.db = sqlite3.connect(
+                self.db = _sqlite3.connect(
                     database=coalesce(self.filename, ":memory:"),
                     check_same_thread=False,
                     isolation_level=None
@@ -316,7 +345,7 @@ class Sqlite(DB):
                     self.transaction_stack.append(transaction)
                 elif transaction.exception and query is not ROLLBACK:
                     result.exception = Except(
-                        type=ERROR,
+                        context=ERROR,
                         template="Not allowed to continue using a transaction that failed",
                         cause=transaction.exception,
                         trace=trace
@@ -330,7 +359,7 @@ class Sqlite(DB):
                     # DEAL WITH ERRORS IN QUEUED COMMANDS
                     # WE WILL UNWRAP THE OUTER EXCEPTION TO GET THE CAUSE
                     err = Except(
-                        type=ERROR,
+                        context=ERROR,
                         template="Bad call to Sqlite3 while "+FORMAT_COMMAND,
                         params={"command": e.params.current.command},
                         cause=e.cause,
@@ -363,7 +392,7 @@ class Sqlite(DB):
             except Exception as e:
                 e = Except.wrap(e)
                 err = Except(
-                    type=ERROR,
+                    context=ERROR,
                     template="Bad call to Sqlite while " + FORMAT_COMMAND,
                     params={"command": query},
                     trace=trace,
@@ -410,6 +439,8 @@ class Transaction(object):
         return output
 
     def execute(self, command):
+        if self.end_of_life:
+            Log.error("Transaction is dead")
         trace = extract_stack(1) if self.db.get_trace else None
         with self.locker:
             self.todo.append(CommandItem(command, None, None, trace, self))
@@ -511,7 +542,7 @@ ROLLBACK = "ROLLBACK"
 
 def _upgrade():
     global _upgraded
-    global sqlite3
+    global _sqlite3
 
     try:
         Log.note("sqlite not upgraded")
@@ -534,6 +565,17 @@ def _upgrade():
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 
-    import sqlite3
-    _ = sqlite3
+    import sqlite3 as _sqlite3
+    _ = _sqlite3
     _upgraded = True
+
+
+json_type_to_sqlite_type = {
+    BOOLEAN: "TINYINT",
+    INTEGER: "INTEGER",
+    NUMBER: "REAL",
+    STRING: "TEXT",
+    OBJECT: "TEXT",
+    NESTED: "TEXT"
+}
+

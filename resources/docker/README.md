@@ -69,9 +69,8 @@ In the event that the container exits soon after starting, you can better see th
         activedata \
         bash
 
-and running ActiveData directly
+update the `resources/docker/gunicorn.py` and enable the debugging variables (and disable production variables). Then run gunicorn directly:
 
     export PYTHONPATH=.:vendor
-    python active_data/app.py
+    /usr/local/bin/gunicorn -b 0.0.0.0:$PORT --config=resources/docker/gunicorn.py active_data.app:flask_app
 
-gunicorn appears to be cutting off the stdout too early to capture the reason for shutdown

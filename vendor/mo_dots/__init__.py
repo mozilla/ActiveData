@@ -22,8 +22,7 @@ ModuleType = type(sys.modules[__name__])
 
 
 _builtin_zip = zip
-SELF_PATH = "."
-ROOT_PATH = [SELF_PATH]
+ROOT_PATH = ["."]
 
 
 _get = object.__getattribute__
@@ -88,6 +87,22 @@ def unliteral_field(field):
     return field.replace("\\.", ".")
 
 
+def tail_field(field):
+    """
+    RETURN THE FIRST STEP IN PATH, ALONG WITH THE REMAINING TAIL
+    """
+    if field == "." or field==None:
+        return ".", "."
+    elif "." in field:
+        if "\\." in field:
+            return tuple(k.replace("\a", ".") for k in field.replace("\\.", "\a").split(".", 1))
+        else:
+            return field.split(".", 1)
+    else:
+        return field, "."
+
+
+
 def split_field(field):
     """
     RETURN field AS ARRAY OF DOT-SEPARATED FIELDS
@@ -105,14 +120,17 @@ def split_field(field):
         return [field]
 
 
-def join_field(field):
+def join_field(path):
     """
     RETURN field SEQUENCE AS STRING
     """
-    potent = [f for f in field if f != "."]
-    if not potent:
-        return "."
-    return ".".join([f.replace(".", "\\.") for f in potent])
+    output = ".".join([f.replace(".", "\\.") for f in path])
+    return output if output else "."
+
+    # potent = [f for f in path if f != "."]
+    # if not potent:
+    #     return "."
+    # return ".".join([f.replace(".", "\\.") for f in potent])
 
 
 def concat_field(prefix, suffix):
@@ -132,8 +150,14 @@ def startswith_field(field, prefix):
     """
     RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
     """
-    if prefix == ".":
+    if prefix.startswith("."):
         return True
+        # f_back = len(field) - len(field.strip("."))
+        # p_back = len(prefix) - len(prefix.strip("."))
+        # if f_back > p_back:
+        #     return False
+        # else:
+        #     return True
 
     if field.startswith(prefix):
         if len(field) == len(prefix) or field[len(prefix)] == ".":
@@ -208,7 +232,7 @@ def _all_default(d, default, seen=None):
     if default is None:
         return
     if isinstance(default, Data):
-        default = object.__getattribute__(default, b"_dict")  # REACH IN AND GET THE dict
+        default = object.__getattribute__(default, SLOT)  # REACH IN AND GET THE dict
         # Log = _late_import()
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
 
@@ -417,11 +441,11 @@ def wrap(v):
     :return:  Data INSTANCE
     """
 
-    type_ = _get(v, "__class__")
+    type_ = v.__class__
 
     if type_ is dict:
         m = object.__new__(Data)
-        _set(m, "_dict", v)
+        _set(m, SLOT, v)
         return m
     elif type_ is none_type:
         return Null
@@ -489,7 +513,7 @@ def _wrap_leaves(value):
 def unwrap(v):
     _type = _get(v, "__class__")
     if _type is Data:
-        d = _get(v, "_dict")
+        d = _get(v, SLOT)
         return d
     elif _type is FlatList:
         return v.list
@@ -569,6 +593,6 @@ def tuplewrap(value):
 
 
 from mo_dots.nones import Null, NullType
-from mo_dots.datas import Data
+from mo_dots.datas import Data, SLOT
 from mo_dots.lists import FlatList
 from mo_dots.objects import DataObject

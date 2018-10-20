@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
+from unittest import skipIf, skip
 
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 

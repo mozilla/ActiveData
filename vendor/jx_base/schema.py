@@ -13,8 +13,10 @@ from __future__ import unicode_literals
 
 from copy import copy
 
-from jx_base import STRUCT, NESTED, OBJECT, EXISTS
-from mo_dots import Null, startswith_field, set_default, wrap
+
+
+from mo_dots import Null, startswith_field, set_default, wrap, relative_field
+from mo_json import STRUCT, EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Log
 
@@ -57,7 +59,7 @@ class Schema(object):
         :param column:
         :return: NAME OF column
         """
-        return column.names[self.query_path]
+        return relative_field(column.name, query_path)
 
     def values(self, name):
         """
@@ -87,13 +89,13 @@ class Schema(object):
         full_name = self.query_path
         return set_default(
             {
-                c.names[full_name]: c.es_column
+                relative_field(c.name, full_name): c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
                 for c in cs if c.jx_type not in STRUCT
             },
             {
-                c.names["."]: c.es_column
+                c.name: c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
                 for c in cs if c.jx_type not in STRUCT
@@ -105,14 +107,13 @@ class Schema(object):
         return copy(self._columns)
 
 
-
 def _indexer(columns, query_path):
-    all_names = set(unnest_path(n) for c in columns for n in c.names.values()) | {"."}
+    all_names = set(unnest_path(c.name) for c in columns) | {"."}
 
     lookup_leaves = {}  # ALL LEAF VARIABLES
     for full_name in all_names:
         for c in columns:
-            cname = c.names[query_path]
+            cname = relative_field(c.name, query_path)
             nfp = unnest_path(cname)
             if (
                 startswith_field(nfp, full_name) and
@@ -127,7 +128,7 @@ def _indexer(columns, query_path):
     lookup_variables = {}  # ALL NOT-NESTED VARIABLES
     for full_name in all_names:
         for c in columns:
-            cname = c.names[query_path]
+            cname = relative_field(c.name, query_path)
             nfp = unnest_path(cname)
             if (
                 startswith_field(nfp, full_name) and
@@ -143,7 +144,7 @@ def _indexer(columns, query_path):
     relative_lookup = {}
     for c in columns:
         try:
-            cname = c.names[query_path]
+            cname = relative_field(c.name, query_path)
             cs = relative_lookup.setdefault(cname, set())
             cs.add(c)
 

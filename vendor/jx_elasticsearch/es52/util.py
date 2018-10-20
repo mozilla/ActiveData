@@ -11,13 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_future import text_type
-
-from mo_logs import Log
-
-from jx_base import STRING, BOOLEAN, NUMBER, OBJECT
 from jx_elasticsearch.es52.expressions import Variable
 from mo_dots import wrap
+from mo_future import text_type
+from mo_json import STRING, BOOLEAN, NUMBER, OBJECT
+from mo_logs import Log
 
 
 def es_query_template(path):
@@ -93,6 +91,7 @@ aggregates = {
     "sum": "sum",
     "add": "sum",
     "count": "value_count",
+    "count_values": "count_values",
     "maximum": "max",
     "minimum": "min",
     "max": "max",

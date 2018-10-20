@@ -63,6 +63,7 @@ jobs:
           destination: test-reports
 
   dockerize:
+    # FIND THE RESULTING IMAGE AT hub.docker.com/r/mozilla/activedata
     working_directory: ~/repo
 
     docker:
@@ -75,7 +76,13 @@ jobs:
           name: Build Docker Image
           command: |
             echo BUILDING ACTIVEDATA WITH TAG = $CIRCLE_TAG
-            docker build --file resources/docker/activedata.dockerfile --build-arg REPO_CHECKOUT=tags/$CIRCLE_TAG --no-cache --tag activedata .
+            docker build \
+              --file resources/docker/activedata.dockerfile \
+              --build-arg REPO_CHECKOUT=tags/$CIRCLE_TAG \
+              --build-arg BUILD_URL=$CIRCLE_BUILD_URL \
+              --no-cache \
+              --tag activedata \
+              .
       - run:
           name: Push to Dockerhub
           command: |

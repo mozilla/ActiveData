@@ -77,7 +77,7 @@ class RolloverIndex(object):
             queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
             candidates = jx.run({
-                "from": ListContainer('.', self.cluster.get_aliases()),
+                "from": ListContainer(".", self.cluster.get_aliases()),
                 "where": {"regex": {"index": self.settings.index + "\d\d\d\d\d\d\d\d_\d\d\d\d\d\d"}},
                 "sort": "index"
             })
@@ -120,7 +120,7 @@ class RolloverIndex(object):
                     self.cluster.delete_index(c.index)
                 except Exception as e:
                     Log.warning("could not delete index {{index}}", index=c.index, cause=e)
-        for t, q in list(self.known_queues.items()):
+        for t, q in items(self.known_queues):
             if unix2Date(t) + self.rollover_interval < Date.today() - self.rollover_max:
                 with self.locker:
                     del self.known_queues[t]

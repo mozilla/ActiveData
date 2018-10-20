@@ -24,6 +24,7 @@ from mo_threads import Thread, Till
 
 mime = MimeTypes()
 
+
 class File(object):
     """
     ASSUMES ALL FILE CONTENT IS UTF8 ENCODED STRINGS
@@ -60,13 +61,13 @@ class File(object):
                     filename = home_path + filename[1::]
                 self._filename = filename.replace(os.sep, "/")  # USE UNIX STANDARD
             except Exception as e:
-                Log.error("can not load {{file}}", file=filename, cause=e)
+                Log.error(u"can not load {{file}}", file=filename, cause=e)
         else:
             try:
                 self.key = base642bytearray(filename.key)
                 self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
             except Exception as e:
-                Log.error("can not load {{file}}", file=ffilename.path, cause=e)
+                Log.error(u"can not load {{file}}", file=filename.path, cause=e)
 
         while self._filename.find(".../") >= 0:
             # LET ... REFER TO GRANDPARENT, .... REFER TO GREAT-GRAND-PARENT, etc...
@@ -490,7 +491,7 @@ else:
         if value == None:
             return bytearray(b"")
         else:
-            return bytearray(base64.b64decode(value), encoding='utf8')
+            return bytearray(base64.b64decode(value))
 
 
 def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):

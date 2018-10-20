@@ -17,7 +17,7 @@ from collections import Mapping
 from datetime import date, timedelta, datetime
 from decimal import Decimal
 
-from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null
+from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null, SLOT
 from mo_dots.objects import DataObject
 from mo_future import text_type, none_type, long, binary_type, PY2
 from mo_logs import Except, strings, Log
@@ -27,6 +27,22 @@ from mo_times import Date, Duration
 FIND_LOOPS = False
 SNAP_TO_BASE_10 = True  # Identify floats near a round base10 value (has 000 or 999) and shorten
 CAN_NOT_DECODE_JSON = "Can not decode JSON"
+
+IS_NULL = '0'
+BOOLEAN = 'boolean'
+INTEGER = 'integer'
+NUMBER = 'number'
+STRING = 'string'
+OBJECT = 'object'
+NESTED = "nested"
+EXISTS = "exists"
+
+JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
+PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
+STRUCT = [EXISTS, OBJECT, NESTED]
+
+
+
 
 
 _get = object.__getattribute__
@@ -158,7 +174,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
     elif type_ is Decimal:
         return scrub_number(value)
     elif type_ is Data:
-        return _scrub(_get(value, '_dict'), is_done, stack, scrub_text, scrub_number)
+        return _scrub(_get(value, SLOT), is_done, stack, scrub_text, scrub_number)
     elif isinstance(value, Mapping):
         _id = id(value)
         if _id in is_done:
@@ -365,6 +381,29 @@ def datetime2unix(d):
         return float(diff.total_seconds())
     except Exception as e:
         Log.error("Can not convert {{value}}",  value= d, cause=e)
+
+
+python_type_to_json_type = {
+    int: NUMBER,
+    text_type: STRING,
+    float: NUMBER,
+    None: OBJECT,
+    bool: BOOLEAN,
+    NullType: OBJECT,
+    none_type: OBJECT,
+    Data: OBJECT,
+    dict: OBJECT,
+    object: OBJECT,
+    Mapping: OBJECT,
+    list: NESTED,
+    FlatList: NESTED,
+    Date: NUMBER
+}
+
+if PY2:
+    python_type_to_json_type[str] = STRING
+    python_type_to_json_type[long] = NUMBER
+
 
 
 from mo_json.decoder import json_decoder

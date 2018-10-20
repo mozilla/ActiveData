@@ -103,11 +103,12 @@ class MySQL(object):
             )
         except Exception as e:
             if self.settings.host.find("://") == -1:
-                Log.error(u"Failure to connect to {{host}}:{{port}}",
-                          host=self.settings.host,
-                          port=self.settings.port,
-                          cause=e
-                          )
+                Log.error(
+                    u"Failure to connect to {{host}}:{{port}}",
+                    host=self.settings.host,
+                    port=self.settings.port,
+                    cause=e
+                )
             else:
                 Log.error(u"Failure to connect.  PROTOCOL PREFIX IS PROBABLY BAD", e)
         self.cursor = None
@@ -361,29 +362,15 @@ class MySQL(object):
         if not self.backlog: return
 
         backlog, self.backlog = self.backlog, []
-        if self.db.__module__.startswith("pymysql"):
-            # BUG IN PYMYSQL: CAN NOT HANDLE MULTIPLE STATEMENTS
-            # https://github.com/PyMySQL/PyMySQL/issues/157
-            for b in backlog:
-                sql = self.preamble + b
-                try:
-                    self.debug and Log.note("Execute SQL:\n{{sql|indent}}", sql=sql)
-                    self.cursor.execute(b)
-                except Exception as e:
-                    Log.error("Can not execute sql:\n{{sql}}", sql=sql, cause=e)
-
-            self.cursor.close()
-            self.cursor = self.db.cursor()
-        else:
-            for i, g in jx.groupby(backlog, size=MAX_BATCH_SIZE):
-                sql = self.preamble + ";\n".join(g)
-                try:
-                    self.debug and Log.note("Execute block of SQL:\n{{sql|indent}}", sql=sql)
-                    self.cursor.execute(sql)
-                    self.cursor.close()
-                    self.cursor = self.db.cursor()
-                except Exception as e:
-                    Log.error("Problem executing SQL:\n{{sql|indent}}", sql=sql, cause=e, stack_depth=1)
+        for i, g in jx.groupby(backlog, size=MAX_BATCH_SIZE):
+            sql = self.preamble + ";\n".join(g)
+            try:
+                self.debug and Log.note("Execute block of SQL:\n{{sql|indent}}", sql=sql)
+                self.cursor.execute(sql)
+                self.cursor.close()
+                self.cursor = self.db.cursor()
+            except Exception as e:
+                Log.error("Problem executing SQL:\n{{sql|indent}}", sql=sql, cause=e, stack_depth=1)
 
     ## Insert dictionary of values into table
     def insert(self, table_name, record):
@@ -560,16 +547,14 @@ def execute_file(
 
 ESCAPE_DCT = {
     u"\\": u"\\\\",
-    # u"\0": u"\\0",
-    # u"\"": u'\\"',
+    u"\0": u"\\0",
+    u"\"": u'\\"',
     u"\'": u"''",
-    # u"\b": u"\\b",
-    # u"\f": u"\\f",
-    # u"\n": u"\\n",
-    # u"\r": u"\\r",
-    # u"\t": u"\\t",
-    # u"%": u"\\%",
-    # u"_": u"\\_"
+    u"\b": u"\\b",
+    u"\f": u"\\f",
+    u"\n": u"\\n",
+    u"\r": u"\\r",
+    u"\t": u"\\t"
 }
 
 

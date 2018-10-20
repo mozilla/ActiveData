@@ -13,7 +13,8 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import NESTED
+
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
@@ -26,7 +27,8 @@ from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
 from mo_future import transpose
-from mo_json.typed_encoder import untype_path, unnest_path, untyped
+from mo_json import NESTED
+from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
 from mo_math import AND, MAX
 from mo_times.timer import Timer
@@ -65,7 +67,7 @@ def es_setop(es, query):
     new_select = FlatList()
     schema = query.frum.schema
     # columns = schema.columns
-    # nested_columns = set(c.names["."] for c in columns if c.nested_path[0] != ".")
+    # nested_columns = set(c.name for c in columns if c.nested_path[0] != ".")
 
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -76,7 +78,7 @@ def es_setop(es, query):
             term = select.value.term
             leaves = schema.leaves(term.var)
             for c in leaves:
-                full_name = concat_field(select.name, relative_field(untype_path(c.names["."]), term.var))
+                full_name = concat_field(select.name, relative_field(untype_path(c.name), term.var))
                 if c.jx_type == NESTED:
                     es_query.stored_fields = ["_source"]
                     new_select.append({
@@ -102,7 +104,7 @@ def es_setop(es, query):
             leaves = schema.leaves(s_column)
             nested_selects = {}
             if leaves:
-                if s_column == '.':
+                if s_column == ".":
                     # PULL ALL SOURCE
                     es_query.stored_fields = ["_source"]
                     new_select.append({
@@ -116,33 +118,35 @@ def es_setop(es, query):
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
                         if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRT LEVEL PROPERTIES
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
+                            pre_child = join_field(decode_property(n) for n in split_field(c.name))
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
-                                "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
                                 "pull": get_pull_source(c.es_column)
                             })
                 else:
                     # PULL ONLY WHAT'S NEEDED
                     for c in leaves:
                         if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.names["."])
+                            jx_name = untype_path(c.name)
                             if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
+                                pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)},
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
                                     "pull": get_pull_source(c.es_column)
                                 })
-
                             else:
                                 es_query.stored_fields += [c.es_column]
+                                pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": relative_field(jx_name, s_column)}
+                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))}
                                 })
                         else:
                             if not nested_filter:
@@ -164,7 +168,7 @@ def es_setop(es, query):
                                 where.nested.inner_hits._source = False
                                 where.nested.inner_hits.stored_fields += [c.es_column]
 
-                                child = relative_field(untype_path(c.names[schema.query_path[0]]), s_column)
+                                child = relative_field(untype_path(relative_field(c.name, schema.query_path[0])), s_column)
                                 pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
                                 new_select.append({
                                     "name": select.name,
@@ -209,7 +213,7 @@ def es_setop(es, query):
         else:
             Log.error("Do not know what to do")
 
-    with Timer("call to ES", silent=True) as call_timer:
+    with Timer("call to ES") as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -217,7 +221,8 @@ def es_setop(es, query):
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
 
-        output = formatter(T, new_select, query)
+        with Timer("formatter"):
+            output = formatter(T, new_select, query)
         output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -255,8 +260,12 @@ def format_list(T, select, query=None):
         for row in T:
             r = Data()
             for s in select:
-                v = s.pull(row)
-                r[s.put.name][s.put.child] = unwraplist(v)
+                v = unwraplist(s.pull(row))
+                if v is not None:
+                    try:
+                        r[s.put.name][s.put.child] = v
+                    except Exception as e:
+                        Log.error("what's happening here?")
             data.append(r if r else None)
     elif isinstance(query.select.value, LeavesOp):
         for row in T:
@@ -329,7 +338,8 @@ def format_table(T, select, query=None):
 
 
 def format_cube(T, select, query=None):
-    table = format_table(T, select, query)
+    with Timer("format table"):
+        table = format_table(T, select, query)
 
     if len(table.data) == 0:
         return Cube(
@@ -358,9 +368,8 @@ def get_pull(column):
     if column.nested_path[0] == ".":
         return concat_field("fields", literal_field(column.es_column))
     else:
-        depth = len(split_field(column.nested_path[0]))
-        rel_name = split_field(column.es_column)[depth:]
-        return join_field(["_inner"] + rel_name)
+        rel_name = relative_field(column.es_column, column.nested_path[0])
+        return concat_field("_inner", rel_name)
 
 
 def get_pull_function(column):

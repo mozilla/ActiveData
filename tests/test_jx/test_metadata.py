@@ -31,7 +31,7 @@ class TestMetadata(BaseTestCase):
 
         settings = self.utils.fill_container(test, typed=False)
 
-        table_name = settings.index
+        table_name = settings.alias
 
         # WE REQUIRE A QUERY TO FORCE LOADING OF METADATA
         pre_test = {
@@ -83,7 +83,6 @@ class TestMetadata(BaseTestCase):
         }
         self.utils.send_queries(test)
 
-    @skipIf(True, "not implemented yet")
     def test_get_nested_columns(self):
         settings = self.utils.fill_container({
             "query": {"from": TEST_TABLE},  # DUMMY QUERY
@@ -99,7 +98,7 @@ class TestMetadata(BaseTestCase):
                 {"o": 4, "c": "x"}
             ]})
 
-        table_name = settings.index
+        table_name = settings.alias
 
         # WE REQUIRE A QUERY TO FORCE LOADING OF METADATA
         pre_test = {

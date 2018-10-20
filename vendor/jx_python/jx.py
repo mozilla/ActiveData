@@ -82,6 +82,10 @@ def run(query, container=Null):
             return cube_aggs(container, query_op)
     elif isinstance(container, QueryOp):
         container = run(container)
+    elif isinstance(container, Mapping):
+        query = container
+        container = query['from']
+        container = run(QueryOp.wrap(query, container, container.namespace), container)
     else:
         Log.error("Do not know how to handle {{type}}", type=container.__class__.__name__)
 
@@ -486,8 +490,8 @@ def _deeper_iterator(columns, nested_path, path, data):
             c = columns.get(leaf)
             if not c:
                 c = columns[leaf] = _Column(name=leaf, type=type_to_name[v.__class__], table=None, es_column=leaf)
-            c.type = _merge_type[c.type][type_to_name[v.__class__]]
-            if c.type == "nested" and not nested_path[0].startswith(leaf + "."):
+            c.jx_type = _merge_type[c.jx_type][type_to_name[v.__class__]]
+            if c.jx_type == "nested" and not nested_path[0].startswith(leaf + "."):
                 if leaf.startswith(nested_path[0] + ".") or leaf == nested_path[0] or not nested_path[0]:
                     nested_path[0] = leaf
                 else:
@@ -502,7 +506,7 @@ def _deeper_iterator(columns, nested_path, path, data):
                 for o in _deeper_iterator(columns, nested_path, leaf, [v]):
                     set_default(output, o)
             else:
-                if c.type not in ["object", "nested"]:
+                if c.jx_type not in ["object", "nested"]:
                     output[leaf] = v
 
         if deep_leaf:
@@ -996,7 +1000,10 @@ def window(data, param):
             data = sort(data, sortColumns, already_normalized=True)
         # SIMPLE CALCULATED VALUE
         for rownum, r in enumerate(data):
-            r[name] = calc_value(r, rownum, data)
+            try:
+                r[name] = calc_value(r, rownum, data)
+            except Exception as e:
+                raise e
         return
 
     try:
@@ -1069,7 +1076,7 @@ def intervals(_min, _max=None, size=1):
 def prefixes(vals):
     """
     :param vals: iterable
-    :return: vals[:1], vals[:1], ... , vals[:n]
+    :return: vals[:1], vals[:2], ... , vals[:n]
     """
     for i in range(len(vals)):
         yield vals[:i + 1]

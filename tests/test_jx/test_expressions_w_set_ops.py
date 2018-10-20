@@ -277,7 +277,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use=="sqlite", "Can't handle array of primitives for now")
     def test_select_when_on_multivalue(self):
         test = {
             "data": [
@@ -311,7 +310,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.use == "sqlite", "Can't handle array of primitives for now")
     def test_select_in_w_multivalue(self):
         test = {
             "data": [
@@ -822,6 +820,60 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_between_missing(self):
+        test = {
+            "data": [
+                {"url": None},
+                {"url": "/"},
+                {"url": "https://hg.mozilla.org/"},
+                {"url": "https://hg.mozilla.org/a/"},
+                {"url": "https://hg.mozilla.org/b/"},
+                {"url": "https://hg.mozilla.org/b/1"},
+                {"url": "https://hg.mozilla.org/b/2"},
+                {"url": "https://hg.mozilla.org/b/3"},
+                {"url": "https://hg.mozilla.org/c/"},
+                {"url": "https://hg.mozilla.org/d"},
+                {"url": "https://hg.mozilla.org/e"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    "url",
+                    {
+                        "name": "filename",
+                        "value": {
+                            "when": {"missing": {"between": {"url": ["https://hg.mozilla.org/", "/"]}}},
+                            "then": "url"
+                        }
+                    },
+                    {
+                        "name": "subdir",
+                        "value": {"between": {"url": ["https://hg.mozilla.org/", "/"]}}
+                    }
+                ],
+                "limit": 100
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    NULL,
+                    {"url": "/", "filename": "/", "subdir": NULL},
+                    {"url": "https://hg.mozilla.org/", "filename": "https://hg.mozilla.org/", "subdir": NULL},
+                    {"url": "https://hg.mozilla.org/a/", "filename": NULL, "subdir": "a"},
+                    {"url": "https://hg.mozilla.org/b/", "filename": NULL, "subdir": "b"},
+                    {"url": "https://hg.mozilla.org/b/1", "filename": NULL, "subdir": "b"},
+                    {"url": "https://hg.mozilla.org/b/2", "filename": NULL, "subdir": "b"},
+                    {"url": "https://hg.mozilla.org/b/3", "filename": NULL, "subdir": "b"},
+                    {"url": "https://hg.mozilla.org/c/", "filename": NULL, "subdir": "c"},
+                    {"url": "https://hg.mozilla.org/d", "filename": "https://hg.mozilla.org/d", "subdir": NULL},
+                    {"url": "https://hg.mozilla.org/e", "filename": "https://hg.mozilla.org/e", "subdir": NULL}
+                ]}
+
+        }
+        self.utils.execute_tests(test)
+
+
+
     def test_lack_of_eval(self):
         test = {
             "data": [
@@ -983,6 +1035,29 @@ class TestSetOps(BaseTestCase):
         }
 
         self.utils.execute_tests(test)
+
+    def test_prefix_w_when(self):
+        test = {
+            "data": [
+                {"a": "test"},
+                {"a": "testkyle"},
+                {"a": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "test",
+                    "value": {"when": {"prefix": {"a": "test"}}, "then": 1}
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 1, NULL]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
 
 
 

@@ -11,17 +11,17 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import OBJECT, BOOLEAN, STRUCT, EXISTS, NESTED
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, FromUnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, BasicEqOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp
+    ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp
 from jx_base.queries import get_property_name
 from jx_sqlite import quoted_GUID, GUID
 from mo_dots import coalesce, wrap, Null, split_field, listwrap, startswith_field
-from mo_dots import join_field, ROOT_PATH, relative_field, Data
+from mo_dots import join_field, ROOT_PATH, relative_field
 from mo_future import text_type
 from mo_json import json2value
+from mo_json.typed_encoder import OBJECT, BOOLEAN, EXISTS, NESTED
 from mo_logs import Log
 from mo_math import Math
 from pyLibrary import convert
@@ -37,7 +37,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     if not vars:
         # DOES NOT EXIST
         return wrap([{"name": ".", "sql": {"0": SQL_NULL}, "nested_path": ROOT_PATH}])
-    var_name = list(set(listwrap(vars).names.get('\\.')))
+    var_name = list(set(listwrap(vars).name))
     if len(var_name) > 1:
         Log.error("do not know how to handle")
     var_name = var_name[0]
@@ -45,7 +45,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     acc = {}
     if boolean:
         for col in cols:
-            cname = relative_field(col.names['.'], var_name)
+            cname = relative_field(col.name, var_name)
             nested_path = col.nested_path[0]
             if col.type == OBJECT:
                 value = SQL_TRUE
@@ -58,7 +58,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
             tempb['b'] = value
     else:
         for col in cols:
-            cname = relative_field(col.names['.'], var_name)
+            cname = relative_field(col.name, var_name)
             if col.type == OBJECT:
                 prefix = self.var + "."
                 for cn, cs in schema.items():
@@ -132,9 +132,9 @@ def to_sql(self, schema, not_null=False, boolean=False):
             "sql": Variable(schema.get_column_name(c)).to_sql(schema)[0].sql
         }
         for c in schema.columns
-        if startswith_field(c.names['.'], term) and (
-            (c.type not in (EXISTS, OBJECT, NESTED) and startswith_field(schema.nested_path[0], c.nested_path[0])) or
-            (c.type not in (EXISTS, OBJECT) and schema.nested_path[0] == c.nested_path[0])
+        if startswith_field(c.name, term) and (
+            (c.jx_type not in (EXISTS, OBJECT, NESTED) and startswith_field(schema.nested_path[0], c.nested_path[0])) or
+            (c.jx_type not in (EXISTS, OBJECT) and schema.nested_path[0] == c.nested_path[0])
         )
     ])
     return output
@@ -188,7 +188,7 @@ def partial_eval(self):
 
 @extend(NeOp)
 def to_sql(self, schema, not_null=False, boolean=False):
-    return NotOp('not', EqOp('eq', self.terms).partial_eval()).partial_eval().to_sql(schema)
+    return NotOp('not', EqOp('eq', [self.lhs, self.rhs]).partial_eval()).partial_eval().to_sql(schema)
 
 
 @extend(BasicIndexOfOp)
@@ -434,7 +434,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
         elif t == "s":
             acc.append(v)
         else:
-            acc.append("RTRIM(RTRIM(CAST" + sql_iso(v + " as TEXT), " + quote_value('0')) + ", " + quote_value('.') + ")")
+            acc.append("RTRIM(RTRIM(CAST" + sql_iso(v + " as TEXT), " + quote_value('0')) + ", " + quote_value(".") + ")")
     if not acc:
         return wrap([{}])
     elif len(acc) == 1:

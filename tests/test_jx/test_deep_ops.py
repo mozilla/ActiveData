@@ -1582,6 +1582,40 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_setop_w_shallow_eq_string(self):
+        # TEST A TWO-TYPE PROPERTY ("o") IS ACCURATELY FILTERED
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": "a", "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": "a", "a": {"_a": {  # THIS IS SECONDS SO WE DO NOT HAVE BOTH INNER AND NESTED OBJECTS
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "from": TEST_TABLE + ".a._a",
+                "select": ["o", "v"],
+                "where": {"eq": {"o": "a"}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": "a", "v": "a string"},
+                    {"o": "a"}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
+
 
 # TODO: using "find" as a filter should be legitimate:
 todo = {

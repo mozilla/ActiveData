@@ -30,3 +30,4 @@ version.json
 /vendor/pyLibrary/vendor/sqlite
 /tuid.db
 
+/*.sqlite-journal

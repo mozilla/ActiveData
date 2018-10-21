@@ -506,7 +506,7 @@ def to_esfilter(self, schema):
                     for c in cols:
                         if jx_type == c.jx_type:
                             return {"terms": {c.es_column: values}}
-                    return FALSE.to_esFilter(schema)
+                    return FALSE.to_esfilter(schema)
                 else:
                     return OrOp("or", [
                         EqOp("in", [self.lhs, values])
@@ -516,7 +516,7 @@ def to_esfilter(self, schema):
         for c in cols:
             if python_type_to_json_type[rhs.__class__] == c.jx_type:
                 return {"term": {c.es_column: rhs}}
-        return FALSE.to_esFilter(schema)
+        return FALSE.to_esfilter(schema)
     else:
         return CaseOp("case", [
             WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),

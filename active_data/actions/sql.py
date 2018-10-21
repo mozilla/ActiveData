@@ -59,8 +59,6 @@ def sql_query(path):
                     text = utf82unicode(request_body)
                     data = json2value(text)
                     record_request(flask.request, data, None, None)
-                    if data.meta.testing:
-                        test_mode_wait(data)
 
                 translate_timer = Timer("translate")
                 with translate_timer:
@@ -68,6 +66,8 @@ def sql_query(path):
                         Log.error("Expecting a `sql` parameter")
                     jx_query = parse_sql(data.sql)
                     frum = find_container(jx_query['from'])
+                    if data.meta.testing:
+                        test_mode_wait(jx_query)
                     result = jx.run(jx_query, container=frum)
                     if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(jx_query.format)

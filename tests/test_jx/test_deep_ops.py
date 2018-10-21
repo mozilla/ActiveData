@@ -1586,29 +1586,30 @@ class TestDeepOps(BaseTestCase):
         # TEST A TWO-TYPE PROPERTY ("o") IS ACCURATELY FILTERED
         test = {
             "data": [
-                {"o": 3, "a": {"_a": [
+                {"o": 3, "a": [
                     {"v": "a string", "s": False},
                     {"v": "another string"}
-                ]}},
-                {"o": "a", "a": {"_a": [
-                    {"v": "string!", "s": True},
-                ]}},
-                {"o": "a", "a": {"_a": {  # THIS IS SECONDS SO WE DO NOT HAVE BOTH INNER AND NESTED OBJECTS
+                ]},
+                {"o": "a", "a": [{
+                    "v": "string!",
+                    "s": True},
+                ]},
+                {"o": "a", "a": {  # THIS IS SECONDS SO WE DO NOT HAVE BOTH INNER AND NESTED OBJECTS
                     "v": "still more",
                     "s": False
-                }}},
-                {"o": 4, "a": {"_a": {"s": False}}}
+                }},
+                {"o": 4, "a": {"s": False}}
             ],
             "query": {
-                "from": TEST_TABLE + ".a._a",
+                "from": TEST_TABLE + ".a",
                 "select": ["o", "v"],
                 "where": {"eq": {"o": "a"}}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"o": "a", "v": "a string"},
-                    {"o": "a"}
+                    {"o": "a", "v": "string!"},
+                    {"o": "a", "v": "still more"}
                 ]
             }
         }

@@ -19,9 +19,9 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
-from mo_dots import coalesce, wrap, Null, set_default, literal_field
-from mo_future import text_type
-from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL
+from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
+from mo_future import text_type, number_types
+from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
@@ -493,17 +493,30 @@ def to_esfilter(self, schema):
         rhs = self.rhs.value
         lhs = self.lhs.var
         cols = schema.leaves(lhs)
-        if cols:
-            lhs = cols[0].es_column
 
         if isinstance(rhs, list):
             if len(rhs) == 1:
-                return {"term": {lhs: rhs[0]}}
+                rhs = rhs[0]
             else:
-                return {"terms": {lhs: rhs}}
-        else:
-            return {"term": {lhs: rhs}}
+                types = Data()  # MAP JSON TYPE TO LIST OF LITERALS
+                for r in rhs:
+                    types[python_type_to_json_type[rhs.__class__]] += [r]
+                if len(types) == 1:
+                    jx_type, values = list(types.items())[0]
+                    for c in cols:
+                        if jx_type == c.jx_type:
+                            return {"terms": {c.es_column: values}}
+                    return FALSE.to_esFilter(schema)
+                else:
+                    return OrOp("or", [
+                        EqOp("in", [self.lhs, values])
+                        for t, values in types.items()
+                    ]).partial_eval().to_esfilter(schema)
 
+        for c in cols:
+            if python_type_to_json_type[rhs.__class__] == c.jx_type:
+                return {"term": {c.es_column: rhs}}
+        return FALSE.to_esFilter(schema)
     else:
         return CaseOp("case", [
             WhenOp("when", self.lhs.missing(), **{"then": self.rhs.missing()}),

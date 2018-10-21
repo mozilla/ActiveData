@@ -203,7 +203,7 @@ class ES52(Container):
         # GET IDS OF DOCUMENTS
         query = {
             "from": command['update'],
-            "select": ["_id"] + [
+            "select": [{"value": "_id"}] + [
                 {"name": k, "value": v}
                 for k, v in command.set.items()
             ],

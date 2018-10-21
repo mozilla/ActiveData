@@ -18,6 +18,8 @@ from datetime import date
 from datetime import datetime
 from decimal import Decimal
 
+from mo_files import File
+
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
@@ -35,7 +37,6 @@ from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_v
 
 DEBUG = False
 singlton = None
-DB_FILE = "activedata_metadata.sqlite"
 db_table_name = quote_column("meta.columns")
 
 INSERT, UPDATE, DELETE = 'insert', 'update', 'delete'
@@ -46,20 +47,21 @@ class ColumnList(Table, jx_base.Container):
     OPTIMIZED FOR THE PARTICULAR ACCESS PATTERNS USED
     """
 
-    def __init__(self):
+    def __init__(self, name):
         Table.__init__(self, "meta.columns")
+        self.db_file = File("metadata." + name + ".sqlite")
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
         self._schema = None
         self.db = sqlite3.connect(
-            database=DB_FILE,
+            database=self.db_file.abspath,
             check_same_thread=False,
             isolation_level=None
         )
         self.last_load = Null
         self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._load_db()
-        Thread.run("update " + DB_FILE, self._update_database_worker)
+        Thread.run("update " + name, self._update_database_worker)
 
     @contextmanager
     def _transaction(self):

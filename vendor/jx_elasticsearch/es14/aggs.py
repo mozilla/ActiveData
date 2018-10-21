@@ -248,13 +248,13 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es_script(schema).script(schema)
+            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es14_script(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_es14_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [50]
             s.pull = jx_expression_to_function(key + ".values.50\\.0")
         elif s.aggregate == "percentile":
@@ -262,35 +262,35 @@ def es_aggsop(es, frum, query):
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[key].percentiles.script = s.value.to_es14_script(schema).script(schema)
             es_query.aggs[key].percentiles.percents += [percent]
             s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[key].cardinality.script = s.value.to_es14_script(schema).script(schema)
             s.pull = jx_expression_to_function(key + ".value")
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[stats_name].extended_stats.script = s.value.to_es14_script(schema).script(schema)
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[median_name].percentiles.script = s.value.to_es14_script(schema).script(schema)
             es_query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
         elif s.aggregate=="union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[stats_name].terms.script_field = s.value.to_es14_script(schema).script(schema)
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(canonical_name + "." + aggregates[s.aggregate])
-            es_query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
+            es_query.aggs[canonical_name].extended_stats.script = s.value.to_es14_script(schema).script(schema)
 
     decoders = get_decoders_by_depth(query)
     start = 0
@@ -308,7 +308,7 @@ def es_aggsop(es, frum, query):
 
         if split_where[1]:
             #TODO: INCLUDE FILTERS ON EDGES
-            filter_ = AndOp("and", split_where[1]).to_esfilter(schema)
+            filter_ = AndOp("and", split_where[1]).to_es14_filter(schema)
             es_query = Data(
                 aggs={"_filter": set_default({"filter": filter_}, es_query)}
             )
@@ -330,7 +330,7 @@ def es_aggsop(es, frum, query):
 
     if split_where[0]:
         #TODO: INCLUDE FILTERS ON EDGES
-        filter = AndOp("and", split_where[0]).to_esfilter(schema)
+        filter = AndOp("and", split_where[0]).to_es14_filter(schema)
         es_query = Data(
             aggs={"_filter": set_default({"filter": filter}, es_query)}
         )
@@ -341,7 +341,7 @@ def es_aggsop(es, frum, query):
 
     es_query.size = 0
 
-    with Timer("ES query time") as es_duration:
+    with Timer("ES query time", silent=True) as es_duration:
         result = es_post(es, es_query, query.limit)
 
     try:

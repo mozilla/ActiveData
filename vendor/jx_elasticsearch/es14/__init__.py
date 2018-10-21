@@ -67,9 +67,9 @@ class ES14(Container):
                 "settings": unwrap(kwargs)
             }
         self.settings = kwargs
-        self.name = name = coalesce(name, alias, index)
+        self.name = name = coalesce(name, index)
         if read_only:
-            self.es = elasticsearch.Alias(alias=coalesce(alias, index), kwargs=kwargs)
+            self.es = elasticsearch.Alias(alias=index, kwargs=kwargs)
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
@@ -78,7 +78,7 @@ class ES14(Container):
         self.edges = Data()
         self.worker = None
 
-        columns = self._namespace.get_snowflake(self.es.settings.alias).columns  # ABSOLUTE COLUMNS
+        columns = self.snowflake.columns  # ABSOLUTE COLUMNS
         is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
 
         if typed == None:
@@ -201,9 +201,9 @@ class ES14(Container):
 
         # GET IDS OF DOCUMENTS
         results = self.es.search({
-            "fields": listwrap(schema._routing.path),
+            "fields": ["_id"],
             "query": {"filtered": {
-                "filter": jx_expression(command.where).to_esfilter(Null)
+                "filter": jx_expression(command.where).to_es14_filter(Null)
             }},
             "size": 10000
         })
@@ -217,13 +217,13 @@ class ES14(Container):
                 scripts.append({"doc": v.doc})
             else:
                 v = scrub(v)
-                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es_script(schema).script(schema)})
+                scripts.append({"script": "ctx._source." + k + " = " + jx_expression(v).to_es14_script(schema).script(schema)})
 
         if results.hits.hits:
             updates = []
             for h in results.hits.hits:
                 for s in scripts:
-                    updates.append({"update": {"_id": h._id, "_routing": unwraplist(h.fields[literal_field(schema._routing.path)])}})
+                    updates.append({"update": {"_id": h._id}})
                     updates.append(s)
             content = ("\n".join(value2json(c) for c in updates) + "\n")
             response = self.es.cluster.post(

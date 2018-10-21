@@ -13,8 +13,6 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-
-
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
@@ -24,15 +22,16 @@ from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template, es
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
-from mo_dots.lists import FlatList
+from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap, FlatList
+from mo_future import transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped
 from mo_logs import Log
-from mo_math import AND
-from mo_math import MAX
+from mo_math import AND, MAX
 from mo_times.timer import Timer
 
+
+DEBUG = False
 format_dispatch = {}
 
 
@@ -59,7 +58,7 @@ def es_setop(es, query):
 
     es_query, filters = es_query_template(schema.query_path[0])
     nested_filter = None
-    set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
+    set_default(filters[0], query.where.partial_eval().to_es14_filter(schema))
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.fields = FlatList()
 
@@ -179,7 +178,7 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            painless = select.value.partial_eval().to_es_script(schema)
+            painless = select.value.partial_eval().to_es14_script(schema)
             es_query.script_fields[literal_field(select.name)] =  es_script(painless.script(schema))
             new_select.append({
                 "name": select.name,
@@ -195,13 +194,14 @@ def es_setop(es, query):
             if es_query.fields[0] == "_source":
                 es_query.fields = ["_source"]
                 n.pull = get_pull_source(n.value.var)
+            if n.value.var == "_id":
+                n.pull = jx_expression_to_function("_id")
             else:
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
 
-    with Timer("call to ES") as call_timer:
-        Log.note("{{data}}", data=es_query)
+    with Timer("call to ES", silent=not DEBUG) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits

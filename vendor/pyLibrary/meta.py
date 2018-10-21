@@ -16,7 +16,7 @@ from types import FunctionType
 
 import mo_json
 from mo_dots import set_default, _get_attr, Null
-from mo_future import text_type, get_function_arguments
+from mo_future import text_type, get_function_arguments, get_function_name
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_math.randoms import Random
@@ -218,6 +218,18 @@ class extenstion_method(object):
         else:
             setattr(self.value, func.__name__, func)
             return func
+
+
+def extend(cls):
+    """
+    DECORATOR TO ADD METHODS TO CLASSES
+    :param cls: THE CLASS TO ADD THE METHOD TO
+    :return:
+    """
+    def extender(func):
+        setattr(cls, get_function_name(func), func)
+        return func
+    return extender
 
 
 class MemorySample(object):

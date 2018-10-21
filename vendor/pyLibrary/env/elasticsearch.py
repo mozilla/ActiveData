@@ -303,6 +303,8 @@ class Index(Features):
         lines = []
         try:
             for r in records:
+                if '_id' in r or 'id' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
+                    Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
                 rec = self.encode(r)
                 json_bytes = rec['json']
                 lines.append('{"index":{"_id": ' + convert.value2json(rec['id']) + '}}')
@@ -1123,10 +1125,9 @@ class Alias(Features):
                 # TODO: MERGE THE mappings OF ALL candidates, DO NOT JUST PICK THE LAST ONE
 
                 index = "dummy value"
-                schema = wrap({"_routing": {}, "properties": {}})
+                schema = wrap({"properties": {}})
                 for _, ind in jx.sort(candidates, {"value": 0, "sort": -1}):
                     mapping = ind.mappings[self.settings.type]
-                    set_default(schema._routing, mapping._routing)
                     schema.properties = _merge_mapping(schema.properties, mapping.properties)
             else:
                 #FULLY DEFINED settings
@@ -1271,7 +1272,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
         if not property.type:
             continue
 
-        cardinality = 0 if not property.store and not name != '_id' else None
+        cardinality = 0 if not (property.store or property.enabled) and name != '_id' else None
 
         if property.fields:
             child_columns = parse_properties(index_name, column_name, nested_path, property.fields)

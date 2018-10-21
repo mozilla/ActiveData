@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
-from itertools import product
 
 import jx_base
 from jx_base import TableDesc
@@ -22,6 +21,7 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
 from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_files import URL
 from mo_future import text_type
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
@@ -78,7 +78,7 @@ class ElasticsearchMetadata(Namespace):
         self.metadata_last_updated = Date.now() - OLD_METADATA
 
         self.meta = Data()
-        self.meta.columns = ColumnList()
+        self.meta.columns = ColumnList(URL(self.es_cluster.settings.host).host)
 
         self.alias_to_query_paths = {
             "meta.columns": [ROOT_PATH],
@@ -657,7 +657,10 @@ class Schema(jx_base.Schema):
                 for c in columns
                 if (
                     (c.name != "_id" or column_name == "_id") and
-                    c.jx_type not in OBJECTS and
+                    (
+                        c.jx_type not in OBJECTS or
+                        (column_name == '.' and c.cardinality == 0)
+                    ) and
                     startswith_field(unnest_path(relative_field(c.name, path)), column_name)
                 )
             ]

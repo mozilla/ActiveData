@@ -21,6 +21,7 @@ from mo_future import text_type, binary_type, PY3
 from mo_logs import Log, Except
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till
+from mo_files.url import URL
 
 mime = MimeTypes()
 

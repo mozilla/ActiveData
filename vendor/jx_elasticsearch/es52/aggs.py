@@ -32,6 +32,8 @@ from mo_logs.strings import quote, expand_template
 from mo_math import Math, MAX, UNION
 from mo_times.timer import Timer
 
+DEBUG = False
+
 COMPARE_TUPLE = """
 (a, b)->{
     int i=0;
@@ -477,12 +479,12 @@ def es_aggsop(es, frum, query):
 
     es_query.size = 0
 
-    with Timer("ES query time") as es_duration:
+    with Timer("ES query time", silent=not DEBUG) as es_duration:
         result = es_post(es, es_query, query.limit)
 
     # Log.note("{{result}}", result=result)
     try:
-        format_time = Timer("formatting")
+        format_time = Timer("formatting", silent=not DEBUG)
         with format_time:
             decoders = [d for ds in decoders for d in ds]
             result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE

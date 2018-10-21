@@ -32,14 +32,14 @@
 		}
 	},
 	"saved_queries":{
-		"host": "http://54.149.21.8",
+		"host": "http://54.148.242.195",
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
 		"debug": true
 	},
 	"elasticsearch": {
-		"host": "http://54.149.21.8",
+		"host": "http://54.148.242.195",
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",

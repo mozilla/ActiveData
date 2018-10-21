@@ -21,7 +21,7 @@ from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
-from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
+from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
 from mo_future import text_type, transpose
 from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL
 from mo_json.typed_encoder import untype_path
@@ -45,7 +45,7 @@ class AggsDecoder(object):
                 Log.error("Expecting Variable or Expression, not plain string")
 
             if isinstance(e.value, LeavesOp):
-                return object.__new__(ObjectDecoder, e)
+                return object.__new__(ObjectDecoder)
             elif isinstance(e.value, TupleOp):
                 # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
                 # JUST PULL THE FIELDS
@@ -55,29 +55,27 @@ class AggsDecoder(object):
                 e.domain = Data(
                     dimension={"fields": e.value.terms}
                 )
-                return object.__new__(DimFieldListDecoder, e)
+                return object.__new__(DimFieldListDecoder)
 
             elif isinstance(e.value, Variable):
                 schema = query.frum.schema
                 cols = schema.leaves(e.value.var)
                 if not cols:
-                    return object.__new__(DefaultDecoder, e)
+                    return object.__new__(DefaultDecoder)
                 if len(cols) != 1:
-                    return object.__new__(ObjectDecoder, e)
+                    return object.__new__(ObjectDecoder)
                 col = cols[0]
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
-                temp = col.partitions
-
-                if col.partitions == None:
-                    start = time()
-                    while col.partitions == None:
-                        pass
-                    end = time()
-                    Log.note("took {{duration}} to find parts", duration=end-start)
-                    DEBUG and Log.note("id={{id}} has no parts {{column}}", id=id(col), column=col)
+                if col.cardinality == None:
+                    Log.error(
+                        "metadata for column {{name|quote}} (id={{id}}) is not ready",
+                        name=concat_field(col.es_index, col.es_column),
+                        id=id(col)
+                    )
+                elif col.partitions == None:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
-                    return object.__new__(DefaultDecoder, e)
+                    return object.__new__(DefaultDecoder)
                 else:
                     DEBUG and Log.note("id={{id}} has parts!!!", id=id(col))
                     if col.multi > 1 and len(col.partitions) < 6:
@@ -91,21 +89,21 @@ class AggsDecoder(object):
                     e.domain = SimpleSetDomain(partitions=partitions, limit=limit)
 
             else:
-                return object.__new__(DefaultDecoder, e)
+                return object.__new__(DefaultDecoder)
 
         if e.value and e.domain.type in PARTITION:
-            return object.__new__(SetDecoder, e)
+            return object.__new__(SetDecoder)
         if isinstance(e.domain.dimension, Dimension):
             e.domain = e.domain.dimension.getDomain()
-            return object.__new__(SetDecoder, e)
+            return object.__new__(SetDecoder)
         if e.value and e.domain.type == "time":
-            return object.__new__(TimeDecoder, e)
+            return object.__new__(TimeDecoder)
         if e.range:
-            return object.__new__(GeneralRangeDecoder, e)
+            return object.__new__(GeneralRangeDecoder)
         if e.value and e.domain.type == "duration":
-            return object.__new__(DurationDecoder, e)
+            return object.__new__(DurationDecoder)
         elif e.value and e.domain.type == "range":
-            return object.__new__(RangeDecoder, e)
+            return object.__new__(RangeDecoder)
         elif not e.value and e.domain.dimension.fields:
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
@@ -113,9 +111,9 @@ class AggsDecoder(object):
             if isinstance(fields, Mapping):
                 Log.error("No longer allowed: All objects are expressions")
             else:
-                return object.__new__(DimFieldListDecoder, e)
+                return object.__new__(DimFieldListDecoder)
         elif not e.value and all(e.domain.partitions.where):
-            return object.__new__(GeneralSetDecoder, e)
+            return object.__new__(GeneralSetDecoder)
         else:
             Log.error("domain type of {{type}} is not supported yet", type=e.domain.type)
 

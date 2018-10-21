@@ -459,7 +459,7 @@ def es_aggsop(es, frum, query):
         })
     else:
         if any(split_where[1::]):
-            Log.error("Where clause is too deep")
+            Log.error("Where clause is too deep:\n{{clause|json}}", clause=coalesce(*split_where[1::]))
 
     if decoders:
         for d in jx.reverse(decoders[0]):

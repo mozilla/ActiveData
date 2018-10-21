@@ -14,7 +14,10 @@ from __future__ import unicode_literals
 
 import sqlite3
 
-from jx_python.meta import DB_FILE
+from mo_logs import Log
+
+from mo_files import File
+
 from mo_threads import Till
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -114,9 +117,13 @@ class TestESSpecial(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_db_is_busy(self):
+        FILENAME = "metadata.localhost.sqlite"
+        db_file = File(FILENAME)
+        if not db_file.exists:
+            Log.error("Expecting activedata server to be using {{file}}", file=FILENAME)
 
         self.db = sqlite3.connect(
-            database=DB_FILE,
+            database=db_file.abspath,
             check_same_thread=False,
             isolation_level=None
         )

@@ -557,7 +557,6 @@ class ElasticsearchMetadata(Namespace):
         if name == "meta.columns":
             return self.meta.columns
 
-
         with self.meta.tables.locker:
             return wrap([t for t in self.meta.tables.data if t.name == name])
 
@@ -567,6 +566,8 @@ class ElasticsearchMetadata(Namespace):
     def get_schema(self, name):
         if name == "meta.columns":
             return self.meta.columns.schema
+        if name == "meta.tables":
+            return self.meta.tables
         root, rest = tail_field(name)
         return self.get_snowflake(root).get_schema(rest)
 

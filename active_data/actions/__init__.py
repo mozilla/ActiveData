@@ -144,8 +144,10 @@ def find_container(frum):
 
         path = split_field(frum)
         if path[0] == "meta":
-            if path[1] in ["columns", "tables"]:
-                return namespace.meta[path[1]].denormalized()
+            if path[1] == "columns":
+                return namespace.meta.columns.denormalized()
+            elif path[1] == "tables":
+                return namespace.meta.tables
             else:
                 Log.error("{{name}} not a recognized table", name=frum)
 

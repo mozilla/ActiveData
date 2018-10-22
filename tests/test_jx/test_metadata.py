@@ -20,6 +20,15 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 class TestMetadata(BaseTestCase):
 
     def test_meta_tables(self):
+        pre_test = {
+            "data": [{"a": "b"}],
+            "query": {"from": TEST_TABLE},  # DUMMY QUERY
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"a": "b"}]
+            }
+        }
+        self.utils.execute_tests(pre_test)
+
         test = {
             "query": {
                 "from": "meta.tables"

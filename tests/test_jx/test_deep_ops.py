@@ -12,6 +12,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skip
+
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_math import Math
@@ -1616,6 +1618,84 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_edge_w_expression(self):
+        test = {
+            "data": [
+                {"v": 1, "a": "b"},
+                {"v": 2, "a": {"b": 1}},
+                {"v": 3, "a": {}},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
+                {"v": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"v": 6, "a": 3},
+                {"v": 7}
+            ],
+            "query": {
+                "from": TEST_TABLE+".a",
+                "edges": [{"value": "b"}],
+                "select": {"name": "count", "value": {"when": "v", "then": 1}, "aggregate": "count"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 1, "count": 2},
+                    {"b": 2, "count": 2},
+                    {"b": 4, "count": 1},
+                    {"count": 3}
+                ]
+            },
+            # "expecting_table": {
+            #     "meta": {"format": "table"},
+            #     "header": ["a.b"],
+            #     "data": [[8]]
+            # },
+            # "expecting_cube": {
+            #     "meta": {"format": "cube"},
+            #     "data": {
+            #         "a.b": 8
+            #     }
+            # }
+        }
+        self.utils.execute_tests(test)
+
+    @skip("not ready")
+    def test_edge(self):
+        test = {
+            "data": [
+                {"v": 1, "a": "b"},
+                {"v": 2, "a": {"b": 1}},
+                {"v": 3, "a": {}},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
+                {"v": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"v": 6, "a": 3},
+                {"v": 7}
+            ],
+            "query": {
+                "from": TEST_TABLE + ".a",
+                "edges": [{"value": "b"}],
+                "select": {"value": "v", "aggregate": "sum"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 1, "v": 6},
+                    {"b": 2, "v": 8},
+                    {"b": 4, "v": 5},
+                    {"v": 14}
+                ]
+            },
+            # "expecting_table": {
+            #     "meta": {"format": "table"},
+            #     "header": ["a.b"],
+            #     "data": [[8]]
+            # },
+            # "expecting_cube": {
+            #     "meta": {"format": "cube"},
+            #     "data": {
+            #         "a.b": 8
+            #     }
+            # }
+        }
+        self.utils.execute_tests(test)
 
 
 # TODO: using "find" as a filter should be legitimate:

@@ -203,7 +203,7 @@ class ColumnList(Table, jx_base.Container):
             )
         except Exception as e:
             e = Except.wrap(e)
-            if "UNIQUE constraint failed" in e:
+            if "UNIQUE constraint failed" in e or " are not unique" in e:
                 # THIS CAN HAPPEN BECAUSE todo HAS OLD COLUMN DATA
                 self.todo.add((UPDATE, column))
             else:

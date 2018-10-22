@@ -68,11 +68,13 @@ class AggsDecoder(object):
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.cardinality == None:
-                    Log.error(
+                    Log.warning(
                         "metadata for column {{name|quote}} (id={{id}}) is not ready",
                         name=concat_field(col.es_index, col.es_column),
                         id=id(col)
                     )
+                    e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
+                    return object.__new__(DefaultDecoder)
                 elif col.partitions == None:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)

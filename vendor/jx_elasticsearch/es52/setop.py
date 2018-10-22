@@ -19,8 +19,8 @@ from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, AndOp
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_depth
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_depth, split_expression_by_path
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script, es_query_proto
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
@@ -58,13 +58,9 @@ def es_setop(es, query):
     schema = query.frum.schema
     query_path = schema.query_path[0]
 
-    es_query, es_filters = es_query_template(query_path)
+    wheres = split_expression_by_path(query.where, schema)
+    es_query = es_query_proto(query_path, wheres, schema)
     nested_filter = None
-
-    wheres = split_expression_by_depth(query.where, schema)
-    for f, w in zip_longest(es_filters, wheres):
-        script = AndOp("and", w).partial_eval().to_esfilter(schema)
-        set_default(f, script)
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()

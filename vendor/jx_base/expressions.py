@@ -2813,6 +2813,29 @@ class UnionOp(Expression):
         return output
 
 
+class NestedOp(Expression):
+    data_type = BOOLEAN
+    has_simple_form = False
+
+    def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
+        self.path, self.query = terms
+
+    @simplified
+    def partial_eval(self):
+        if self.path.var == '.':
+            return self.query.partial_eval()
+        return NestedOp("nested", [self.path, self.query.partial_eval()])
+
+    def __data__(self):
+        return {"nested": {self.path.var: self.query.__data__()}}
+
+    def __eq__(self, other):
+        if isinstance(other, NestedOp):
+            return self.path.var == other.path.var and self.query == other.query
+        return False
+
+
 class BasicStartsWithOp(Expression):
     """
     PLACEHOLDER FOR BASIC value.startsWith(find, start) (CAN NOT DEAL WITH NULLS)

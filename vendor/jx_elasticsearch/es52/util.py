@@ -11,9 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.expressions import TRUE, AndOp, ScriptOp, NestedOp
+
 from jx_elasticsearch.es52.expressions import Variable
-from mo_dots import wrap
-from mo_future import text_type
+from mo_dots import wrap, startswith_field, literal_field
+from mo_future import text_type, sort_using_key
 from mo_json import STRING, BOOLEAN, NUMBER, OBJECT
 from mo_logs import Log
 
@@ -22,7 +24,7 @@ def es_query_template(path):
     """
     RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
     :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
-    :return:
+    :return: (es_query, es_filters) TUPLE
     """
 
     if not isinstance(path, text_type):
@@ -54,6 +56,39 @@ def es_query_template(path):
             "sort": []
         })
         return output, wrap([f0])
+
+
+def es_query_proto(path, wheres, schema):
+    """
+    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
+    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
+    :param wheres: MAP FROM path TO LIST OF WHERE CONDITIONS
+    :return: (es_query, filters_map) TUPLE
+    """
+
+    literal_path = literal_field(path)
+    if literal_path not in wheres:
+        wheres[literal_path] += [TRUE]
+
+    for p, filter in sort_using_key(wheres.items(), lambda r: -len(r[0])):
+        if p == path:
+            if p == ".":
+                output = wrap({
+                    "from": 0,
+                    "size": 0,
+                    "sort": []
+                })
+            else:
+                output = {"nested": {
+                    "path": p,
+                    "inner_hits": {"size": 100000}
+                }}
+        else:
+            # parent filter
+            wheres[literal_path] += [NestedOp("nested", [Variable(p), AndOp("and", filter)])]
+
+    output.query = AndOp("and", wheres[literal_path]).partial_eval().to_esfilter(schema)
+    return output
 
 
 def jx_sort_to_es_sort(sort, schema):

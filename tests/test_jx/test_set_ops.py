@@ -1247,7 +1247,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    #@skip("not ready")
     def test_filter_on_deep_property(self):
         test = {
             "data": [
@@ -1268,17 +1267,17 @@ class TestSetOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [2, 4, 5]
             },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["v"],
+                "data": [[2], [4], [5]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "v": [2, 4, 5]
+                }
+            }
         }
         self.utils.execute_tests(test)
 

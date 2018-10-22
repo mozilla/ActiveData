@@ -12,14 +12,23 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
-
 from mo_dots import wrap
 from pyLibrary.meta import extenstion_method
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestMetadata(BaseTestCase):
+
+    def test_meta_tables(self):
+        test = {
+            "query": {
+                "from": "meta.tables"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}
+            }
+        }
+        self.utils.send_queries(test)
 
     def test_meta(self):
         test = wrap({

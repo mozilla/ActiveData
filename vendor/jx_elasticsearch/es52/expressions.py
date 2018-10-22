@@ -13,14 +13,16 @@ from __future__ import unicode_literals
 
 import itertools
 
+from jx_python import jx
+
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, NestedOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
-from mo_future import text_type, number_types
+from mo_future import text_type, number_types, sort_using_key
 from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
@@ -1071,6 +1073,16 @@ def to_esfilter(self, schema):
     return {"match_all": {}}
 
 
+@extend(NestedOp)
+def to_esfilter(self, schema):
+    if self.path.var == '.':
+        return {"query": self.query.to_esfilter(schema)}
+    else:
+        return {"nested": {
+            "path": self.path.var,
+            "query": self.query.to_esfilter(schema)
+        }}
+
 @extend(BasicStartsWithOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     expr = FirstOp("first", self.value).partial_eval().to_es_script(schema)
@@ -1489,6 +1501,40 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     elif isinstance(where, AndOp):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
+    else:
+        Log.error("Can not handle complex where clause")
+
+    return output
+
+
+def split_expression_by_path(where, schema, output=None, var_to_path=None):
+    """
+    :param where: EXPRESSION TO INSPECT
+    :param schema: THE SCHEMA
+    :param output: THE MAP FROM PATH TO EXPRESSION WE WANT UPDATED
+    :param var_to_path: MAP FROM EACH VARIABLE NAME TO THE DEPTH
+    :return: output: A MAP FROM PATH TO EXPRESSION
+    """
+    vars_ = where.vars()
+
+    if var_to_path is None:
+        if not vars_:
+            return Data()
+        # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
+        var_to_path = {
+            v.var: c.nested_path[0]
+            for v in vars_
+            for c in sort_using_key(schema[v.var], lambda r: len(r.nested_path))
+        }
+        output = Data()
+
+    all_paths = set(var_to_path[v.var] for v in vars_)
+
+    if len(all_paths) == 1:
+        output[literal_field(iter(all_paths).next())] += [where]
+    elif isinstance(where, AndOp):
+        for a in where.terms:
+            split_expression_by_depth(a, schema, output, var_to_path)
     else:
         Log.error("Can not handle complex where clause")
 

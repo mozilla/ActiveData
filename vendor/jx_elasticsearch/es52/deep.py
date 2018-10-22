@@ -18,7 +18,7 @@ from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, 
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
 from jx_python.expressions import compile_expression, jx_expression_to_function
-from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
+from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field, wrap, unwrap
 from mo_future import zip_longest
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path
@@ -94,10 +94,11 @@ def es_deepop(es, query):
     es_query.stored_fields = []
 
     is_list = isinstance(query.select, list)
+    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
 
-    i = 0
-    for s in listwrap(query.select):
+    put_index = 0
+    for s in selects:
         if isinstance(s.value, LeavesOp) and isinstance(s.value.term, Variable):
             # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
             leaves = schema.leaves(s.value.term.var)
@@ -112,10 +113,10 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": concat_field(s.name, c_name),
                     "nested_path": c.nested_path[0],
-                    "put": {"name": concat_field(s.name, literal_field(c_name)), "index": i, "child": "."},
+                    "put": {"name": concat_field(s.name, literal_field(c_name)), "index": put_index, "child": "."},
                     "pull": get_pull_function(c)
                 })
-                i += 1
+                put_index += 1
 
             # REMOVE DOTS IN PREFIX IF NAME NOT AMBIGUOUS
             for n in new_select:
@@ -128,7 +129,7 @@ def es_deepop(es, query):
                 new_select.append({
                     "name": s.name,
                     "nested_path": ".",
-                    "put": {"name": s.name, "index": i, "child": "."},
+                    "put": {"name": s.name, "index": put_index, "child": "."},
                     "pull": NULL
                 })
             else:
@@ -156,11 +157,11 @@ def es_deepop(es, query):
                         "nested_path": n.nested_path[0],
                         "put": {
                             "name": s.name,
-                            "index": i,
+                            "index": put_index,
                             "child": child
                         }
                     })
-            i += 1
+            put_index += 1
         else:
             expr = s.value
             for v in expr.vars():
@@ -179,9 +180,9 @@ def es_deepop(es, query):
                 "name": s.name if is_list else ".",
                 "pull": pull,
                 "value": expr.__data__(),
-                "put": {"name": s.name, "index": i, "child": "."}
+                "put": {"name": s.name, "index": put_index, "child": "."}
             })
-            i += 1
+            put_index += 1
 
     # <COMPLICATED> ES needs two calls to get all documents
     more = []

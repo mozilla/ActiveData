@@ -16,17 +16,17 @@ from collections import Mapping
 
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY
+from jx_base.expressions import IDENTITY, AndOp
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_depth
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
-from mo_future import transpose
+from mo_future import transpose, zip_longest
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
@@ -57,17 +57,20 @@ def is_setop(es, query):
 def es_setop(es, query):
     schema = query.frum.schema
 
-    es_query, filters = es_query_template(schema.query_path[0])
+    es_query, es_filters = es_query_template(schema.query_path[0])
     nested_filter = None
-    set_default(filters[0], query.where.partial_eval().to_esfilter(schema))
+
+    wheres = split_expression_by_depth(query.where, schema)
+    for f, w in zip_longest(es_filters, wheres):
+        script = AndOp("and", w).partial_eval().to_esfilter(schema)
+        set_default(f, script)
+
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
 
-    selects = wrap([s.copy() for s in listwrap(query.select)])
+    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
     schema = query.frum.schema
-    # columns = schema.columns
-    # nested_columns = set(c.name for c in columns if c.nested_path[0] != ".")
 
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -150,12 +153,12 @@ def es_setop(es, query):
                                 })
                         else:
                             if not nested_filter:
-                                where = filters[0].copy()
+                                where = es_filters[0].copy()
                                 nested_filter = [where]
-                                for k in filters[0].keys():
-                                    filters[0][k] = None
+                                for k in es_filters[0].keys():
+                                    es_filters[0][k] = None
                                 set_default(
-                                    filters[0],
+                                    es_filters[0],
                                     es_and([where, es_or(nested_filter)])
                                 )
 

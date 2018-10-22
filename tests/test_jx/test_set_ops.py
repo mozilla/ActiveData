@@ -1247,6 +1247,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    #@skip("not ready")
     def test_filter_on_deep_property(self):
         test = {
             "data": [

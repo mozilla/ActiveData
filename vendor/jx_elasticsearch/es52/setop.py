@@ -56,8 +56,9 @@ def is_setop(es, query):
 
 def es_setop(es, query):
     schema = query.frum.schema
+    query_path = schema.query_path[0]
 
-    es_query, es_filters = es_query_template(schema.query_path[0])
+    es_query, es_filters = es_query_template(query_path)
     nested_filter = None
 
     wheres = split_expression_by_depth(query.where, schema)

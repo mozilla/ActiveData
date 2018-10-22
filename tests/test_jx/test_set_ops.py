@@ -1246,3 +1246,38 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_filter_on_deep_property(self):
+        test = {
+            "data": [
+                {"v": 1, "a": "b"},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+                {"v": 2, "a": {"b": 1}},
+                {"v": 3, "a": {}},
+                {"v": 5, "a": {"b": 4}},
+                {"v": 6, "a": 3},
+                {"v": 7}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "v",
+                "where": {"exists": "a.b"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [2, 4, 5]
+            },
+            # "expecting_table": {
+            #     "meta": {"format": "table"},
+            #     "header": ["a.b"],
+            #     "data": [[8]]
+            # },
+            # "expecting_cube": {
+            #     "meta": {"format": "cube"},
+            #     "data": {
+            #         "a.b": 8
+            #     }
+            # }
+        }
+        self.utils.execute_tests(test)
+

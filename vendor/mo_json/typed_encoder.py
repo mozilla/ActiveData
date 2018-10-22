@@ -194,10 +194,14 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
                     append(buffer, text_type(len(value)))
                     append(buffer, '}')
                 else:
-                    # SINGLETON LISTS OF null SHOULD NOT EXIST
-                    from mo_logs import Log
-
-                    Log.error("should not happen")
+                    # SINGLETON LIST
+                    append(buffer, '{')
+                    append(buffer, QUOTED_NESTED_TYPE)
+                    append(buffer, '[{')
+                    append(buffer, QUOTED_EXISTS_TYPE)
+                    append(buffer, '1}]' + COMMA)
+                    append(buffer, QUOTED_EXISTS_TYPE)
+                    append(buffer, '1}')
             else:
                 if EXISTS_TYPE not in sub_schema:
                     sub_schema[EXISTS_TYPE] = {}

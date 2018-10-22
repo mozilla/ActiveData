@@ -578,6 +578,9 @@ class ObjectDecoder(AggsDecoder):
             output[k] = v.get('key')
         return output
 
+    def get_value(self, index):
+        return self.parts[index]
+
     @property
     def num_columns(self):
         return len(self.fields)

@@ -60,7 +60,7 @@ def es_setop(es, query):
 
     wheres = split_expression_by_path(query.where, schema)
     es_query = es_query_proto(query_path, wheres, schema)
-    nested_filter = None
+    nested_filter = FlatList()
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
@@ -100,8 +100,7 @@ def es_setop(es, query):
                     put_index += 1
         elif isinstance(select.value, Variable):
             s_column = select.value.var
-            # LEAVES OF OBJECT
-            leaves = schema.leaves(s_column)
+            leaves = schema.leaves(s_column)  # LEAVES OF OBJECT
             nested_selects = {}
             if leaves:
                 if s_column == ".":
@@ -129,8 +128,8 @@ def es_setop(es, query):
                 else:
                     # PULL ONLY WHAT'S NEEDED
                     for c in leaves:
-                        if len(c.nested_path) == 1:
-                            jx_name = untype_path(c.name)
+                        c_nested_path = c.nested_path[0]
+                        if c_nested_path == ".":
                             if c.jx_type == NESTED:
                                 es_query.stored_fields = ["_source"]
                                 pre_child = join_field(decode_property(n) for n in split_field(c.name))
@@ -149,27 +148,16 @@ def es_setop(es, query):
                                     "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))}
                                 })
                         else:
-                            if not nested_filter:
-                                where = es_filters[0].copy()
-                                nested_filter = [where]
-                                for k in es_filters[0].keys():
-                                    es_filters[0][k] = None
-                                set_default(
-                                    es_filters[0],
-                                    es_and([where, es_or(nested_filter)])
-                                )
-
-                            nested_path = c.nested_path[0]
-                            if nested_path not in nested_selects:
-                                where = nested_selects[nested_path] = Data()
-                                nested_filter += [where]
-                                where.nested.path = nested_path
-                                where.nested.query.match_all = {}
-                                where.nested.inner_hits._source = False
-                                where.nested.inner_hits.stored_fields += [c.es_column]
+                            if c_nested_path not in nested_selects:
+                                es_select = nested_selects[c_nested_path] = Data()
+                                nested_filter += [es_select]
+                                es_select.nested.path = c_nested_path
+                                es_select.nested.query.match_all = {}
+                                es_select.nested.inner_hits._source = False
+                                es_select.nested.inner_hits.stored_fields += [c.es_column]
 
                                 child = relative_field(untype_path(relative_field(c.name, schema.query_path[0])), s_column)
-                                pull = accumulate_nested_doc(nested_path, Variable(relative_field(s_column, unnest_path(nested_path))))
+                                pull = accumulate_nested_doc(c_nested_path, Variable(relative_field(s_column, unnest_path(c_nested_path))))
                                 new_select.append({
                                     "name": select.name,
                                     "value": select.value,
@@ -181,7 +169,7 @@ def es_setop(es, query):
                                     "pull": pull
                                 })
                             else:
-                                nested_selects[nested_path].nested.inner_hits.stored_fields += [c.es_column]
+                                nested_selects[c_nested_path].nested.inner_hits.stored_fields += [c.es_column]
             else:
                 new_select.append({
                     "name": select.name,

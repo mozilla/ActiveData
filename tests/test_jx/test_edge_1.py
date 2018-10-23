@@ -12,7 +12,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skipIf
+from unittest import skipIf, skip
 
 from jx_base.expressions import NULL
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
@@ -1974,7 +1974,7 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
+    @skip("not ready")
     def test_shallow_with_deep_edge(self):
         test = {
             "data": [
@@ -1988,7 +1988,7 @@ class TestEdge1(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "edges": [{"name":"b", "value":{"first":"a.b"}}],
+                "edges": [{"name": "b", "value": {"first": "a.b"}}],
                 "select": {"name": "count", "value": {"when": "v", "then": 1}, "aggregate": "count"},
                 "where": {"exists": "a.b"}
             },

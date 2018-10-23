@@ -1618,14 +1618,15 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    @skip("not ready")
     def test_edge_w_expression(self):
         test = {
             "data": [
                 {"v": 1, "a": "b"},
-                {"v": 2, "a": {"b": 1}},
+                {"v": 2, "a": [{"b": 1}]},
                 {"v": 3, "a": {}},
-                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
-                {"v": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+                {"v": 5, "a": [{"b": 4}]},
                 {"v": 6, "a": 3},
                 {"v": 7}
             ],

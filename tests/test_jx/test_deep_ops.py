@@ -1678,7 +1678,7 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"b": 1, "count": 2},
-                    {"b": 2, "count": 2},
+                    {"b": 2, "count": 0},
                     {"b": 4, "count": 1},
                     {"count": 3}
                 ]

@@ -1518,7 +1518,7 @@ def split_expression_by_path(where, schema, output=None, var_to_path=None):
     vars_ = where.vars()
 
     if var_to_path is None:
-        output = wrap({schema.query_path[0]: [TRUE]})
+        output = wrap({schema.query_path[0]: []})
         if not vars_:
             return output
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE

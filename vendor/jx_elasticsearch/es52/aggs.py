@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field, split_field, tail_field
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field, split_field, tail_field, startswith_field
 from mo_future import text_type, sort_using_key
 from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
@@ -173,6 +173,8 @@ def sort_edges(query, prop):
 def es_aggsop(es, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
     schema = frum.schema
+    query_path = schema.query_path[0]
+
     select = listwrap(query.select)
 
     es_query = Data()
@@ -350,6 +352,7 @@ def es_aggsop(es, frum, query):
                         s.pull = jx_expression_to_function({"sum": pulls})
 
     for i, s in enumerate(formula):
+        value_by_path = split_expression_by_path(s.value, schema=schema)
         canonical_name = literal_field(s.name)
 
         if isinstance(s.value, TupleOp):
@@ -433,9 +436,9 @@ def es_aggsop(es, frum, query):
     split_wheres = split_expression_by_path(query.where, schema=frum.schema)
 
     start = 0
-    decoders=[]
+    decoders = []
     paths = sort_using_key(split_wheres.keys() | split_decoders.keys(), key=lambda p: -len(split_field(p)))
-    for i, path in enumerate(paths):
+    for path in paths:
         literal_path = literal_field(path)
         decoder = split_decoders[literal_path]
         for d in decoder:
@@ -452,7 +455,7 @@ def es_aggsop(es, frum, query):
                     aggs={"_filter": set_default({"filter": filter_}, es_query)}
                 )
 
-        if path != ".":
+        if startswith_field(query_path, path) and path != '.':
             es_query = wrap({
                 "aggs": {"_nested": set_default(
                     {"nested": {"path": path}},

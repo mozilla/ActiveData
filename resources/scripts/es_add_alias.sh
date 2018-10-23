@@ -1,3 +1,3 @@
 
 
-curl -XPOST http://54.148.242.195:9200/_aliases -d "{\"actions\":[{\"add\":{\"index\":\"coverage20180930_000000\",\"alias\":\"coverage\"}}]}"  -H "Content-Type: application/json"
+curl -XPOST http://54.148.242.195:9200/_aliases -d "{\"actions\":[{\"add\":{\"index\":\"activedata_requests20180117_004432\",\"alias\":\"activedata_requests\"}}]}"  -H "Content-Type: application/json"

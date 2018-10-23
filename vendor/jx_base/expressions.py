@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import operator
+import re
 from collections import Mapping
 from decimal import Decimal
 
@@ -2033,6 +2034,7 @@ class PrefixOp(Expression):
 
 class SuffixOp(Expression):
     has_simple_form = True
+    data_type = BOOLEAN
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
@@ -2051,6 +2053,14 @@ class SuffixOp(Expression):
         else:
             return {"suffix": [self.expr.__data__(), self.suffix.__data__()]}
 
+    def missing(self):
+        """
+        THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY missing EXPRESSIONS
+        OVERRIDE THIS METHOD TO SIMPLIFY
+        :return:
+        """
+        return FALSE
+
     def vars(self):
         if self.expr is None:
             return set()
@@ -2061,6 +2071,21 @@ class SuffixOp(Expression):
             return TRUE
         else:
             return SuffixOp("suffix", [self.expr.map(map_), self.suffix.map(map_)])
+
+    def partial_eval(self):
+        if self.expr is None:
+            return TRUE
+        if not isinstance(self.suffix, Literal) and self.suffix.type == STRING:
+            Log.error("can only hanlde literal suffix ")
+
+        return WhenOp(
+            "when",
+            AndOp("and", [self.expr.exists(), self.suffix.exists()]),
+            **{"then": RegExpOp(None, [self.expr, Literal(None, ".*" + re.escape(self.suffix.value))]), "else": FALSE}
+        ).partial_eval()
+
+
+
 
 
 class ConcatOp(Expression):

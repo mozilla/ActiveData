@@ -14,17 +14,17 @@ from __future__ import unicode_literals
 from operator import add
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL
+from jx_base.expressions import TupleOp, NULL, TRUE
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
-from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp, split_expression_by_path
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field
-from mo_future import text_type
+from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field, split_field, tail_field
+from mo_future import text_type, sort_using_key
 from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
@@ -92,12 +92,15 @@ def is_aggsop(es, query):
     return False
 
 
-def get_decoders_by_depth(query):
+def get_decoders_by_path(query):
     """
-    RETURN A LIST OF DECODER ARRAYS, ONE ARRAY FOR EACH NESTED DEPTH
+    RETURN MAP FROM QUERY PATH TO LIST OF DECODER ARRAYS
+
+    :param query:
+    :return:
     """
     schema = query.frum.schema
-    output = FlatList()
+    output = Data()
 
     if query.edges:
         if query.sort and query.format != "cube":
@@ -131,23 +134,19 @@ def get_decoders_by_depth(query):
 
         try:
             vars_ |= edge.value.vars()
-            depths = set(len(c.nested_path) - 1 for v in vars_ for c in schema.leaves(v.var))
-            if -1 in depths:
+            depths = set(c.nested_path[0] for v in vars_ for c in schema.leaves(v.var))
+            if not depths:
                 Log.error(
                     "Do not know of column {{column}}",
                     column=unwraplist([v for v in vars_ if schema[v] == None])
                 )
             if len(depths) > 1:
                 Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
-            max_depth = MAX(depths)
-            while len(output) <= max_depth:
-                output.append([])
         except Exception as e:
             # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
-            max_depth = 0
-            output.append([])
+            depths = "."
 
-        output[max_depth].append(AggsDecoder(edge, query, limit))
+        output[literal_field(iter(depths).next())] += [AggsDecoder(edge, query, limit)]
     return output
 
 
@@ -430,53 +429,38 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function(concat_field(canonical_name, aggregates[s.aggregate]))
             es_query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
-    decoders = get_decoders_by_depth(query)
+    split_decoders = get_decoders_by_path(query)
+    split_wheres = split_expression_by_path(query.where, schema=frum.schema)
+
     start = 0
-
-    # <TERRIBLE SECTION> THIS IS WHERE WE WEAVE THE where CLAUSE WITH nested
-    split_where = split_expression_by_depth(query.where, schema=frum.schema)
-
-    if (schema.multi and schema.multi.nested_path[0] != ".") or (not schema.multi and schema.query_path[0] != "."):
-        if any(split_where[2::]):
-            Log.error("Where clause is too deep")
-
-        for d in decoders[1]:
+    decoders=[]
+    paths = sort_using_key(split_wheres.keys() | split_decoders.keys(), key=lambda p: -len(split_field(p)))
+    for i, path in enumerate(paths):
+        literal_path = literal_field(path)
+        decoder = split_decoders[literal_path]
+        for d in decoder:
+            decoders.append(d)
             es_query = d.append_query(es_query, start)
             start += d.num_columns
 
-        if split_where[1]:
-            # TODO: INCLUDE FILTERS ON EDGES
-            filter_ = AndOp("and", split_where[1]).to_esfilter(schema)
-            es_query = Data(
-                aggs={"_filter": set_default({"filter": filter_}, es_query)}
-            )
+        where = split_wheres[literal_path]
+        if where:
+            w = AndOp("and", where).partial_eval()
+            if w is not TRUE:
+                filter_ = w.to_esfilter(schema)
+                es_query = Data(
+                    aggs={"_filter": set_default({"filter": filter_}, es_query)}
+                )
 
-        es_query = wrap({
-            "aggs": {"_nested": set_default(
-                {"nested": {"path": schema.query_path[0]}},
-                es_query
-            )}
-        })
-    else:
-        if any(split_where[1::]):
-            Log.error("Where clause is too deep:\n{{clause|json}}", clause=coalesce(*split_where[1::]))
+        if path != ".":
+            es_query = wrap({
+                "aggs": {"_nested": set_default(
+                    {"nested": {"path": path}},
+                    es_query
+                )}
+            })
 
-    if decoders:
-        for d in jx.reverse(decoders[0]):
-            es_query = d.append_query(es_query, start)
-            start += d.num_columns
-
-    if split_where[0]:
-        # TODO: INCLUDE FILTERS ON EDGES
-        filter = AndOp("and", split_where[0]).to_esfilter(schema)
-        es_query = Data(
-            aggs={"_filter": set_default({"filter": filter}, es_query)}
-        )
-    # </TERRIBLE SECTION>
-
-    if not es_query:
-        es_query = wrap({"query": {"match_all": {}}})
-
+    decoders = jx.reverse(decoders)
     es_query.size = 0
 
     with Timer("ES query time", silent=not DEBUG) as es_duration:
@@ -486,7 +470,6 @@ def es_aggsop(es, frum, query):
     try:
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:
-            decoders = [d for ds in decoders for d in ds]
             result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
 
             formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]

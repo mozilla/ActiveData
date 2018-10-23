@@ -1518,15 +1518,15 @@ def split_expression_by_path(where, schema, output=None, var_to_path=None):
     vars_ = where.vars()
 
     if var_to_path is None:
+        output = wrap({schema.query_path[0]: [TRUE]})
         if not vars_:
-            return Data()
+            return output
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
         var_to_path = {
             v.var: c.nested_path[0]
             for v in vars_
             for c in sort_using_key(schema[v.var], lambda r: len(r.nested_path))
         }
-        output = Data()
 
     all_paths = set(var_to_path[v.var] for v in vars_)
 

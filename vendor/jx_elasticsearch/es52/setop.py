@@ -60,18 +60,16 @@ def es_setop(es, query):
 
     wheres = split_expression_by_path(query.where, schema)
     es_query = es_query_proto(query_path, wheres, schema)
-    nested_filter = FlatList()
-
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.stored_fields = FlatList()
-
-    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
-    new_select = FlatList()
-    schema = query.frum.schema
-
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
+    split_select = Data()
+    nested_filter = FlatList()
+    new_select = FlatList()
+
     put_index = 0
+    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):

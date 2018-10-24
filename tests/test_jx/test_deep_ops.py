@@ -1540,6 +1540,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("broken")
     def test_from_shallow_select_deep_column(self):
         # QUERY AS IF _a.b IS A NULTI-VALUED COLUMN
         test = {
@@ -1618,6 +1619,7 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    @skip("for Orange query")
     def test_deep_edge_w_shallow_expression(self):
         test = {
             "data": [

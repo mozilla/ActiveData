@@ -1203,13 +1203,7 @@ class Alias(Features):
     def search(self, query, timeout=None):
         query = wrap(query)
         try:
-            if self.debug:
-                if len(query.facets.keys()) > 20:
-                    show_query = query.copy()
-                    show_query.facets = {k: "..." for k in query.facets.keys()}
-                else:
-                    show_query = query
-                Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=show_query)
+            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=query)
             return self.cluster.post(
                 self.path + "/_search",
                 data=query,

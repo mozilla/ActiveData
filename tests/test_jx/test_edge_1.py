@@ -1974,7 +1974,7 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("broken")
+    @skip("for Orange query")
     def test_shallow_with_deep_edge(self):
         test = {
             "data": [
@@ -1988,7 +1988,7 @@ class TestEdge1(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "edges": [{"name":"b", "value":{"first":"a.b"}}],
+                "edges": [{"name": "b", "value": {"first": "a.b"}}],
                 "select": {"name": "count", "value": {"when": "v", "then": 1}, "aggregate": "count"},
                 "where": {"exists": "a.b"}
             },

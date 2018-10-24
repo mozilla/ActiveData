@@ -26,6 +26,8 @@ curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\"
 
 
 
+
+
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \".kibana\",\"shard\": 0,\"from_node\": \"secondary\",\"to_node\": \"spot_C4D2B23E\"}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"repo20160225_224705\",\"shard\": 2,\"from_node\": \"spot_00C8C755\",\"to_node\": \"spot_01B4ADC5\"}}]}"
 
@@ -43,7 +45,7 @@ curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": 
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"treeherder20160722_171527\",\"shard\": 2,\"from_node\": \"spot_BAC8AE00\",\"to_node\": \"spot_01B4ADC5\"}}]}"
 
 
-curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \"coverage20180617_000000\",\"shard\": 35,\"from_node\": \"spot_34.219.85.42\",\"to_node\": \"3\"}}]}"  -H "Content-Type: application/json"
 
 
 
+curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"allocate_replica\": {\"index\": \"unittest20180916_000000\",\"shard\": 59,\"node\": \"3\"}}]}"  -H "Content-Type: application/json"

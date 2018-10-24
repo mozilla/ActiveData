@@ -1166,7 +1166,10 @@ def to_esfilter(self, schema):
         cols = schema.leaves(var)
         if cols:
             var = cols[0].es_column
-        return {"terms": {var: self.superset.value}}
+        if isinstance(self.superset, Literal) and not isinstance(self.superset.value, list):
+            return {"terms": {var: self.superset.value}}
+        else:
+            return {"terms": {var: self.superset.value}}
     else:
         return ScriptOp("script",  self.to_es_script(schema).script(schema)).to_esfilter(schema)
 

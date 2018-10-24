@@ -1095,6 +1095,34 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_in_with_singlton(self):
+        test = {
+            "data": [
+                {"a": "b"},
+                {"a": "b"},
+                {"a": "b"},
+                {"a": "c"},
+                {"a": "c"},
+                {"a": "d"},
+                {"a": "d"},
+                {"a": "d"},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"in": {"a": "b"}}
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b"},
+                    {"a": "b"},
+                    {"a": "b"}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
 
 
 # TODO: {"left": {variable: sentinel}}

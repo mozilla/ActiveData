@@ -1203,7 +1203,7 @@ class Alias(Features):
     def search(self, query, timeout=None):
         query = wrap(query)
         try:
-            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=show_query)
+            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=query)
             return self.cluster.post(
                 self.path + "/_search",
                 data=query,

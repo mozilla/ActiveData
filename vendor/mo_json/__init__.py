@@ -396,6 +396,7 @@ python_type_to_json_type = {
     object: OBJECT,
     Mapping: OBJECT,
     list: NESTED,
+    # tuple: NESTED,  # DO NOT INCLUDE, WILL HIDE LOGIC ERRORS
     FlatList: NESTED,
     Date: NUMBER
 }

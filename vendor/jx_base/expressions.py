@@ -2598,6 +2598,14 @@ class InOp(Expression):
     has_simple_form = True
     data_type = BOOLEAN
 
+    def __new__(cls, op, terms):
+        if isinstance(terms[0], Variable) and isinstance(terms[1], Literal):
+            name, value = terms
+            if isinstance(value.value, list):
+                return InOp("in", terms)
+            else:
+                return EqOp("in", [name, Literal(None, [value.value])])
+
     def __init__(self, op, term):
         Expression.__init__(self, op, term)
         self.value, self.superset = term

@@ -2717,13 +2717,13 @@ class CaseOp(Expression):
         if not isinstance(terms, (list, tuple)):
             Log.error("case expression requires a list of `when` sub-clauses")
         Expression.__init__(self, op, terms)
-        if len(terms) <= 1:
-            Log.error("Expecting at least two clauses")
-        else:
-            for w in terms[:-1]:
-                if not isinstance(w, WhenOp) or w.els_:
-                    Log.error("case expression does not allow `else` clause in `when` sub-clause")
-            self.whens = terms
+        if len(terms) == 0:
+            Log.error("Expecting at least one clause")
+
+        for w in terms[:-1]:
+            if not isinstance(w, WhenOp) or w.els_:
+                Log.error("case expression does not allow `else` clause in `when` sub-clause")
+        self.whens = terms
 
     def __data__(self):
         return {"case": [w.__data__() for w in self.whens]}

@@ -529,8 +529,9 @@ def to_esfilter(self, schema):
 
 @extend(BasicEqOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    simple_rhs = self.rhs.partial_eval()
     lhs = self.lhs.partial_eval().to_es_script(schema)
-    rhs = self.rhs.partial_eval().to_es_script(schema)
+    rhs = simple_rhs.to_es_script(schema)
 
     if lhs.many:
         if rhs.many:
@@ -539,7 +540,15 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
                 EsScript(type=BOOLEAN, expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")", frum=self)
             ]).to_es_script(schema)
         else:
-            return EsScript(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",frum=self)
+            if lhs.type == BOOLEAN:
+                if isinstance(simple_rhs, Literal) and simple_rhs.value in ('F', False):
+                    return EsScript(type=BOOLEAN, expr="!" + lhs.expr, frum=self)
+                elif isinstance(simple_rhs, Literal) and simple_rhs.value in ('T', True):
+                    return EsScript(type=BOOLEAN, expr=lhs.expr, frum=self)
+                else:
+                    return EsScript(type=BOOLEAN, expr="(" + lhs.expr + ")==(" + rhs.expr + ")", frum=self)
+            else:
+                return EsScript(type=BOOLEAN, expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",frum=self)
     elif rhs.many:
         return EsScript(
             type=BOOLEAN,
@@ -547,11 +556,15 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
             frum=self
         )
     else:
-        return EsScript(
-            type=BOOLEAN,
-            expr="(" + lhs.expr + "==" + rhs.expr + ")",
-            frum=self
-        )
+        if lhs.type == BOOLEAN:
+            if isinstance(simple_rhs, Literal) and simple_rhs.value in ('F', False):
+                return EsScript(type=BOOLEAN, expr="!" + lhs.expr, frum=self)
+            elif isinstance(simple_rhs, Literal) and simple_rhs.value in ('T', True):
+                return EsScript(type=BOOLEAN, expr=lhs.expr, frum=self)
+            else:
+                return EsScript(type=BOOLEAN, expr="(" + lhs.expr + ")==(" + rhs.expr + ")", frum=self)
+        else:
+            return EsScript(type=BOOLEAN, expr="(" + lhs.expr + "==" + rhs.expr + ")", frum=self)
 
 
 @extend(BasicEqOp)
@@ -1188,7 +1201,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
                     type=c.jx_type,
                     expr="doc[" + q + "].values" if c.jx_type != BOOLEAN else "doc[" + q + "].value",
                     frum=frum,
-                    many=True
+                    many=c.jx_type != BOOLEAN
                 ))
             else:
                 acc.append(EsScript(

@@ -2601,10 +2601,9 @@ class InOp(Expression):
     def __new__(cls, op, terms):
         if isinstance(terms[0], Variable) and isinstance(terms[1], Literal):
             name, value = terms
-            if isinstance(value.value, (list, tuple)):
-                return object.__new__(cls)
-            else:
+            if not isinstance(value.value, (list, tuple)):
                 return EqOp("in", [name, Literal(None, [value.value])])
+        return object.__new__(cls)
 
     def __init__(self, op, term):
         Expression.__init__(self, op, term)

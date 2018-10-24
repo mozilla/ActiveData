@@ -1974,7 +1974,7 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("not ready")
+    @skip("for Orange query")
     def test_shallow_with_deep_edge(self):
         test = {
             "data": [

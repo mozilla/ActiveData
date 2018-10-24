@@ -507,7 +507,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True, "Too complicated")
+    @skip("Too complicated")
     def test_select_into_children(self):
         test = {
             "name": "select into children to table",
@@ -1105,7 +1105,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(True, "not implemented yet")
+    @skip("was working")
     def test_select_array_as_value(self):
         test = {
             "data": [

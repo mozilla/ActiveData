@@ -1619,7 +1619,7 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    @skip("not ready")
+    @skip("for Orange query")
     def test_edge_w_expression(self):
         test = {
             "data": [

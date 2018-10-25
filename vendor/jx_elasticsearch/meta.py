@@ -20,7 +20,7 @@ from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field
 from mo_files import URL
 from mo_future import text_type
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
@@ -595,6 +595,13 @@ class Snowflake(object):
         Log.error("Can not find index {{index|quote}}", index=self.name)
 
     @property
+    def sorted_query_paths(self):
+        """
+        RETURN A LIST OF ALL SCHEMA'S IN DEPTH-FIRST TOPOLOGICAL ORDER
+        """
+        return list(reversed(sorted(p[0] for p in self.namespace.alias_to_query_paths.get(self.name))))
+
+    @property
     def columns(self):
         """
         RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
@@ -651,7 +658,7 @@ class Schema(jx_base.Schema):
         column_name = unnest_path(column_name)
         columns = self.columns
         # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
-        # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME
+        # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
         for path in reversed(self.query_path) if column_name == '.' else self.query_path:
             output = [
                 c
@@ -668,6 +675,28 @@ class Schema(jx_base.Schema):
             if output:
                 return output
         return []
+
+    def all_leaves(self, column_name):
+        """
+        :param column_name:
+        :return: ALL COLUMNS THAT START WITH column_name, INCLUDING DEEP COLUMNS
+        """
+        column_name = unnest_path(column_name)
+        columns = self.columns
+        all_paths = [unnest_path(p) for p in self.snowflake.sorted_query_paths]
+
+        output = set()
+        for c in columns:
+            if c.name == "_id" and column_name != "_id":
+                continue
+            if c.jx_type in OBJECTS:
+                continue
+            abs_path = unnest_path(c.name)
+            for path in all_paths:
+                full_column_name = concat_field(path, column_name)
+                if startswith_field(abs_path, full_column_name):
+                    output.add(c)
+        return output
 
     def values(self, column_name, exclude_type=STRUCT):
         """
@@ -709,7 +738,7 @@ class Schema(jx_base.Schema):
                 output,
                 {
                     k: c.es_column
-                    for c in self.snowflake.columns
+                    for c in self.columns
                     if c.jx_type not in STRUCT
                     for rel_name in [relative_field(c.name, path)]
                     for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]

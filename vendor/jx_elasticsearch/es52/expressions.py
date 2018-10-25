@@ -1531,20 +1531,19 @@ def split_expression_by_path(where, schema, output=None, var_to_path=None):
     :param var_to_path: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: output: A MAP FROM PATH TO EXPRESSION
     """
-    vars_ = where.vars()
+    columns = set(l for v in where.vars() for l in schema.all_leaves(v.var))
 
     if var_to_path is None:
         output = wrap({schema.query_path[0]: []})
-        if not vars_:
+        if not columns:
             return output
         # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
         var_to_path = {
-            v.var: c.nested_path[0]
-            for v in vars_
-            for c in sort_using_key(schema[v.var], lambda r: len(r.nested_path))
+            c.es_column: c.nested_path[0]
+            for c in columns
         }
 
-    all_paths = set(var_to_path[v.var] for v in vars_)
+    all_paths = set(var_to_path.values())
 
     if len(all_paths) == 1:
         output[literal_field(iter(all_paths).next())] += [where]

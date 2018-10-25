@@ -437,7 +437,7 @@ def es_aggsop(es, frum, query):
 
     start = 0
     decoders = []
-    paths = sort_using_key(split_wheres.keys() | split_decoders.keys(), key=lambda p: -len(split_field(p)))
+    paths = list(reversed(sorted(split_wheres.keys() | split_decoders.keys())))
     for path in paths:
         literal_path = literal_field(path)
         decoder = split_decoders[literal_path]

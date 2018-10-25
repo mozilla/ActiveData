@@ -406,7 +406,7 @@ class TestgroupBy1(BaseTestCase):
         self.utils.execute_tests(test)
 
     # @skipIf(int(global_settings.elasticsearch.version.split(".")[0]) <= 5, "version 5 and below do not implement")
-    @skip("for Orange query")
+    @skip("for coverage")
     def test_groupby_multivalue_nested(self):
         test = {
             "data": [

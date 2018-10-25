@@ -23,6 +23,7 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
+from jx_python.jx import first
 from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field, split_field, tail_field, startswith_field
 from mo_future import text_type, sort_using_key
 from mo_json import EXISTS, OBJECT, NESTED
@@ -146,7 +147,7 @@ def get_decoders_by_path(query):
             # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
             depths = "."
 
-        output[literal_field(iter(depths).next())] += [AggsDecoder(edge, query, limit)]
+        output[literal_field(first(depths))] += [AggsDecoder(edge, query, limit)]
     return output
 
 
@@ -177,7 +178,7 @@ def es_aggsop(es, frum, query):
 
     select = listwrap(query.select)
 
-    es_query = Data()
+    es_query = wrap({"path": ".", "query": {}})  # TRACK THE PATH AND THE COMPOSED QUERY
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
@@ -207,10 +208,10 @@ def es_aggsop(es, frum, query):
                     cn = literal_field(column.es_column + "_count")
                     if column.jx_type == EXISTS:
                         canonical_names.append(cn + ".doc_count")
-                        es_query.aggs[cn].filter.range = {column.es_column: {"gt": 0}}
+                        es_query.query.aggs[cn].filter.range = {column.es_column: {"gt": 0}}
                     else:
                         canonical_names.append(cn + ".value")
-                        es_query.aggs[cn].value_count.field = column.es_column
+                        es_query.query.aggs[cn].value_count.field = column.es_column
                 if len(canonical_names) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0])
                 else:
@@ -221,8 +222,8 @@ def es_aggsop(es, frum, query):
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
-                es_query.aggs[key].percentiles.field = columns[0].es_column
-                es_query.aggs[key].percentiles.percents += [50]
+                es_query.query.aggs[key].percentiles.field = columns[0].es_column
+                es_query.query.aggs[key].percentiles.percents += [50]
                 s.pull = jx_expression_to_function(key + ".values.50\\.0")
             elif s.aggregate == "percentile":
                 if len(columns) > 1:
@@ -233,16 +234,16 @@ def es_aggsop(es, frum, query):
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
-                es_query.aggs[key].percentiles.field = columns[0].es_column
-                es_query.aggs[key].percentiles.percents += [percent]
-                es_query.aggs[key].percentiles.tdigest.compression = 2
+                es_query.query.aggs[key].percentiles.field = columns[0].es_column
+                es_query.query.aggs[key].percentiles.percents += [percent]
+                es_query.query.aggs[key].percentiles.tdigest.compression = 2
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
             elif s.aggregate == "cardinality":
                 canonical_names = []
                 for column in columns:
                     cn = literal_field(column.es_column + "_cardinality")
                     canonical_names.append(cn)
-                    es_query.aggs[cn].cardinality.field = column.es_column
+                    es_query.query.aggs[cn].cardinality.field = column.es_column
                 if len(columns) == 1:
                     s.pull = jx_expression_to_function(canonical_names[0] + ".value")
                 else:
@@ -252,12 +253,12 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].extended_stats.field = columns[0].es_column
+                es_query.query.aggs[stats_name].extended_stats.field = columns[0].es_column
 
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + "_percentile")
-                es_query.aggs[median_name].percentiles.field = columns[0].es_column
-                es_query.aggs[median_name].percentiles.percents += [50]
+                es_query.query.aggs[median_name].percentiles.field = columns[0].es_column
+                es_query.query.aggs[median_name].percentiles.percents += [50]
 
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
@@ -271,10 +272,10 @@ def es_aggsop(es, frum, query):
                     }}
                     stats_name = encode_property(column.es_column)
                     if column.nested_path[0] == ".":
-                        es_query.aggs[stats_name] = script
+                        es_query.query.aggs[stats_name] = script
                         pulls.append(jx_expression_to_function(stats_name + ".value"))
                     else:
-                        es_query.aggs[stats_name] = {
+                        es_query.query.aggs[stats_name] = {
                             "nested": {"path": column.nested_path[0]},
                             "aggs": {"_nested": script}
                         }
@@ -311,10 +312,10 @@ def es_aggsop(es, frum, query):
                     }}
                     stats_name = encode_property(column.es_column)
                     if column.nested_path[0] == ".":
-                        es_query.aggs[stats_name] = script
+                        es_query.query.aggs[stats_name] = script
                         pulls.append(jx_expression_to_function(stats_name + ".value"))
                     else:
-                        es_query.aggs[stats_name] = {
+                        es_query.query.aggs[stats_name] = {
                             "nested": {"path": column.nested_path[0]},
                             "aggs": {"_nested": script}
                         }
@@ -334,11 +335,11 @@ def es_aggsop(es, frum, query):
                     for c in columns:
                         if relative_field(c.nested_path[0], schema.query_path[0]) == '.':
                             # PULL VALUE OUT OF THE stats AGGREGATE
-                            es_query.aggs[literal_field(canonical_name)].extended_stats.field = c.es_column
+                            es_query.query.aggs[literal_field(canonical_name)].extended_stats.field = c.es_column
                             pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), s.default]})
                         else:
                             nest_name = literal_field(concat_field(c.nested_path[0], canonical_name))
-                            es_query.aggs[nest_name] = {
+                            es_query.query.aggs[nest_name] = {
                                 "nested": {"path": c.nested_path[0]},
                                 "aggs": {canonical_name: {"extended_stats": {"field": c.es_column}}}
                             }
@@ -352,7 +353,7 @@ def es_aggsop(es, frum, query):
                         s.pull = jx_expression_to_function({"sum": pulls})
 
     for i, s in enumerate(formula):
-        value_by_path = split_expression_by_path(s.value, schema=schema)
+        # value_by_path = split_expression_by_path(s.value, schema=schema)
         canonical_name = literal_field(s.name)
 
         if isinstance(s.value, TupleOp):
@@ -377,10 +378,11 @@ def es_aggsop(es, frum, query):
                     'reduce_script': 'return params._aggs.stream().'+op+'(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
                 }}
                 if schema.query_path[0] == ".":
-                    es_query.aggs[canonical_name] = script
+                    es_query.query.aggs[canonical_name] = script
                     s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
                 else:
-                    es_query.aggs[canonical_name] = {
+                    es_query.path = query_path
+                    es_query.query.aggs[canonical_name] = {
                         "nested": {"path": schema.query_path[0]},
                         "aggs": {"_nested": script}
                     }
@@ -388,52 +390,72 @@ def es_aggsop(es, frum, query):
             else:
                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es_script(schema).script(schema)
+            es_query.query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
 
-            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
-            es_query.aggs[key].percentiles.percents += [50]
+            es_query.query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[key].percentiles.percents += [50]
             s.pull = jx_expression_to_function(key + ".values.50\\.0")
         elif s.aggregate == "percentile":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
             percent = Math.round(s.percentile * 100, decimal=6)
 
-            es_query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
-            es_query.aggs[key].percentiles.percents += [percent]
+            es_query.query.aggs[key].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[key].percentiles.percents += [percent]
             s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
         elif s.aggregate == "cardinality":
             # ES USES DIFFERENT METHOD FOR CARDINALITY
             key = canonical_name + " cardinality"
 
-            es_query.aggs[key].cardinality.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[key].cardinality.script = s.value.to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(key + ".value")
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[stats_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
             # GET MEDIAN TOO!
             median_name = literal_field(canonical_name + " percentile")
-            es_query.aggs[median_name].percentiles.script = s.value.to_es_script(schema).script(schema)
-            es_query.aggs[median_name].percentiles.percents += [50]
+            es_query.query.aggs[median_name].percentiles.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[median_name].percentiles.percents += [50]
 
             s.pull = get_pull_stats(stats_name, median_name)
         elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             stats_name = literal_field(canonical_name)
-            es_query.aggs[stats_name].terms.script_field = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[stats_name].terms.script_field = s.value.to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(stats_name + ".buckets.key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(concat_field(canonical_name, aggregates[s.aggregate]))
-            es_query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
+            es_query.query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
     split_decoders = get_decoders_by_path(query)
     split_wheres = split_expression_by_path(query.where, schema=frum.schema)
+
+    def remap_nested(new_path):
+        if new_path != es_query.path:
+            if startswith_field(es_query.path, new_path):
+                # DEEPER
+                es_query.query = wrap({
+                    "aggs": {"_nested": set_default(
+                        {"nested": {"path": es_query.path}},
+                        es_query.query
+                    )}
+                })
+            else:
+                # SHALLOWER
+                es_query.query = wrap({
+                    "aggs": {"_nested": set_default(
+                        {"reverse_nested": {"path": es_query.path if es_query.path != "." else None}},
+                        es_query.query
+                    )}
+                })
+            es_query.path = new_path
 
     start = 0
     decoders = []
@@ -441,33 +463,31 @@ def es_aggsop(es, frum, query):
     for path in paths:
         literal_path = literal_field(path)
         decoder = split_decoders[literal_path]
+        where = split_wheres[literal_path]
+
+        if decoder or where:
+            remap_nested(path)
+
         for d in decoder:
             decoders.append(d)
-            es_query = d.append_query(es_query, start)
+            es_query.query = d.append_query(es_query.path, es_query.query, start)
             start += d.num_columns
 
-        where = split_wheres[literal_path]
         if where:
             w = AndOp("and", where).partial_eval()
             if w is not TRUE:
                 filter_ = w.to_esfilter(schema)
-                es_query = Data(
-                    aggs={"_filter": set_default({"filter": filter_}, es_query)}
+                es_query.query = Data(
+                    aggs={"_filter": set_default({"filter": filter_}, es_query.query)}
                 )
 
-        if startswith_field(query_path, path) and path != '.':
-            es_query = wrap({
-                "aggs": {"_nested": set_default(
-                    {"nested": {"path": path}},
-                    es_query
-                )}
-            })
+    remap_nested(".")  # ALL ES QUERIES START AT NO NESTING
 
     decoders = jx.reverse(decoders)
-    es_query.size = 0
+    es_query.query.size = 0
 
     with Timer("ES query time", silent=not DEBUG) as es_duration:
-        result = es_post(es, es_query, query.limit)
+        result = es_post(es, es_query.query, query.limit)
 
     # Log.note("{{result}}", result=result)
     try:
@@ -486,7 +506,7 @@ def es_aggsop(es, frum, query):
         output.meta.timing.formatting = format_time.duration
         output.meta.timing.es_search = es_duration.duration
         output.meta.content_type = mime_type
-        output.meta.es_query = es_query
+        output.meta.es_query = es_query.query
         return output
     except Exception as e:
         if query.format not in format_dispatch:
@@ -546,16 +566,15 @@ def aggs_iterator(aggs, decoders, coord=True):
                     v = drill(v)
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
-                        yield b, (b,)
+                        yield drill(b,), (b,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         yield b, (Null,)
                 elif k == "_missing":
-                    b = drill(v,)
-                    yield b, (v,)
+                    yield drill(v,), (v,)
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
-                    yield v, (v,)
+                    yield drill(v), (v,)
 
     if coord:
         for a, parts in _aggs_iterator(unwrap(aggs), depth - 1):

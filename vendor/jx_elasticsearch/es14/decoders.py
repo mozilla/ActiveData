@@ -20,7 +20,7 @@ from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es14.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_python import jx
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist
-from mo_future import text_type
+from mo_future import text_type, transpose
 from mo_json import STRING, NUMBER, BOOLEAN
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
@@ -113,7 +113,7 @@ class AggsDecoder(object):
         self.limit = limit
         self.schema = self.query.frum.schema
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         Log.error("Not supported")
 
     def count(self, row):
@@ -154,7 +154,7 @@ class SetDecoder(AggsDecoder):
                     parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
                     edge.domain = self.domain = SimpleSetDomain(key=domain.key, label=domain.label, partitions=parts)
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         domain = self.domain
 
@@ -258,7 +258,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
 
 
 class TimeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         schema = self.query.frum.schema
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix, schema)
@@ -305,7 +305,7 @@ class GeneralRangeDecoder(AggsDecoder):
         else:
             Log.error("Unknown domain of type {{type}} for range edge", type=edge.domain.type)
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         edge = self.edge
@@ -345,7 +345,7 @@ class GeneralSetDecoder(AggsDecoder):
     EXPECTING ALL PARTS IN partitions TO HAVE A where CLAUSE
     """
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         parts = self.edge.domain.partitions
@@ -388,7 +388,7 @@ class GeneralSetDecoder(AggsDecoder):
 
 
 class DurationDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds, self.schema)
 
@@ -419,7 +419,7 @@ class DurationDecoder(AggsDecoder):
 
 
 class RangeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x, self.schema)
 
@@ -456,7 +456,7 @@ class MultivalueDecoder(SetDecoder):
         self.values = query.frum.schema[edge.value.var][0].partitions
         self.parts = []
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         es_field = self.query.frum.schema.leaves(self.var)[0].es_column
@@ -508,7 +508,7 @@ class ObjectDecoder(AggsDecoder):
         self.key2index = {}
         self.computed_domain = False
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         for i, v in enumerate(self.fields):
             nest = wrap({"aggs": {
@@ -588,7 +588,7 @@ class DefaultDecoder(SetDecoder):
         else:
             self.es_order = None
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         if not isinstance(self.edge.value, Variable):
@@ -692,7 +692,7 @@ class DimFieldListDecoder(SetDecoder):
         self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         # TODO: USE "reverse_nested" QUERY TO PULL THESE
         self.start = start
         for i, v in enumerate(self.fields):

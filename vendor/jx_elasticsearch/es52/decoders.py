@@ -16,11 +16,12 @@ from time import time
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, TRUE
+from jx_base.expressions import TupleOp, TRUE, FirstOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
+from jx_python.jx import first
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
 from mo_future import text_type, transpose
 from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL
@@ -64,7 +65,7 @@ class AggsDecoder(object):
                     return object.__new__(DefaultDecoder)
                 if len(cols) != 1:
                     return object.__new__(ObjectDecoder)
-                col = cols[0]
+                col = first(cols)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.cardinality == None:
@@ -127,7 +128,7 @@ class AggsDecoder(object):
         self.limit = limit
         self.schema = self.query.frum.schema
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         Log.error("Not supported")
 
     def count(self, row):
@@ -168,7 +169,7 @@ class SetDecoder(AggsDecoder):
                     parts = jx.sort(domain.partitions, {"value": domain.key, "sort": s.sort})
                     edge.domain = self.domain = SimpleSetDomain(key=domain.key, label=domain.label, partitions=parts)
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         domain = self.domain
 
@@ -189,7 +190,7 @@ class SetDecoder(AggsDecoder):
         limit = coalesce(self.limit, len(domain.partitions))
 
         if isinstance(value, Variable):
-            es_field = self.query.frum.schema.leaves(value.var)[0].es_column  # ALREADY CHECKED THERE IS ONLY ONE
+            es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
             terms = set_default({"terms": {
                 "field": es_field,
                 "size": limit,
@@ -205,10 +206,19 @@ class SetDecoder(AggsDecoder):
             }}, es_query)
 
         if self.edge.allowNulls:
-            missing = set_default(
-                {"filter": NotOp("not", exists).to_esfilter(self.schema)},
-                es_query
-            )
+            if depth != '.':
+                missing = set_default(
+                    {"filter": {"bool": {"must_not": {"nested": {
+                        "path": depth,
+                        "query": exists.to_esfilter(self.schema)
+                    }}}}},
+                    es_query
+                )
+            else:
+                missing = set_default(
+                    {"filter": NotOp("not", exists).to_esfilter(self.schema)},
+                    es_query
+                )
         else:
             missing = None
 
@@ -275,7 +285,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
 
 
 class TimeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         schema = self.query.frum.schema
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix, schema)
@@ -322,7 +332,7 @@ class GeneralRangeDecoder(AggsDecoder):
         else:
             Log.error("Unknown domain of type {{type}} for range edge", type=edge.domain.type)
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         edge = self.edge
@@ -362,7 +372,7 @@ class GeneralSetDecoder(AggsDecoder):
     EXPECTING ALL PARTS IN partitions TO HAVE A where CLAUSE
     """
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         parts = self.edge.domain.partitions
@@ -405,7 +415,7 @@ class GeneralSetDecoder(AggsDecoder):
 
 
 class DurationDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds, self.schema)
 
@@ -436,7 +446,7 @@ class DurationDecoder(AggsDecoder):
 
 
 class RangeDecoder(AggsDecoder):
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x, self.schema)
 
@@ -473,7 +483,7 @@ class MultivalueDecoder(SetDecoder):
         self.values = query.frum.schema[edge.value.var][0].partitions
         self.parts = []
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
         es_field = self.query.frum.schema.leaves(self.var)[0].es_column
@@ -525,7 +535,7 @@ class ObjectDecoder(AggsDecoder):
         self.key2index = {}
         self.computed_domain = False
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
         for i, v in enumerate(self.fields):
             nest = wrap({"aggs": {
@@ -608,9 +618,11 @@ class DefaultDecoder(SetDecoder):
         else:
             self.es_order = None
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         self.start = start
 
+        if isinstance(self.edge.value, FirstOp) and isinstance(self.edge.value.term, Variable):
+            self.edge.value = self.edge.value.term  # ES USES THE FIRST TERM FOR {"terms": } AGGREGATION
         if not isinstance(self.edge.value, Variable):
             if self.exists is TRUE:
                 # IF True THEN WE DO NOT NEED THE _filter OR THE _missing (THIS RARELY HAPPENS THOUGH)
@@ -649,14 +661,14 @@ class DefaultDecoder(SetDecoder):
             output = wrap({"aggs": {
                 "_match": set_default(
                     {"terms": {
-                        "field": self.schema.leaves(self.edge.value.var)[0].es_column,
+                        "field": first(self.schema.leaves(self.edge.value.var)).es_column,
                         "size": self.domain.limit,
                         "order": self.es_order
                     }},
                     es_query
                 ),
                 "_missing": set_default(
-                    {"filter": self.missing.to_esfilter(self.schema)},
+                    {"filter": self.missing.partial_eval().to_esfilter(self.schema)},
                     es_query
                 )
             }})
@@ -712,7 +724,7 @@ class DimFieldListDecoder(SetDecoder):
         self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
 
-    def append_query(self, es_query, start):
+    def append_query(self, depth, es_query, start):
         # TODO: USE "reverse_nested" QUERY TO PULL THESE
         self.start = start
         for i, v in enumerate(self.fields):

@@ -451,13 +451,19 @@ class ElasticsearchMetadata(Namespace):
             TEST_TABLE = "testdata"
             is_missing_index = any(w in e for w in ["IndexMissingException", "index_not_found_exception"])
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
-            if is_missing_index and is_test_table:
+            if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
                 self.meta.columns.update({
                     "clear": ".",
                     "where": {"eq": {"es_index": column.es_index}}
                 })
                 self.index_does_not_exist.add(column.es_index)
+            elif "No field found for" in e:
+                self.meta.columns.update({
+                    "clear": ".",
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
+                })
+                Log.warning("Could not get column {{col.es_index}}.{{col.es_column}} info", col=column, cause=e)
             else:
                 self.meta.columns.update({
                     "set": {
@@ -650,7 +656,7 @@ class Schema(jx_base.Schema):
         except Exception as e:
             Log.error("logic error", cause=e)
 
-    def leaves(self, column_name):
+    def old_leaves(self, column_name):
         """
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
@@ -676,7 +682,7 @@ class Schema(jx_base.Schema):
                 return output
         return []
 
-    def all_leaves(self, column_name):
+    def leaves(self, column_name):
         """
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, INCLUDING DEEP COLUMNS
@@ -685,18 +691,25 @@ class Schema(jx_base.Schema):
         columns = self.columns
         all_paths = [unnest_path(p) for p in self.snowflake.sorted_query_paths]
 
-        output = set()
+        output = {}
         for c in columns:
             if c.name == "_id" and column_name != "_id":
                 continue
             if c.jx_type in OBJECTS:
                 continue
+            if c.cardinality == 0:
+                continue
             abs_path = unnest_path(c.name)
             for path in all_paths:
                 full_column_name = concat_field(path, column_name)
-                if startswith_field(abs_path, full_column_name):
-                    output.add(c)
-        return output
+                if not startswith_field(abs_path, full_column_name):
+                    continue
+                existing = output.get(full_column_name)
+                if existing and len(existing.nested_path[0]) > len(c.nested_path[0]):
+                    continue
+                # ONLY THE DEEPEST COLUMN WILL BE CHOSEN
+                output[full_column_name] = c
+        return set(output.values())
 
     def values(self, column_name, exclude_type=STRUCT):
         """
@@ -710,7 +723,8 @@ class Schema(jx_base.Schema):
                 for c in columns
                 if (
                     c.jx_type not in exclude_type and
-                    untype_path(relative_field(c.name, path)) == column_name
+                    untype_path(relative_field(c.name, path)) == column_name and
+                    c.cardinality != 0
                 )
             ]
             if output:

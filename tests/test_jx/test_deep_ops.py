@@ -1619,7 +1619,7 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    @skip("for Orange query")
+    # @skip("for Orange query")
     def test_deep_edge_w_shallow_expression(self):
         test = {
             "data": [
@@ -1640,9 +1640,9 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"b": 1, "count": 2},
-                    {"b": 2, "count": 2},
+                    {"b": 2, "count": 1},  # v (at b==2) is multivalued: [4, 4] => v is not null => {"when":"v", "then":1} == 1
                     {"b": 4, "count": 1},
-                    {"count": 3}
+                    {"count": 4}
                 ]
             },
             # "expecting_table": {

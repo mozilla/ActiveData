@@ -24,7 +24,7 @@ from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_miss
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
 from mo_future import text_type, number_types, sort_using_key
-from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type
+from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type, NESTED
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
@@ -714,13 +714,11 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 def to_esfilter(self, schema):
     if isinstance(self.term, MissingOp) and isinstance(self.term.expr, Variable):
         v = self.term.expr.var
-        cols = schema.leaves(v)
-        num = len(cols)
-        if num > 1:
-            Log.error("do not know how to handle")
-        elif num:
-            v = first(cols).es_column
-        return {"exists": {"field": v}}
+        cols = schema.values(v, (OBJECT, NESTED))
+        if len(cols) == 1:
+            # PREVENT RECURSIVE LOOP
+            return {"exists": {"field": first(cols).es_column}}
+        return AndOp("and", [ExistsOp("exists", Variable(c.es_column)) for c in cols]).partial_eval().to_esfilter(schema)
     else:
         operand = self.term.to_esfilter(schema)
         return es_not(operand)

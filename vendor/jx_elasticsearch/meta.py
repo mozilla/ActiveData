@@ -656,7 +656,7 @@ class Schema(jx_base.Schema):
         except Exception as e:
             Log.error("logic error", cause=e)
 
-    def old_leaves(self, column_name):
+    def leaves(self, column_name):
         """
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
@@ -679,17 +679,17 @@ class Schema(jx_base.Schema):
                 )
             ]
             if output:
-                return output
-        return []
+                return set(output)
+        return set()
 
-    def leaves(self, column_name):
+    def new_leaves(self, column_name):
         """
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, INCLUDING DEEP COLUMNS
         """
         column_name = unnest_path(column_name)
         columns = self.columns
-        all_paths = [unnest_path(p) for p in self.snowflake.sorted_query_paths]
+        all_paths = self.snowflake.sorted_query_paths
 
         output = {}
         for c in columns:
@@ -699,20 +699,34 @@ class Schema(jx_base.Schema):
                 continue
             if c.cardinality == 0:
                 continue
-            abs_path = unnest_path(c.name)
             for path in all_paths:
-                full_column_name = concat_field(path, column_name)
-                if not startswith_field(abs_path, full_column_name):
+                if not startswith_field(unnest_path(relative_field(c.name, path)), column_name):
                     continue
-                existing = output.get(full_column_name)
-                if existing and len(existing.nested_path[0]) > len(c.nested_path[0]):
+                existing = output.get(path)
+                if not existing:
+                    output[path] = [c]
                     continue
-                if existing and any("." + t + "." in c.es_column for t in (STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE)):
+                if len(path) > len(c.nested_path[0]):
+                    continue
+                if any("." + t + "." in c.es_column for t in (STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE)):
                     # ELASTICSEARCH field TYPES ARE NOT ALLOWED
                     continue
                 # ONLY THE DEEPEST COLUMN WILL BE CHOSEN
-                output[full_column_name] = c
+                output[path].append(c)
         return set(output.values())
+
+    def both_leaves(self, column_name):
+        old = self.old_leaves(column_name)
+        new = self.new_leaves(column_name)
+
+        if old != new:
+            Log.error(
+                "not the same: {{old}}, {{new}}",
+                old=[c.name for c in old],
+                new=[c.name for c in new]
+            )
+
+        return new
 
     def values(self, column_name, exclude_type=STRUCT):
         """
@@ -720,16 +734,16 @@ class Schema(jx_base.Schema):
         """
         column_name = unnest_path(column_name)
         columns = self.columns
+        output = []
         for path in self.query_path:
-            output = [
-                c
-                for c in columns
-                if (
-                    c.jx_type not in exclude_type and
-                    untype_path(relative_field(c.name, path)) == column_name and
-                    c.cardinality != 0
-                )
-            ]
+            full_path = untype_path(concat_field(path, column_name))
+            for c in columns:
+                if c.jx_type in exclude_type:
+                    continue
+                if c.cardinality == 0:
+                    continue
+                if untype_path(c.name) == full_path:
+                    output.append(c)
             if output:
                 return output
         return []

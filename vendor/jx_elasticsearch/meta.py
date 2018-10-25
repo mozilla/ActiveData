@@ -24,7 +24,7 @@ from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null
 from mo_files import URL
 from mo_future import text_type
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
+from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, STRING_TYPE, BOOLEAN_TYPE, NUMBER_TYPE
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -706,6 +706,9 @@ class Schema(jx_base.Schema):
                     continue
                 existing = output.get(full_column_name)
                 if existing and len(existing.nested_path[0]) > len(c.nested_path[0]):
+                    continue
+                if existing and any("." + t + "." in c.es_column for t in (STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE)):
+                    # ELASTICSEARCH field TYPES ARE NOT ALLOWED
                     continue
                 # ONLY THE DEEPEST COLUMN WILL BE CHOSEN
                 output[full_column_name] = c

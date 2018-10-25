@@ -98,19 +98,22 @@ def es_setop(es, query):
                     put_index += 1
         elif isinstance(select.value, Variable):
             s_column = select.value.var
+
+            if s_column == ".":
+                # PULL ALL SOURCE
+                es_query.stored_fields = ["_source"]
+                new_select.append({
+                    "name": select.name,
+                    "value": select.value,
+                    "put": {"name": select.name, "index": put_index, "child": "."},
+                    "pull": get_pull_source(".")
+                })
+                continue
+
             leaves = schema.leaves(s_column)  # LEAVES OF OBJECT
             nested_selects = {}
             if leaves:
-                if s_column == ".":
-                    # PULL ALL SOURCE
-                    es_query.stored_fields = ["_source"]
-                    new_select.append({
-                        "name": select.name,
-                        "value": select.value,
-                        "put": {"name": select.name, "index": put_index, "child": "."},
-                        "pull": get_pull_source(".")
-                    })
-                elif any(c.jx_type == NESTED for c in leaves):
+                if any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.stored_fields = ["_source"]
                     for c in leaves:

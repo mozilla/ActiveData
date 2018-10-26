@@ -1640,7 +1640,7 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"b": 1, "count": 2},
-                    {"b": 2, "count": 1},  # v (at b==2) is multivalued: [4, 4] => v is not null => {"when":"v", "then":1} == 1
+                    {"b": 2, "count": 1},  # v (at b==2) is multivalued: [4, 4] =>  is not null => {"when":"v", "then":1} == 1
                     {"b": 4, "count": 1},
                     {"count": 4}
                 ]

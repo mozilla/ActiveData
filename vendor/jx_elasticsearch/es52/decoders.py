@@ -183,7 +183,7 @@ class SetDecoder(AggsDecoder):
         ))
         value = self.edge.value
         exists = AndOp("and", [
-            value.exists(),
+            value.exists(),  # TODO: is this needed?
             InOp("in", [value, Literal("literal", include)])
         ]).partial_eval()
 

@@ -178,7 +178,7 @@ def es_aggsop(es, frum, query):
 
     select = listwrap(query.select)
 
-    es_query = wrap({"path": ".", "query": {}})  # TRACK THE PATH AND THE COMPOSED QUERY
+    es_query = wrap({"path": query_path, "query": {}})  # TRACK THE PATH AND THE COMPOSED QUERY
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
@@ -489,7 +489,7 @@ def es_aggsop(es, frum, query):
     with Timer("ES query time", silent=not DEBUG) as es_duration:
         result = es_post(es, es_query.query, query.limit)
 
-    # Log.note("{{result}}", result=result)
+    Log.note("{{result}}", result=result)
     try:
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:

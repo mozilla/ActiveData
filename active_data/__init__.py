@@ -38,7 +38,7 @@ def record_request(request, query_, data, error):
             "remote_addr": request.remote_addr,
             "query_text": value2json(query_),
             "data": data,
-            "error": error
+            "error": value2json(error)
         })
         log["from"] = request.headers.get('from')
         request_log_queue.add({"value": log})

@@ -179,9 +179,35 @@ def es_aggsop(es, frum, query):
     select = listwrap(query.select)
 
     es_query = wrap({"path": query_path, "query": {}})  # TRACK THE PATH AND THE COMPOSED QUERY
+    def remap_nested(new_path):
+        if new_path != es_query.path:
+            if startswith_field(es_query.path, new_path):
+                # DEEPER
+                es_query.query = wrap({
+                    "aggs": {"_nested": set_default(
+                        {"nested": {"path": es_query.path}},
+                        es_query.query
+                    )}
+                })
+            else:
+                # SHALLOWER
+                es_query.query = wrap({
+                    "aggs": {"_nested": set_default(
+                        {"reverse_nested": {"path": es_query.path if es_query.path != "." else None}},
+                        es_query.query
+                    )}
+                })
+            es_query.path = new_path
+
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
+        split_select = split_expression_by_path(s.value, schema)
+        for si_key, si_value in split_select.items():
+            if si_value:
+                if s.query_path:
+                    Log.error("can not handle more than one depth per select")
+                s.query_path = si_key
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
             if schema.query_path == ".":
                 s.pull = jx_expression_to_function("doc_count")
@@ -351,6 +377,8 @@ def es_aggsop(es, frum, query):
                         s.pull = jx_expression_to_function(pulls[0])
                     else:
                         s.pull = jx_expression_to_function({"sum": pulls})
+            # TODO: there can be many depths
+            es_query.path = s.query_path
 
     for i, s in enumerate(formula):
         # value_by_path = split_expression_by_path(s.value, schema=schema)
@@ -434,28 +462,11 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function(concat_field(canonical_name, aggregates[s.aggregate]))
             es_query.query.aggs[canonical_name].extended_stats.script = s.value.to_es_script(schema).script(schema)
 
+        es_query.path = s.query_path
+
     split_decoders = get_decoders_by_path(query)
     split_wheres = split_expression_by_path(query.where, schema=frum.schema)
 
-    def remap_nested(new_path):
-        if new_path != es_query.path:
-            if startswith_field(es_query.path, new_path):
-                # DEEPER
-                es_query.query = wrap({
-                    "aggs": {"_nested": set_default(
-                        {"nested": {"path": es_query.path}},
-                        es_query.query
-                    )}
-                })
-            else:
-                # SHALLOWER
-                es_query.query = wrap({
-                    "aggs": {"_nested": set_default(
-                        {"reverse_nested": {"path": es_query.path if es_query.path != "." else None}},
-                        es_query.query
-                    )}
-                })
-            es_query.path = new_path
 
     start = 0
     decoders = []

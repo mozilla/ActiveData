@@ -12,7 +12,6 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import Mapping
-from time import time
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
@@ -207,6 +206,7 @@ class SetDecoder(AggsDecoder):
 
         if self.edge.allowNulls:
             if depth != '.':
+                # MISSING MUST HAPPEN WITH RESPECT .
                 missing = set_default(
                     {"filter": {"bool": {"must_not": {"nested": {
                         "path": depth,
@@ -270,7 +270,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
         missing_filter = None
 
     if isinstance(edge.value, Variable):
-        calc = {"field": schema.leaves(edge.value.var)[0].es_column}
+        calc = {"field": first(schema.leaves(edge.value.var)).es_column}
     else:
         calc = {"script": edge.value.to_es_script(schema).script(schema)}
 
@@ -732,7 +732,7 @@ class DimFieldListDecoder(SetDecoder):
             nest = wrap({"aggs": {"_match": {
                 "filter": exists.to_esfilter(self.schema),
                 "aggs": {"_filter": set_default({"terms": {
-                    "field": self.schema.leaves(v.var)[0].es_column,
+                    "field": first(self.schema.leaves(v.var)).es_column,
                     "size": self.domain.limit
                 }}, es_query)}
             }}})

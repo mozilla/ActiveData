@@ -407,7 +407,7 @@ def to_esfilter(self, schema):
         if not cols:
             lhs = self.lhs.var  # HAPPENS DURING DEBUGGING, AND MAYBE IN REAL LIFE TOO
         elif len(cols) == 1:
-            lhs = cols[0].es_column
+            lhs = first(cols).es_column
         else:
             Log.error("operator {{op|quote}} does not work on objects", op=self.op)
         return {"range": {lhs: {self.op: self.rhs.value}}}
@@ -574,7 +574,7 @@ def to_esfilter(self, schema):
         lhs = self.lhs.var
         cols = schema.leaves(lhs)
         if cols:
-            lhs = cols[0].es_column
+            lhs = first(cols).es_column
         rhs = self.rhs.value
         if isinstance(rhs, list):
             if len(rhs) == 1:
@@ -1018,7 +1018,7 @@ def to_esfilter(self, schema):
         if len(cols) == 0:
             return MATCH_NONE
         elif len(cols) == 1:
-            return {"regexp": {cols[0].es_column: self.pattern.value}}
+            return {"regexp": {first(cols).es_column: self.pattern.value}}
         else:
             Log.error("regex on not supported ")
     else:

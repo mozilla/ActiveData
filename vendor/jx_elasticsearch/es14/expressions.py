@@ -19,6 +19,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
 from jx_elasticsearch.es14.util import es_not, es_script, es_or, es_and, es_missing
+from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
 from mo_future import text_type
 from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER
@@ -1405,7 +1406,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
-        output[list(all_depths)[0]] += [where]
+        output[first(all_depths)] += [where]
     elif isinstance(where, AndOp):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)

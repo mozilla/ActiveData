@@ -17,6 +17,7 @@ from collections import Mapping
 from decimal import Decimal
 
 import mo_json
+from jx_base import first
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
@@ -64,7 +65,7 @@ def jx_expression(expr, schema=None):
         if len(leaves) == 0:
             v.data_type = IS_NULL
         if len(leaves) == 1:
-            v.data_type = list(leaves)[0].jx_type
+            v.data_type = first(leaves).jx_type
     return output
 
 
@@ -2786,7 +2787,7 @@ class CaseOp(Expression):
         if len(types) > 1:
             return OBJECT
         else:
-            return list(types)[0]
+            return first(types)
 
 
 class UnionOp(Expression):

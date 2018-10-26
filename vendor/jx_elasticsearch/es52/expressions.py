@@ -505,7 +505,7 @@ def to_esfilter(self, schema):
                 for r in rhs:
                     types[python_type_to_json_type[rhs.__class__]] += [r]
                 if len(types) == 1:
-                    jx_type, values = list(types.items())[0]
+                    jx_type, values = first(types.items())
                     for c in cols:
                         if jx_type == c.jx_type:
                             return {"terms": {c.es_column: values}}
@@ -1512,7 +1512,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
-        output[list(all_depths)[0]] += [where]
+        output[first(all_depths)] += [where]
     elif isinstance(where, AndOp):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)

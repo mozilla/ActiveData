@@ -202,23 +202,25 @@ def es_aggsop(es, frum, query):
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
-        split_select = split_expression_by_path(s.value, schema)
-        for si_key, si_value in split_select.items():
-            if si_value:
-                if s.query_path:
-                    Log.error("can not handle more than one depth per select")
-                s.query_path = si_key
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
+            s.query_path = schema.query_path[0]
             if schema.query_path == ".":
                 s.pull = jx_expression_to_function("doc_count")
             else:
                 s.pull = jx_expression_to_function({"coalesce": ["_nested.doc_count", "doc_count", 0]})
         elif isinstance(s.value, Variable):
+            s.query_path = schema.query_path[0]
             if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
                 new_select[literal_field(s.value.var)] += [s]
         elif s.aggregate:
+            split_select = split_expression_by_path(s.value, schema)
+            for si_key, si_value in split_select.items():
+                if si_value:
+                    if s.query_path:
+                        Log.error("can not handle more than one depth per select")
+                    s.query_path = si_key
             formula.append(s)
 
     for canonical_name, many in new_select.items():

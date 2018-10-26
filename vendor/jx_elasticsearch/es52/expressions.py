@@ -1550,7 +1550,7 @@ def split_expression_by_path(where, schema, output=None, var_to_path=None):
         output[literal_field(iter(all_paths).next())] += [where]
     elif isinstance(where, AndOp):
         for a in where.terms:
-            split_expression_by_depth(a, schema, output, var_to_path)
+            split_expression_by_path(a, schema, output, var_to_path)
     else:
         Log.error("Can not handle complex where clause")
 

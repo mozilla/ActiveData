@@ -513,7 +513,8 @@ HOPELESS = [
     "400 MapperParsingException",
     "400 RoutingMissingException",
     "500 IllegalArgumentException[cannot change DocValues type",
-    "JsonParseException"
+    "JsonParseException",
+    " as object, but found a concrete value"
 ]
 
 known_clusters = {}  # MAP FROM (host, port) PAIR TO CLUSTER INSTANCE

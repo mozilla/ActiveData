@@ -227,8 +227,11 @@ class Expression(object):
         return self.data_type
 
     def __eq__(self, other):
-        Log.note("this is slow on {{type}}", type=text_type(self.__class__.__name__))
+        self_class = self.__class_
+        Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
         if other is None:
+            return False
+        if not isinstance(other, self_class):
             return False
         return self.__data__() == other.__data__()
 

@@ -105,20 +105,23 @@ class RangeAggs(Aggs):
         }
 
 
-
 def simplify(aggs):
     # CONVERT FROM TREE TO UNION OF SEQUENCES
-    def depth_first(_aggs):
-        if not _aggs.children:
-            yield (_aggs,)
-        elif _aggs.__class__ == Aggs:
-            for c in _aggs.children:
+    def depth_first(aggr):
+        if aggr.__class__ == Aggs:
+            # BASE CLASS Aggs IS ONLY A PLACEHOLDER
+            if not aggr.children:
+                yield tuple()
+                return
+            for c in aggr.children:
                 for path in depth_first(c):
                     yield path
+        elif not aggr.children:
+            yield (aggr,)
         else:
-            for c in _aggs.children:
+            for c in aggr.children:
                 for path in depth_first(c):
-                    yield (_aggs,) + path
+                    yield (aggr,) + path
 
     # CANCEL OUT REDUNDANT NESTED AGGS
     combined = []

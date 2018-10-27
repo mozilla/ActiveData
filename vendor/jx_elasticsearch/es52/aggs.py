@@ -183,13 +183,10 @@ def es_aggsop(es, frum, query):
     formula = []
     for s in select:
         if s.aggregate == "count" and isinstance(s.value, Variable) and s.value.var == ".":
-            s.query_path = schema.query_path[0]
-            if schema.query_path == ".":
-                s.pull = jx_expression_to_function("doc_count")
-            else:
-                s.pull = jx_expression_to_function({"coalesce": ["_nested.doc_count", "doc_count", 0]})
+            s.query_path = query_path
+            s.pull = jx_expression_to_function("doc_count")
         elif isinstance(s.value, Variable):
-            s.query_path = schema.query_path[0]
+            s.query_path = query_path
             if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
             else:
@@ -370,7 +367,7 @@ def es_aggsop(es, frum, query):
                         ))
                         pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), s.default]})
 
-                        # if relative_field(c.nested_path[0], schema.query_path[0]) == '.':
+                        # if relative_field(c.nested_path[0], query_path) == '.':
                         #     # PULL VALUE OUT OF THE stats AGGREGATE
                         #     # es_query.aggs[literal_field(canonical_name)].extended_stats.field = c.es_column
                         #     pulls.append({"coalesce": [concat_field(literal_field(canonical_name), aggregates[s.aggregate]), s.default]})
@@ -419,20 +416,20 @@ def es_aggsop(es, frum, query):
                 ))
                 s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
 
-                # if schema.query_path[0] == ".":
+                # if query_path == ".":
                 #     es_query.aggs[canonical_name] = script
                 #     s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
                 # else:
                 #     es_query.path = query_path
                 #     es_query.aggs[canonical_name] = {
-                #         "nested": {"path": schema.query_path[0]},
+                #         "nested": {"path": query_path},
                 #         "aggs": {"_nested": script}
                 #     }
                 #     s.pull = jx_expression_to_function(literal_field(canonical_name) + "._nested.value")
             else:
                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            acc.add(ExprAggs(literal_field(canonical_name), {"value_count": {"script": s.value.partial_eval().to_es_script(schema).script(schema)}}))
+            acc.add(ExprAggs(canonical_name, {"value_count": {"script": s.value.partial_eval().to_es_script(schema).script(schema)}}))
             # es_query.aggs[literal_field(canonical_name)].value_count.script = s.value.partial_eval().to_es_script(schema).script(schema)
             s.pull = jx_expression_to_function(literal_field(canonical_name) + ".value")
         elif s.aggregate == "median":

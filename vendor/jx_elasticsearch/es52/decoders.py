@@ -17,7 +17,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, FirstOp, EsNestedOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es52.es_expressions import NestedAggs, FilterAggs, Aggs, TermsAggs, ExprAggs, RangeAggs
+from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, ExprAggs, RangeAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
@@ -191,7 +191,7 @@ class SetDecoder(AggsDecoder):
         limit = coalesce(self.limit, len(domain.partitions))
 
         output = Aggs()
-        filtered = FilterAggs(None, exists)
+        filtered = FilterAggs("_filter", exists)
         output.add(filtered)
 
         if isinstance(value, Variable):
@@ -200,7 +200,7 @@ class SetDecoder(AggsDecoder):
                 "field": es_field,
                 "size": limit,
                 "order": {"_term": self.sorted} if self.sorted else None
-            }))
+            }).add(es_query))
         else:
             filtered.add(TermsAggs("_match", {
                 "script": {
@@ -208,11 +208,11 @@ class SetDecoder(AggsDecoder):
                     "inline": value.to_es_script(self.schema).script(self.schema)
                 },
                 "size": limit
-            }))
+            }).add(es_query))
 
         if self.edge.allowNulls:
             output.add(
-                NestedAggs(".").add(FilterAggs("_missing", NotOp(None, EsNestedOp(None, [Variable(depth), exists]))))
+                NestedAggs(".").add(FilterAggs("_missing", NotOp(None, EsNestedOp(None, [Variable(depth), exists]))).add(es_query))
             )
         return output
 
@@ -592,7 +592,7 @@ class DefaultDecoder(SetDecoder):
                 "order": self.es_order
             })
         output = Aggs()
-        output.add(FilterAggs("_match", self.exists).add(terms.add(es_query)))
+        output.add(FilterAggs("_filter", self.exists).add(terms.add(es_query)))
         output.add(FilterAggs("_missing", self.missing).add(es_query))
         return output
 
@@ -651,7 +651,7 @@ class DimFieldListDecoder(SetDecoder):
         self.start = start
         for i, v in enumerate(self.fields):
             exists = v.exists().partial_eval()
-            nest = FilterAggs(None, exists)
+            nest = FilterAggs("_filter", exists)
             nest.add(TermsAggs("_match", {
                 "field": first(self.schema.leaves(v.var)).es_column,
                 "size": self.domain.limit

@@ -46,10 +46,13 @@ class ExprAggs(Aggs):
         self.expr = expr
 
     def to_es(self, schema):
-        return set_default(
-            {"aggs": Aggs.to_es(self, schema)},
-            self.expr
-        )
+        if self.children:
+            return set_default(
+                {"aggs": Aggs.to_es(self, schema)},
+                self.expr
+            )
+        else:
+            return self.expr
 
 
 class FilterAggs(Aggs):
@@ -66,7 +69,7 @@ class FilterAggs(Aggs):
 
 class NestedAggs(Aggs):
     def __init__(self, path):
-        Aggs.__init__(self, None)
+        Aggs.__init__(self, "_nested")
         self.path = path
 
     def to_es(self, schema):
@@ -120,7 +123,7 @@ def simplify(aggs):
     # CANCEL OUT REDUNDANT NESTED AGGS
     combined = []
     for path in depth_first(aggs):
-        last = NestedAggs(".")
+        current_nested = NestedAggs(".")
         prev = None
         remove = []
         for step in path:
@@ -128,15 +131,18 @@ def simplify(aggs):
                 if prev is not None:
                     remove.append(prev)
                     prev = None
-                if last is not None and last.path == step.path:
-                    remove.append(step)
-                    continue
+                if current_nested is not None:
+                    if current_nested.path == step.path:
+                        remove.append(step)
+                        continue
+                    else:
+                        pass
                 prev = step
             else:
-                last = prev if prev else last
+                current_nested = prev if prev else current_nested
                 prev = None
 
-        combined.append(tuple(p for p in path if p not in remove))
+        combined.append(tuple(p for p in path if not any(p is r for r in remove)))
 
     # COMMON FACTOR, CONVERT BACK TO TREE
     def merge(terms):

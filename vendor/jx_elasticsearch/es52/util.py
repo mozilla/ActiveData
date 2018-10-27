@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import TRUE, AndOp, ScriptOp, NestedOp
+from jx_base.expressions import TRUE, AndOp, ScriptOp, EsNestedOp
 
 from jx_elasticsearch.es52.expressions import Variable
 from mo_dots import wrap, startswith_field, literal_field
@@ -85,7 +85,7 @@ def es_query_proto(path, wheres, schema):
                 }}
         else:
             # parent filter
-            wheres[literal_path] += [NestedOp("nested", [Variable(p), AndOp("and", filter)])]
+            wheres[literal_path] += [EsNestedOp("nested", [Variable(p), AndOp("and", filter)])]
 
     output.query = AndOp("and", wheres[literal_path]).partial_eval().to_esfilter(schema)
     return output

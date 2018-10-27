@@ -2845,8 +2845,7 @@ class UnionOp(Expression):
 
         return output
 
-
-class NestedOp(Expression):
+class EsNestedOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
@@ -2858,13 +2857,13 @@ class NestedOp(Expression):
     def partial_eval(self):
         if self.path.var == '.':
             return self.query.partial_eval()
-        return NestedOp("nested", [self.path, self.query.partial_eval()])
+        return EsNestedOp("es.nested", [self.path, self.query.partial_eval()])
 
     def __data__(self):
-        return {"nested": {self.path.var: self.query.__data__()}}
+        return {"es.nested": {self.path.var: self.query.__data__()}}
 
     def __eq__(self, other):
-        if isinstance(other, NestedOp):
+        if isinstance(other, EsNestedOp):
             return self.path.var == other.path.var and self.query == other.query
         return False
 

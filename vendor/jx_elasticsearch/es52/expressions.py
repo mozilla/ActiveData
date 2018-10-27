@@ -19,7 +19,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, NestedOp
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
@@ -1085,7 +1085,7 @@ def to_esfilter(self, schema):
     return {"match_all": {}}
 
 
-@extend(NestedOp)
+@extend(EsNestedOp)
 def to_esfilter(self, schema):
     if self.path.var == '.':
         return {"query": self.query.to_esfilter(schema)}

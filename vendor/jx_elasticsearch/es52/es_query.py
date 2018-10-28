@@ -9,7 +9,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from mo_dots import set_default
+from jx_base.expressions import TRUE
+from mo_logs import Log
+
+from mo_dots import set_default, startswith_field
 from mo_future import text_type
 from mo_json import value2json
 
@@ -20,12 +23,15 @@ class Aggs(object):
         self.name = name
         self.children = []
 
-    def to_es(self, schema):
-        return {
-            name: t.to_es(schema)
-            for i, t in enumerate(self.children)
-            for name in [t.name if t.name else "_"+text_type(i)]
-        }
+    def to_es(self, schema, query_path="."):
+        if self.children:
+            return {"aggs": {
+                name: t.to_es(schema, query_path)
+                for i, t in enumerate(self.children)
+                for name in [t.name if t.name else "_" + text_type(i)]
+            }}
+        else:
+            return {}
 
     def add(self, child):
         self.children.append(child)
@@ -45,10 +51,10 @@ class ExprAggs(Aggs):
         self.name = name
         self.expr = expr
 
-    def to_es(self, schema):
+    def to_es(self, schema, query_path="."):
         if self.children:
             return set_default(
-                {"aggs": Aggs.to_es(self, schema)},
+                Aggs.to_es(self, schema, query_path),
                 self.expr
             )
         else:
@@ -60,11 +66,11 @@ class FilterAggs(Aggs):
         Aggs.__init__(self, name)
         self.filter = filter
 
-    def to_es(self, schema):
-        return {
-            "filter": self.filter.partial_eval().to_esfilter(schema),
-            "aggs": Aggs.to_es(self, schema)
-        }
+    def to_es(self, schema, query_path="."):
+        filter = self.filter.partial_eval()
+        output = Aggs.to_es(self, schema, query_path)
+        output['filter'] = self.filter.partial_eval().to_esfilter(schema)
+        return output
 
 
 class NestedAggs(Aggs):
@@ -72,11 +78,15 @@ class NestedAggs(Aggs):
         Aggs.__init__(self, "_nested")
         self.path = path
 
-    def to_es(self, schema):
-        return {
-            "nested": {"path": self.path},
-            "aggs": Aggs.to_es(self, schema)
-        }
+    def to_es(self, schema, query_path="."):
+        output = Aggs.to_es(self, schema, query_path)
+        if query_path == self.path:
+            Log.error("this should have been cancelled out")
+        elif startswith_field(self.path, query_path):
+            output['nested'] = {"path": self.path}
+        else:
+            output["reverse_nested"] = {"path": None if self.path == "." else self.path}
+        return output
 
     def __eq__(self, other):
         return isinstance(other, NestedAggs) and self.path == other.path
@@ -87,11 +97,10 @@ class TermsAggs(Aggs):
         Aggs.__init__(self, name)
         self.terms = terms
 
-    def to_es(self, schema):
-        return {
-            "terms": self.terms,
-            "aggs": Aggs.to_es(self, schema)
-        }
+    def to_es(self, schema, query_path="."):
+        output = Aggs.to_es(self, schema, query_path)
+        output['terms'] = self.terms
+        return output
 
 
 class RangeAggs(Aggs):
@@ -99,10 +108,10 @@ class RangeAggs(Aggs):
         Aggs.__init__(self, None)
         self.expr = expr
 
-    def to_es(self, schema):
-        return {
-            "range": self.expr
-        }
+    def to_es(self, schema, query_path="."):
+        output = Aggs.to_es(self, schema, query_path)
+        output['range'] = self.expr
+        return output
 
 
 def simplify(aggs):

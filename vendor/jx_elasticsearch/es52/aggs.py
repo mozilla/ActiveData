@@ -14,24 +14,24 @@ from __future__ import unicode_literals
 from operator import add
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL, TRUE
+from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, NestedAggs, TermsAggs, FilterAggs, simplify
-from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, Variable, NullOp, split_expression_by_path
+from jx_elasticsearch.es52.expressions import AndOp, Variable, NullOp, split_expression_by_path
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.jx import first
-from mo_dots import listwrap, Data, wrap, literal_field, set_default, coalesce, Null, FlatList, unwrap, unwraplist, concat_field, relative_field, split_field, tail_field, startswith_field
-from mo_future import text_type, sort_using_key
+from mo_dots import listwrap, Data, wrap, literal_field, coalesce, Null, unwrap, unwraplist, concat_field
+from mo_future import text_type
 from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
-from mo_math import Math, MAX, UNION
+from mo_math import Math, UNION
 from mo_times.timer import Timer
 
 DEBUG = False
@@ -506,12 +506,12 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
         if where:
-            acc = FilterAggs(AndOp("and", where)).add(acc)
+            acc = FilterAggs("_filter", AndOp("and", where)).add(acc)
         acc = NestedAggs(path).add(acc)
 
     acc = NestedAggs('.').add(acc)
     acc = simplify(acc)
-    es_query = wrap({"aggs": acc.to_es(schema)})
+    es_query = wrap(acc.to_es(schema))
 
     decoders = jx.reverse(decoders)
     es_query.size = 0
@@ -578,14 +578,13 @@ def aggs_iterator(aggs, decoders, coord=True):
                         b["_index"] = i
                         for a, parts in _aggs_iterator(b, d - 1):
                             yield a, parts + (b,)
+                elif k == "_missing":
+                    for a, parts in _aggs_iterator(v, d - 1):
+                        yield a, parts + (v,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         for a, parts in _aggs_iterator(b, d - 1):
                             yield a, parts + (Null,)
-                elif k == "_missing":
-                    b = drill(v)
-                    for a, parts in _aggs_iterator(b, d - 1):
-                        yield a, parts + (b,)
                 elif k.startswith("_join_"):
                     v["key"] = int(k[6:])
                     for a, parts in _aggs_iterator(v, d - 1):
@@ -599,11 +598,11 @@ def aggs_iterator(aggs, decoders, coord=True):
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
                         yield drill(b,), (b,)
+                elif k == "_missing":
+                    yield drill(v,), (v,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         yield b, (Null,)
-                elif k == "_missing":
-                    yield drill(v,), (v,)
                 elif k.startswith("_join_"):
                     v["_index"] = int(k[6:])
                     yield drill(v), (v,)

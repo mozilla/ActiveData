@@ -293,20 +293,10 @@ def es_aggsop(es, frum, query):
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
-                    stats_name = encode_property(column.es_column)
+                    stats_name = column.es_column
                     acc.add(NestedAggs(column.nested_path[0]).add(ExprAggs(stats_name, script)))
-                    pulls.append(jx_expression_to_function(stats_name + ".value"))
-                    # if column.nested_path[0] == ".":
-                    #     acc.add(ExprAggs(stats_name, script))
-                    #     es_query.aggs[stats_name] = script
-                    #     pulls.append(jx_expression_to_function(stats_name + ".value"))
-                    # else:
-                    #     es_query.aggs[stats_name] = {
-                    #         "nested": {"path": column.nested_path[0]},
-                    #         "aggs": {"_nested": script}
-                    #     }
-                    #     pulls.append(jx_expression_to_function(stats_name + "._nested.value"))
 
+                    pulls.append(jx_expression_to_function(literal_field(stats_name) + ".value"))
                 if len(pulls) == 0:
                     s.pull = NULL
                 elif len(pulls) == 1:
@@ -549,11 +539,14 @@ EMPTY_LIST = []
 
 
 def drill(agg):
-    deeper = agg.get("_filter") or agg.get("_nested")
-    while deeper:
-        agg = deeper
-        deeper = agg.get("_filter") or agg.get("_nested")
-    return agg
+    def items(a):
+        for k, v in a.items():
+            if k in ("_filter", "_nested"):
+                for i in items(v):
+                    yield i
+            else:
+                yield k, v
+    return dict(items(agg))
 
 
 def aggs_iterator(aggs, decoders, coord=True):

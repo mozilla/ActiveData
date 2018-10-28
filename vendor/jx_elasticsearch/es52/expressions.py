@@ -713,12 +713,13 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 @extend(NotOp)
 def to_esfilter(self, schema):
     if isinstance(self.term, MissingOp) and isinstance(self.term.expr, Variable):
+        # PREVENT RECURSIVE LOOP
         v = self.term.expr.var
         cols = schema.values(v, (OBJECT, NESTED))
         if len(cols) == 1:
-            # PREVENT RECURSIVE LOOP
             return {"exists": {"field": first(cols).es_column}}
-        return AndOp("and", [ExistsOp("exists", Variable(c.es_column)) for c in cols]).partial_eval().to_esfilter(schema)
+        else:
+            return es_and([{"exists": {"field": c.es_column}}])
     else:
         operand = self.term.to_esfilter(schema)
         return es_not(operand)

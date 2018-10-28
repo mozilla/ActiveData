@@ -9,6 +9,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import Mapping
+
 from mo_dots import startswith_field
 from mo_future import text_type
 from mo_json import value2json
@@ -58,10 +60,25 @@ class FilterAggs(Aggs):
     def __init__(self, name, filter):
         Aggs.__init__(self, name)
         self.filter = filter
+        if isinstance(filter, Mapping):
+            Log.error("programming error")
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
         output['filter'] = self.filter.partial_eval().to_esfilter(schema)
+        return output
+
+
+class FiltersAggs(Aggs):
+    def __init__(self, name, filters):
+        Aggs.__init__(self, name)
+        self.filters = filters
+        if not isinstance(filters, list):
+            Log.error("expecting a list")
+
+    def to_es(self, schema, query_path="."):
+        output = Aggs.to_es(self, schema, query_path)
+        output['filters'] = {"filters": [f.partial_eval().to_esfilter(schema) for f in self.filters]}
         return output
 
 
@@ -96,8 +113,8 @@ class TermsAggs(Aggs):
 
 
 class RangeAggs(Aggs):
-    def __init__(self, expr):
-        Aggs.__init__(self, None)
+    def __init__(self, name, expr):
+        Aggs.__init__(self, name)
         self.expr = expr
 
     def to_es(self, schema, query_path="."):

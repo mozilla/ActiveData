@@ -17,7 +17,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, FirstOp, EsNestedOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, ExprAggs, RangeAggs
+from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, ExprAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
@@ -241,13 +241,14 @@ def _range_composer(edge, domain, es_query, to_float, schema):
 
     output = Aggs()
     if edge.allowNulls:
-        output.add(FilterAggs("_missing", {
-            "filter": NotOp("not", AndOp("and", [
+        output.add(FilterAggs(
+            "_missing",
+            NotOp("not", AndOp("and", [
                 edge.value.exists(),
                 InequalityOp("gte", [edge.value, Literal(None, to_float(_min))]),
                 InequalityOp("lt", [edge.value, Literal(None, to_float(_max))])
             ]).partial_eval())
-        }).add(es_query))
+        ).add(es_query))
 
     if isinstance(edge.value, Variable):
         calc = {"field": first(schema.leaves(edge.value.var)).es_column}
@@ -255,7 +256,7 @@ def _range_composer(edge, domain, es_query, to_float, schema):
         calc = {"script": edge.value.to_es_script(schema).script(schema)}
     calc['ranges'] = [{"from": to_float(p.min), "to": to_float(p.max)} for p in domain.partitions]
 
-    return output.add(RangeAggs(calc).add(es_query))
+    return output.add(RangeAggs("_match", calc).add(es_query))
 
 
 class TimeDecoder(AggsDecoder):
@@ -354,7 +355,7 @@ class GeneralSetDecoder(AggsDecoder):
             filters.append(AndOp("and", [w] + notty))
             notty.append(NotOp("not", w))
 
-        output = Aggs().add(ExprAggs("_match", {"filters": {"filters": filters}}).add(es_query))
+        output = Aggs().add(FiltersAggs("_match", filters).add(es_query))
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             output.add(FilterAggs("_missing", AndOp("and", notty)).add(es_query))
 
@@ -647,11 +648,10 @@ class DimFieldListDecoder(SetDecoder):
         self.parts = list()
 
     def append_query(self, depth, es_query, start):
-        # TODO: USE "reverse_nested" QUERY TO PULL THESE
         self.start = start
         for i, v in enumerate(self.fields):
             exists = v.exists().partial_eval()
-            nest = FilterAggs("_filter", exists)
+            nest = Aggs()
             nest.add(TermsAggs("_match", {
                 "field": first(self.schema.leaves(v.var)).es_column,
                 "size": self.domain.limit

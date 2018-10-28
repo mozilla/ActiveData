@@ -15,11 +15,10 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, EsNestedOp
+from jx_base.expressions import TupleOp, FirstOp, EsNestedOp, MissingOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
-from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, ExprAggs, RangeAggs, FiltersAggs
+from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
-from jx_elasticsearch.es52.util import es_missing
 from jx_python import jx
 from jx_python.jx import first
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
@@ -190,30 +189,34 @@ class SetDecoder(AggsDecoder):
 
         limit = coalesce(self.limit, len(domain.partitions))
 
-        output = Aggs()
-        filtered = FilterAggs("_filter", exists)
-        output.add(filtered)
-
         if isinstance(value, Variable):
             es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
-            filtered.add(TermsAggs("_match", {
+            match = TermsAggs("_match", {
                 "field": es_field,
                 "size": limit,
                 "order": {"_term": self.sorted} if self.sorted else None
-            }).add(es_query))
+            })
         else:
-            filtered.add(TermsAggs("_match", {
+            match = TermsAggs("_match", {
                 "script": {
                     "lang": "painless",
                     "inline": value.to_es_script(self.schema).script(self.schema)
                 },
                 "size": limit
-            }).add(es_query))
+            })
+        output = Aggs().add(FilterAggs("_filter", exists).add(match.add(es_query)))
 
         if self.edge.allowNulls:
-            output.add(
-                NestedAggs(".").add(FilterAggs("_missing", NotOp(None, EsNestedOp(None, [Variable(depth), exists]))).add(es_query))
-            )
+            # FIND NULLS AT EACH NESTED LEVEL
+            for p in self.schema.query_path:
+                if p == depth:  # TODO: There is an intereaction between Expressions and Aggs and nested levels
+                    output.add(
+                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(None, exists)).add(es_query))
+                    )
+                else:
+                    output.add(
+                        NestedAggs(p).add(FilterAggs("_missing1", NotOp(None, EsNestedOp(None, [Variable(depth), exists]))).add(es_query))
+                    )
         return output
 
     def get_value(self, index):
@@ -503,7 +506,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }).add(es_query)
             ).add(
-                FilterAggs("_missing", es_missing(v)).add(es_query)
+                FilterAggs("_missing", MissingOp("missing", Variable(v))).add(es_query)
             )
             es_query = nest
         return es_query

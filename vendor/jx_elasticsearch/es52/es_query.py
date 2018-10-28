@@ -16,6 +16,7 @@ from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
 
+_new = object.__new__
 
 class Aggs(object):
 
@@ -43,6 +44,12 @@ class Aggs(object):
     def __str__(self):
         return value2json(self.to_es)
 
+    def copy(self):
+        output = _new(self.__class__)
+        output.name = self.name
+        output.children = self.children[:]
+        return output
+
 
 class ExprAggs(Aggs):
 
@@ -55,6 +62,11 @@ class ExprAggs(Aggs):
         self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
         return self.expr
 
+    def copy(self):
+        output = Aggs.copy(self)
+        output.expr = self.expr
+        return output
+
 
 class FilterAggs(Aggs):
     def __init__(self, name, filter):
@@ -66,6 +78,11 @@ class FilterAggs(Aggs):
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
         output['filter'] = self.filter.partial_eval().to_esfilter(schema)
+        return output
+
+    def copy(self):
+        output = Aggs.copy(self)
+        output.filter = self.filter
         return output
 
 
@@ -81,6 +98,11 @@ class FiltersAggs(Aggs):
         output['filters'] = {"filters": [f.partial_eval().to_esfilter(schema) for f in self.filters]}
         return output
 
+    def copy(self):
+        output = Aggs.copy(self)
+        output.filters = self.filters
+        return output
+
 
 class NestedAggs(Aggs):
     def __init__(self, path):
@@ -88,7 +110,7 @@ class NestedAggs(Aggs):
         self.path = path
 
     def to_es(self, schema, query_path="."):
-        output = Aggs.to_es(self, schema, query_path)
+        output = Aggs.to_es(self, schema, self.path)
         if query_path == self.path:
             Log.error("this should have been cancelled out")
         elif startswith_field(self.path, query_path):
@@ -99,6 +121,12 @@ class NestedAggs(Aggs):
 
     def __eq__(self, other):
         return isinstance(other, NestedAggs) and self.path == other.path
+
+    def copy(self):
+        output = Aggs.copy(self)
+        output.path = self.path
+        return output
+
 
 
 class TermsAggs(Aggs):
@@ -111,6 +139,11 @@ class TermsAggs(Aggs):
         output['terms'] = self.terms
         return output
 
+    def copy(self):
+        output = Aggs.copy(self)
+        output.terms = self.terms
+        return output
+
 
 class RangeAggs(Aggs):
     def __init__(self, name, expr):
@@ -120,6 +153,11 @@ class RangeAggs(Aggs):
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
         output['range'] = self.expr
+        return output
+
+    def copy(self):
+        output = Aggs.copy(self)
+        output.expr = self.expr
         return output
 
 
@@ -184,7 +222,7 @@ def simplify(aggs):
                 return output
             else:
                 f.children = merge(common)
-            output.append(f)
+            output.append(f.copy())
 
     merged = [trim_root(o) for o in merge(combined)]
 

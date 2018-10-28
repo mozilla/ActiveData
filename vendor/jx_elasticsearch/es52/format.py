@@ -11,11 +11,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_python import jx
+
 from jx_base.expressions import TupleOp
 from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch, drill
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_dots import Data, set_default, wrap, split_field, coalesce, unliteral_field
 from mo_future import sort_using_key
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -177,11 +179,13 @@ def format_csv(decoders, aggs, start, query, select):
 
 def format_list_from_groupby(decoders, aggs, start, query, select):
     def data():
+        groupby = query.groupby
+
         for row, coord, agg in aggs_iterator(aggs, decoders):
             if agg.get('doc_count', 0) == 0:
                 continue
             output = Data()
-            for g, d in zip(query.groupby, decoders):
+            for g, d in zip(groupby, decoders):
                 output[coalesce(g.put.name, g.name)] = d.get_value_from_row(row)
 
             for s in select:
@@ -204,7 +208,7 @@ def format_list(decoders, aggs, start, query, select):
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
 
-        is_sent = Matrix(dims=dims, zeros=0)
+        is_sent = Matrix(dims=dims)
         if query.sort and not query.groupby:
             # TODO: USE THE format_table() TO PRODUCE THE NEEDED VALUES INSTEAD OF DUPLICATING LOGIC HERE
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
@@ -232,14 +236,30 @@ def format_list(decoders, aggs, start, query, select):
         else:
 
             for row, coord, agg in aggs_iterator(aggs, decoders):
-                is_sent[coord] = 1
+                output = is_sent[coord]
+                if output == None:
+                    output = is_sent[coord] = Data()
 
-                output = Data()
-                for e, c, d in zip(query.edges, coord, decoders):
-                    output[e.name] = d.get_value(c)
+                    for e, c, d in zip(query.edges, coord, decoders):
+                        output[e.name] = d.get_value(c)
+                    for s in select:
+                        output[s.name] = s.pull(agg)
+                else:
+                    for e, c, d in zip(query.edges, coord, decoders):
+                        if output[e.name] != d.get_value(c):
+                            Log.error("not expected")
 
-                for s in select:
-                    output[s.name] = s.pull(agg)
+                    for s in select:
+                        existing = output[s.name]
+                        value = s.pull(agg)
+                        if existing == None:
+                            output[s.name] = value
+                        elif value == None:
+                            pass
+                        elif s.aggregate not in ['sum', 'count']:
+                            Log.warning("not ready")
+                        else:
+                            output[s.name] = existing + value
                 yield output
 
             # EMIT THE MISSING CELLS IN THE CUBE

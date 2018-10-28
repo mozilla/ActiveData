@@ -503,7 +503,7 @@ def es_aggsop(es, frum, query):
     acc = simplify(acc)
     es_query = wrap(acc.to_es(schema))
 
-    decoders = jx.reverse(decoders)
+    # decoders = jx.reverse(decoders)
     es_query.size = 0
 
     with Timer("ES query time", silent=not DEBUG) as es_duration:
@@ -571,7 +571,7 @@ def aggs_iterator(aggs, decoders, coord=True):
                         b["_index"] = i
                         for a, parts in _aggs_iterator(b, d - 1):
                             yield a, parts + (b,)
-                elif k == "_missing":
+                elif k.startswith("_missing"):
                     for a, parts in _aggs_iterator(v, d - 1):
                         yield a, parts + (v,)
                 elif k == "_other":
@@ -591,7 +591,7 @@ def aggs_iterator(aggs, decoders, coord=True):
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
                         yield drill(b,), (b,)
-                elif k == "_missing":
+                elif k.startswith("_missing"):
                     yield drill(v,), (v,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):

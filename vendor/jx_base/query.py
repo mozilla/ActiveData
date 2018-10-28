@@ -550,7 +550,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 return wrap([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
-                    "value": jx_expression(prefix, schema=schema),
+                    "value": LeavesOp(None, Variable(prefix)),
                     "allowNulls": True,
                     "dim":dim_index,
                     "domain": {"type": "default"}

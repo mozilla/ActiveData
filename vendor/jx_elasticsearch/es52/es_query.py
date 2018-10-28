@@ -9,12 +9,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import TRUE
-from mo_logs import Log
-
-from mo_dots import set_default, startswith_field
+from mo_dots import startswith_field
 from mo_future import text_type
 from mo_json import value2json
+from mo_logs import Log
 
 
 class Aggs(object):
@@ -52,13 +50,8 @@ class ExprAggs(Aggs):
         self.expr = expr
 
     def to_es(self, schema, query_path="."):
-        if self.children:
-            return set_default(
-                Aggs.to_es(self, schema, query_path),
-                self.expr
-            )
-        else:
-            return self.expr
+        self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
+        return self.expr
 
 
 class FilterAggs(Aggs):
@@ -67,7 +60,6 @@ class FilterAggs(Aggs):
         self.filter = filter
 
     def to_es(self, schema, query_path="."):
-        filter = self.filter.partial_eval()
         output = Aggs.to_es(self, schema, query_path)
         output['filter'] = self.filter.partial_eval().to_esfilter(schema)
         return output
@@ -179,12 +171,9 @@ def simplify(aggs):
 
     merged = [trim_root(o) for o in merge(combined)]
 
-    if len(merged) == 1:
-        return merged[0]
-    else:
-        temp = Aggs()
-        temp.children = merged
-        return temp
+    output = Aggs()
+    output.children = merged
+    return output
 
 
 def trim_root(agg):

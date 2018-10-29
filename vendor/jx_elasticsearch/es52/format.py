@@ -50,14 +50,32 @@ def format_cube(decoders, aggs, start, query, select):
 
 
 def format_cube_from_aggop(decoders, aggs, start, query, select):
-    agg = drill(aggs)
     matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
+    agg = _value_drill(aggs)
     for s, m in matricies:
         v = s.pull(agg)
         union(m, tuple(), v, s.aggregate)
+
     cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
+
+
+def _value_drill(agg):
+    while True:
+        deeper = agg.get("_nested")
+        if deeper:
+            agg = deeper
+            continue
+        deeper = agg.get("_filter")
+        if deeper:
+            agg = deeper
+            continue
+        return agg
+
+
+
+
 
 
 def format_table(decoders, aggs, start, query, select):
@@ -140,7 +158,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
 
 def format_table_from_aggop(decoders, aggs, start, query, select):
     header = select.name
-    agg = drill(aggs)
+    agg = _value_drill(aggs)
     row = []
     for s in select:
         row.append(s.pull(agg))
@@ -218,7 +236,7 @@ def format_list(decoders, aggs, start, query, select):
 
 
 def format_list_from_aggop(decoders, aggs, start, query, select):
-    agg = drill(aggs)
+    agg = _value_drill(aggs)
 
     if isinstance(query.select, list):
         item = Data()

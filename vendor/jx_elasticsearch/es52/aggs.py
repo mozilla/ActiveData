@@ -337,8 +337,8 @@ def es_aggsop(es, frum, query):
                             ExprAggs(canonical_name, {"extended_stats": {"field": c.es_column}})
                         ))
                         pull_field = concat_field(literal_field(canonical_name), aggregates[s.aggregate])
-                        if len(c.nested_path) > 1:
-                            pull_field = concat_field("_nested", pull_field)
+                        # if len(c.nested_path) > 1:
+                        #     pull_field = concat_field("_nested", pull_field)
                         pulls.append({"coalesce": [pull_field, s.default]})
                     if len(pulls) == 1:
                         s.pull = jx_expression_to_function(pulls[0])
@@ -518,7 +518,10 @@ def aggs_iterator(aggs, decoders, coord=True):
     :param decoders: MUST BE IN EDGE ORDER SO COORDINATES HAVE CORRECT ORDER
     :param coord: TURN ON LOCAL COORDINATE LOOKUP
     """
-    depth = max(d.start + d.num_columns for d in decoders)
+    if not decoders:
+        depth = 0
+    else:
+        depth = max(d.start + d.num_columns for d in decoders)
 
     def _aggs_iterator(agg, d):
         if d > 0:

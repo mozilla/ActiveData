@@ -22,8 +22,8 @@ from mo_logs.strings import quote
 from pyLibrary import convert
 
 
-def format_cube(decoders, aggs, start, query, select):
-    new_edges = count_dim(aggs, decoders)
+def format_cube(aggs, es_query, query, decoders, select):
+    new_edges = count_dim(aggs, es_query, decoders)
 
     dims = []
     for e in new_edges:
@@ -35,7 +35,7 @@ def format_cube(decoders, aggs, start, query, select):
 
     dims = tuple(dims)
     matricies = tuple((s, Matrix(dims=dims, zeros=s.default)) for s in select)
-    for row, coord, agg in aggs_iterator(aggs, decoders):
+    for row, coord, agg in aggs_iterator(aggs, es_query):
         for s, m in matricies:
             v = s.pull(agg)
             union(m, coord, v, s.aggregate)
@@ -49,7 +49,7 @@ def format_cube(decoders, aggs, start, query, select):
     return cube
 
 
-def format_cube_from_aggop(decoders, aggs, start, query, select):
+def format_cube_from_aggop(aggs, es_query, query, decoders, select):
     matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
     agg = _value_drill(aggs)
     for s, m in matricies:
@@ -74,12 +74,8 @@ def _value_drill(agg):
         return agg
 
 
-
-
-
-
-def format_table(decoders, aggs, start, query, select):
-    new_edges = count_dim(aggs, decoders)
+def format_table(aggs, es_query, query, decoders, select):
+    new_edges = wrap(count_dim(aggs, es_query, decoders))
     header = tuple(new_edges.name + select.name)
 
     def data():
@@ -89,7 +85,7 @@ def format_table(decoders, aggs, start, query, select):
 
         if query.sort and not query.groupby:
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            for row, coord, agg in aggs_iterator(aggs, decoders):
+            for row, coord, agg in aggs_iterator(aggs, es_query):
                 missing_coord = all_coord.next()
                 while coord != missing_coord:
                     record = [d.get_value(missing_coord[i]) for i, d in enumerate(decoders)]
@@ -106,7 +102,7 @@ def format_table(decoders, aggs, start, query, select):
                     output.append(s.pull(agg))
                 yield output
         else:
-            for row, coord, agg in aggs_iterator(aggs, decoders):
+            for row, coord, agg in aggs_iterator(aggs, es_query):
                 output = is_sent[coord]
                 if output == None:
                     output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
@@ -137,11 +133,11 @@ def format_table(decoders, aggs, start, query, select):
     )
 
 
-def format_table_from_groupby(decoders, aggs, start, query, select):
+def format_table_from_groupby(aggs, es_query, query, decoders, select):
     header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
 
     def data():
-        for row, coord, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, es_query):
             if agg.get('doc_count', 0) == 0:
                 continue
             output = [d.get_value_from_row(row) for d in decoders]
@@ -156,7 +152,7 @@ def format_table_from_groupby(decoders, aggs, start, query, select):
     )
 
 
-def format_table_from_aggop(decoders, aggs, start, query, select):
+def format_table_from_aggop(aggs, es_query, query, decoders, select):
     header = select.name
     agg = _value_drill(aggs)
     row = []
@@ -170,8 +166,8 @@ def format_table_from_aggop(decoders, aggs, start, query, select):
     )
 
 
-def format_tab(decoders, aggs, start, query, select):
-    table = format_table(decoders, aggs, start, query, select)
+def format_tab(aggs, es_query, query, decoders, select):
+    table = format_table(aggs, es_query, query, decoders, select)
 
     def data():
         yield "\t".join(map(quote, table.header))
@@ -181,8 +177,8 @@ def format_tab(decoders, aggs, start, query, select):
     return data()
 
 
-def format_csv(decoders, aggs, start, query, select):
-    table = format_table(decoders, aggs, start, query, select)
+def format_csv(aggs, es_query, query, decoders, select):
+    table = format_table(aggs, es_query, query, decoders, select)
 
     def data():
         yield ", ".join(map(quote, table.header))
@@ -192,7 +188,7 @@ def format_csv(decoders, aggs, start, query, select):
     return data()
 
 
-def format_list_from_groupby(decoders, aggs, start, query, select):
+def format_list_from_groupby(aggs, es_query, query, decoders, select):
     def data():
         groupby = query.groupby
 
@@ -217,8 +213,8 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
     return output
 
 
-def format_list(decoders, aggs, start, query, select):
-    table = format_table(decoders, aggs, start, query, select)
+def format_list(aggs, es_query, query, decoders, select):
+    table = format_table(aggs, es_query, query, decoders, select)
     header = table.header
 
     data = []
@@ -235,7 +231,7 @@ def format_list(decoders, aggs, start, query, select):
     return output
 
 
-def format_list_from_aggop(decoders, aggs, start, query, select):
+def format_list_from_aggop(aggs, es_query, query, decoders, select):
     agg = _value_drill(aggs)
 
     if isinstance(query.select, list):
@@ -257,8 +253,8 @@ def format_list_from_aggop(decoders, aggs, start, query, select):
         })
 
 
-def format_line(decoders, aggs, start, query, select):
-    list = format_list(decoders, aggs, start, query, select)
+def format_line(aggs, es_query, query, decoders, select):
+    list = format_list(aggs, es_query, query, decoders, select)
 
     def data():
         for d in list.data:

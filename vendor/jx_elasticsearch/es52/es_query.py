@@ -23,6 +23,7 @@ class Aggs(object):
     def __init__(self, name=None):
         self.name = name
         self.children = []
+        self.decoder = None
 
     def to_es(self, schema, query_path="."):
         if self.children:
@@ -53,10 +54,10 @@ class Aggs(object):
 
 class ExprAggs(Aggs):
 
-    def __init__(self, name, expr):
+    def __init__(self, name, expr, select):
         Aggs.__init__(self, name)
-        self.name = name
         self.expr = expr
+        self.select = select
 
     def to_es(self, schema, query_path="."):
         self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
@@ -65,15 +66,39 @@ class ExprAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.expr = self.expr
+        output.select = self.select
         return output
 
 
+class ComplexAggs(ExprAggs):
+    """
+    FOR COMPLICATED AGGREGATIONS
+    """
+
+    def __init__(self, select):
+        Aggs.__init__(self, "_filter")
+        self.expr = {"filter": {"match_all": {}}}
+        self.select = select
+
+    def to_es(self, schema, query_path="."):
+        self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
+        return self.expr
+
+    def copy(self):
+        output = Aggs.copy(self)
+        output.expr = self.expr
+        output.select = self.select
+        return output
+
+
+
 class FilterAggs(Aggs):
-    def __init__(self, name, filter):
+    def __init__(self, name, filter, decoder):
         Aggs.__init__(self, name)
         self.filter = filter
         if isinstance(filter, Mapping):
             Log.error("programming error")
+        self.decoder = decoder
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
@@ -83,6 +108,7 @@ class FilterAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.filter = self.filter
+        output.decoder = self.decoder
         return output
 
 
@@ -130,9 +156,10 @@ class NestedAggs(Aggs):
 
 
 class TermsAggs(Aggs):
-    def __init__(self, name, terms):
+    def __init__(self, name, terms, decoder):
         Aggs.__init__(self, name)
         self.terms = terms
+        self.decoder = decoder
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
@@ -142,6 +169,7 @@ class TermsAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.terms = self.terms
+        output.decoder = self.decoder
         return output
 
 

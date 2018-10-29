@@ -191,20 +191,28 @@ class SetDecoder(AggsDecoder):
 
         if isinstance(value, Variable):
             es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
-            match = TermsAggs("_match", {
-                "field": es_field,
-                "size": limit,
-                "order": {"_term": self.sorted} if self.sorted else None
-            })
-        else:
-            match = TermsAggs("_match", {
-                "script": {
-                    "lang": "painless",
-                    "inline": value.to_es_script(self.schema).script(self.schema)
+            match = TermsAggs(
+                "_match",
+                {
+                    "field": es_field,
+                    "size": limit,
+                    "order": {"_term": self.sorted} if self.sorted else None
                 },
-                "size": limit
-            })
-        output = Aggs().add(FilterAggs("_filter", exists).add(match.add(es_query)))
+                self
+            )
+        else:
+            match = TermsAggs(
+                "_match",
+                {
+                    "script": {
+                        "lang": "painless",
+                        "inline": value.to_es_script(self.schema).script(self.schema)
+                    },
+                    "size": limit
+                },
+                self
+            )
+        output = Aggs().add(FilterAggs("_filter", exists, None).add(match.add(es_query)))
 
         if self.edge.allowNulls:
             # FIND NULLS AT EACH NESTED LEVEL
@@ -212,7 +220,7 @@ class SetDecoder(AggsDecoder):
                 if p == depth:
                     # MISSING AT THE QUERY DEPTH
                     output.add(
-                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(None, exists)).add(es_query))
+                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(None, exists), self).add(es_query))
                     )
                 else:
                     # PARENT HAS NO CHILDREN, SO MISSING
@@ -221,7 +229,8 @@ class SetDecoder(AggsDecoder):
                         NestedAggs(column.nested_path[0]).add(
                             FilterAggs(
                                 "_missing1",
-                                NotOp(None, ExistsOp(None, Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE))))
+                                NotOp(None, ExistsOp(None, Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE)))),
+                                self
                             ).add(es_query)
                         )
                     )
@@ -592,20 +601,27 @@ class DefaultDecoder(SetDecoder):
         if isinstance(self.edge.value, FirstOp) and isinstance(self.edge.value.term, Variable):
             self.edge.value = self.edge.value.term  # ES USES THE FIRST TERM FOR {"terms": } AGGREGATION
         if not isinstance(self.edge.value, Variable):
-            terms = TermsAggs("_match", {
-                "script": {"lang": "painless", "inline": self.script.expr},
-                "size": self.domain.limit,
-                "order": self.es_order
-            })
+            terms = TermsAggs(
+                "_match",
+                {
+                    "script": {"lang": "painless", "inline": self.script.expr},
+                    "size": self.domain.limit,
+                    "order": self.es_order
+                },
+                self
+            )
         else:
-            terms = TermsAggs("_match", {
-                "field": first(self.schema.leaves(self.edge.value.var)).es_column,
-                "size": self.domain.limit,
-                "order": self.es_order
-            })
+            terms = TermsAggs(
+                "_match", {
+                    "field": first(self.schema.leaves(self.edge.value.var)).es_column,
+                    "size": self.domain.limit,
+                    "order": self.es_order
+                },
+                self
+            )
         output = Aggs()
-        output.add(FilterAggs("_filter", self.exists).add(terms.add(es_query)))
-        output.add(FilterAggs("_missing", self.missing).add(es_query))
+        output.add(FilterAggs("_filter", self.exists, None).add(terms.add(es_query)))
+        output.add(FilterAggs("_missing", self.missing, self).add(es_query))
         return output
 
     def count(self, row):
@@ -666,12 +682,12 @@ class DimFieldListDecoder(SetDecoder):
             nest.add(TermsAggs("_match", {
                 "field": first(self.schema.leaves(v.var)).es_column,
                 "size": self.domain.limit
-            }).add(es_query))
-            nest.add(FilterAggs("_missing", NotOp("not", exists)).add(es_query))
+            }, self).add(es_query))
+            nest.add(FilterAggs("_missing", NotOp("not", exists), self).add(es_query))
             es_query = nest
 
         if self.domain.where:
-            es_query = FilterAggs("_filter", self.domain.where).add(es_query)
+            es_query = FilterAggs("_filter", self.domain.where, None).add(es_query)
 
         return es_query
 

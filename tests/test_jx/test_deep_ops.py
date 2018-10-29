@@ -1645,17 +1645,22 @@ class TestDeepOps(BaseTestCase):
                     {"count": 4}
                 ]
             },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["b", "count"],
+                "data": [
+                    [1, 2],
+                    [2, 1],
+                    [4, 1],
+                    [NULL, 4]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "b": [2, 1, 1, 4]
+                }
+            }
         }
         self.utils.execute_tests(test)
 
@@ -1703,7 +1708,7 @@ class TestDeepOps(BaseTestCase):
                     {"value": 4}
                 ]}}],
                 "data": {
-                    "sum": [8, 12, 5, 25]
+                    "sum": [6, 12, 5, 25]
                 }
             }
         }
@@ -1735,17 +1740,22 @@ class TestDeepOps(BaseTestCase):
                     {"count": 3}
                 ]
             },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.b"],
+                "data": [[8]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
+                "data": {
+                    "a.b": 8
+                }
+            }
         }
         self.utils.execute_tests(test)
 

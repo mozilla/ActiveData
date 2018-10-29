@@ -202,9 +202,16 @@ def format_list(decoders, aggs, start, query, select):
     table = format_table(decoders, aggs, start, query, select)
     header = table.header
 
+    data = []
+    for row in table.data:
+        d = Data()
+        for h, r in zip(header, row):
+            d[h] = r
+        data.append(d)
+
     output = Data(
         meta={"format": "list"},
-        data=[dict(zip(header, row)) for row in table.data]
+        data=data
     )
     return output
 

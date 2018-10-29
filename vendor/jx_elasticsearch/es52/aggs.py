@@ -284,9 +284,13 @@ def es_aggsop(es, frum, query):
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
                     stats_name = column.es_column
-                    acc.add(NestedAggs(column.nested_path[0]).add(ExprAggs(stats_name, script)))
+                    c_path = column.nested_path[0]
+                    acc.add(NestedAggs(c_path).add(ExprAggs(stats_name, script)))
 
-                    pulls.append(jx_expression_to_function(literal_field(stats_name) + ".value"))
+                    if c_path == '.':
+                        pulls.append(jx_expression_to_function(literal_field(stats_name) + ".value"))
+                    else:
+                        pulls.append(jx_expression_to_function("_nested." + literal_field(stats_name) + ".value"))
                 if len(pulls) == 0:
                     s.pull = NULL
                 elif len(pulls) == 1:
@@ -346,10 +350,15 @@ def es_aggsop(es, frum, query):
 
     for i, s in enumerate(formula):
         s_path = [k for k, v in split_expression_by_path(s.value, schema=schema).items() if v]
-        if len(s_path) != 1:
+        if len(s_path) == 0:
+            # FOR CONSTANTS
+            nest = NestedAggs(query_path)
+            acc.add(nest)
+        elif len(s_path) == 1:
+            nest = NestedAggs(first(s_path))
+            acc.add(nest)
+        else:
             Log.error("do not know how to handle")
-        nest = NestedAggs(first(s_path))
-        acc.add(nest)
 
         canonical_name = literal_field(s.name)
         if isinstance(s.value, TupleOp):

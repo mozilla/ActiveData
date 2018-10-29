@@ -661,21 +661,22 @@ class Schema(jx_base.Schema):
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
-        column_name = unnest_path(column_name)
+        clean_name = unnest_path(column_name)
         columns = self.columns
         # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
         # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
-        for path in reversed(self.query_path) if column_name == '.' else self.query_path:
+        for path in reversed(self.query_path) if clean_name == '.' else self.query_path:
             output = [
                 c
                 for c in columns
                 if (
-                    (c.name != "_id" or column_name == "_id") and
+                    (c.name != "_id" or clean_name == "_id") and
                     (
+                        (c.jx_type == EXISTS and column_name.endswith("." + EXISTS_TYPE)) or
                         c.jx_type not in OBJECTS or
-                        (column_name == '.' and c.cardinality == 0)
+                        (clean_name == '.' and c.cardinality == 0)
                     ) and
-                    startswith_field(unnest_path(relative_field(c.name, path)), column_name)
+                    startswith_field(unnest_path(relative_field(c.name, path)), clean_name)
                 )
             ]
             if output:

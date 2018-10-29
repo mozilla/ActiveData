@@ -11,22 +11,18 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_python import jx
-
 from jx_base.expressions import TupleOp
 from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch, drill
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, set_default, wrap, split_field, coalesce, unliteral_field
+from mo_dots import Data, set_default, wrap, split_field, coalesce
 from mo_future import sort_using_key
 from mo_logs import Log
 from mo_logs.strings import quote
 from pyLibrary import convert
 
-FunctionType = type(lambda: 1)
 
 def format_cube(decoders, aggs, start, query, select):
-    # decoders = sorted(decoders, key=lambda d: -d.edge.dim)  # REVERSE DECODER ORDER, BECAUSE ES QUERY WAS BUILT IN REVERSE ORDER
     new_edges = count_dim(aggs, decoders)
 
     dims = []
@@ -38,16 +34,11 @@ def format_cube(decoders, aggs, start, query, select):
         dims.append(len(e.domain.partitions) + extra)
 
     dims = tuple(dims)
-    matricies = [(s, Matrix(dims=dims, zeros=s.default)) for s in select]
+    matricies = tuple((s, Matrix(dims=dims, zeros=s.default)) for s in select)
     for row, coord, agg in aggs_iterator(aggs, decoders):
         for s, m in matricies:
-            try:
-                v = s.pull(agg)
-                m[coord] = v
-            except Exception as e:
-                # THIS HAPPENS WHEN ES RETURNS MORE TUPLE COMBINATIONS THAN DOCUMENTS
-                if agg.get('doc_count') != 0:
-                    Log.error("Programmer error", cause=e)
+            v = s.pull(agg)
+            union(m, coord, v, s.aggregate)
 
     cube = Cube(
         query.select,
@@ -70,11 +61,12 @@ def format_cube_from_aggop(decoders, aggs, start, query, select):
 
 def format_table(decoders, aggs, start, query, select):
     new_edges = count_dim(aggs, decoders)
-    header = new_edges.name + select.name
+    header = tuple(new_edges.name + select.name)
 
     def data():
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        is_sent = Matrix(dims=dims, zeros=0)
+        rank = len(dims)
+        is_sent = Matrix(dims=dims)
 
         if query.sort and not query.groupby:
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
@@ -96,17 +88,21 @@ def format_table(decoders, aggs, start, query, select):
                 yield output
         else:
             for row, coord, agg in aggs_iterator(aggs, decoders):
-                is_sent[coord] = 1
-
-                output = [d.get_value(c) for c, d in zip(coord, decoders)]
-                for s in select:
-                    output.append(s.pull(agg))
-                yield output
+                output = is_sent[coord]
+                if output == None:
+                    output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
+                    for s in select:
+                        output.append(s.pull(agg))
+                    yield output
+                else:
+                    # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+                    for i, s in enumerate(select):
+                        union(output, rank+i, s.pull(agg), s.aggregate)
 
             # EMIT THE MISSING CELLS IN THE CUBE
             if not query.groupby:
                 for c, v in is_sent:
-                    if not v:
+                    if v == None:
                         record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
                         for s in select:
                             if s.aggregate == "count":
@@ -203,81 +199,12 @@ def format_list_from_groupby(decoders, aggs, start, query, select):
 
 
 def format_list(decoders, aggs, start, query, select):
-    new_edges = count_dim(aggs, decoders)
-
-    def data():
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-
-        is_sent = Matrix(dims=dims)
-        if query.sort and not query.groupby:
-            # TODO: USE THE format_table() TO PRODUCE THE NEEDED VALUES INSTEAD OF DUPLICATING LOGIC HERE
-            all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            for _, coord, agg in aggs_iterator(aggs, decoders):
-                missing_coord = all_coord.next()
-                while coord != missing_coord:
-                    # INSERT THE MISSING COORDINATE INTO THE GENERATION
-                    output = Data()
-                    for i, d in enumerate(decoders):
-                        output[query.edges[i].name] = d.get_value(missing_coord[i])
-
-                    for s in select:
-                        if s.aggregate == "count":
-                            output[s.name] = 0
-                    yield output
-                    missing_coord = all_coord.next()
-
-                output = Data()
-                for e, c, d in zip(query.edges, coord, decoders):
-                    output[e.name] = d.get_value(c)
-
-                for s in select:
-                    output[s.name] = s.pull(agg)
-                yield output
-        else:
-
-            for row, coord, agg in aggs_iterator(aggs, decoders):
-                output = is_sent[coord]
-                if output == None:
-                    output = is_sent[coord] = Data()
-
-                    for e, c, d in zip(query.edges, coord, decoders):
-                        output[e.name] = d.get_value(c)
-                    for s in select:
-                        output[s.name] = s.pull(agg)
-                else:
-                    for e, c, d in zip(query.edges, coord, decoders):
-                        if output[e.name] != d.get_value(c):
-                            Log.error("not expected")
-
-                    for s in select:
-                        existing = output[s.name]
-                        value = s.pull(agg)
-                        if existing == None:
-                            output[s.name] = value
-                        elif value == None:
-                            pass
-                        elif s.aggregate not in ['sum', 'count']:
-                            Log.warning("not ready")
-                        else:
-                            output[s.name] = existing + value
-                yield output
-
-            # EMIT THE MISSING CELLS IN THE CUBE
-            if not query.groupby:
-                for c, v in is_sent:
-                    if not v:
-                        output = Data()
-                        for i, d in enumerate(decoders):
-                            output[query.edges[i].name] = d.get_value(c[i])
-
-                        for s in select:
-                            if s.aggregate == "count":
-                                output[s.name] = 0
-                        yield output
+    table = format_table(decoders, aggs, start, query, select)
+    header = table.header
 
     output = Data(
         meta={"format": "list"},
-        data=list(data())
+        data=[dict(zip(header, row)) for row in table.data]
     )
     return output
 
@@ -334,3 +261,16 @@ def _get(v, k, d):
         except Exception:
             v = [vv.get(p) for vv in v]
     return v
+
+
+def union(matrix, coord, value, agg):
+    # matrix[coord] = existing + value  WITH ADDITIONAL CHECKS
+    existing = matrix[coord]
+    if existing == None:
+        matrix[coord] = value
+    elif value == None:
+        pass
+    elif agg not in ['sum', 'count']:
+        Log.warning("not ready")
+    else:
+        matrix[coord] = existing + value

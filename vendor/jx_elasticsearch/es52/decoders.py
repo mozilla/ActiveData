@@ -15,7 +15,7 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, EsNestedOp, MissingOp
+from jx_base.expressions import TupleOp, FirstOp, EsNestedOp, MissingOp, ExistsOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
@@ -23,8 +23,8 @@ from jx_python import jx
 from jx_python.jx import first
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
 from mo_future import text_type, transpose
-from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL
-from mo_json.typed_encoder import untype_path
+from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL, EXISTS, OBJECT
+from mo_json.typed_encoder import untype_path, NESTED_TYPE, EXISTS_TYPE
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
@@ -209,13 +209,21 @@ class SetDecoder(AggsDecoder):
         if self.edge.allowNulls:
             # FIND NULLS AT EACH NESTED LEVEL
             for p in self.schema.query_path:
-                if p == depth:  # TODO: There is an intereaction between Expressions and Aggs and nested levels
+                if p == depth:
+                    # MISSING AT THE QUERY DEPTH
                     output.add(
                         NestedAggs(p).add(FilterAggs("_missing0", NotOp(None, exists)).add(es_query))
                     )
                 else:
+                    # PARENT HAS NO CHILDREN, SO MISSING
+                    column = first(self.schema.values(depth, (OBJECT, EXISTS)))
                     output.add(
-                        NestedAggs(p).add(FilterAggs("_missing1", NotOp(None, EsNestedOp(None, [Variable(depth), exists]))).add(es_query))
+                        NestedAggs(column.nested_path[0]).add(
+                            FilterAggs(
+                                "_missing1",
+                                NotOp(None, ExistsOp(None, Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE))))
+                            ).add(es_query)
+                        )
                     )
         return output
 

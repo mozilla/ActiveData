@@ -1659,6 +1659,56 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_deep_edge_w_shallow_var(self):
+        test = {
+            "data": [
+                {"v": 1, "a": "b"},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+                {"v": 2, "a": [{"b": 1}]},
+                {"v": 3, "a": {}},
+                {"v": 5, "a": [{"b": 4}]},
+                {"v": 6, "a": 3},
+                {"v": 7},
+                {"v": 8, "a": [{}, {"b": 2}]}
+            ],
+            "query": {
+                "from": TEST_TABLE+".a",
+                "edges": [{"value": "b"}],
+                "select": {"name": "sum", "value": "v", "aggregate": "sum"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 1, "sum": 6},
+                    {"b": 2, "sum": 12},  # v (at b==2) is multivalued: [4, 4] =>  is not null => {"when":"v", "then":1} == 1
+                    {"b": 4, "sum": 5},
+                    {"sum": 25}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["b", "sum"],
+                "data": [
+                    [1, 6],
+                    [2, 12],
+                    [4, 5],
+                    [NULL, 25]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
+                "data": {
+                    "sum": [8, 12, 5, 25]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
     @skip("broken")
     def test_nested_property_edge_w_shallow_expression(self):
         test = {

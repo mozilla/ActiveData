@@ -980,9 +980,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-
-
     def test_deep_edge_using_list(self):
         data = [{"a": {"_b": [
             {"r": "a",  "s": "aa"},

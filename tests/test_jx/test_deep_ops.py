@@ -1657,8 +1657,13 @@ class TestDeepOps(BaseTestCase):
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
                 "data": {
-                    "b": [2, 1, 1, 4]
+                    "count": [2, 1, 1, 4]
                 }
             }
         }

@@ -488,14 +488,16 @@ EMPTY_LIST = []
 
 
 def drill(agg):
-    def items(a):
-        for k, v in a.items():
-            if k in ("_filter", "_nested"):
-                for i in items(v):
-                    yield i
-            else:
-                yield k, v
-    return dict(items(agg))
+    while True:
+        deeper = agg.get("_nested")
+        if deeper:
+            agg = deeper
+            continue
+        deeper = agg.get("_filter")
+        if deeper:
+            agg = deeper
+            continue
+        return agg
 
 
 def aggs_iterator(aggs, decoders, coord=True):
@@ -539,9 +541,9 @@ def aggs_iterator(aggs, decoders, coord=True):
                 elif k == "_match":
                     for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
                         b["_index"] = i
-                        yield drill(b,), (b,)
+                        yield drill(b), (b,)
                 elif k.startswith("_missing"):
-                    yield drill(v,), (v,)
+                    yield drill(v), (v,)
                 elif k == "_other":
                     for b in v.get("buckets", EMPTY_LIST):
                         yield b, (Null,)

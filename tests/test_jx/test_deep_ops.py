@@ -1619,7 +1619,6 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    # @skip("for Orange query")
     def test_deep_edge_w_shallow_expression(self):
         test = {
             "data": [

@@ -49,6 +49,7 @@ class Aggs(object):
         output = _new(self.__class__)
         output.name = self.name
         output.children = self.children[:]
+        output.decoder = self.decoder
         return output
 
 

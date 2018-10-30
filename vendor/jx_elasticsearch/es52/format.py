@@ -35,7 +35,7 @@ def format_cube(aggs, es_query, query, decoders, select):
 
     dims = tuple(dims)
     matricies = tuple((s, Matrix(dims=dims, zeros=s.default)) for s in select)
-    for row, coord, agg in aggs_iterator(aggs, es_query):
+    for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
         for s, m in matricies:
             v = s.pull(agg)
             union(m, coord, v, s.aggregate)

@@ -1006,13 +1006,13 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"v": ["a", "aa"], "count": 1},
+                    {"v": ["a" , "aa"], "count": 1},
                     {"v": [NULL, "bb"], "count": 1},
                     {"v": ["bb", "bb"], "count": 1},
-                    {"v": ["c", "cc"], "count": 1},
+                    {"v": ["c" , "cc"], "count": 1},
                     {"v": [NULL, "dd"], "count": 1},
-                    {"v": ["e", "ee"], "count": 2},
-                    {"v": ["f", NULL], "count": 2},
+                    {"v": ["e" , "ee"], "count": 2},
+                    {"v": ["f" , NULL], "count": 2},
                     {"v": [NULL, NULL], "count": 1}
                 ]
             },
@@ -1020,13 +1020,13 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["v", "count"],
                 "data": [
-                    [["a", "aa"], 1],
+                    [["a" , "aa"], 1],
                     [[NULL, "bb"], 1],
                     [["bb", "bb"], 1],
-                    [["c", "cc"], 1],
+                    [["c" , "cc"], 1],
                     [[NULL, "dd"], 1],
-                    [["e", "ee"], 2],
-                    [["f", NULL], 2],
+                    [["e" , "ee"], 2],
+                    [["f" , NULL], 2],
                     [[NULL, NULL], 1]
                 ]
             },

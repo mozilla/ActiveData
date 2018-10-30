@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from collections import deque
 from operator import add
 
 from jx_base.domains import SetDomain
@@ -442,7 +443,7 @@ def es_aggsop(es, frum, query):
 
         for d in decoder:
             decoders[d.edge.dim] = d
-            acc = d.append_query(path, acc, start)
+            acc = d.append_query(path, acc)
             start += d.num_columns
 
         if where:
@@ -463,7 +464,7 @@ def es_aggsop(es, frum, query):
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:
             result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
-            aggs = result.aggregations
+            aggs = unwrap(result.aggregations)
 
             formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
             if query.edges:
@@ -497,81 +498,91 @@ def drill(agg):
         return agg
 
 
-def aggs_iterator(aggs, acc):
+def aggs_iterator(aggs, es_query, decoders):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
     RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
 
     :param aggs: ES AGGREGATE OBJECT
-    :param acc: THE ABSTRACT ES QUERY WE WILL TRACK ALONGSIDE aggs
-    :param coord: TURN ON LOCAL COORDINATE LOOKUP
+    :param es_query: THE ABSTRACT ES QUERY WE WILL TRACK ALONGSIDE aggs
+    :param decoders: TO CONVERT PARTS INTO COORDINATES
     """
+    coord = [0] * len(decoders)
+    parts = deque()
+    stack = []
 
-    def _aggs_iterator(agg, es_query):
-        children = es_query.children
-        if getattr(es_query, "select", None) or not children:
-            yield tuple(), tuple(), agg
-        else:
-            for child in children:
-                name = child.name
-                v = agg[name]
-                if name == "_match":
-                    for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                        b["_index"] = i
-                        for c_parts, c_coord, child_agg in _aggs_iterator(b, child):
-                            new_parts = c_parts + (b,)
-                            if child.decoder:
-                                new_coord = c_coord + (child.decoder.get_index(new_parts),)
-                            else:
-                                new_coord = c_coord
+    def _children(agg, children):
+        for child in children:
+            name = child.name
+            v = agg[name]
+            if name == "_match":
+                for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
+                    b["_index"] = i
+                    yield b, child
+            elif name.startswith("_missing"):
+                yield v, child
+            else:
+                yield v, child
 
-                            yield new_parts, new_coord, child_agg
-                elif name.startswith("_missing"):
-                    for c_parts, c_coord, child_agg in _aggs_iterator(v, child):
-                        new_parts = c_parts + (v,)
-                        if child.decoder:
-                            new_coord = c_coord + (child.decoder.get_index(new_parts),)
-                        else:
-                            new_coord = c_coord
+    gen = _children(aggs, es_query.children)
+    while True:
+        try:
+            c_agg, c_query = gen.next()
+        except StopIteration:
+            try:
+                gen = stack.pop()
+            except IndexError:
+                return
+            parts.popleft()
+            continue
 
-                        yield new_parts, new_coord, child_agg
-                else:
-                    for c_parts, c_coord, child_agg in _aggs_iterator(v, child):
-                        yield c_parts, c_coord, child_agg
+        stack.append(gen)
+        parts.appendleft(c_agg)
+        d = c_query.decoder
+        if d:
+            coord[d.edge.dim] = d.get_index(parts)
 
-    for parts, coord, agg in _aggs_iterator(unwrap(aggs), acc):
-        yield parts, coord, agg
+        children = c_query.children
+        if getattr(c_query, "select", None) or not children:
+            parts.popleft()
+            yield tuple(parts), tuple(coord), c_agg
+            gen = stack.pop()
+            continue
 
+        gen = _children(c_agg, children)
 
 def count_dim(aggs, es_query, decoders):
     if not any(isinstance(d, (DefaultDecoder, DimFieldListDecoder, ObjectDecoder)) for d in decoders):
         return [d.edge for d in decoders]
 
-    def _count_dim(aggs, es_query):
+    def _count_dim(parts, aggs, es_query):
         children = es_query.children
         if not children:
-            yield tuple()
-        else:
-            for child in children:
-                name = child.name
-                v = aggs[name]
-                if name == "_match":
-                    for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                        b["_index"] = i
-                        for parts in _count_dim(b, child):
-                            new_parts = parts + (b,)
-                            if child.decoder:
-                                child.decoder.count(new_parts)
+            return
 
-                            yield new_parts
-                else:
-                    for parts in _count_dim(v, child):
-                        yield parts
-    for _ in _count_dim(aggs, es_query):
-        pass
+        for child in children:
+            name = child.name
+            agg = aggs[name]
+            if name == "_match":
+                for i, b in enumerate(agg.get("buckets", EMPTY_LIST)):
+                    b["_index"] = i
+                    new_parts = parts + (b,)
+                    if child.decoder:
+                        child.decoder.count(new_parts)
+                    _count_dim(new_parts, b, child)
+            elif name.startswith("_missing"):
+                new_parts = parts + (agg,)
+                if child.decoder:
+                    child.decoder.count(new_parts)
+                _count_dim(new_parts, agg, child)
+            else:
+                _count_dim(parts, agg, child)
+
+    _count_dim(tuple(), aggs, es_query)
     for d in decoders:
         d.done_count()
     return [d.edge for d in decoders]
+
 
 format_dispatch = {}
 from jx_elasticsearch.es52.format import format_cube

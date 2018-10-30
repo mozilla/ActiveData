@@ -135,15 +135,24 @@ def format_table(aggs, es_query, query, decoders, select):
 
 def format_table_from_groupby(aggs, es_query, query, decoders, select):
     header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
+    new_edges = wrap(count_dim(aggs, es_query, decoders))
 
     def data():
+        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+        rank = len(dims)
+        is_sent = Matrix(dims=dims)
+
         for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
-            if agg.get('doc_count', 0) == 0:
-                continue
-            output = [d.get_value_from_row(row) for d in decoders]
-            for s in select:
-                output.append(s.pull(agg))
-            yield output
+            output = is_sent[coord]
+            if output == None:
+                output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
+                for s in select:
+                    output.append(s.pull(agg))
+                yield output
+            else:
+                # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+                for i, s in enumerate(select):
+                    union(output, rank+i, s.pull(agg), s.aggregate)
 
     return Data(
         meta={"format": "table"},
@@ -189,19 +198,26 @@ def format_csv(aggs, es_query, query, decoders, select):
 
 
 def format_list_from_groupby(aggs, es_query, query, decoders, select):
+    new_edges = wrap(count_dim(aggs, es_query, decoders))
+
     def data():
         groupby = query.groupby
+        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+        is_sent = Matrix(dims=dims)
 
-        for row, coord, agg in aggs_iterator(aggs, decoders, decoders):
-            if agg.get('doc_count', 0) == 0:
-                continue
-            output = Data()
-            for g, d in zip(groupby, decoders):
-                output[coalesce(g.put.name, g.name)] = d.get_value_from_row(row)
-
-            for s in select:
-                output[s.name] = s.pull(agg)
-            yield output
+        for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
+            output = is_sent[coord]
+            if output == None:
+                output = Data()
+                for g, d in zip(groupby, decoders):
+                    output[coalesce(g.put.name, g.name)] = d.get_value_from_row(row)
+                for s in select:
+                    output[s.name] = s.pull(agg)
+                yield output
+            else:
+                # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+                for s in select:
+                    union(output, s.name, s.pull(agg), s.aggregate)
 
     for g in query.groupby:
         g.put.name = coalesce(g.put.name, g.name)
@@ -211,6 +227,10 @@ def format_list_from_groupby(aggs, es_query, query, decoders, select):
         data=list(data())
     )
     return output
+
+
+
+
 
 
 def format_list(aggs, es_query, query, decoders, select):

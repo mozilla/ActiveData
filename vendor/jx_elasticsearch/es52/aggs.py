@@ -425,7 +425,7 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function(join_field(["buckets", "key"]))
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
-            s.pull = jx_expression_to_function(join_field([canonical_name, aggregates[s.aggregate]]))
+            s.pull = jx_expression_to_function(aggregates[s.aggregate])
             nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": s.value.to_es_script(schema).script(schema)}}, s))
 
 
@@ -568,7 +568,7 @@ def count_dim(aggs, es_query, decoders):
         for child in children:
             name = child.name
             agg = aggs[name]
-            if not agg.get('doc_count'):
+            if agg.get('doc_count')==0:
                 continue
             elif name == "_match":
                 for i, b in enumerate(agg.get("buckets", EMPTY_LIST)):

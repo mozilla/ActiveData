@@ -184,7 +184,7 @@ as having no data.
 `where` Clause
 ------------
 
-The `where` clause is [an expression](jx_Expresions.md) that returns a Boolean 
+The `where` clause is [an expression](jx_expressions.md) that returns a Boolean 
 indicating whether the document will be included in the aggregate. If the 
 query is returning a pivot-table, or data cube, the where clause does not 
 affect the dimensions' domains.

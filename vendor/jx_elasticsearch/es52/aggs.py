@@ -177,7 +177,6 @@ def es_aggsop(es, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
     schema = frum.schema
     query_path = schema.query_path[0]
-
     select = listwrap(query.select)
 
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
@@ -265,14 +264,15 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                acc.add(ComplexAggs(s).add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, None)))
-
+                complex = ComplexAggs(s).add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, None))
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + "_percentile")
-                acc.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
+                complex.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
                     "field": first(columns).es_column,
                     "percents": [50]
-                }}, s))
+                }}, None))
+
+                acc.add(complex)
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
                 pulls = []
@@ -287,7 +287,7 @@ def es_aggsop(es, frum, query):
                     c_path = column.nested_path[0]
                     acc.add(NestedAggs(c_path).add(ExprAggs(stats_name, script, s)))
 
-                    pulls.append(jx_expression_to_function(literal_field(stats_name) + ".value"))
+                    pulls.append(jx_expression_to_function("value"))
                 if len(pulls) == 0:
                     s.pull = NULL
                 elif len(pulls) == 1:
@@ -504,12 +504,15 @@ def _children(agg, children):
         v = agg[name]
         if name == "_match":
             for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                b["_index"] = i
-                yield b, child, b
+                yield i, b, child, b
+        elif name.startswith("_match"):
+            i = int(name[6:])
+            yield i, v, child, v
         elif name.startswith("_missing"):
-            yield v, child, v
+            i = int(name[8:])
+            yield i, v, child, v
         else:
-            yield v, child, None
+            yield 0, v, child, None
 
 
 def aggs_iterator(aggs, es_query, decoders):
@@ -528,7 +531,7 @@ def aggs_iterator(aggs, es_query, decoders):
     gen = _children(aggs, es_query.children)
     while True:
         try:
-            c_agg, c_query, part = gen.next()
+            index, c_agg, c_query, part = gen.next()
         except StopIteration:
             try:
                 gen = stack.pop()
@@ -542,19 +545,27 @@ def aggs_iterator(aggs, es_query, decoders):
         parts.appendleft(part)
         d = c_query.decoder
         if d:
-            coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None))
+            coord[d.edge.dim] = d.get_index( tuple(p for p in parts if p is not None), c_query)
 
         children = c_query.children
-        if getattr(c_query, "select", None) or not children:
+        select = getattr(c_query, "select", Null)
+        if select or not children:
             parts.popleft()  # c_agg IS NOT ON TOP
             if any(c is None for c in coord):
                 Log.error("should never happen (we already skip doc_count==0)")
             else:
-                yield tuple(p for p in parts if p is not None), tuple(coord), c_agg
+                yield (
+                    tuple(p for p in parts if p is not None),
+                    tuple(coord),
+                    c_agg,
+                    select
+                )
+
             continue
 
         stack.append(gen)
         gen = _children(c_agg, children)
+
 
 def count_dim(aggs, es_query, decoders):
     if not any(isinstance(d, (DefaultDecoder, DimFieldListDecoder, ObjectDecoder)) for d in decoders):

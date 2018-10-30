@@ -141,7 +141,7 @@ class AggsDecoder(object):
     def get_value(self, index):
         raise NotImplementedError()
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         raise NotImplementedError()
 
     @property
@@ -240,7 +240,7 @@ class SetDecoder(AggsDecoder):
     def get_value_from_row(self, parts):
         return self.pull(parts[0].get('key'))
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         try:
             part = row[0]
             return self.domain.getIndexByKey(part.get('key'))
@@ -252,7 +252,7 @@ class SetDecoder(AggsDecoder):
         return 1
 
 
-def _range_composer(edge, domain, es_query, to_float, schema):
+def _range_composer(self, edge, domain, es_query, to_float, schema):
     # USE RANGES
     _min = coalesce(domain.min, MIN(domain.partitions.min))
     _max = coalesce(domain.max, MAX(domain.partitions.max))
@@ -265,7 +265,8 @@ def _range_composer(edge, domain, es_query, to_float, schema):
                 edge.value.exists(),
                 InequalityOp("gte", [edge.value, Literal(None, to_float(_min))]),
                 InequalityOp("lt", [edge.value, Literal(None, to_float(_max))])
-            ]).partial_eval())
+            ]).partial_eval()),
+            self
         ).add(es_query))
 
     if isinstance(edge.value, Variable):
@@ -274,18 +275,18 @@ def _range_composer(edge, domain, es_query, to_float, schema):
         calc = {"script": edge.value.to_es_script(schema).script(schema)}
     calc['ranges'] = [{"from": to_float(p.min), "to": to_float(p.max)} for p in domain.partitions]
 
-    return output.add(RangeAggs("_match", calc).add(es_query))
+    return output.add(RangeAggs("_match", calc, self).add(es_query))
 
 
 class TimeDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
         schema = self.query.frum.schema
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.unix, schema)
+        return _range_composer(self, self.edge, self.edge.domain, es_query, lambda x: x.unix, schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -335,19 +336,20 @@ class GeneralRangeDecoder(AggsDecoder):
                 InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
                 InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
-            aggs.add(FilterAggs("_join_" + text_type(i), filter_))
+            aggs.add(FilterAggs("_match" + text_type(i), filter_, self).add(es_query))
 
         return aggs
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
             return len(domain.partitions)
-        return part["_index"]
+        index = int(es_query.name[6:])
+        return index
 
     @property
     def num_columns(self):
@@ -368,16 +370,16 @@ class GeneralSetDecoder(AggsDecoder):
             filters.append(AndOp("and", [w] + notty))
             notty.append(NotOp("not", w))
 
-        output = Aggs().add(FiltersAggs("_match", filters).add(es_query))
+        output = Aggs().add(FiltersAggs("_match", filters, self).add(es_query))
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-            output.add(FilterAggs("_missing", AndOp("and", notty)).add(es_query))
+            output.add(FilterAggs("_missing", AndOp("and", notty), self).add(es_query))
 
         return output
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         domain = self.edge.domain
         part = row[0]
         # if part == None:
@@ -391,12 +393,12 @@ class GeneralSetDecoder(AggsDecoder):
 
 class DurationDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x.seconds, self.schema)
+        return _range_composer(self, self.edge, self.edge.domain, es_query, lambda x: x.seconds, self.schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -421,12 +423,12 @@ class DurationDecoder(AggsDecoder):
 
 class RangeDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
-        return _range_composer(self.edge, self.edge.domain, es_query, lambda x: x, self.schema)
+        return _range_composer(self, self.edge, self.edge.domain, es_query, lambda x: x, self.schema)
 
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -469,7 +471,7 @@ class MultivalueDecoder(SetDecoder):
             return None
         return unwraplist([v.replace("\b", "|") for v in values[1:-1]])
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         find = self.get_value_from_row(row)
         try:
             return self.parts.index(find)
@@ -532,7 +534,7 @@ class ObjectDecoder(AggsDecoder):
             partitions=[{"value": p, "dataIndex": i} for i, p in enumerate(self.parts)]
         )
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         value = self.get_value_from_row(row)
         if self.computed_domain:
             return self.domain.getIndexByKey(value)
@@ -545,13 +547,12 @@ class ObjectDecoder(AggsDecoder):
             self.parts.append(value)
         return i
 
-    def get_value_from_row(self, row):
-        part = row[:self.num_columns:]
-        if not part[0]['doc_count']:
+    def get_value_from_row(self, parts):
+        if not parts[0]['doc_count']:
             return None
 
         output = Data()
-        for k, v in transpose(self.put, part):
+        for k, v in transpose(self.put, parts):
             output[k] = v.get('key')
         return output
 
@@ -627,7 +628,7 @@ class DefaultDecoder(SetDecoder):
         self.parts = None
         self.computed_domain = True
 
-    def get_index(self, row):
+    def get_index(self, row, es_query=None):
         if self.computed_domain:
             try:
                 part = row[0]

@@ -171,10 +171,11 @@ class Matrix(object):
 
     def __iter__(self):
         if not self.dims:
-            return [self.value].__iter__()
+            yield (tuple(), self.value)
         else:
             # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
-            return ((c, self[c]) for c in self._all_combos())
+            for c in self._all_combos():
+                yield (c, self[c])
 
     def __float__(self):
         return self.value

@@ -114,9 +114,10 @@ class FilterAggs(Aggs):
 
 
 class FiltersAggs(Aggs):
-    def __init__(self, name, filters):
+    def __init__(self, name, filters, decoder):
         Aggs.__init__(self, name)
         self.filters = filters
+        self.decoder = decoder
         if not isinstance(filters, list):
             Log.error("expecting a list")
 
@@ -175,9 +176,10 @@ class TermsAggs(Aggs):
 
 
 class RangeAggs(Aggs):
-    def __init__(self, name, expr):
+    def __init__(self, name, expr, decoder):
         Aggs.__init__(self, name)
         self.expr = expr
+        self.decoder = decoder
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)

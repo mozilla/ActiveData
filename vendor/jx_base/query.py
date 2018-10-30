@@ -278,6 +278,7 @@ class QueryOp(Expression):
 
 
 canonical_aggregates = wrap({
+    "cardinality": {"name":"cardinality", "default": 0},
     "count": {"name": "count", "default": 0},
     "min": {"name": "minimum"},
     "max": {"name": "maximum"},
@@ -449,7 +450,8 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                         name=edge,
                         value=jx_expression(edge, schema=schema),
                         allowNulls=True,
-                        dim=dim_index
+                        dim=dim_index,
+                        domain=_normalize_domain(None, limit)
                     )
                 ]
             elif isinstance(leaves, _Column):

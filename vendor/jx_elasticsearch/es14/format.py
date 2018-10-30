@@ -298,7 +298,7 @@ set_default(format_dispatch, {
     None: (format_cube, format_table_from_groupby, format_cube_from_aggop, "application/json"),
     "cube": (format_cube, format_cube, format_cube_from_aggop, "application/json"),
     "table": (format_table, format_table_from_groupby, format_table_from_aggop,  "application/json"),
-    "list": (format_list, format_list_from_groupby, format_list_from_aggop, "application/json"),
+    "list": (format_list, format_list_from_groupby, format_list, "application/json"),
     # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")

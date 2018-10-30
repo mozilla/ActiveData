@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.expressions import TupleOp
-from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch, drill
+from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, set_default, wrap, split_field, coalesce
@@ -22,7 +22,7 @@ from mo_logs.strings import quote
 from pyLibrary import convert
 
 
-def format_cube(aggs, es_query, query, decoders, select):
+def format_cube(aggs, es_query, query, decoders, selects):
     new_edges = count_dim(aggs, es_query, decoders)
 
     dims = []
@@ -34,29 +34,19 @@ def format_cube(aggs, es_query, query, decoders, select):
         dims.append(len(e.domain.partitions) + extra)
 
     dims = tuple(dims)
-    matricies = tuple((s, Matrix(dims=dims, zeros=s.default)) for s in select)
-    for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
-        for s, m in matricies:
-            v = s.pull(agg)
-            union(m, coord, v, s.aggregate)
+    matricies = {s.name: Matrix(dims=dims, zeros=s.default) for s in selects}
+    for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
+        if not select:
+            continue
+        m = matricies[select.name]
+        v = select.pull(agg)
+        union(m, coord, v, select.aggregate)
 
     cube = Cube(
         query.select,
         sort_using_key(new_edges, key=lambda e: e.dim),  # ENSURE EDGES ARE IN SAME ORDER AS QUERY
-        {s.name: m for s, m in matricies}
+        matricies
     )
-    cube.frum = query
-    return cube
-
-
-def format_cube_from_aggop(aggs, es_query, query, decoders, select):
-    matricies = [(s, Matrix(dims=[], zeros=s.default)) for s in select]
-    agg = _value_drill(aggs)
-    for s, m in matricies:
-        v = s.pull(agg)
-        union(m, tuple(), v, s.aggregate)
-
-    cube = Cube(query.select, [], {s.name: m for s, m in matricies})
     cube.frum = query
     return cube
 
@@ -74,85 +64,30 @@ def _value_drill(agg):
         return agg
 
 
-def format_table(aggs, es_query, query, decoders, select):
+def format_table(aggs, es_query, query, decoders, selects):
     new_edges = wrap(count_dim(aggs, es_query, decoders))
-    header = tuple(new_edges.name + select.name)
+    dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+    rank = len(dims)
+    header = tuple(new_edges.name + selects.name)
+    name2index = {s.name: i + rank for i, s in enumerate(selects)}
 
     def data():
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        rank = len(dims)
         is_sent = Matrix(dims=dims)
 
-        if query.sort and not query.groupby:
-            all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
-                missing_coord = all_coord.next()
-                while coord != missing_coord:
-                    record = [d.get_value(missing_coord[i]) for i, d in enumerate(decoders)]
-                    for s in select:
-                        if s.aggregate == "count":
-                            record.append(0)
-                        else:
-                            record.append(None)
-                    yield record
-                    missing_coord = all_coord.next()
-
-                output = [d.get_value(c) for c, d in zip(coord, decoders)]
-                for s in select:
-                    output.append(s.pull(agg))
-                yield output
-        else:
-            for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
-                output = is_sent[coord]
-                if output == None:
-                    output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
-                    for s in select:
-                        output.append(s.pull(agg))
-                    yield output
-                else:
-                    # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-                    for i, s in enumerate(select):
-                        union(output, rank+i, s.pull(agg), s.aggregate)
-
-            # EMIT THE MISSING CELLS IN THE CUBE
-            if not query.groupby:
-                for c, v in is_sent:
-                    if v == None:
-                        record = [d.get_value(c[i]) for i, d in enumerate(decoders)]
-                        for s in select:
-                            if s.aggregate == "count":
-                                record.append(0)
-                            else:
-                                record.append(None)
-                        yield record
-
-    return Data(
-        meta={"format": "table"},
-        header=header,
-        data=list(data())
-    )
-
-
-def format_table_from_groupby(aggs, es_query, query, decoders, select):
-    header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
-    new_edges = wrap(count_dim(aggs, es_query, decoders))
-
-    def data():
-        dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-        rank = len(dims)
-        is_sent = Matrix(dims=dims)
-
-        for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
+        for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
             output = is_sent[coord]
             if output == None:
-                output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
-                for s in select:
-                    output.append(s.pull(agg))
+                output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in selects]
                 yield output
-            else:
-                # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-                for i, s in enumerate(select):
-                    union(output, rank+i, s.pull(agg), s.aggregate)
+            # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+            union(output, name2index[select.name], select.pull(agg), select.aggregate)
+
+        # EMIT THE MISSING CELLS IN THE CUBE
+        if not query.groupby:
+            for coord, output in is_sent:
+                if output == None:
+                    record = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in selects]
+                    yield record
 
     return Data(
         meta={"format": "table"},
@@ -161,18 +96,41 @@ def format_table_from_groupby(aggs, es_query, query, decoders, select):
     )
 
 
-def format_table_from_aggop(aggs, es_query, query, decoders, select):
-    header = select.name
-    agg = _value_drill(aggs)
-    row = []
-    for s in select:
-        row.append(s.pull(agg))
+def format_table_from_groupby(aggs, es_query, query, decoders, selects):
+    new_edges = wrap(count_dim(aggs, es_query, decoders))
+    dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
+    rank = len(dims)
+    header = tuple(new_edges.name + selects.name)
+    name2index = {s.name: i + rank for i, s in enumerate(selects)}
+
+    def data():
+        is_sent = Matrix(dims=dims)
+        for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
+            output = is_sent[coord]
+            if output == None:
+                output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in selects]
+                yield output
+            # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+            union(output, name2index[select.name], select.pull(agg), select.aggregate)
 
     return Data(
         meta={"format": "table"},
         header=header,
-        data=[row]
+        data=list(data())
     )
+
+
+# def format_table_from_aggop(aggs, es_query, query, decoders, selects):
+#     header = selects.name
+#     row = [s.default for s in selects]
+#     for _, _, agg, s in aggs_iterator(aggs, es_query, tuple()):
+#         row.append(s.pull(agg))
+#
+#     return Data(
+#         meta={"format": "table"},
+#         header=header,
+#         data=[row]
+#     )
 
 
 def format_tab(aggs, es_query, query, decoders, select):
@@ -197,7 +155,7 @@ def format_csv(aggs, es_query, query, decoders, select):
     return data()
 
 
-def format_list_from_groupby(aggs, es_query, query, decoders, select):
+def format_list_from_groupby(aggs, es_query, query, decoders, selects):
     new_edges = wrap(count_dim(aggs, es_query, decoders))
 
     def data():
@@ -205,19 +163,17 @@ def format_list_from_groupby(aggs, es_query, query, decoders, select):
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims)
 
-        for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
+        for row, coord, agg, s in aggs_iterator(aggs, es_query, decoders):
             output = is_sent[coord]
             if output == None:
                 output = Data()
                 for g, d in zip(groupby, decoders):
                     output[coalesce(g.put.name, g.name)] = d.get_value_from_row(row)
-                for s in select:
-                    output[s.name] = s.pull(agg)
+                for s in selects:
+                    output[s.name] = s.default
                 yield output
-            else:
-                # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-                for s in select:
-                    union(output, s.name, s.pull(agg), s.aggregate)
+            # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+            union(output, s.name, s.pull(agg), s.aggregate)
 
     for g in query.groupby:
         g.put.name = coalesce(g.put.name, g.name)
@@ -229,48 +185,32 @@ def format_list_from_groupby(aggs, es_query, query, decoders, select):
     return output
 
 
-
-
-
-
 def format_list(aggs, es_query, query, decoders, select):
     table = format_table(aggs, es_query, query, decoders, select)
     header = table.header
 
-    data = []
-    for row in table.data:
-        d = Data()
-        for h, r in zip(header, row):
-            d[h] = r
-        data.append(d)
+    if query.edges or query.groupby:
+        data = []
+        for row in table.data:
+            d = Data()
+            for h, r in zip(header, row):
+                d[h] = r
+            data.append(d)
+        format = "list"
+    elif isinstance(query.select, list):
+        data = Data()
+        for h, r in zip(header, table.data[0]):
+            data[h] = r
+        format = "value"
+    else:
+        data = table.data[0][0]
+        format = "value"
 
     output = Data(
-        meta={"format": "list"},
+        meta={"format": format},
         data=data
     )
     return output
-
-
-def format_list_from_aggop(aggs, es_query, query, decoders, select):
-    agg = _value_drill(aggs)
-
-    if isinstance(query.select, list):
-        item = Data()
-        for s in select:
-            item[s.name] = s.pull(agg)
-    else:
-        item = select[0].pull(agg)
-
-    if query.edges or query.groupby:
-        return wrap({
-            "meta": {"format": "list"},
-            "data": [item]
-        })
-    else:
-        return wrap({
-            "meta": {"format": "value"},
-            "data": item
-        })
 
 
 def format_line(aggs, es_query, query, decoders, select):
@@ -284,10 +224,10 @@ def format_line(aggs, es_query, query, decoders, select):
 
 
 set_default(format_dispatch, {
-    None: (format_cube, format_table_from_groupby, format_cube_from_aggop, "application/json"),
-    "cube": (format_cube, format_cube, format_cube_from_aggop, "application/json"),
-    "table": (format_table, format_table_from_groupby, format_table_from_aggop,  "application/json"),
-    "list": (format_list, format_list_from_groupby, format_list_from_aggop, "application/json"),
+    None: (format_cube, format_table_from_groupby, format_cube, "application/json"),
+    "cube": (format_cube, format_cube, format_cube, "application/json"),
+    "table": (format_table, format_table_from_groupby, format_table,  "application/json"),
+    "list": (format_list, format_list_from_groupby, format_list, "application/json"),
     # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")
@@ -313,6 +253,12 @@ def union(matrix, coord, value, agg):
     elif value == None:
         pass
     elif agg not in ['sum', 'count']:
+        if agg == "cardinality" and (existing == 0 or value == 0):
+            matrix[coord] = existing + value
+            return
+        elif agg == "stats" and (not existing or not value):
+            matrix[coord] = existing + value
+            return
         Log.warning("not ready")
     else:
         matrix[coord] = existing + value

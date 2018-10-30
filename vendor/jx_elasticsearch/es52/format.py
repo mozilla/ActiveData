@@ -167,8 +167,8 @@ def format_list_from_groupby(aggs, es_query, query, decoders, selects):
             output = is_sent[coord]
             if output == None:
                 output = Data()
-                for g, d in zip(groupby, decoders):
-                    output[coalesce(g.put.name, g.name)] = d.get_value_from_row(row)
+                for g, d, c in zip(groupby, decoders, coord):
+                    output[coalesce(g.put.name, g.name)] = d.get_value(c)
                 for s in selects:
                     output[s.name] = s.default
                 yield output

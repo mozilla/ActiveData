@@ -238,12 +238,13 @@ class SetDecoder(AggsDecoder):
         return self.domain.getKeyByIndex(index)
 
     def get_value_from_row(self, parts):
-        return self.pull(parts[0].get('key'))
+        key = parts[0].get('key')
+        return self.pull(key)
 
     def get_index(self, row, es_query=None):
         try:
-            part = row[0]
-            return self.domain.getIndexByKey(part.get('key'))
+            key = row[0].get('key')
+            return self.domain.getIndexByKey(key)
         except Exception as e:
             Log.error("problem", cause=e)
 
@@ -463,21 +464,35 @@ class MultivalueDecoder(SetDecoder):
 
         return Aggs().add(TermsAggs("_match", {
             "script": expand_template(LIST_TO_PIPE, {"expr": 'doc[' + quote(es_field) + '].values'})
-        }).add(es_query))
+        }, self).add(es_query))
 
     def get_value_from_row(self, row):
         values = row[0]['key'].replace("||", "\b").split("|")
         if len(values) == 2:
             return None
-        return unwraplist([v.replace("\b", "|") for v in values[1:-1]])
+        t = tuple(v.replace("\b", "|") for v in sorted(values[1:-1]))
+
+        if len(t) == 0:
+            return None
+        elif len(t) == 1:
+            return t[0]
+        else:
+            return t
 
     def get_index(self, row, es_query=None):
         find = self.get_value_from_row(row)
-        try:
-            return self.parts.index(find)
-        except Exception:
-            self.parts.append(find)
-            return len(self.parts)-1
+        return self.domain.getIndexByKey(find)
+
+    def count(self, row):
+        value = self.get_value_from_row(row)
+        self.parts.append(value)
+
+    def done_count(self):
+        self.edge.allowNulls = False
+        self.edge.domain = self.domain = SimpleSetDomain(
+            partitions=jx.sort(set(self.parts))
+        )
+        self.parts = None
 
     @property
     def num_columns(self):
@@ -697,9 +712,9 @@ class DimFieldListDecoder(SetDecoder):
             partitions=[{"value": tuple(v[k] for k in columns), "dataIndex": i} for i, v in enumerate(sorted_parts)]
         )
 
-    def get_index(self, parts):
-        if parts[0]['doc_count']:
-            find = tuple(p.get("key") for p, f in zip(parts, self.fields))
+    def get_index(self, row, es_query=None):
+        if row[0]['doc_count']:
+            find = tuple(p.get("key") for p, f in zip(row, self.fields))
             output = self.domain.getIndexByKey(find)
             return output
 

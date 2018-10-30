@@ -18,7 +18,7 @@ from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL, TRUE
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder
+from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder, MultivalueDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, NestedAggs, TermsAggs, FilterAggs, simplify, ComplexAggs
 from jx_elasticsearch.es52.expressions import AndOp, Variable, NullOp, split_expression_by_path
 from jx_elasticsearch.es52.setop import get_pull_stats
@@ -213,7 +213,7 @@ def es_aggsop(es, frum, query):
                         if column.nested_path[0] == query_path:
                             canonical_names.append("doc_count")
                             acc.add(NestedAggs(column.nested_path[0]).add(
-                                ExprAggs(es_name, {"filter": {"range": {column.es_column: {"gt": 0}}}}, s)
+                                ComplexAggs(s)
                             ))
                     else:
                         canonical_names.append("value")
@@ -509,7 +509,10 @@ def _children(agg, children):
             i = int(name[6:])
             yield i, v, child, v
         elif name.startswith("_missing"):
-            i = int(name[8:])
+            if len(name) == 8:
+                i = 0
+            else:
+                i = int(name[8:])
             yield i, v, child, v
         else:
             yield 0, v, child, None
@@ -545,7 +548,7 @@ def aggs_iterator(aggs, es_query, decoders):
         parts.appendleft(part)
         d = c_query.decoder
         if d:
-            coord[d.edge.dim] = d.get_index( tuple(p for p in parts if p is not None), c_query)
+            coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None), c_query)
 
         children = c_query.children
         select = getattr(c_query, "select", Null)
@@ -568,7 +571,7 @@ def aggs_iterator(aggs, es_query, decoders):
 
 
 def count_dim(aggs, es_query, decoders):
-    if not any(isinstance(d, (DefaultDecoder, DimFieldListDecoder, ObjectDecoder)) for d in decoders):
+    if not any(hasattr(d, "done_count") for d in decoders):
         return [d.edge for d in decoders]
 
     def _count_dim(parts, aggs, es_query):

@@ -26,7 +26,7 @@ from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
-from pyLibrary.convert import string2boolean
+from pyLibrary.convert import value2boolean
 
 
 class AggsDecoder(object):
@@ -748,6 +748,6 @@ class DimFieldListDecoder(SetDecoder):
 pull_functions = {
     STRING: lambda x: x,
     NUMBER: lambda x: float(x) if x !=None else None,
-    BOOLEAN: string2boolean
+    BOOLEAN: value2boolean
 }
 

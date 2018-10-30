@@ -85,7 +85,7 @@ def format_table(aggs, es_query, query, decoders, select):
 
         if query.sort and not query.groupby:
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            for row, coord, agg in aggs_iterator(aggs, es_query):
+            for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
                 missing_coord = all_coord.next()
                 while coord != missing_coord:
                     record = [d.get_value(missing_coord[i]) for i, d in enumerate(decoders)]
@@ -102,7 +102,7 @@ def format_table(aggs, es_query, query, decoders, select):
                     output.append(s.pull(agg))
                 yield output
         else:
-            for row, coord, agg in aggs_iterator(aggs, es_query):
+            for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
                 output = is_sent[coord]
                 if output == None:
                     output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)]
@@ -137,7 +137,7 @@ def format_table_from_groupby(aggs, es_query, query, decoders, select):
     header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
 
     def data():
-        for row, coord, agg in aggs_iterator(aggs, es_query):
+        for row, coord, agg in aggs_iterator(aggs, es_query, decoders):
             if agg.get('doc_count', 0) == 0:
                 continue
             output = [d.get_value_from_row(row) for d in decoders]
@@ -192,7 +192,7 @@ def format_list_from_groupby(aggs, es_query, query, decoders, select):
     def data():
         groupby = query.groupby
 
-        for row, coord, agg in aggs_iterator(aggs, decoders):
+        for row, coord, agg in aggs_iterator(aggs, decoders, decoders):
             if agg.get('doc_count', 0) == 0:
                 continue
             output = Data()

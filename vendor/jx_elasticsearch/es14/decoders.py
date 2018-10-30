@@ -156,7 +156,6 @@ class SetDecoder(AggsDecoder):
                     edge.domain = self.domain = SimpleSetDomain(key=domain.key, label=domain.label, partitions=parts)
 
     def append_query(self, query_path, es_query):
-        self.start = start
         domain = self.domain
 
         domain_key = domain.key

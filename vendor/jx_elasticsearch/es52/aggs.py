@@ -498,6 +498,20 @@ def drill(agg):
         return agg
 
 
+def _children(agg, children):
+    for child in children:
+        name = child.name
+        v = agg[name]
+        if name == "_match":
+            for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
+                b["_index"] = i
+                yield b, child, b
+        elif name.startswith("_missing"):
+            yield v, child, v
+        else:
+            yield v, child, None
+
+
 def aggs_iterator(aggs, es_query, decoders):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
@@ -511,23 +525,10 @@ def aggs_iterator(aggs, es_query, decoders):
     parts = deque()
     stack = []
 
-    def _children(agg, children):
-        for child in children:
-            name = child.name
-            v = agg[name]
-            if name == "_match":
-                for i, b in enumerate(v.get("buckets", EMPTY_LIST)):
-                    b["_index"] = i
-                    yield b, child
-            elif name.startswith("_missing"):
-                yield v, child
-            else:
-                yield v, child
-
     gen = _children(aggs, es_query.children)
     while True:
         try:
-            c_agg, c_query = gen.next()
+            c_agg, c_query, part = gen.next()
         except StopIteration:
             try:
                 gen = stack.pop()
@@ -536,19 +537,23 @@ def aggs_iterator(aggs, es_query, decoders):
             parts.popleft()
             continue
 
-        stack.append(gen)
-        parts.appendleft(c_agg)
+        if c_agg.get('doc_count') == 0:
+            continue
+        parts.appendleft(part)
         d = c_query.decoder
         if d:
-            coord[d.edge.dim] = d.get_index(parts)
+            coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None))
 
         children = c_query.children
         if getattr(c_query, "select", None) or not children:
-            parts.popleft()
-            yield tuple(parts), tuple(coord), c_agg
-            gen = stack.pop()
+            parts.popleft()  # c_agg IS NOT ON TOP
+            if any(c is None for c in coord):
+                Log.error("should never happen (we already skip doc_count==0)")
+            else:
+                yield tuple(p for p in parts if p is not None), tuple(coord), c_agg
             continue
 
+        stack.append(gen)
         gen = _children(c_agg, children)
 
 def count_dim(aggs, es_query, decoders):
@@ -563,15 +568,19 @@ def count_dim(aggs, es_query, decoders):
         for child in children:
             name = child.name
             agg = aggs[name]
-            if name == "_match":
+            if not agg.get('doc_count'):
+                continue
+            elif name == "_match":
                 for i, b in enumerate(agg.get("buckets", EMPTY_LIST)):
+                    if not b.get('doc_count'):
+                        continue
                     b["_index"] = i
-                    new_parts = parts + (b,)
+                    new_parts = (b,) + parts
                     if child.decoder:
                         child.decoder.count(new_parts)
                     _count_dim(new_parts, b, child)
             elif name.startswith("_missing"):
-                new_parts = parts + (agg,)
+                new_parts = (agg,) + parts
                 if child.decoder:
                     child.decoder.count(new_parts)
                 _count_dim(new_parts, agg, child)

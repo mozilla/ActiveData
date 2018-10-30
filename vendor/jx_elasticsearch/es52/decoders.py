@@ -681,9 +681,8 @@ class DimFieldListDecoder(SetDecoder):
         return es_query
 
     def count(self, parts):
-        part = parts[:len(self.fields):]
-        if part[0]['doc_count']:
-            value = tuple(p.get("key") for p in part)
+        if parts[0]['doc_count']:
+            value = tuple(p.get("key") for p, f in zip(parts, self.fields))
             self.parts.append(value)
 
     def done_count(self):
@@ -698,11 +697,11 @@ class DimFieldListDecoder(SetDecoder):
         )
 
     def get_index(self, parts):
-        if parts[0]['doc_count'] == 0:
-            return None
-        find = tuple(p.get("key") for p, f in zip(parts, self.fields))
-        output = self.domain.getIndexByKey(find)
-        return output
+        if parts[0]['doc_count']:
+            find = tuple(p.get("key") for p, f in zip(parts, self.fields))
+            output = self.domain.getIndexByKey(find)
+            return output
+
     @property
     def num_columns(self):
         return len(self.fields)

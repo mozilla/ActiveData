@@ -354,7 +354,7 @@ def es_aggsop(es, frum, query):
                 ))
                 s.pull = jx_expression_to_function("value")
             else:
-               Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
+                Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
             nest.add(ExprAggs(canonical_name, {"value_count": {"script": s.value.partial_eval().to_es_script(schema).script(schema)}}, s))
             s.pull = jx_expression_to_function("value")

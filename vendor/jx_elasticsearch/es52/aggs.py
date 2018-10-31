@@ -313,7 +313,7 @@ def es_aggsop(es, frum, query):
                         acc.add(NestedAggs(c.nested_path[0]).add(
                             ExprAggs(canonical_name, {"extended_stats": {"field": c.es_column}}, s)
                         ))
-                    s.pull = aggregates[s.aggregate]
+                    s.pull = jx_expression_to_function(aggregates[s.aggregate])
 
     for i, s in enumerate(formula):
         s_path = [k for k, v in split_expression_by_path(s.value, schema=schema).items() if v]
@@ -519,24 +519,19 @@ def aggs_iterator(aggs, es_query, decoders):
         if c_agg.get('doc_count') == 0:
             continue
         parts.appendleft(part)
-        d = c_query.decoder
-        if d:
+        for d in c_query.decoders:
             coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None), c_query)
 
         children = c_query.children
-        select = getattr(c_query, "select", Null)
-        if select or not children:
-            parts.popleft()  # c_agg IS NOT ON TOP
-            if any(c is None for c in coord):
-                Log.error("should never happen (we already skip doc_count==0)")
-            else:
-                yield (
-                    tuple(p for p in parts if p is not None),
-                    tuple(coord),
-                    c_agg,
-                    select
-                )
-
+        selects = c_query.selects
+        if selects or not children:
+            parts.popleft()  # c_agg WAS ON TOP
+            yield (
+                tuple(p for p in parts if p is not None),
+                tuple(coord),
+                c_agg,
+                selects
+            )
             continue
 
         stack.append(gen)
@@ -563,13 +558,13 @@ def count_dim(aggs, es_query, decoders):
                         continue
                     b["_index"] = i
                     new_parts = (b,) + parts
-                    if child.decoder:
-                        child.decoder.count(new_parts)
+                    for d in child.decoders:
+                        d.count(new_parts)
                     _count_dim(new_parts, b, child)
             elif name.startswith("_missing"):
                 new_parts = (agg,) + parts
-                if child.decoder:
-                    child.decoder.count(new_parts)
+                for d in child.decoders:
+                    d.count(new_parts)
                 _count_dim(new_parts, agg, child)
             else:
                 _count_dim(parts, agg, child)
@@ -581,7 +576,7 @@ def count_dim(aggs, es_query, decoders):
 
 
 format_dispatch = {}
-from jx_elasticsearch.es52.format import format_cube
 
+from jx_elasticsearch.es52.format import format_cube
 _ = format_cube
 

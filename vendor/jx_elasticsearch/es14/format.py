@@ -120,25 +120,25 @@ def format_table(aggs, es_query, query, decoders, select):
     )
 
 
-def format_table_from_groupby(aggs, es_query, query, decoders, select):
-    header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
-
-    def data():
-        for row, coord, agg in aggs_iterator(aggs, decoders):
-            if agg.get('doc_count', 0) == 0:
-                continue
-            output = [d.get_value_from_row(row) for d in decoders]
-            for s in select:
-                output.append(s.pull(agg))
-            yield output
-
-    return Data(
-        meta={"format": "table"},
-        header=header,
-        data=list(data())
-    )
-
-
+# def format_table_from_groupby(aggs, es_query, query, decoders, select):
+#     header = [d.edge.name.replace("\\.", ".") for d in decoders] + select.name
+#
+#     def data():
+#         for row, coord, agg in aggs_iterator(aggs, decoders):
+#             if agg.get('doc_count', 0) == 0:
+#                 continue
+#             output = [d.get_value_from_row(row) for d in decoders]
+#             for s in select:
+#                 output.append(s.pull(agg))
+#             yield output
+#
+#     return Data(
+#         meta={"format": "table"},
+#         header=header,
+#         data=list(data())
+#     )
+#
+#
 def format_table_from_aggop(aggs, es_query, query, decoders, select):
     header = select.name
     agg = drill(aggs)
@@ -295,10 +295,10 @@ def format_line(aggs, es_query, query, decoders, select):
 
 
 set_default(format_dispatch, {
-    None: (format_cube, format_table_from_groupby, format_cube_from_aggop, "application/json"),
+    None: (format_cube, format_table, format_cube_from_aggop, "application/json"),
     "cube": (format_cube, format_cube, format_cube_from_aggop, "application/json"),
-    "table": (format_table, format_table_from_groupby, format_table_from_aggop,  "application/json"),
-    "list": (format_list, format_list_from_groupby, format_list, "application/json"),
+    "table": (format_table, format_table, format_table_from_aggop,  "application/json"),
+    "list": (format_list, format_list, format_list, "application/json"),
     # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
     # "line": (format_line, format_line_from_groupby,  "application/json")

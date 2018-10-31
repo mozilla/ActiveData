@@ -24,7 +24,8 @@ class Aggs(object):
     def __init__(self, name=None):
         self.name = name
         self.children = []
-        self.decoders = None
+        self.decoders = []
+        self.selects = []
 
     def to_es(self, schema, query_path="."):
         if self.children:
@@ -41,6 +42,8 @@ class Aggs(object):
         return self
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, Aggs) and self.name == other.name
 
     def merge(self, other):
@@ -58,6 +61,7 @@ class Aggs(object):
         output.name = self.name
         output.children = self.children[:]
         output.decoders = self.decoders[:]
+        output.selects = self.selects[:]
         return output
 
 
@@ -69,6 +73,8 @@ class ExprAggs(Aggs):
         self.selects = [select]
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, ExprAggs) and self.name == other.name and self.expr == other.expr
 
     def merge(self, other):
@@ -86,7 +92,6 @@ class ExprAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.expr = self.expr
-        output.selects = self.selects[:]
         return output
 
 
@@ -99,6 +104,8 @@ class FilterAggs(Aggs):
         self.decoders = [decoder] if decoder else []
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, FilterAggs) and self.name == other.name and self.filter == other.filter
 
     def merge(self, other):
@@ -116,7 +123,6 @@ class FilterAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.filter = self.filter
-        output.decoders = self.decoders
         return output
 
 
@@ -137,7 +143,6 @@ class ComplexAggs(FilterAggs):
     def copy(self):
         output = Aggs.copy(self)
         output.expr = self.expr
-        output.selects = self.selects[:]
         return output
 
 
@@ -150,6 +155,8 @@ class FiltersAggs(Aggs):
             Log.error("expecting a list")
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, FiltersAggs) and self.name == other.name and self.filters == other.filters
 
     def merge(self, other):
@@ -176,6 +183,8 @@ class NestedAggs(Aggs):
         self.path = path
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, NestedAggs) and self.path == other.path
 
     def to_es(self, schema, query_path="."):
@@ -189,6 +198,8 @@ class NestedAggs(Aggs):
         return output
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, NestedAggs) and self.path == other.path
 
     def copy(self):
@@ -204,6 +215,8 @@ class TermsAggs(Aggs):
         self.decoders = [decoder] if decoder else []
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, TermsAggs) and self.name == other.name and self.terms == other.terms
 
     def to_es(self, schema, query_path="."):
@@ -214,7 +227,6 @@ class TermsAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.terms = self.terms
-        output.decoders = self.decoders
         return output
 
 
@@ -225,6 +237,8 @@ class RangeAggs(Aggs):
         self.decoders = [decoder] if decoder else []
 
     def __eq__(self, other):
+        if self is other:
+            return True
         return isinstance(other, RangeAggs) and self.name == other.name and self.expr == other.expr
 
     def to_es(self, schema, query_path="."):
@@ -281,25 +295,32 @@ def simplify(aggs):
         combined.append(tuple(p for p in path if not any(p is r for r in remove)))
 
     # COMMON FACTOR, CONVERT BACK TO TREE
-    def merge(terms):
+    def merge(aggregations):
         output = []
         while True:
-            common = []
-            f = None
-            for i, t in enumerate(terms):
-                if not t:
+            common_children = []
+            first_found = None
+            common = None
+            for i, terms in enumerate(aggregations):
+                if not terms:
                     continue
-                if f is None:
-                    f = t[0]
-                if t[0] == f:
-                    common.append(t[1:])
-                    terms[i] = None
+                term, rest = terms[0], terms[1:]
+                if first_found is None:
+                    first_found = term
+                    common_children.append(rest)
+                    common = first_found.copy()
+                    aggregations[i] = None
+                elif term == first_found:
+                    common_children.append(rest)
+                    common.selects.extend([t for t in term.selects if not any(t is s for s in common.selects)])
+                    common.decoders.extend([t for t in term.decoders if not any(t is d for d in common.decoders)])
+                    aggregations[i] = None
 
-            if f is None:
+            if first_found is None:
                 return output
             else:
-                f.children = merge(common)
-            output.append(f.copy())
+                common.children = merge(common_children)
+            output.append(common)
 
     merged = [trim_root(o) for o in merge(combined)]
 

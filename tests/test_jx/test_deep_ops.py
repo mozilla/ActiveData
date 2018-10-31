@@ -1736,15 +1736,20 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"b": 1, "count": 2},
-                    {"b": 2, "count": 0},
+                    {"b": 2, "count": 1},
                     {"b": 4, "count": 1},
                     {"count": 3}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
-                "header": ["a.b"],
-                "data": [[8]]
+                "header": ["b", "count"],
+                "data": [
+                    [1, 2],
+                    [2, 1],
+                    [4, 1],
+                    [NULL, 3]
+                ]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -1754,7 +1759,7 @@ class TestDeepOps(BaseTestCase):
                     {"value": 4}
                 ]}}],
                 "data": {
-                    "a.b": 8
+                    "count": [2, 1, 1, 3]
                 }
             }
         }

@@ -1537,7 +1537,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("broken")
+    # @skip("broken")
     def test_from_shallow_select_deep_column(self):
         # QUERY AS IF _a.b IS A NULTI-VALUED COLUMN
         test = {
@@ -1715,7 +1715,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("broken")
+    # @skip("broken")
     def test_nested_property_edge_w_shallow_expression(self):
         test = {
             "data": [
@@ -1760,7 +1760,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("not ready")
+    # @skip("not ready")
     def test_edge(self):
         test = {
             "data": [

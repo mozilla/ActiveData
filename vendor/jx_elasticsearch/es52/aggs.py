@@ -250,15 +250,10 @@ def es_aggsop(es, frum, query):
                 }}, s))
                 s.pull = jx_expression_to_function(join_field(["values", text_type(percent)]))
             elif s.aggregate == "cardinality":
-                canonical_names = []
                 for column in columns:
                     path = column.es_column + "_cardinality"
-                    canonical_names.append(path)
                     acc.add(ExprAggs(path, {"cardinality": {"field": column.es_column}}, s))
-                if len(columns) == 1:
-                    s.pull = jx_expression_to_function("value")
-                else:
-                    s.pull = jx_expression_to_function({"add": [literal_field(path) + ".value" for path in canonical_names], "default": 0})
+                s.pull = jx_expression_to_function("value")
             elif s.aggregate == "stats":
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
@@ -275,7 +270,6 @@ def es_aggsop(es, frum, query):
                 acc.add(complex)
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
-                pulls = []
                 for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
@@ -284,20 +278,11 @@ def es_aggsop(es, frum, query):
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
                     stats_name = column.es_column
-                    c_path = column.nested_path[0]
-                    acc.add(NestedAggs(c_path).add(ExprAggs(stats_name, script, s)))
-
-                    pulls.append(jx_expression_to_function("value"))
-                if len(pulls) == 0:
-                    s.pull = NULL
-                elif len(pulls) == 1:
-                    s.pull = pulls[0]
-                else:
-                    s.pull = lambda row: UNION(p(row) for p in pulls)
+                    acc.add(NestedAggs(column.nested_path[0]).add(ExprAggs(stats_name, script, s)))
+                s.pull = jx_expression_to_function("value")
             elif s.aggregate == "count_values":
                 # RETURN MAP FROM VALUE TO THE NUMBER OF TIMES FOUND IN THE DOCUMENTS
                 # NOT A NESTED DOC, RATHER A MULTIVALUE FIELD
-                pulls = []
                 for column in columns:
                     script = {"scripted_metric": {
                         'params': {"_agg": {}},
@@ -319,28 +304,16 @@ def es_aggsop(es, frum, query):
                     }}
                     stats_name = encode_property(column.es_column)
                     acc.add(NestedAggs(column.nested_path[0]).add(ExprAggs(stats_name, script, s)))
-                    pulls.append(jx_expression_to_function("value"))
-
-                if len(pulls) == 0:
-                    s.pull = NULL
-                elif len(pulls) == 1:
-                    s.pull = pulls[0]
-                else:
-                    s.pull = lambda row: add(p(row) for p in pulls)
+                s.pull = jx_expression_to_function("value")
             else:
                 if not columns:
                     s.pull = jx_expression_to_function(NULL)
                 else:
-                    pulls = []
                     for c in columns:
                         acc.add(NestedAggs(c.nested_path[0]).add(
                             ExprAggs(canonical_name, {"extended_stats": {"field": c.es_column}}, s)
                         ))
-                        pulls.append({"coalesce": [aggregates[s.aggregate], s.default]})
-                    if len(pulls) == 1:
-                        s.pull = jx_expression_to_function(pulls[0])
-                    else:
-                        s.pull = jx_expression_to_function({"sum": pulls})
+                    s.pull = aggregates[s.aggregate]
 
     for i, s in enumerate(formula):
         s_path = [k for k, v in split_expression_by_path(s.value, schema=schema).items() if v]
@@ -422,7 +395,7 @@ def es_aggsop(es, frum, query):
         elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             nest.add(TermsAggs(canonical_name, {"script_field": s.value.to_es_script(schema).script(schema)}, s))
-            s.pull = jx_expression_to_function(join_field(["buckets", "key"]))
+            s.pull = jx_expression_to_function("key")
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(aggregates[s.aggregate])

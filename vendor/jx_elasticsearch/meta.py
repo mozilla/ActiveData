@@ -538,26 +538,19 @@ class ElasticsearchMetadata(Namespace):
         Log.alert("metadata scan has been disabled")
         please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
-            c = self.todo.pop()
-            if c == THREAD_STOP:
+            column = self.todo.pop()
+            if column == THREAD_STOP:
                 break
 
-            if c.last_updated >= Date.now()-TOO_OLD:
+            if column.last_updated >= Date.now()-TOO_OLD:
                 continue
 
-            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": c}, silent=not DEBUG, too_long=0.05):
-                self.meta.columns.update({
-                    "set": {
-                        "last_updated": Date.now()
-                    },
-                    "clear": [
-                        "count",
-                        "cardinality",
-                        "multi",
-                        "partitions",
-                    ],
-                    "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
-                })
+            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
+                if column.name in ["build.type", "run.type"]:
+                    try:
+                        self._update_cardinality(column)
+                    except Exception as e:
+                        Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
 
     def get_table(self, name):
         if name == "meta.columns":

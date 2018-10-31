@@ -18,12 +18,13 @@ from mo_logs import Log
 
 _new = object.__new__
 
+
 class Aggs(object):
 
     def __init__(self, name=None):
         self.name = name
         self.children = []
-        self.decoder = None
+        self.decoders = None
 
     def to_es(self, schema, query_path="."):
         if self.children:
@@ -40,7 +41,14 @@ class Aggs(object):
         return self
 
     def __eq__(self, other):
-        return self is other
+        return isinstance(other, Aggs) and self.name == other.name
+
+    def merge(self, other):
+        if self != other:
+            return False
+        self.children.extend(other.children)
+        self.decoders.extend(other.decoders)
+        return True
 
     def __str__(self):
         return value2json(self.to_es)
@@ -49,7 +57,7 @@ class Aggs(object):
         output = _new(self.__class__)
         output.name = self.name
         output.children = self.children[:]
-        output.decoder = self.decoder
+        output.decoders = self.decoders[:]
         return output
 
 
@@ -58,39 +66,28 @@ class ExprAggs(Aggs):
     def __init__(self, name, expr, select):
         Aggs.__init__(self, name)
         self.expr = expr
-        self.select = select
+        self.selects = [select]
+
+    def __eq__(self, other):
+        return isinstance(other, ExprAggs) and self.name == other.name and self.expr == other.expr
+
+    def merge(self, other):
+        if self != other:
+            return False
+        self.children.extend(other.children)
+        self.decoders.extend(other.decoders)
+        self.selects.extend(other.selects)
+        return True
 
     def to_es(self, schema, query_path="."):
-        self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
+        self.expr['aggs'] = Aggs.to_es(self, schema, query_path).get('aggs')
         return self.expr
 
     def copy(self):
         output = Aggs.copy(self)
         output.expr = self.expr
-        output.select = self.select
+        output.selects = self.selects[:]
         return output
-
-
-class ComplexAggs(ExprAggs):
-    """
-    FOR COMPLICATED AGGREGATIONS
-    """
-
-    def __init__(self, select):
-        Aggs.__init__(self, "_filter")
-        self.expr = {"filter": {"match_all": {}}}
-        self.select = select
-
-    def to_es(self, schema, query_path="."):
-        self.expr['aggs']=Aggs.to_es(self, schema, query_path).get('aggs')
-        return self.expr
-
-    def copy(self):
-        output = Aggs.copy(self)
-        output.expr = self.expr
-        output.select = self.select
-        return output
-
 
 
 class FilterAggs(Aggs):
@@ -99,7 +96,17 @@ class FilterAggs(Aggs):
         self.filter = filter
         if isinstance(filter, Mapping):
             Log.error("programming error")
-        self.decoder = decoder
+        self.decoders = [decoder] if decoder else []
+
+    def __eq__(self, other):
+        return isinstance(other, FilterAggs) and self.name == other.name and self.filter == other.filter
+
+    def merge(self, other):
+        if self != other:
+            return False
+        self.children.extend(other.children)
+        self.decoders.extend(other.decoders)
+        return True
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
@@ -109,7 +116,28 @@ class FilterAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.filter = self.filter
-        output.decoder = self.decoder
+        output.decoders = self.decoders
+        return output
+
+
+class ComplexAggs(FilterAggs):
+    """
+    FOR COMPLICATED AGGREGATIONS
+    """
+
+    def __init__(self, select):
+        Aggs.__init__(self, "_filter")
+        self.expr = {"filter": {"match_all": {}}}
+        self.selects = [select]
+
+    def to_es(self, schema, query_path="."):
+        self.expr['aggs'] = Aggs.to_es(self, schema, query_path).get('aggs')
+        return self.expr
+
+    def copy(self):
+        output = Aggs.copy(self)
+        output.expr = self.expr
+        output.selects = self.selects[:]
         return output
 
 
@@ -117,9 +145,19 @@ class FiltersAggs(Aggs):
     def __init__(self, name, filters, decoder):
         Aggs.__init__(self, name)
         self.filters = filters
-        self.decoder = decoder
+        self.decoders = [decoder] if decoder else []
         if not isinstance(filters, list):
             Log.error("expecting a list")
+
+    def __eq__(self, other):
+        return isinstance(other, FiltersAggs) and self.name == other.name and self.filters == other.filters
+
+    def merge(self, other):
+        if self != other:
+            return False
+        self.children.extend(other.children)
+        self.decoders.extend(other.decoders)
+        return True
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
@@ -136,6 +174,9 @@ class NestedAggs(Aggs):
     def __init__(self, path):
         Aggs.__init__(self, "_nested")
         self.path = path
+
+    def __eq__(self, other):
+        return isinstance(other, NestedAggs) and self.path == other.path
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, self.path)
@@ -156,12 +197,14 @@ class NestedAggs(Aggs):
         return output
 
 
-
 class TermsAggs(Aggs):
     def __init__(self, name, terms, decoder):
         Aggs.__init__(self, name)
         self.terms = terms
-        self.decoder = decoder
+        self.decoders = [decoder] if decoder else []
+
+    def __eq__(self, other):
+        return isinstance(other, TermsAggs) and self.name == other.name and self.terms == other.terms
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
@@ -171,7 +214,7 @@ class TermsAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.terms = self.terms
-        output.decoder = self.decoder
+        output.decoders = self.decoders
         return output
 
 
@@ -179,7 +222,10 @@ class RangeAggs(Aggs):
     def __init__(self, name, expr, decoder):
         Aggs.__init__(self, name)
         self.expr = expr
-        self.decoder = decoder
+        self.decoders = [decoder] if decoder else []
+
+    def __eq__(self, other):
+        return isinstance(other, RangeAggs) and self.name == other.name and self.expr == other.expr
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)

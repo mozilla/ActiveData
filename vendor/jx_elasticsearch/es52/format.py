@@ -11,6 +11,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base.query import canonical_aggregates
+
 from jx_base.expressions import TupleOp
 from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch
 from jx_python.containers.cube import Cube
@@ -34,13 +36,33 @@ def format_cube(aggs, es_query, query, decoders, selects):
         dims.append(len(e.domain.partitions) + extra)
 
     dims = tuple(dims)
-    matricies = {s.name: Matrix(dims=dims, zeros=s.default) for s in selects}
-    for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
-        if not select:
-            continue
-        m = matricies[select.name]
-        v = select.pull(agg)
-        union(m, coord, v, select.aggregate)
+    if any(s.default != canonical_aggregates[s.aggregate].default for s in selects):
+        # DEFAULT VALUES MESS THE union() FUNCTION
+        is_default = Matrix(dims=dims, zeros=True)
+        matricies = {s.name: Matrix(dims=dims) for s in selects}
+        for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
+            if not select:
+                continue
+            m = matricies[select.name]
+            v = select.pull(agg)
+            if v == None:
+                continue
+            is_default[coord] = False
+            union(m, coord, v, select.aggregate)
+
+        # FILL THE DEFAULT VALUES
+        for c, v in is_default:
+            if v:
+                for s in selects:
+                    matricies[s.name][c] = s.default
+    else:
+        matricies = {s.name: Matrix(dims=dims, zeros=s.default) for s in selects}
+        for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
+            if not select:
+                continue
+            m = matricies[select.name]
+            v = select.pull(agg)
+            union(m, coord, v, select.aggregate)
 
     cube = Cube(
         query.select,
@@ -74,13 +96,34 @@ def format_table(aggs, es_query, query, decoders, selects):
     def data():
         is_sent = Matrix(dims=dims)
 
+        # HANG ONTO THE output FOR A BIT WIL WE FILL THE ELEMENTS
+        last_coord = None
+        output = None
         for row, coord, agg, select in aggs_iterator(aggs, es_query, decoders):
-            output = is_sent[coord]
-            if output == None:
-                output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in selects]
-                yield output
+            if coord != last_coord:
+                if output:
+                    for i, s in enumerate(selects):
+                        v = output[rank+i]
+                        if v == None:
+                            output[rank+i] = s.default
+                    yield output
+                output = is_sent[coord]
+                if output == None:
+                    output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [None for s in selects]
+                last_coord = coord
             # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-            union(output, name2index[select.name], select.pull(agg), select.aggregate)
+            if select:
+                v = select.pull(agg)
+                if v != None:
+                    union(output, name2index[select.name], v, select.aggregate)
+
+        if output:
+            for i, s in enumerate(selects):
+                v = output[rank+i]
+                if v == None:
+                    output[rank+i] = s.default
+            yield output
+
 
         # EMIT THE MISSING CELLS IN THE CUBE
         if not query.groupby:
@@ -258,6 +301,9 @@ def union(matrix, coord, value, agg):
             return
         elif agg == "stats" and (not existing or not value):
             matrix[coord] = existing + value
+            return
+        elif agg == "union":
+            matrix[coord] = list(set(existing) | set(value))
             return
         Log.warning("not ready")
     else:

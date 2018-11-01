@@ -228,7 +228,7 @@ class Expression(object):
         return self.data_type
 
     def __eq__(self, other):
-        self_class = self.__class_
+        self_class = self.__class__
         Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
         if other is None:
             return False

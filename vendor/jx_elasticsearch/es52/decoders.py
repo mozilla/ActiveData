@@ -132,8 +132,9 @@ class AggsDecoder(object):
     def count(self, row):
         pass
 
-    def done_count(self):
-        pass
+    # DO NOT IMPLEMENT OF domain HAS KNOWN PARTITIONS
+    # def done_count(self):
+    #     pass
 
     def get_value_from_row(self, row):
         raise NotImplementedError()
@@ -631,8 +632,9 @@ class DefaultDecoder(SetDecoder):
     def count(self, row):
         part = row[0]
         if part['doc_count']:
-            if part.get('key') != None:
-                self.parts.append(self.pull(part.get('key')))
+            key=part.get('key')
+            if key != None:
+                self.parts.append(self.pull(key))
             else:
                 self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
 

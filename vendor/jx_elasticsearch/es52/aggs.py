@@ -571,7 +571,8 @@ def count_dim(aggs, es_query, decoders):
 
     _count_dim(tuple(), aggs, es_query)
     for d in decoders:
-        d.done_count()
+        done_count = getattr(d, "done_count", Null)
+        done_count()
     return [d.edge for d in decoders]
 
 

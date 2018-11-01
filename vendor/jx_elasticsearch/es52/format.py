@@ -94,8 +94,8 @@ def format_table(aggs, es_query, query, decoders, all_selects):
     def data():
         is_sent = Matrix(dims=dims)
 
-        # HANG ONTO THE output FOR A BIT WIL WE FILL THE ELEMENTS
-        last_coord = None
+
+        last_coord = None   # HANG ONTO THE output FOR A BIT WHILE WE FILL THE ELEMENTS
         output = None
         for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
             if coord != last_coord:
@@ -136,32 +136,6 @@ def format_table(aggs, es_query, query, decoders, all_selects):
         header=header,
         data=list(data())
     )
-
-
-# def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
-#     new_edges = wrap(count_dim(aggs, es_query, decoders))
-#     dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
-#     rank = len(dims)
-#     header = tuple(new_edges.name + all_selects.name)
-#     name2index = {s.name: i + rank for i, s in enumerate(all_selects)}
-#
-#     def data():
-#         is_sent = Matrix(dims=dims)
-#         for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
-#             output = is_sent[coord]
-#             if output == None:
-#                 output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in all_selects]
-#                 yield output
-#             # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-#             for s in ss:
-#                 union(output, name2index[s.name], s.pull(agg), s.aggregate)
-#
-#     return Data(
-#         meta={"format": "table"},
-#         header=header,
-#         data=list(data())
-#     )
-
 
 def format_tab(aggs, es_query, query, decoders, select):
     table = format_table(aggs, es_query, query, decoders, select)

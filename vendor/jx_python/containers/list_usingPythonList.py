@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 from collections import Mapping
+from copy import copy
 
 import jx_base
 from jx_base import Container
@@ -195,6 +196,10 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         else:
             select_value = jx_expression_to_function(select.value)
             new_data = map(select_value, self.data)
+            if isinstance(select.value, Variable):
+                column = copy(first(c for c in self.schema.columns if c.name == select.value.var))
+                column.name = '.'
+                new_schema = Schema("from " + self.name, [column])
 
         return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 
@@ -242,10 +247,16 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         self.data.extend(documents)
 
     def __data__(self):
-        return wrap({
-            "meta": {"format": "list"},
-            "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
-        })
+        if first(self.schema.columns).name=='.':
+            return wrap({
+                "meta": {"format": "list"},
+                "data": self.data
+            })
+        else:
+            return wrap({
+                "meta": {"format": "list"},
+                "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
+            })
 
     def get_columns(self, table_name=None):
         return self.schema.values()
@@ -303,3 +314,6 @@ DUAL = ListContainer(
     schema=Schema(table_name="dual", columns=UniqueIndex(keys=("name",)))
 )
 
+
+def first(values):
+    return iter(values).next()

@@ -26,7 +26,7 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import wrap, unwrap, unwraplist, concat_field
+from mo_dots import wrap, unwrap, unwraplist, concat_field, Null
 from mo_future import text_type, HTMLParser, StringIO, PY3, long
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -53,6 +53,24 @@ def string2boolean(value):
         return False
     else:
         return None
+
+
+_v2b = {
+    True: True,
+    "true": True,
+    "T": True,
+    1: True,
+    False: False,
+    "false": False,
+    "F": False,
+    0: False,
+    None: None,
+    Null: None
+}
+
+
+def value2boolean(value):
+    return _v2b.get(value, True)
 
 
 def str2datetime(value, format=None):

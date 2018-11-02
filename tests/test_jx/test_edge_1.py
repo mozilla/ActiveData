@@ -1974,6 +1974,7 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("requires schema merging of a.b.~n~ and a.~N~.b.~n~")
     def test_shallow_with_deep_edge(self):
         test = {
             "data": [

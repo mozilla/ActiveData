@@ -487,7 +487,7 @@ def _children(agg, children):
             yield None, v, child, None
 
 
-def aggs_iterator(aggs, es_query, decoders):
+def aggs_iterator(aggs, es_query, decoders, give_me_zeros=False):
     """
     DIG INTO ES'S RECURSIVE aggs DATA-STRUCTURE:
     RETURN AN ITERATOR OVER THE EFFECTIVE ROWS OF THE RESULTS
@@ -512,7 +512,7 @@ def aggs_iterator(aggs, es_query, decoders):
             parts.popleft()
             continue
 
-        if c_agg.get('doc_count') == 0:
+        if c_agg.get('doc_count') == 0 and not give_me_zeros:
             continue
         parts.appendleft(part)
         for d in c_query.decoders:

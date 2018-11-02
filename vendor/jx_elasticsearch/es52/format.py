@@ -40,7 +40,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
         # UNUSUAL DEFAULT VALUES MESS THE union() FUNCTION
         is_default = Matrix(dims=dims, zeros=True)
         matricies = {s.name: Matrix(dims=dims) for s in all_selects}
-        for row, coord, agg, selects in aggs_iterator(aggs, es_query, decoders):
+        for row, coord, agg, selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
             for select in selects:
                 m = matricies[select.name]
                 v = select.pull(agg)
@@ -97,7 +97,7 @@ def format_table(aggs, es_query, query, decoders, all_selects):
 
         last_coord = None   # HANG ONTO THE output FOR A BIT WHILE WE FILL THE ELEMENTS
         output = None
-        for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
+        for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
             if coord != last_coord:
                 if output:
                     # SET DEFAULTS

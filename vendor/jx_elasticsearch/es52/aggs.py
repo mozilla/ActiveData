@@ -479,12 +479,12 @@ def _children(agg, children):
             yield i, v, child, v
         elif name.startswith("_missing"):
             if len(name) == 8:
-                i = 0
+                i = None
             else:
                 i = int(name[8:])
-            yield i, v, child, v
+            yield None, v, child, v
         else:
-            yield 0, v, child, None
+            yield None, v, child, None
 
 
 def aggs_iterator(aggs, es_query, decoders):
@@ -516,7 +516,7 @@ def aggs_iterator(aggs, es_query, decoders):
             continue
         parts.appendleft(part)
         for d in c_query.decoders:
-            coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None), c_query)
+            coord[d.edge.dim] = d.get_index(tuple(p for p in parts if p is not None), c_query, index)
 
         children = c_query.children
         selects = c_query.selects

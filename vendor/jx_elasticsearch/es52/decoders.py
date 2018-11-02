@@ -381,12 +381,12 @@ class GeneralSetDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
-        part = row[0]
-        # if part == None:
-        #     return len(domain.partitions)
-        return part.get("_index", len(domain.partitions))
+        if index == None:
+            return len(domain.partitions)
+        else:
+            return index
 
     @property
     def num_columns(self):

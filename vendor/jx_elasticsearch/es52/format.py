@@ -37,7 +37,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
 
     dims = tuple(dims)
     if any(s.default != canonical_aggregates[s.aggregate].default for s in all_selects):
-        # DEFAULT VALUES MESS THE union() FUNCTION
+        # UNUSUAL DEFAULT VALUES MESS THE union() FUNCTION
         is_default = Matrix(dims=dims, zeros=True)
         matricies = {s.name: Matrix(dims=dims) for s in all_selects}
         for row, coord, agg, selects in aggs_iterator(aggs, es_query, decoders):

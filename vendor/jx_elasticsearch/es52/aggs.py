@@ -12,26 +12,26 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import deque
-from operator import add
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import TupleOp, NULL, TRUE
+from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.decoders import DefaultDecoder, AggsDecoder, ObjectDecoder, DimFieldListDecoder, MultivalueDecoder
+from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, NestedAggs, TermsAggs, FilterAggs, simplify, ComplexAggs
 from jx_elasticsearch.es52.expressions import AndOp, Variable, NullOp, split_expression_by_path
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
+from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from jx_python.jx import first
-from mo_dots import listwrap, Data, wrap, literal_field, coalesce, Null, unwrap, unwraplist, concat_field, join_field, startswith_field
+from mo_dots import listwrap, Data, wrap, literal_field, coalesce, Null, unwrap, unwraplist, join_field
 from mo_future import text_type
 from mo_json import EXISTS, OBJECT, NESTED
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
-from mo_math import Math, UNION
+from mo_math import Math
 from mo_times.timer import Timer
 
 DEBUG = False
@@ -152,7 +152,7 @@ def get_decoders_by_path(query):
 def sort_edges(query, prop):
     ordered_edges = []
     remaining_edges = getattr(query, prop)
-    for s in query.sort:
+    for s in jx.reverse(query.sort):
         for e in remaining_edges:
             if e.value == s.value:
                 if isinstance(e.domain, SetDomain):
@@ -166,6 +166,8 @@ def sort_edges(query, prop):
             Log.error("Can not sort by {{expr}}, can only sort by an existing edge expression", expr=s.value)
 
     ordered_edges.extend(remaining_edges)
+    for i, o in enumerate(ordered_edges):
+        o.dim = i  # REORDER THE EDGES
     return ordered_edges
 
 

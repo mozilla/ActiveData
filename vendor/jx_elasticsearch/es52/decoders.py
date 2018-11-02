@@ -84,7 +84,7 @@ class AggsDecoder(object):
                         return object.__new__(MultivalueDecoder)
 
                     partitions = col.partitions[:limit:]
-                    if e.domain.sort==-1:
+                    if e.domain.sort == -1:
                         partitions = list(reversed(sorted(partitions)))
                     else:
                         partitions = sorted(partitions)

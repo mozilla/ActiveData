@@ -12,8 +12,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from unittest import skip
-
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_logs import Log
@@ -96,7 +94,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("2d sorting is broken")
+    # @skip("2d sorting is broken")
     def test_2edge_and_sort(self):
         test = {
             "data": [
@@ -279,7 +277,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("2d sorting is broken")
+    # @skip("2d sorting is broken")
     def test_groupby2a_and_sort(self):
         test = {
             "data": [
@@ -327,7 +325,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("2d sorting is broken")
+    # @skip("2d sorting is broken")
     def test_groupby2b_and_sort(self):
         test = {
             "data": [
@@ -393,7 +391,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("2d sorting is broken")
+    # @skip("2d sorting is broken")
     def test_groupby2c_and_sort(self):
         test = {
             "data": [

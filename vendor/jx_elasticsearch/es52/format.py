@@ -40,7 +40,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
         # UNUSUAL DEFAULT VALUES MESS THE union() FUNCTION
         is_default = Matrix(dims=dims, zeros=True)
         matricies = {s.name: Matrix(dims=dims) for s in all_selects}
-        for row, coord, agg, selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
+        for row, coord, agg, selects in aggs_iterator(aggs, es_query, decoders):
             for select in selects:
                 m = matricies[select.name]
                 v = select.pull(agg)
@@ -93,43 +93,71 @@ def format_table(aggs, es_query, query, decoders, all_selects):
 
     def data():
         is_sent = Matrix(dims=dims)
+        give_me_zeros = query.sort and not query.groupby
+        if give_me_zeros:
+            # WE REQUIRE THE ZEROS FOR SORTING
+            all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
+            ordered_coord = all_coord.next()[::-1]
+            output = None
+            for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
+                if coord != ordered_coord:
+                    # output HAS BEEN YIELDED, BUT SET THE DEFAULT VALUES
+                    if output is not None:
+                        for s in all_selects:
+                            i = name2index[s.name]
+                            if output[i] is None:
+                                output[i] = s.default
+                        # WE CAN GET THE SAME coord MANY TIMES, SO ONLY ADVANCE WHEN NOT
+                        ordered_coord = all_coord.next()[::-1]
 
-
-        last_coord = None   # HANG ONTO THE output FOR A BIT WHILE WE FILL THE ELEMENTS
-        output = None
-        for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
-            if coord != last_coord:
-                if output:
-                    # SET DEFAULTS
-                    for i, s in enumerate(all_selects):
-                        v = output[rank+i]
-                        if v == None:
-                            output[rank+i] = s.default
-                    yield output
-                output = is_sent[coord]
-                if output == None:
-                    output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [None for _ in all_selects]
-                last_coord = coord
-            # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
-            for select in ss:
-                v = select.pull(agg)
-                if v != None:
-                    union(output, name2index[select.name], v, select.aggregate)
-
-        if output:
-            # SET DEFAULTS ON LAST ROW
-            for i, s in enumerate(all_selects):
-                v = output[rank+i]
-                if v == None:
-                    output[rank+i] = s.default
-            yield output
-
-        # EMIT THE MISSING CELLS IN THE CUBE
-        if not query.groupby:
-            for coord, output in is_sent:
-                if output == None:
-                    record = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in all_selects]
+                while coord != ordered_coord:
+                    # HAPPENS WHEN THE coord IS AHEAD OF ordered_coord
+                    record = [d.get_value(ordered_coord[i]) for i, d in enumerate(decoders)] + [s.default for s in all_selects]
                     yield record
+                    ordered_coord = all_coord.next()[::-1]
+                # coord == missing_coord
+                output = [d.get_value(c) for c, d in zip(coord, decoders)] + [None for s in all_selects]
+                for select in ss:
+                    v = select.pull(agg)
+                    if v != None:
+                        union(output, name2index[select.name], v, select.aggregate)
+                yield output
+        else:
+            last_coord = None   # HANG ONTO THE output FOR A BIT WHILE WE FILL THE ELEMENTS
+            output = None
+            for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
+                if coord != last_coord:
+                    if output:
+                        # SET DEFAULTS
+                        for i, s in enumerate(all_selects):
+                            v = output[rank+i]
+                            if v == None:
+                                output[rank+i] = s.default
+                        yield output
+                    output = is_sent[coord]
+                    if output == None:
+                        output = is_sent[coord] = [d.get_value(c) for c, d in zip(coord, decoders)] + [None for _ in all_selects]
+                    last_coord = coord
+                # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+                for select in ss:
+                    v = select.pull(agg)
+                    if v != None:
+                        union(output, name2index[select.name], v, select.aggregate)
+
+            if output:
+                # SET DEFAULTS ON LAST ROW
+                for i, s in enumerate(all_selects):
+                    v = output[rank+i]
+                    if v == None:
+                        output[rank+i] = s.default
+                yield output
+
+            # EMIT THE MISSING CELLS IN THE CUBE
+            if not query.groupby:
+                for coord, output in is_sent:
+                    if output == None:
+                        record = [d.get_value(c) for c, d in zip(coord, decoders)] + [s.default for s in all_selects]
+                        yield record
 
     return Data(
         meta={"format": "table"},
@@ -167,7 +195,7 @@ def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims)
 
-        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
+        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=(query.sort and not query.groupby)):
             output = is_sent[coord]
             if output == None:
                 output = is_sent[coord] = Data()

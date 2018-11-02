@@ -116,6 +116,32 @@ class TestESSpecial(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_query_on_null_startswith(self):
+        schema = {
+            "mappings": {"test_result": {
+                "properties": {"name": {
+                    "type": "keyword",
+                    "store": True
+                }}
+            }}
+        }
+
+        test = {
+            "schema": schema,
+            "data": [
+            ],
+            "query": {
+                "where": {"prefix": {"no_name": "something"}},
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": []
+            }
+        }
+        self.utils.execute_tests(test)
+
+
+
     def test_db_is_busy(self):
         FILENAME = "metadata.localhost.sqlite"
         db_file = File(FILENAME)

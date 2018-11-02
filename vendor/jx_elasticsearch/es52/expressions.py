@@ -13,8 +13,6 @@ from __future__ import unicode_literals
 
 import itertools
 
-from jx_python import jx
-
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
@@ -23,7 +21,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
-from mo_future import text_type, number_types, sort_using_key
+from mo_future import text_type
 from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type, NESTED
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
@@ -1544,7 +1542,9 @@ def split_expression_by_path(where, schema, output=None, var_to_columns=None):
     where_vars = where.vars()
     all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
 
-    if len(all_paths) == 1:
+    if len(all_paths) == 0:
+        pass
+    elif len(all_paths) == 1:
         output[literal_field(first(all_paths))] += [where.map({v.var: c.es_column for v in where.vars() for c in var_to_columns[v.var]})]
     elif isinstance(where, AndOp):
         for w in where.terms:

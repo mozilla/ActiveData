@@ -69,3 +69,21 @@ class TestExpressions(FuzzyTestCase):
         filter = jx_expression({"prefix": [{"null": {}}, {"literal": ""}]}).to_esfilter(Null)
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
+
+    def test_null_var_startswith(self):
+        filter = jx_expression({"prefix": [{"literal": None}, {"literal": "something"}]}).partial_eval().to_esfilter(no_schema)
+        expected = {"match_all": {}}
+        self.assertEqual(filter, expected)
+
+
+
+class S(object):
+    def values(self, name):
+        return []
+
+    def leaves(self, name):
+        return []
+
+
+no_schema = S()
+

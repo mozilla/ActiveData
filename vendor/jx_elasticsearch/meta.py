@@ -99,7 +99,7 @@ class ElasticsearchMetadata(Namespace):
         if ENABLE_META_SCAN:
             self.worker = Thread.run("refresh metadata", self.monitor)
         else:
-            self.worker = Thread.run("refresh metadata", self.not_monitor)
+            self.worker = Thread.run("not refresh metadata", self.not_monitor)
         return
 
 
@@ -188,13 +188,31 @@ class ElasticsearchMetadata(Namespace):
                     self.alias_to_query_paths[i] = query_paths
 
             # ENSURE COLUMN HAS CORRECT jx_type
+            # PICK DEEPEST NESTED PROPERTY AS REPRESENTATIVE
             output = []
+            best = {}
             for abs_column in abs_columns:
                 abs_column.jx_type = jx_type(abs_column)
+                if abs_column.jx_type not in STRUCT:
+                    clean_name = unnest_path(abs_column.name)
+                    other = best.get(clean_name)
+                    if other:
+                        if len(other.nested_path) < len(abs_column.nested_path):
+                            output.remove(other)
+                            self.meta.columns.update({"clear": ".", "where": {"eq": {"es_column": other.es_column, "es_index": other.es_index}}})
+                        else:
+                            continue
+                    output.append(abs_column)
+                    best[clean_name] = abs_column
+
+            # REGISTER ALL COLUMNS
+            canonicals = []
+            for abs_column in output:
                 canonical = self.meta.columns.add(abs_column)
-                output.append(canonical)
-                self.todo.add(canonical)
-        return output
+                canonicals.append(canonical)
+
+            self.todo.extend(canonicals)
+            return canonicals
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
@@ -655,6 +673,14 @@ class Schema(jx_base.Schema):
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
         clean_name = unnest_path(column_name)
+
+        if clean_name != column_name:
+            clean_name = column_name
+            cleaner = lambda x: x
+        else:
+            cleaner = unnest_path
+
+
         columns = self.columns
         # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
         # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
@@ -669,7 +695,7 @@ class Schema(jx_base.Schema):
                         c.jx_type not in OBJECTS or
                         (clean_name == '.' and c.cardinality == 0)
                     ) and
-                    startswith_field(unnest_path(relative_field(c.name, path)), clean_name)
+                    startswith_field(cleaner(relative_field(c.name, path)), clean_name)
                 )
             ]
             if output:

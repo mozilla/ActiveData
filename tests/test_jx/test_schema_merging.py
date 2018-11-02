@@ -301,7 +301,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("not ready")
+    @skip("For Orange query")
     def test_edge(self):
         test = {
             "data": [

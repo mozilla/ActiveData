@@ -422,8 +422,7 @@ def _wait_for_exit(please_stop):
     cr_count = 0  # COUNT NUMBER OF BLANK LINES
 
     while not please_stop:
-        # if DEBUG:
-        #     Log.note("inside wait-for-shutdown loop")
+        # DEBUG and Log.note("inside wait-for-shutdown loop")
         if cr_count > 30:
             (Till(seconds=3) | please_stop).wait()
         try:
@@ -434,8 +433,7 @@ def _wait_for_exit(please_stop):
                 _wait_for_interrupt(please_stop)
                 break
 
-        # if DEBUG:
-        #     Log.note("read line {{line|quote}}, count={{count}}", line=line, count=cr_count)
+        # DEBUG and Log.note("read line {{line|quote}}, count={{count}}", line=line, count=cr_count)
         if line == "":
             cr_count += 1
         else:

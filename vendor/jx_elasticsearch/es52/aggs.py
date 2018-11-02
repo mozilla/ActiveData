@@ -134,19 +134,15 @@ def get_decoders_by_path(query):
             for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
 
-        try:
-            vars_ |= edge.value.vars()
-            depths = set(c.nested_path[0] for v in vars_ for c in schema.leaves(v.var))
-            if not depths:
-                Log.error(
-                    "Do not know of column {{column}}",
-                    column=unwraplist([v for v in vars_ if schema[v] == None])
-                )
-            if len(depths) > 1:
-                Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
-        except Exception as e:
-            # USUALLY THE SCHEMA IS EMPTY, SO WE ASSUME THIS IS A SIMPLE QUERY
-            depths = "."
+        vars_ |= edge.value.vars()
+        depths = set(c.nested_path[0] for v in vars_ for c in schema.leaves(v.var))
+        if not depths:
+            Log.error(
+                "Do not know of column {{column}}",
+                column=unwraplist([v for v in vars_ if schema[v] == None])
+            )
+        if len(depths) > 1:
+            Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
 
         decoder = AggsDecoder(edge, query, limit)
         output[literal_field(first(depths))] += [decoder]

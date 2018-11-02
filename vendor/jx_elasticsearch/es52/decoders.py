@@ -632,7 +632,7 @@ class DefaultDecoder(SetDecoder):
     def count(self, row):
         part = row[0]
         if part['doc_count']:
-            key=part.get('key')
+            key = part.get('key')
             if key != None:
                 self.parts.append(self.pull(key))
             else:

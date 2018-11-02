@@ -1537,13 +1537,14 @@ def split_expression_by_path(where, schema, output=None, var_to_columns=None):
         if not var_to_columns:
             return output
 
-    all_paths = set(c.nested_path[0] for v in where.vars() for c in var_to_columns[v.var])
+    where_vars = where.vars()
+    all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
 
     if len(all_paths) == 1:
         output[literal_field(first(all_paths))] += [where.map({v.var: c.es_column for v in where.vars() for c in var_to_columns[v.var]})]
     elif isinstance(where, AndOp):
         for w in where.terms:
-            split_expression_by_depth(w, schema, output, var_to_columns)
+            split_expression_by_path(w, schema, output, var_to_columns)
     else:
         Log.error("Can not handle complex where clause")
 

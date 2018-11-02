@@ -61,17 +61,17 @@ class Lock(object):
         self.waiting = None
 
     def __enter__(self):
-        # with mo_times.timer.Timer("get lock"):
+        # DEBUG and print("acquire lock "+quote(self.name))
         self.lock.acquire()
         return self
 
     def __exit__(self, a, b, c):
         if self.waiting:
-            if DEBUG:
-                _Log.note("signaling {{num}} waiters", num=len(self.waiting))
+            DEBUG and _Log.note("signaling {{num}} waiters on {{name|quote}}", name=self.name, num=len(self.waiting))
             waiter = self.waiting.pop()
             waiter.go()
         self.lock.release()
+        # DEBUG and _Log.note("released lock {{name|quote}}", name=self.name)
 
     def wait(self, till=None):
         """
@@ -81,18 +81,15 @@ class Lock(object):
         """
         waiter = Signal()
         if self.waiting:
-            if DEBUG:
-                _Log.note("waiting with {{num}} others on {{name|quote}}", num=len(self.waiting), name=self.name)
+            DEBUG and _Log.note("waiting with {{num}} others on {{name|quote}}", num=len(self.waiting), name=self.name, stack_depth=1)
             self.waiting.insert(0, waiter)
         else:
-            if DEBUG:
-                _Log.note("waiting by self on {{name|quote}}", name=self.name)
+            DEBUG and _Log.note("waiting by self on {{name|quote}}", name=self.name)
             self.waiting = [waiter]
 
         try:
             self.lock.release()
-            if DEBUG:
-                _Log.note("out of lock {{name|quote}}", name=self.name)
+            DEBUG and _Log.note("out of lock {{name|quote}}", name=self.name)
             (waiter | till).wait()
             if DEBUG:
                 _Log.note("done minimum wait (for signal {{till|quote}})", till=till.name if till else "", name=self.name)
@@ -102,13 +99,11 @@ class Lock(object):
             _Log.warning("problem", cause=e)
         finally:
             self.lock.acquire()
-            if DEBUG:
-                _Log.note("re-acquired lock {{name|quote}}", name=self.name)
+            DEBUG and _Log.note("re-acquired lock {{name|quote}}", name=self.name)
 
         try:
             self.waiting.remove(waiter)
-            if DEBUG:
-                _Log.note("removed own signal from {{name|quote}}", name=self.name)
+            DEBUG and _Log.note("removed own signal from {{name|quote}}", name=self.name)
         except Exception:
             pass
 

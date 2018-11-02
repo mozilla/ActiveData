@@ -142,7 +142,7 @@ class AggsDecoder(object):
     def get_value(self, index):
         raise NotImplementedError()
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         raise NotImplementedError()
 
     @property
@@ -242,7 +242,7 @@ class SetDecoder(AggsDecoder):
         key = parts[0].get('key')
         return self.pull(key)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         try:
             key = row[0].get('key')
             return self.domain.getIndexByKey(key)
@@ -288,7 +288,7 @@ class TimeDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -345,7 +345,7 @@ class GeneralRangeDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -400,7 +400,7 @@ class DurationDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -430,7 +430,7 @@ class RangeDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
         part = row[0]
         if part == None:
@@ -480,7 +480,7 @@ class MultivalueDecoder(SetDecoder):
         else:
             return t
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         find = self.get_value_from_row(row)
         return self.domain.getIndexByKey(find)
 
@@ -550,7 +550,7 @@ class ObjectDecoder(AggsDecoder):
             partitions=[{"value": p, "dataIndex": i} for i, p in enumerate(self.parts)]
         )
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         value = self.get_value_from_row(row)
         if self.computed_domain:
             return self.domain.getIndexByKey(value)
@@ -645,7 +645,7 @@ class DefaultDecoder(SetDecoder):
         self.parts = None
         self.computed_domain = True
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         if self.computed_domain:
             try:
                 part = row[0]
@@ -714,7 +714,7 @@ class DimFieldListDecoder(SetDecoder):
             partitions=[{"value": tuple(v[k] for k in columns), "dataIndex": i} for i, v in enumerate(sorted_parts)]
         )
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         if row[0]['doc_count']:
             find = tuple(p.get("key") for p, f in zip(row, self.fields))
             output = self.domain.getIndexByKey(find)

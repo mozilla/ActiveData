@@ -130,7 +130,7 @@ class AggsDecoder(object):
     def get_value(self, index):
         raise NotImplementedError()
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         raise NotImplementedError()
 
     @property
@@ -212,7 +212,7 @@ class SetDecoder(AggsDecoder):
     def get_value_from_row(self, row):
         return self.pull(row[self.start].get('key'))
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         try:
             part = row[self.start]
             return self.domain.getIndexByKey(part.get('key'))
@@ -266,7 +266,7 @@ class TimeDecoder(AggsDecoder):
     def get_value(self, index):
         return self.edge.domain.getKeyByIndex(index)
 
-    def get_index(self, row, es_query=None):
+    def get_index(self, row, es_query=None, index=None):
         domain = self.edge.domain
         part = row[self.start]
         if part == None:

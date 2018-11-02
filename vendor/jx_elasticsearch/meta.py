@@ -202,8 +202,8 @@ class ElasticsearchMetadata(Namespace):
                             self.meta.columns.update({"clear": ".", "where": {"eq": {"es_column": other.es_column, "es_index": other.es_index}}})
                         else:
                             continue
-                    output.append(abs_column)
                     best[clean_name] = abs_column
+                output.append(abs_column)
 
             # REGISTER ALL COLUMNS
             canonicals = []

@@ -12,11 +12,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
+from jx_elasticsearch.es52 import expressions
+from mo_dots import Null
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times import Date, MONTH
+
+_ = expressions  # IMPORT TRIGGERS ATTACHMENT OF EXTENSION METHODS
 
 
 class TestExpressions(FuzzyTestCase):
@@ -56,3 +59,13 @@ class TestExpressions(FuzzyTestCase):
         result = compile_expression(jx_expression(expr).partial_eval().to_python())(None)
         expected = (Date.today()-MONTH).unix
         self.assertEqual(result, expected)
+
+    def test_null_startswith(self):
+        filter = jx_expression({"prefix": [{"null": {}}, {"literal": "something"}]}).to_esfilter(Null)
+        expected = {"bool": {"must_not": {"match_all": {}}}}
+        self.assertEqual(filter, expected)
+
+    def test_null_startswith_null(self):
+        filter = jx_expression({"prefix": [{"null": {}}, {"literal": ""}]}).to_esfilter(Null)
+        expected = {"match_all": {}}
+        self.assertEqual(filter, expected)

@@ -1121,10 +1121,14 @@ def to_esfilter(self, schema):
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):
-    if not self.expr:
+    if isinstance(self.prefix, Literal) and not self.prefix.value:
+        return {"match_all": {}}
+    elif self.expr is NULL:
+        return es_not({"match_all": {}})
+    elif not self.expr:
         return {"match_all": {}}
     elif isinstance(self.expr, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.expr.var)[0].es_column
+        var = first(schema.leaves(self.expr.var)).es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp("script",  self.to_es_script(schema).script(schema)).to_esfilter(schema)

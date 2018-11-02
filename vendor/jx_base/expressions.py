@@ -570,6 +570,10 @@ class NullOp(Literal):
     """
     data_type = OBJECT
 
+    @classmethod
+    def define(cls, expr):
+        return NULL
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
 

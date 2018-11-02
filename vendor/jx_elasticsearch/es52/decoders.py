@@ -132,7 +132,7 @@ class AggsDecoder(object):
     def count(self, row):
         pass
 
-    # DO NOT IMPLEMENT OF domain HAS KNOWN PARTITIONS
+    # DO NOT IMPLEMENT IF domain HAS KNOWN PARTITIONS
     # def done_count(self):
     #     pass
 

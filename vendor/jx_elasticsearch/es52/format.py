@@ -167,14 +167,14 @@ def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims)
 
-        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders):
+        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=query.sort):
             output = is_sent[coord]
             if output == None:
-                output = Data()
+                output = is_sent[coord] = Data()
                 for g, d, c in zip(groupby, decoders, coord):
-                    output[coalesce(g.put.name, g.name)] = d.get_value(c)
+                    output[g.put.name] = d.get_value(c)
                 for s in all_selects:
-                    output[s.name] = s.default
+                    output[s.name] = None
                 yield output
             # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
             for s in _selects:
@@ -267,7 +267,7 @@ def union(matrix, coord, value, agg):
         elif agg == "union":
             matrix[coord] = list(set(existing) | set(value))
             return
-        Log.warning("not ready")
+        Log.warning("{{agg}} not ready", agg=agg)
     else:
         matrix[coord] = existing + value
 

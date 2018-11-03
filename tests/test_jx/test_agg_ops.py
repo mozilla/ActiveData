@@ -134,25 +134,25 @@ class TestAggOps(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "value"},
-                "data": [{"a": 702.5, "b": 210.5}]
+                "data": {"a": 703.5, "b": 210.5}
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "b"],
-                "data": [[702.5, 210.5]]
+                "data": [[703.5, 210.5]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "edges": [],
                 "data": {
-                    "a": 702.5,
+                    "a": 703.5,
                     "b": 210.5
                 }
             }
         }
         self.utils.execute_tests(test, places=1.5)  # 1.5 approx +/- 3%
 
-    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
+    @skipIf(global_settings.use == "sqlite", "not expected to pass yet")
     def test_stats(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],

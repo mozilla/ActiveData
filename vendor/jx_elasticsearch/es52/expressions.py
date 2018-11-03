@@ -1094,6 +1094,7 @@ def to_esfilter(self, schema):
             "query": self.query.to_esfilter(schema)
         }}
 
+
 @extend(BasicStartsWithOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     expr = FirstOp("first", self.value).partial_eval().to_es_script(schema)

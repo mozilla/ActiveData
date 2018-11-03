@@ -39,7 +39,7 @@ DEBUG = True
 singlton = None
 db_table_name = quote_column("meta.columns")
 
-INSERT, UPDATE, DELETE = 'insert', 'update', 'delete'
+INSERT, UPDATE, DELETE, EXECUTE = 'insert', 'update', 'delete', 'execute'
 
 
 class ColumnList(Table, jx_base.Container):
@@ -60,11 +60,11 @@ class ColumnList(Table, jx_base.Container):
         )
         self.last_load = Null
         self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
-        self._load_db()
-        Thread.run("update " + name, self._update_database_worker)
+        self._db_load()
+        Thread.run("update " + name, self._db_worker)
 
     @contextmanager
-    def _transaction(self):
+    def _db_transaction(self):
         self.db.execute("BEGIN")
         try:
             yield
@@ -82,8 +82,8 @@ class ColumnList(Table, jx_base.Container):
         result.data = curr.fetchall()
         return result
 
-    def _create_db(self):
-        with self._transaction():
+    def _db_create(self):
+        with self._db_transaction():
             self.db.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
@@ -98,9 +98,9 @@ class ColumnList(Table, jx_base.Container):
 
             for c in METADATA_COLUMNS:
                 self._add(c)
-                self._insert_column(c)
+                self._db_insert_column(c)
 
-    def _load_db(self):
+    def _db_load(self):
         self.last_load = Date.now()
 
         result = self._query(
@@ -112,7 +112,7 @@ class ColumnList(Table, jx_base.Container):
             ])
         )
         if not result.data:
-            self._create_db()
+            self._db_create()
             return
 
         result = self._query(
@@ -126,10 +126,10 @@ class ColumnList(Table, jx_base.Container):
                 c = row_to_column(result.header, r)
                 self._add(c)
 
-    def _update_database_worker(self, please_stop):
+    def _db_worker(self, please_stop):
         while not please_stop:
             try:
-                with self._transaction():
+                with self._db_transaction():
                     result = self._query(
                         SQL_SELECT + all_columns +
                         SQL_FROM + db_table_name +
@@ -149,9 +149,11 @@ class ColumnList(Table, jx_base.Container):
                 for action, column in updates:
                     while not please_stop:
                         try:
-                            with self._transaction():
+                            with self._db_transaction():
                                 DEBUG and Log.note("{{action}} db for {{table}}.{{column}}", action=action, table=column.es_index, column=column.es_column)
-                                if action is UPDATE:
+                                if action is EXECUTE:
+                                    self.db.execute(column)
+                                elif action is UPDATE:
                                     self.db.execute(
                                         "UPDATE" + db_table_name +
                                         "SET" + sql_list([
@@ -176,7 +178,7 @@ class ColumnList(Table, jx_base.Container):
                                         ])
                                     )
                                 else:
-                                    self._insert_column(column)
+                                    self._db_insert_column(column)
                             break
                         except Exception as e:
                             e = Except.wrap(e)
@@ -192,7 +194,7 @@ class ColumnList(Table, jx_base.Container):
 
             (Till(seconds=10) | please_stop).wait()
 
-    def _insert_column(self, column):
+    def _db_insert_column(self, column):
         try:
             self.db.execute(
                 "INSERT INTO" + db_table_name + sql_iso(all_columns) +
@@ -335,8 +337,7 @@ class ColumnList(Table, jx_base.Container):
                     if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                        with self._transaction():
-                            self.db.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
+                        self.todo.add((EXECUTE, "DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index)))
                         return
 
                     # FASTEST

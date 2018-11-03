@@ -2888,6 +2888,10 @@ class BasicStartsWithOp(Expression):
     def __data__(self):
         return {"basic.startsWith": [self.value.__data__(), self.prefix.__data__()]}
 
+    def __eq__(self, other):
+        if isinstance(other, BasicStartsWithOp):
+            return self.value==other.value and self.prefix==other.prefix
+
     def vars(self):
         return self.value.vars() | self.prefix.vars()
 

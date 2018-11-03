@@ -64,21 +64,24 @@ class TestExpressions(FuzzyTestCase):
         filter = jx_expression({"prefix": [{"null": {}}, {"literal": "something"}]}).to_esfilter(Null)
         expected = {"bool": {"must_not": {"match_all": {}}}}
         self.assertEqual(filter, expected)
+        self.assertEqual(expected, filter)
 
     def test_null_startswith_null(self):
         filter = jx_expression({"prefix": [{"null": {}}, {"literal": ""}]}).to_esfilter(Null)
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
+        self.assertEqual(expected, filter)
 
     def test_null_var_startswith(self):
-        filter = jx_expression({"prefix": [{"literal": None}, {"literal": "something"}]}).partial_eval().to_esfilter(no_schema)
+        filter = jx_expression({"prefix": ["name", {"literal": "something"}]}).partial_eval().to_esfilter(no_schema)
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
+        self.assertEqual(expected, filter)
 
 
 
 class S(object):
-    def values(self, name):
+    def values(self, name, exclude=None):
         return []
 
     def leaves(self, name):

@@ -937,12 +937,16 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
             frum=self
         )
 
+
+count_template = "long count=0; for(v in {{expr}}) if (v!=null) count+=1; return count;"
+
+
 @extend(CountOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     return EsScript(
         miss=FALSE,
         type=INTEGER,
-        expr="+".join("((" + t.missing().partial_eval().to_es_script(schema).expr + ") ? 0 : 1)" for t in self.terms),
+        expr=expand_template(count_template, {"expr": self.terms.partial_eval().to_es_script(schema).expr}),
         frum=self
     )
 

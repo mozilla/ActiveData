@@ -377,7 +377,7 @@ class ElasticsearchMetadata(Namespace):
                         "_filter": {
                             "aggs": {"multi": {"max": {"script": "doc[" + quote(column.es_column) + "].values.size()"}}},
                             "filter": {"bool": {"should": [
-                                {"term": {"etl.timestamp.~n~": (Date.today() - WEEK)}},
+                                {"range": {"etl.timestamp.~n~": {"gte": (Date.today() - WEEK)}}},
                                 {"bool": {"must_not": {"exists": {"field": "etl.timestamp.~n~"}}}}
                             ]}}
                         }
@@ -560,15 +560,24 @@ class ElasticsearchMetadata(Namespace):
             if column == THREAD_STOP:
                 break
 
-            if column.last_updated >= Date.now()-TOO_OLD:
+            if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
+                DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
+                column.last_updated = Date.now()
+                continue
+            elif column.last_updated > Date.now() - TOO_OLD and column.cardinality is not None:
+                # DO NOT UPDATE FRESH COLUMN METADATA
+                DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                 continue
 
             with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
-                if column.name in ["build.type", "run.type"]:
+                if untype_path(column.name) in ["build.type", "run.type"]:
                     try:
                         self._update_cardinality(column)
                     except Exception as e:
                         Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
+                else:
+                    column.last_updated = Date.now()
+
 
     def get_table(self, name):
         if name == "meta.columns":

@@ -1617,19 +1617,20 @@ class CountOp(Expression):
 
     def __init__(self, op, terms, **clauses):
         Expression.__init__(self, op, terms)
-        self.terms = terms
+        if isinstance(terms, list):
+            # SHORTCUT: ASSUME AN ARRAY OF IS A TUPLE
+            self.terms = TupleOp(None, terms)
+        else:
+            self.terms = terms
 
     def __data__(self):
-        return {"count": [t.__data__() for t in self.terms]}
+        return {"count": self.terms.__data__()}
 
     def vars(self):
-        output = set()
-        for t in self.terms:
-            output |= t.vars()
-        return output
+        return self.terms.vars()
 
     def map(self, map_):
-        return CountOp("count", [t.map(map_) for t in self.terms])
+        return CountOp("count", self.terms.map(map_))
 
     def missing(self):
         return FALSE

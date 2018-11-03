@@ -558,6 +558,10 @@ def sort(data, fieldnames=None, already_normalized=False):
         Log.error("Problem sorting\n{{data}}",  data=data, cause=e)
 
 
+def first(values):
+    return iter(values).next()
+
+
 def count(values):
     return sum((1 if v!=None else 0) for v in values)
 

@@ -98,19 +98,22 @@ def es_setop(es, query):
                     put_index += 1
         elif isinstance(select.value, Variable):
             s_column = select.value.var
+
+            if s_column == ".":
+                # PULL ALL SOURCE
+                es_query.stored_fields = ["_source"]
+                new_select.append({
+                    "name": select.name,
+                    "value": select.value,
+                    "put": {"name": select.name, "index": put_index, "child": "."},
+                    "pull": get_pull_source(".")
+                })
+                continue
+
             leaves = schema.leaves(s_column)  # LEAVES OF OBJECT
             nested_selects = {}
             if leaves:
-                if s_column == ".":
-                    # PULL ALL SOURCE
-                    es_query.stored_fields = ["_source"]
-                    new_select.append({
-                        "name": select.name,
-                        "value": select.value,
-                        "put": {"name": select.name, "index": put_index, "child": "."},
-                        "pull": get_pull_source(".")
-                    })
-                elif any(c.jx_type == NESTED for c in leaves):
+                if any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
                     es_query.stored_fields = ["_source"]
                     for c in leaves:
@@ -206,9 +209,7 @@ def es_setop(es, query):
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
-
-        with Timer("formatter"):
-            output = formatter(T, new_select, query)
+        output = formatter(T, new_select, query)
         output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -370,14 +371,14 @@ def get_pull_source(es_column):
 
 def get_pull_stats(stats_name, median_name):
     return jx_expression_to_function({"select": [
-        {"name": "count", "value": stats_name + ".count"},
-        {"name": "sum", "value": stats_name + ".sum"},
-        {"name": "min", "value": stats_name + ".min"},
-        {"name": "max", "value": stats_name + ".max"},
-        {"name": "avg", "value": stats_name + ".avg"},
-        {"name": "sos", "value": stats_name + ".sum_of_squares"},
-        {"name": "std", "value": stats_name + ".std_deviation"},
-        {"name": "var", "value": stats_name + ".variance"},
-        {"name": "median", "value": median_name + ".values.50\\.0"}
+        {"name": "count", "value": join_field([stats_name, "count"])},
+        {"name": "sum", "value": join_field([stats_name, "sum"])},
+        {"name": "min", "value": join_field([stats_name, "min"])},
+        {"name": "max", "value": join_field([stats_name, "max"])},
+        {"name": "avg", "value": join_field([stats_name, "avg"])},
+        {"name": "sos", "value": join_field([stats_name, "sum_of_squares"])},
+        {"name": "std", "value": join_field([stats_name, "std_deviation"])},
+        {"name": "var", "value": join_field([stats_name, "variance"])},
+        {"name": "median", "value": join_field([median_name, "values", "50.0"])}
     ]})
 

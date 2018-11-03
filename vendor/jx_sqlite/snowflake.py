@@ -16,6 +16,7 @@ import jx_base
 from jx_base import Column, Facts
 from jx_base.queries import get_property_name
 # from jx_python.meta import ColumnList
+from jx_python.jx import first
 from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, quoted_PARENT, quoted_ORDER
 from mo_dots import startswith_field, Null, relative_field, concat_field, set_default, wrap, tail_field, coalesce, listwrap
 from mo_future import text_type
@@ -348,7 +349,7 @@ class Schema(object):
         head = self.namespace.get(prefix, None)
         if not head:
             return Null
-        full_name = list(head)[0].name
+        full_name = first(head).name
         return set(
             c
             for k, cs in self.namespace.items()

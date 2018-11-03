@@ -39,7 +39,7 @@ DEBUG = False
 singlton = None
 db_table_name = quote_column("meta.columns")
 
-INSERT, UPDATE, DELETE = 'insert', 'update', 'delete'
+INSERT, UPDATE, DELETE, EXECUTE = 'insert', 'update', 'delete', 'execute'
 
 
 class ColumnList(Table, jx_base.Container):
@@ -60,11 +60,11 @@ class ColumnList(Table, jx_base.Container):
         )
         self.last_load = Null
         self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
-        self._load_db()
-        Thread.run("update " + name, self._update_database_worker)
+        self._db_load()
+        Thread.run("update " + name, self._db_worker)
 
     @contextmanager
-    def _transaction(self):
+    def _db_transaction(self):
         self.db.execute("BEGIN")
         try:
             yield
@@ -82,8 +82,8 @@ class ColumnList(Table, jx_base.Container):
         result.data = curr.fetchall()
         return result
 
-    def _create_db(self):
-        with self._transaction():
+    def _db_create(self):
+        with self._db_transaction():
             self.db.execute(
                 "CREATE TABLE " + db_table_name +
                 sql_iso(sql_list(
@@ -98,9 +98,9 @@ class ColumnList(Table, jx_base.Container):
 
             for c in METADATA_COLUMNS:
                 self._add(c)
-                self._insert_column(c)
+                self._db_insert_column(c)
 
-    def _load_db(self):
+    def _db_load(self):
         self.last_load = Date.now()
 
         result = self._query(
@@ -112,7 +112,7 @@ class ColumnList(Table, jx_base.Container):
             ])
         )
         if not result.data:
-            self._create_db()
+            self._db_create()
             return
 
         result = self._query(
@@ -126,10 +126,10 @@ class ColumnList(Table, jx_base.Container):
                 c = row_to_column(result.header, r)
                 self._add(c)
 
-    def _update_database_worker(self, please_stop):
+    def _db_worker(self, please_stop):
         while not please_stop:
             try:
-                with self._transaction():
+                with self._db_transaction():
                     result = self._query(
                         SQL_SELECT + all_columns +
                         SQL_FROM + db_table_name +
@@ -149,9 +149,11 @@ class ColumnList(Table, jx_base.Container):
                 for action, column in updates:
                     while not please_stop:
                         try:
-                            with self._transaction():
-                                DEBUG and Log.note("update db for {{table}}.{{column}}", table=column.es_index, column=column.es_column)
-                                if action is UPDATE:
+                            with self._db_transaction():
+                                DEBUG and Log.note("{{action}} db for {{table}}.{{column}}", action=action, table=column.es_index, column=column.es_column)
+                                if action is EXECUTE:
+                                    self.db.execute(column)
+                                elif action is UPDATE:
                                     self.db.execute(
                                         "UPDATE" + db_table_name +
                                         "SET" + sql_list([
@@ -176,7 +178,7 @@ class ColumnList(Table, jx_base.Container):
                                         ])
                                     )
                                 else:
-                                    self._insert_column(column)
+                                    self._db_insert_column(column)
                             break
                         except Exception as e:
                             e = Except.wrap(e)
@@ -192,7 +194,7 @@ class ColumnList(Table, jx_base.Container):
 
             (Till(seconds=10) | please_stop).wait()
 
-    def _insert_column(self, column):
+    def _db_insert_column(self, column):
         try:
             self.db.execute(
                 "INSERT INTO" + db_table_name + sql_iso(all_columns) +
@@ -205,7 +207,7 @@ class ColumnList(Table, jx_base.Container):
             e = Except.wrap(e)
             if "UNIQUE constraint failed" in e or " are not unique" in e:
                 # THIS CAN HAPPEN BECAUSE todo HAS OLD COLUMN DATA
-                self.todo.add((UPDATE, column))
+                self.todo.add((UPDATE, column), force=True)
             else:
                 Log.error("do not know how to handle", cause=e)
 
@@ -241,19 +243,25 @@ class ColumnList(Table, jx_base.Container):
         self.dirty = True
         with self.locker:
             canonical = self._add(column)
-            self.todo.add((INSERT if canonical is column else UPDATE, canonical))
-            return canonical
+        if canonical == None:
+            return column  # ALREADY ADDED
+        self.todo.add((INSERT if canonical is column else UPDATE, canonical))
+        return canonical
 
     def remove_table(self, table_name):
         del self.data[table_name]
 
     def _add(self, column):
+        """
+        :param column: ANY COLUMN OBJECT
+        :return:  None IF column IS canonical ALREADY (NET-ZERO EFFECT)
+        """
         columns_for_table = self.data.setdefault(column.es_index, {})
         existing_columns = columns_for_table.setdefault(column.name, [])
 
         for canonical in existing_columns:
             if canonical is column:
-                return canonical
+                return None
             if canonical.es_type == column.es_type:
                 if column.last_updated > canonical.last_updated:
                     for key in Column.__slots__:
@@ -329,9 +337,8 @@ class ColumnList(Table, jx_base.Container):
                     if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                            with self._transaction():
-                                self.db.execute("DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index))
-                            return
+                        self.todo.add((EXECUTE, "DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index)))
+                        return
 
                     # FASTEST
                     all_columns = self.data.get(eq.es_index, {}).values()
@@ -368,7 +375,7 @@ class ColumnList(Table, jx_base.Container):
 
             with self.locker:
                 for col in columns:
-                    DEBUG and Log.note("Update column {{table}}.{{column}}", table=col.es_index, column=col.es_column)
+                    DEBUG and Log.note("update column {{table}}.{{column}}", table=col.es_index, column=col.es_column)
                     for k in command["clear"]:
                         if k == ".":
                             self.todo.add((DELETE, col))
@@ -379,19 +386,17 @@ class ColumnList(Table, jx_base.Container):
                                 del lst[col.name]
                                 if len(lst) == 0:
                                     del self.data[col.es_index]
+                            break
                         else:
                             col[k] = None
+                    else:
+                        # DID NOT DELETE COLUMNM ("."), CONTINUE TO SET PROPERTIES
+                        for k, v in command.set.items():
+                            col[k] = v
+                        self.todo.add((UPDATE, col))
 
-                    for k, v in command.set.items():
-                        # if k == 'partitions':
-                        #     Log.note("set partitions on {{id}}", id=id(col))
-                        #     def check(please_stop):
-                        #         while not please_stop:
-                        #             Log.note("{{id}}: {{parts}}", id=id(col), parts=col[k])
-                        #             Till(seconds=0.05).wait()
-                        #     Thread.run("check", check)
-                        col[k] = v
-                    self.todo.add((UPDATE, col))
+
+
         except Exception as e:
             Log.error("should not happen", cause=e)
 

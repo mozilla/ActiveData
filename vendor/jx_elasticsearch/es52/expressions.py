@@ -13,17 +13,16 @@ from __future__ import unicode_literals
 
 import itertools
 
-from jx_python import jx
-
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
     WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, NestedOp
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
+from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
-from mo_future import text_type, number_types, sort_using_key
-from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type
+from mo_future import text_type
+from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL, python_type_to_json_type, NESTED
 from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
@@ -406,7 +405,7 @@ def to_esfilter(self, schema):
         if not cols:
             lhs = self.lhs.var  # HAPPENS DURING DEBUGGING, AND MAYBE IN REAL LIFE TOO
         elif len(cols) == 1:
-            lhs = cols[0].es_column
+            lhs = first(cols).es_column
         else:
             Log.error("operator {{op|quote}} does not work on objects", op=self.op)
         return {"range": {lhs: {self.op: self.rhs.value}}}
@@ -504,7 +503,7 @@ def to_esfilter(self, schema):
                 for r in rhs:
                     types[python_type_to_json_type[rhs.__class__]] += [r]
                 if len(types) == 1:
-                    jx_type, values = list(types.items())[0]
+                    jx_type, values = first(types.items())
                     for c in cols:
                         if jx_type == c.jx_type:
                             return {"terms": {c.es_column: values}}
@@ -573,7 +572,7 @@ def to_esfilter(self, schema):
         lhs = self.lhs.var
         cols = schema.leaves(lhs)
         if cols:
-            lhs = cols[0].es_column
+            lhs = first(cols).es_column
         rhs = self.rhs.value
         if isinstance(rhs, list):
             if len(rhs) == 1:
@@ -608,17 +607,14 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
             return EsScript(type=BOOLEAN, expr="false", frum=self)
         else:
             columns = schema.leaves(self.expr.var)
-            if len(columns) == 1:
-                return EsScript(type=BOOLEAN, expr="doc[" + quote(columns[0].es_column) + "].empty", frum=self)
-            else:
-                return AndOp("and", [
-                    EsScript(
-                        type=BOOLEAN,
-                        expr="doc[" + quote(c.es_column) + "].empty",
-                        frum=self
-                    )
-                    for c in columns
-                ]).partial_eval().to_es_script(schema)
+            return AndOp("and", [
+                EsScript(
+                    type=BOOLEAN,
+                    expr="doc[" + quote(c.es_column) + "].empty",
+                    frum=self
+                )
+                for c in columns
+            ]).partial_eval().to_es_script(schema)
     elif isinstance(self.expr, Literal):
         return self.expr.missing().to_es_script(schema)
     else:
@@ -632,7 +628,7 @@ def to_esfilter(self, schema):
         if not cols:
             return {"match_all": {}}
         elif len(cols) == 1:
-            return es_missing(cols[0].es_column)
+            return es_missing(first(cols).es_column)
         else:
             return es_and([
                 es_missing(c.es_column) for c in cols
@@ -715,11 +711,15 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 @extend(NotOp)
 def to_esfilter(self, schema):
     if isinstance(self.term, MissingOp) and isinstance(self.term.expr, Variable):
+        # PREVENT RECURSIVE LOOP
         v = self.term.expr.var
-        cols = schema.leaves(v)
-        if cols:
-            v = cols[0].es_column
-        return {"exists": {"field": v}}
+        cols = schema.values(v, (OBJECT, NESTED))
+        if len(cols) == 0:
+            return false_script
+        elif len(cols) == 1:
+            return {"exists": {"field": first(cols).es_column}}
+        else:
+            return es_and([{"exists": {"field": c.es_column}} for c in cols])
     else:
         operand = self.term.to_esfilter(schema)
         return es_not(operand)
@@ -792,6 +792,8 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if isinstance(self.term, Variable):
         columns = schema.values(self.term.var)
+        if len(columns) == 0:
+            return null_script
         if len(columns) == 1:
             return self.term.to_es_script(schema, many=False)
 
@@ -1019,7 +1021,7 @@ def to_esfilter(self, schema):
         if len(cols) == 0:
             return MATCH_NONE
         elif len(cols) == 1:
-            return {"regexp": {cols[0].es_column: self.pattern.value}}
+            return {"regexp": {first(cols).es_column: self.pattern.value}}
         else:
             Log.error("regex on not supported ")
     else:
@@ -1035,7 +1037,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in value.frum.terms]).to_es_script(schema)
 
     if value.miss is TRUE or value.type is IS_NULL:
-        return null_script
+        return empty_string_script
     elif value.type == BOOLEAN:
         return EsScript(
             miss=self.term.missing().partial_eval(),
@@ -1074,6 +1076,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 true_script = EsScript(type=BOOLEAN, expr="true", frum=TRUE)
 false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE)
 null_script = EsScript(miss=TRUE, type=IS_NULL, expr="null", frum=NULL)
+empty_string_script = EsScript(miss=TRUE, type=STRING, expr='""', frum=NULL)
 
 
 @extend(TrueOp)
@@ -1086,7 +1089,7 @@ def to_esfilter(self, schema):
     return {"match_all": {}}
 
 
-@extend(NestedOp)
+@extend(EsNestedOp)
 def to_esfilter(self, schema):
     if self.path.var == '.':
         return {"query": self.query.to_esfilter(schema)}
@@ -1096,9 +1099,13 @@ def to_esfilter(self, schema):
             "query": self.query.to_esfilter(schema)
         }}
 
+
 @extend(BasicStartsWithOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     expr = FirstOp("first", self.value).partial_eval().to_es_script(schema)
+    if expr is empty_string_script:
+        return false_script
+
     prefix = self.prefix.to_es_script(schema).partial_eval()
     return EsScript(
         miss=FALSE,
@@ -1121,10 +1128,14 @@ def to_esfilter(self, schema):
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):
-    if not self.expr:
+    if isinstance(self.prefix, Literal) and not self.prefix.value:
+        return {"match_all": {}}
+    elif self.expr is NULL:
+        return es_not({"match_all": {}})
+    elif not self.expr:
         return {"match_all": {}}
     elif isinstance(self.expr, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.expr.var)[0].es_column
+        var = first(schema.leaves(self.expr.var)).es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp("script",  self.to_es_script(schema).script(schema)).to_esfilter(schema)
@@ -1165,7 +1176,7 @@ def to_esfilter(self, schema):
         var = self.value.var
         cols = schema.leaves(var)
         if cols:
-            var = cols[0].es_column
+            var = first(cols).es_column
         if isinstance(self.superset, Literal) and not isinstance(self.superset.value, (list, tuple)):
             return {"term": {var: self.superset.value}}
         else:
@@ -1513,7 +1524,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
-        output[list(all_depths)[0]] += [where]
+        output[first(all_depths)] += [where]
     elif isinstance(where, AndOp):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
@@ -1523,34 +1534,30 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     return output
 
 
-def split_expression_by_path(where, schema, output=None, var_to_path=None):
+def split_expression_by_path(where, schema, output=None, var_to_columns=None):
     """
     :param where: EXPRESSION TO INSPECT
     :param schema: THE SCHEMA
     :param output: THE MAP FROM PATH TO EXPRESSION WE WANT UPDATED
-    :param var_to_path: MAP FROM EACH VARIABLE NAME TO THE DEPTH
+    :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: output: A MAP FROM PATH TO EXPRESSION
     """
-    vars_ = where.vars()
+    if var_to_columns is None:
+        var_to_columns = {v.var: schema.leaves(v.var) for v in where.vars()}
+        output = wrap({schema.query_path[0]: []})
+        if not var_to_columns:
+            return output
 
-    if var_to_path is None:
-        if not vars_:
-            return Data()
-        # MAP VARIABLE NAMES TO HOW DEEP THEY ARE
-        var_to_path = {
-            v.var: c.nested_path[0]
-            for v in vars_
-            for c in sort_using_key(schema[v.var], lambda r: len(r.nested_path))
-        }
-        output = Data()
+    where_vars = where.vars()
+    all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
 
-    all_paths = set(var_to_path[v.var] for v in vars_)
-
-    if len(all_paths) == 1:
-        output[literal_field(iter(all_paths).next())] += [where]
+    if len(all_paths) == 0:
+        pass
+    elif len(all_paths) == 1:
+        output[literal_field(first(all_paths))] += [where.map({v.var: c.es_column for v in where.vars() for c in var_to_columns[v.var]})]
     elif isinstance(where, AndOp):
-        for a in where.terms:
-            split_expression_by_path(a, schema, output, var_to_path)
+        for w in where.terms:
+            split_expression_by_path(w, schema, output, var_to_columns)
     else:
         Log.error("Can not handle complex where clause")
 

@@ -271,12 +271,13 @@ _python_operators = {
 
 @extend(MultiOp)
 def to_python(self, not_null=False, boolean=False, many=False):
+    sign, zero =_python_operators[self.op]
     if len(self.terms) == 0:
         return self.default.to_python()
     elif self.default is NULL:
-        return _python_operators[self.op][0].join("(" + t.to_python() + ")" for t in self.terms)
+        return sign.join("coalesce(" + t.to_python() + ", " + zero + ")" for t in self.terms)
     else:
-        return "coalesce(" + _python_operators[self.op][0].join("(" + t.to_python() + ")" for t in self.terms) + ", " + self.default.to_python() + ")"
+        return "coalesce(" + sign.join("(" + t.to_python() + ")" for t in self.terms) + ", " + self.default.to_python() + ")"
 
 @extend(RegExpOp)
 def to_python(self, not_null=False, boolean=False, many=False):

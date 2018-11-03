@@ -20,11 +20,11 @@ from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field
+from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field
 from mo_files import URL
 from mo_future import text_type
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
+from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, STRING_TYPE, BOOLEAN_TYPE, NUMBER_TYPE
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -99,7 +99,7 @@ class ElasticsearchMetadata(Namespace):
         if ENABLE_META_SCAN:
             self.worker = Thread.run("refresh metadata", self.monitor)
         else:
-            self.worker = Thread.run("refresh metadata", self.not_monitor)
+            self.worker = Thread.run("not refresh metadata", self.not_monitor)
         return
 
 
@@ -188,13 +188,31 @@ class ElasticsearchMetadata(Namespace):
                     self.alias_to_query_paths[i] = query_paths
 
             # ENSURE COLUMN HAS CORRECT jx_type
+            # PICK DEEPEST NESTED PROPERTY AS REPRESENTATIVE
             output = []
+            best = {}
             for abs_column in abs_columns:
                 abs_column.jx_type = jx_type(abs_column)
+                if abs_column.jx_type not in STRUCT:
+                    clean_name = unnest_path(abs_column.name)
+                    other = best.get(clean_name)
+                    if other:
+                        if len(other.nested_path) < len(abs_column.nested_path):
+                            output.remove(other)
+                            self.meta.columns.update({"clear": ".", "where": {"eq": {"es_column": other.es_column, "es_index": other.es_index}}})
+                        else:
+                            continue
+                    best[clean_name] = abs_column
+                output.append(abs_column)
+
+            # REGISTER ALL COLUMNS
+            canonicals = []
+            for abs_column in output:
                 canonical = self.meta.columns.add(abs_column)
-                output.append(canonical)
-                self.todo.add(canonical)
-        return output
+                canonicals.append(canonical)
+
+            self.todo.extend(canonicals)
+            return canonicals
 
     def query(self, _query):
         return self.meta.columns.query(QueryOp(set_default(
@@ -451,13 +469,19 @@ class ElasticsearchMetadata(Namespace):
             TEST_TABLE = "testdata"
             is_missing_index = any(w in e for w in ["IndexMissingException", "index_not_found_exception"])
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
-            if is_missing_index and is_test_table:
+            if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
                 self.meta.columns.update({
                     "clear": ".",
                     "where": {"eq": {"es_index": column.es_index}}
                 })
                 self.index_does_not_exist.add(column.es_index)
+            elif "No field found for" in e:
+                self.meta.columns.update({
+                    "clear": ".",
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
+                })
+                Log.warning("Could not get column {{col.es_index}}.{{col.es_column}} info", col=column, cause=e)
             else:
                 self.meta.columns.update({
                     "set": {
@@ -532,26 +556,19 @@ class ElasticsearchMetadata(Namespace):
         Log.alert("metadata scan has been disabled")
         please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
-            c = self.todo.pop()
-            if c == THREAD_STOP:
+            column = self.todo.pop()
+            if column == THREAD_STOP:
                 break
 
-            if c.last_updated >= Date.now()-TOO_OLD:
+            if column.last_updated >= Date.now()-TOO_OLD:
                 continue
 
-            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": c}, silent=not DEBUG, too_long=0.05):
-                self.meta.columns.update({
-                    "set": {
-                        "last_updated": Date.now()
-                    },
-                    "clear": [
-                        "count",
-                        "cardinality",
-                        "multi",
-                        "partitions",
-                    ],
-                    "where": {"eq": {"es_index": c.es_index, "es_column": c.es_column}}
-                })
+            with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
+                if column.name in ["build.type", "run.type"]:
+                    try:
+                        self._update_cardinality(column)
+                    except Exception as e:
+                        Log.warning("problem getting cardinality for {{column.name}}", column=column, cause=e)
 
     def get_table(self, name):
         if name == "meta.columns":
@@ -593,6 +610,13 @@ class Snowflake(object):
         if output:
             return output
         Log.error("Can not find index {{index|quote}}", index=self.name)
+
+    @property
+    def sorted_query_paths(self):
+        """
+        RETURN A LIST OF ALL SCHEMA'S IN DEPTH-FIRST TOPOLOGICAL ORDER
+        """
+        return list(reversed(sorted(p[0] for p in self.namespace.alias_to_query_paths.get(self.name))))
 
     @property
     def columns(self):
@@ -648,26 +672,81 @@ class Schema(jx_base.Schema):
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
-        column_name = unnest_path(column_name)
+        clean_name = unnest_path(column_name)
+
+        if clean_name != column_name:
+            clean_name = column_name
+            cleaner = lambda x: x
+        else:
+            cleaner = unnest_path
+
+
         columns = self.columns
         # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
-        # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME
-        for path in reversed(self.query_path) if column_name == '.' else self.query_path:
+        # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
+        for path in reversed(self.query_path) if clean_name == '.' else self.query_path:
             output = [
                 c
                 for c in columns
                 if (
-                    (c.name != "_id" or column_name == "_id") and
+                    (c.name != "_id" or clean_name == "_id") and
                     (
+                        (c.jx_type == EXISTS and column_name.endswith("." + EXISTS_TYPE)) or
                         c.jx_type not in OBJECTS or
-                        (column_name == '.' and c.cardinality == 0)
+                        (clean_name == '.' and c.cardinality == 0)
                     ) and
-                    startswith_field(unnest_path(relative_field(c.name, path)), column_name)
+                    startswith_field(cleaner(relative_field(c.name, path)), clean_name)
                 )
             ]
             if output:
-                return output
-        return []
+                return set(output)
+        return set()
+
+    def new_leaves(self, column_name):
+        """
+        :param column_name:
+        :return: ALL COLUMNS THAT START WITH column_name, INCLUDING DEEP COLUMNS
+        """
+        column_name = unnest_path(column_name)
+        columns = self.columns
+        all_paths = self.snowflake.sorted_query_paths
+
+        output = {}
+        for c in columns:
+            if c.name == "_id" and column_name != "_id":
+                continue
+            if c.jx_type in OBJECTS:
+                continue
+            if c.cardinality == 0:
+                continue
+            for path in all_paths:
+                if not startswith_field(unnest_path(relative_field(c.name, path)), column_name):
+                    continue
+                existing = output.get(path)
+                if not existing:
+                    output[path] = [c]
+                    continue
+                if len(path) > len(c.nested_path[0]):
+                    continue
+                if any("." + t + "." in c.es_column for t in (STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE)):
+                    # ELASTICSEARCH field TYPES ARE NOT ALLOWED
+                    continue
+                # ONLY THE DEEPEST COLUMN WILL BE CHOSEN
+                output[path].append(c)
+        return set(output.values())
+
+    def both_leaves(self, column_name):
+        old = self.old_leaves(column_name)
+        new = self.new_leaves(column_name)
+
+        if old != new:
+            Log.error(
+                "not the same: {{old}}, {{new}}",
+                old=[c.name for c in old],
+                new=[c.name for c in new]
+            )
+
+        return new
 
     def values(self, column_name, exclude_type=STRUCT):
         """
@@ -675,15 +754,16 @@ class Schema(jx_base.Schema):
         """
         column_name = unnest_path(column_name)
         columns = self.columns
+        output = []
         for path in self.query_path:
-            output = [
-                c
-                for c in columns
-                if (
-                    c.jx_type not in exclude_type and
-                    untype_path(relative_field(c.name, path)) == column_name
-                )
-            ]
+            full_path = untype_path(concat_field(path, column_name))
+            for c in columns:
+                if c.jx_type in exclude_type:
+                    continue
+                # if c.cardinality == 0:
+                #     continue
+                if untype_path(c.name) == full_path:
+                    output.append(c)
             if output:
                 return output
         return []
@@ -709,7 +789,7 @@ class Schema(jx_base.Schema):
                 output,
                 {
                     k: c.es_column
-                    for c in self.snowflake.columns
+                    for c in self.columns
                     if c.jx_type not in STRUCT
                     for rel_name in [relative_field(c.name, path)]
                     for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]

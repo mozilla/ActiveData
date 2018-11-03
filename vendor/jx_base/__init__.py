@@ -35,6 +35,10 @@ def generateGuid():
     return text_type(uuid4())
 
 
+def first(values):
+    return iter(values).next()
+
+
 def _exec(code, name):
     try:
         globs = globals()
@@ -230,3 +234,5 @@ from jx_base.facts import Facts
 from jx_base.snowflake import Snowflake
 from jx_base.table import Table
 from jx_base.schema import Schema
+
+

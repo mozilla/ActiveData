@@ -131,7 +131,19 @@ git checkout activedata
 git pull origin activedata
 sudo pip install -r requirements.txt
 
+# Install Read Only plugin
+# Important: download the latest build from https://readonlyrest.com/download/
+# Use the version 6.1.2
+# The downloaded file should be put on the target server as /tmp/es-readonly.zip
+cd /usr/local/elasticsearch/
+sudo bin/elasticsearch-plugin install file:///tmp/es-readonly.zip
+cp ~/ActiveData/resources/config/readonlyrest.yml /usr/local/elasticsearch/config/readonlyrest.yml
 
+# Replace the placeholders in configuration files with real values
+# The RELMAN_HASH is an sha256 hash of user:password
+# See https://github.com/beshu-tech/readonlyrest-docs/blob/master/elasticsearch.md#auth_key_sha256
+sed -i -e 's/RELMAN_USERNAME/xxxx/g' /usr/local/elasticsearch/config/readonlyrest.yml
+sed -i -e 's/RELMAN_HASH/yyyy/g' /usr/local/elasticsearch/config/readonlyrest.yml
 
 
 

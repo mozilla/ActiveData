@@ -15,7 +15,7 @@ import itertools
 from collections import Mapping
 from numbers import Number
 
-from mo_future import text_type
+from mo_future import text_type, sort_using_cmp
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
@@ -210,7 +210,12 @@ class SimpleSetDomain(Domain):
     DOMAIN IS A LIST OF OBJECTS, EACH WITH A value PROPERTY
     """
 
-    __slots__ = ["NULL", "partitions", "map", "order"]
+    __slots__ = [
+        "NULL",       # THE value FOR NULL
+        "partitions", # LIST OF {name, value, dataIndex} dicts
+        "map",        # MAP FROM value TO name
+        "order"       # MAP FROM value TO dataIndex
+    ]
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
@@ -251,10 +256,13 @@ class SimpleSetDomain(Domain):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
         elif desc.partitions and isinstance(desc.partitions[0][desc.key], Mapping):
+            # LOOKS LIKE OBJECTS
+            # sorted = desc.partitions[desc.key]
+
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-            # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
-            # self.map = UniqueIndex(keys=self.key)
+            self.order = {p[self.key]: p.dataIndex for p in desc.partitions}
+            self.partitions = desc.partitions
         elif len(desc.partitions) == 0:
             # CREATE AN EMPTY DOMAIN
             self.key = "value"

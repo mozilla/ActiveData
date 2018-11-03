@@ -17,6 +17,7 @@ from collections import Mapping
 from decimal import Decimal
 
 import mo_json
+from jx_base import first
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
@@ -64,7 +65,7 @@ def jx_expression(expr, schema=None):
         if len(leaves) == 0:
             v.data_type = IS_NULL
         if len(leaves) == 1:
-            v.data_type = list(leaves)[0].jx_type
+            v.data_type = first(leaves).jx_type
     return output
 
 
@@ -227,7 +228,7 @@ class Expression(object):
         return self.data_type
 
     def __eq__(self, other):
-        self_class = self.__class_
+        self_class = self.__class__
         Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
         if other is None:
             return False
@@ -568,6 +569,10 @@ class NullOp(Literal):
     USE IT TO EXPECT A NULL VALUE IN assertAlmostEqual
     """
     data_type = OBJECT
+
+    @classmethod
+    def define(cls, expr):
+        return NULL
 
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls, *args, **kwargs)
@@ -2789,7 +2794,7 @@ class CaseOp(Expression):
         if len(types) > 1:
             return OBJECT
         else:
-            return list(types)[0]
+            return first(types)
 
 
 class UnionOp(Expression):
@@ -2847,8 +2852,7 @@ class UnionOp(Expression):
 
         return output
 
-
-class NestedOp(Expression):
+class EsNestedOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
@@ -2860,13 +2864,13 @@ class NestedOp(Expression):
     def partial_eval(self):
         if self.path.var == '.':
             return self.query.partial_eval()
-        return NestedOp("nested", [self.path, self.query.partial_eval()])
+        return EsNestedOp("es.nested", [self.path, self.query.partial_eval()])
 
     def __data__(self):
-        return {"nested": {self.path.var: self.query.__data__()}}
+        return {"es.nested": {self.path.var: self.query.__data__()}}
 
     def __eq__(self, other):
-        if isinstance(other, NestedOp):
+        if isinstance(other, EsNestedOp):
             return self.path.var == other.path.var and self.query == other.query
         return False
 
@@ -2883,6 +2887,10 @@ class BasicStartsWithOp(Expression):
 
     def __data__(self):
         return {"basic.startsWith": [self.value.__data__(), self.prefix.__data__()]}
+
+    def __eq__(self, other):
+        if isinstance(other, BasicStartsWithOp):
+            return self.value==other.value and self.prefix==other.prefix
 
     def vars(self):
         return self.value.vars() | self.prefix.vars()

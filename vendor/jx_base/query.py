@@ -278,6 +278,7 @@ class QueryOp(Expression):
 
 
 canonical_aggregates = wrap({
+    "cardinality": {"name":"cardinality", "default": 0},
     "count": {"name": "count", "default": 0},
     "min": {"name": "minimum"},
     "max": {"name": "maximum"},
@@ -449,7 +450,8 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                         name=edge,
                         value=jx_expression(edge, schema=schema),
                         allowNulls=True,
-                        dim=dim_index
+                        dim=dim_index,
+                        domain=_normalize_domain(None, limit)
                     )
                 ]
             elif isinstance(leaves, _Column):
@@ -518,8 +520,10 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 def _normalize_groupby(groupby, limit, schema=None):
     if groupby == None:
         return None
-    output = wrap([n for ie, e in enumerate(listwrap(groupby)) for n in _normalize_group(e, ie, limit, schema=schema) ])
-    if any(o==None for o in output):
+    output = wrap([n for e in listwrap(groupby) for n in _normalize_group(e, None, limit, schema=schema)])
+    for i, o in enumerate(output):
+        o.dim = i
+    if any(o == None for o in output):
         Log.error("not expected")
     return output
 
@@ -536,7 +540,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
             prefix = edge[:-2]
             if schema:
                 output = wrap([
-                    {
+                    {  # BECASUE THIS IS A GROUPBY, EARLY SPLIT INTO LEAVES WORKS JUST FINE
                         "name": concat_field(prefix, literal_field(relative_field(untype_path(c.name), prefix))),
                         "put": {"name": literal_field(untype_path(c.name))},
                         "value": jx_expression(c.es_column, schema=schema),
@@ -550,7 +554,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 return wrap([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
-                    "value": jx_expression(prefix, schema=schema),
+                    "value": LeavesOp(None, Variable(prefix)),
                     "allowNulls": True,
                     "dim":dim_index,
                     "domain": {"type": "default"}

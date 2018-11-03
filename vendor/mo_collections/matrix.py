@@ -40,7 +40,7 @@ class Matrix(object):
         self.num = len(dims)
         self.dims = tuple(dims)
         if zeros != None:
-            if self.num == 0 or any(d == 0 for d in dims):  #NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
+            if self.num == 0 or any(d == 0 for d in dims):  # NO DIMS, OR HAS A ZERO DIM, THEN IT IS A NULL CUBE
                 if hasattr(zeros, "__call__"):
                     self.cube = zeros()
                 else:
@@ -171,10 +171,11 @@ class Matrix(object):
 
     def __iter__(self):
         if not self.dims:
-            return [self.value].__iter__()
+            yield (tuple(), self.value)
         else:
             # TODO: MAKE THIS FASTER BY NOT CALLING __getitem__ (MAKES CUBE OBJECTS)
-            return ((c, self[c]) for c in self._all_combos())
+            for c in self._all_combos():
+                yield (c, self[c])
 
     def __float__(self):
         return self.value

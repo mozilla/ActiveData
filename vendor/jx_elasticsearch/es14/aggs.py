@@ -303,7 +303,7 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
         for d in decoders[1]:
-            es_query = d.append_query(es_query, start)
+            es_query = d.append_query(".", es_query, start)
             start += d.num_columns
 
         if split_where[1]:
@@ -325,7 +325,7 @@ def es_aggsop(es, frum, query):
 
     if decoders:
         for d in jx.reverse(decoders[0]):
-            es_query = d.append_query(es_query, start)
+            es_query = d.append_query(".", es_query, start)
             start += d.num_columns
 
     if split_where[0]:

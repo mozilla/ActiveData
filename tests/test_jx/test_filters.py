@@ -14,8 +14,6 @@ from __future__ import unicode_literals
 
 from jx_base.expressions import NULL
 from mo_dots import wrap
-
-from jx_base.expressions import NULL
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])

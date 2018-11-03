@@ -980,9 +980,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-
-
     def test_deep_edge_using_list(self):
         data = [{"a": {"_b": [
             {"r": "a",  "s": "aa"},
@@ -1009,13 +1006,13 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"v": ["a", "aa"], "count": 1},
+                    {"v": ["a" , "aa"], "count": 1},
                     {"v": [NULL, "bb"], "count": 1},
                     {"v": ["bb", "bb"], "count": 1},
-                    {"v": ["c", "cc"], "count": 1},
+                    {"v": ["c" , "cc"], "count": 1},
                     {"v": [NULL, "dd"], "count": 1},
-                    {"v": ["e", "ee"], "count": 2},
-                    {"v": ["f", NULL], "count": 2},
+                    {"v": ["e" , "ee"], "count": 2},
+                    {"v": ["f" , NULL], "count": 2},
                     {"v": [NULL, NULL], "count": 1}
                 ]
             },
@@ -1023,13 +1020,13 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["v", "count"],
                 "data": [
-                    [["a", "aa"], 1],
+                    [["a" , "aa"], 1],
                     [[NULL, "bb"], 1],
                     [["bb", "bb"], 1],
-                    [["c", "cc"], 1],
+                    [["c" , "cc"], 1],
                     [[NULL, "dd"], 1],
-                    [["e", "ee"], 2],
-                    [["f", NULL], 2],
+                    [["e" , "ee"], 2],
+                    [["f" , NULL], 2],
                     [[NULL, NULL], 1]
                 ]
             },
@@ -1619,14 +1616,13 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    @skip("for Orange query")
-    def test_edge_w_expression(self):
+    def test_deep_edge_w_shallow_expression(self):
         test = {
             "data": [
                 {"v": 1, "a": "b"},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
                 {"v": 2, "a": [{"b": 1}]},
                 {"v": 3, "a": {}},
-                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
                 {"v": 5, "a": [{"b": 4}]},
                 {"v": 6, "a": 3},
                 {"v": 7}
@@ -1640,64 +1636,134 @@ class TestDeepOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"b": 1, "count": 2},
-                    {"b": 2, "count": 2},
+                    {"b": 2, "count": 1},  # v (at b==2) is multivalued: [4, 4] =>  is not null => {"when":"v", "then":1} == 1
                     {"b": 4, "count": 1},
-                    {"count": 3}
+                    {"count": 4}
                 ]
             },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["b", "count"],
+                "data": [
+                    [1, 2],
+                    [2, 1],
+                    [4, 1],
+                    [NULL, 4]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
+                "data": {
+                    "count": [2, 1, 1, 4]
+                }
+            }
         }
         self.utils.execute_tests(test)
 
-    @skip("not ready")
-    def test_edge(self):
+    def test_deep_edge_w_shallow_var(self):
         test = {
             "data": [
                 {"v": 1, "a": "b"},
-                {"v": 2, "a": {"b": 1}},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+                {"v": 2, "a": [{"b": 1}]},
                 {"v": 3, "a": {}},
-                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
-                {"v": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"v": 5, "a": [{"b": 4}]},
                 {"v": 6, "a": 3},
-                {"v": 7}
+                {"v": 7},
+                {"v": 8, "a": [{}, {"b": 2}]}
             ],
             "query": {
-                "from": TEST_TABLE + ".a",
+                "from": TEST_TABLE+".a",
                 "edges": [{"value": "b"}],
-                "select": {"value": "v", "aggregate": "sum"}
+                "select": {"name": "sum", "value": "v", "aggregate": "sum"}
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"b": 1, "v": 6},
-                    {"b": 2, "v": 8},
-                    {"b": 4, "v": 5},
-                    {"v": 14}
+                    {"b": 1, "sum": 6},
+                    {"b": 2, "sum": 12},  # v (at b==2) is multivalued: [4, 4] =>  is not null => {"when":"v", "then":1} == 1
+                    {"b": 4, "sum": 5},
+                    {"sum": 25}
                 ]
             },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["b", "sum"],
+                "data": [
+                    [1, 6],
+                    [2, 12],
+                    [4, 5],
+                    [NULL, 25]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
+                "data": {
+                    "sum": [6, 12, 5, 25]
+                }
+            }
         }
         self.utils.execute_tests(test)
+
+    def test_nested_property_edge_w_shallow_expression(self):
+        test = {
+            "data": [
+                {"v": 1, "a": "b"},
+                {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+                {"v": 2, "a": [{"b": 1}]},
+                {"v": 3, "a": {}},
+                {"v": 5, "a": [{"b": 4}]},
+                {"v": 6, "a": 3},
+                {"v": 7}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": [{"name": "b", "value": "a.b"}],
+                "select": {"name": "count", "value": {"when": "v", "then": 1}, "aggregate": "count"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": 1, "count": 2},
+                    {"b": 2, "count": 1},
+                    {"b": 4, "count": 1},
+                    {"count": 3}
+                ]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["b", "count"],
+                "data": [
+                    [1, 2],
+                    [2, 1],
+                    [4, 1],
+                    [NULL, 3]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "b", "domain": {"partitions": [
+                    {"value": 1},
+                    {"value": 2},
+                    {"value": 4}
+                ]}}],
+                "data": {
+                    "count": [2, 1, 1, 3]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
 
 
 # TODO: using "find" as a filter should be legitimate:

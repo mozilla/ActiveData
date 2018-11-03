@@ -196,8 +196,9 @@ def es_aggsop(es, frum, query):
             formula.append(s)
 
     acc = Aggs()
-    for canonical_name, many in new_select.items():
+    for _, many in new_select.items():
         for s in many:
+            canonical_name = s.name
             if s.aggregate in ("value_count", "count"):
                 columns = frum.schema.values(s.value.var, exclude_type=(OBJECT, NESTED))
             else:

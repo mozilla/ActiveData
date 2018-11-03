@@ -36,7 +36,7 @@ def jx_query(path):
     with RegisterThread():
         try:
             with Timer("total duration") as query_timer:
-                preamble_timer = Timer("preamble")
+                preamble_timer = Timer("preamble", silent=True)
                 with preamble_timer:
                     if flask.request.headers.get("content-length", "") in ["", "0"]:
                         # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
@@ -57,7 +57,7 @@ def jx_query(path):
                     if data.meta.testing:
                         test_mode_wait(data)
 
-                translate_timer = Timer("translate")
+                translate_timer = Timer("translate", silent=True)
                 with translate_timer:
                     frum = find_container(data['from'])
                     result = jx.run(data, container=frum)
@@ -78,10 +78,10 @@ def jx_query(path):
                 result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                with Timer("jsonification") as json_timer:
+                with Timer("jsonification", silent=True) as json_timer:
                     response_data = unicode2utf8(value2json(result))
 
-            with Timer("post timer"):
+            with Timer("post timer", silent=True):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
                 timing_replacement = (

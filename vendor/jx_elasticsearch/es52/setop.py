@@ -209,9 +209,7 @@ def es_setop(es, query):
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
-
-        with Timer("formatter"):
-            output = formatter(T, new_select, query)
+        output = formatter(T, new_select, query)
         output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query

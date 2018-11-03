@@ -80,6 +80,7 @@ class ExprAggs(Aggs):
     def merge(self, other):
         if self != other:
             return False
+        self.expr += other.expr
         self.children.extend(other.children)
         self.decoders.extend(other.decoders)
         self.selects.extend(other.selects)

@@ -122,6 +122,37 @@ class TestAggOps(BaseTestCase):
         self.utils.execute_tests(test, places=1.5)  # 1.5 approx +/- 3%
 
     @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
+    def test_both_percentile(self):
+        test = {
+            "data": [{"a": i**2} for i in range(30)],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {"name": "a", "value": "a", "aggregate": "percentile", "percentile": 0.90},
+                    {"name": "b", "value": "a", "aggregate": "median"}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": [{"a": 702.5, "b": 210.5}]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "b"],
+                "data": [[702.5, 210.5]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [],
+                "data": {
+                    "a": 702.5,
+                    "b": 210.5
+                }
+            }
+        }
+        self.utils.execute_tests(test, places=1.5)  # 1.5 approx +/- 3%
+
+    @skipIf(global_settings.use=="sqlite", "not expected to pass yet")
     def test_stats(self):
         test = {
             "data": [{"a": i**2} for i in range(30)],

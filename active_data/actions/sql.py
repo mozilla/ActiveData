@@ -41,7 +41,7 @@ def sql_query(path):
         request_body = None
         try:
             with query_timer:
-                preamble_timer = Timer("preamble")
+                preamble_timer = Timer("preamble", silent=True)
                 with preamble_timer:
                     if flask.request.headers.get("content-length", "") in ["", "0"]:
                         # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
@@ -60,7 +60,7 @@ def sql_query(path):
                     data = json2value(text)
                     record_request(flask.request, data, None, None)
 
-                translate_timer = Timer("translate")
+                translate_timer = Timer("translate", silent=True)
                 with translate_timer:
                     if not data.sql:
                         Log.error("Expecting a `sql` parameter")
@@ -86,10 +86,10 @@ def sql_query(path):
                 result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-                with Timer("jsonification") as json_timer:
+                with Timer("jsonification", silent=True) as json_timer:
                     response_data = unicode2utf8(value2json(result))
 
-            with Timer("post timer"):
+            with Timer("post timer", silent=True):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
                 timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\

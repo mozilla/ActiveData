@@ -203,6 +203,7 @@ class ElasticsearchMetadata(Namespace):
                         else:
                             continue
                     best[clean_name] = abs_column
+                output.append(abs_column)
 
             # REGISTER ALL COLUMNS
             canonicals = []

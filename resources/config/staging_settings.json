@@ -54,7 +54,8 @@
 				"host": "http://localhost",
 				"port": 9200,
 				"index": "debug_active_data",
-				"type": "active_data"
+				"type": "active_data",
+				"timeout": 600
 			},
 			{
 				"class": "logging.handlers.RotatingFileHandler",

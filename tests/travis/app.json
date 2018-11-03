@@ -29,9 +29,10 @@
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"
 		},
- 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
+		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
-		"jx_elasticsearch.meta.DEBUG": false
+		"jx_elasticsearch.meta.DEBUG": false,
+		"jx_python.meta.DEBUG": false
 	},
 	"request_logs": {
 		"host": "http://localhost",

@@ -714,7 +714,9 @@ def to_esfilter(self, schema):
         # PREVENT RECURSIVE LOOP
         v = self.term.expr.var
         cols = schema.values(v, (OBJECT, NESTED))
-        if len(cols) == 1:
+        if len(cols) == 0:
+            return false_script
+        elif len(cols) == 1:
             return {"exists": {"field": first(cols).es_column}}
         else:
             return es_and([{"exists": {"field": c.es_column}} for c in cols])
@@ -790,6 +792,8 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if isinstance(self.term, Variable):
         columns = schema.values(self.term.var)
+        if len(columns) == 0:
+            return null_script
         if len(columns) == 1:
             return self.term.to_es_script(schema, many=False)
 
@@ -1033,7 +1037,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return CoalesceOp("coalesce", [StringOp("string", t).partial_eval() for t in value.frum.terms]).to_es_script(schema)
 
     if value.miss is TRUE or value.type is IS_NULL:
-        return null_script
+        return empty_string_script
     elif value.type == BOOLEAN:
         return EsScript(
             miss=self.term.missing().partial_eval(),
@@ -1072,6 +1076,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 true_script = EsScript(type=BOOLEAN, expr="true", frum=TRUE)
 false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE)
 null_script = EsScript(miss=TRUE, type=IS_NULL, expr="null", frum=NULL)
+empty_string_script = EsScript(miss=TRUE, type=STRING, expr='""', frum=NULL)
 
 
 @extend(TrueOp)
@@ -1098,6 +1103,9 @@ def to_esfilter(self, schema):
 @extend(BasicStartsWithOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     expr = FirstOp("first", self.value).partial_eval().to_es_script(schema)
+    if expr is empty_string_script:
+        return false_script
+
     prefix = self.prefix.to_es_script(schema).partial_eval()
     return EsScript(
         miss=FALSE,

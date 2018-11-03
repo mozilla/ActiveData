@@ -759,8 +759,8 @@ class Schema(jx_base.Schema):
             for c in columns:
                 if c.jx_type in exclude_type:
                     continue
-                if c.cardinality == 0:
-                    continue
+                # if c.cardinality == 0:
+                #     continue
                 if untype_path(c.name) == full_path:
                     output.append(c)
             if output:

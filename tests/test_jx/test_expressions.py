@@ -15,7 +15,7 @@ from __future__ import unicode_literals
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es52 import expressions
-from mo_dots import Null
+from mo_dots import Null, wrap
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times import Date, MONTH
 
@@ -68,12 +68,6 @@ class TestExpressions(FuzzyTestCase):
 
     def test_null_startswith_null(self):
         filter = jx_expression({"prefix": [{"null": {}}, {"literal": ""}]}).to_esfilter(Null)
-        expected = {"match_all": {}}
-        self.assertEqual(filter, expected)
-        self.assertEqual(expected, filter)
-
-    def test_null_var_startswith(self):
-        filter = jx_expression({"prefix": ["name", {"literal": "something"}]}).partial_eval().to_esfilter(no_schema)
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)

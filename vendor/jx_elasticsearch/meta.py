@@ -153,7 +153,7 @@ class ElasticsearchMetadata(Namespace):
 
     def _parse_properties(self, alias, mapping):
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
-        if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
+        if DEBUG and any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",
                 names=[

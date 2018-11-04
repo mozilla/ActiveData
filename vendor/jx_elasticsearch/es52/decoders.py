@@ -68,7 +68,7 @@ class AggsDecoder(object):
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.cardinality == None:
-                    Log.warning(
+                    DEBUG and Log.warning(
                         "metadata for column {{name|quote}} (id={{id}}) is not ready",
                         name=concat_field(col.es_index, col.es_column),
                         id=id(col)

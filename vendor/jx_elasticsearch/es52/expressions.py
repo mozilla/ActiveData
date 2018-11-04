@@ -359,8 +359,10 @@ def to_esfilter(self, schema):
 
 @extend(TupleOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-    terms = [FirstOp("first", t).partial_eval().to_es_script(schema) for t in self.terms]
-    expr = 'new Object[]{'+','.join(t.expr for t in terms)+'}'
+    expr = 'new Object[]{' + ','.join(
+        FirstOp("first", t).partial_eval().to_es_script(schema).script(schema)
+        for t in self.terms
+    ) + '}'
     return EsScript(
         type=OBJECT,
         expr=expr,

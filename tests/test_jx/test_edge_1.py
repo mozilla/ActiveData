@@ -1826,6 +1826,51 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+
+    def test_range2(self):
+        test = {
+            "data": [
+                {"s": 0},  # THIS RECORD HAS NO LIFESPAN, SO WE DO NOT COUNT IT
+                {"s": 1},
+                {"s": 2},
+                {"s": 3},
+                {"s": 4},
+                {"s": 5},
+                {"s": 6},
+                {"s": 7},
+                {"s": 8}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": [
+                    {
+                        "domain": {
+                            "type": "range",
+                            "key": "name",
+                            "partitions": [
+                                {
+                                    "max": 4,
+                                    "min": 0,
+                                    "dataIndex": 0,
+                                    "name": "first_four"
+                                }
+                            ]
+                        },
+                        "value": "s"
+                    }
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"s": "first_four", "count": 4},
+                    {"s": NULL, "count": 5}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+
     def test_edge_w_partition_filters(self):
         test = {
             "data": structured_test_data,

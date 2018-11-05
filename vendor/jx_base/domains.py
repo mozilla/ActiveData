@@ -19,7 +19,7 @@ from mo_future import text_type, sort_using_cmp
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import coalesce, Data, set_default, Null, listwrap
+from mo_dots import coalesce, Data, set_default, Null, listwrap, unwrap
 from mo_dots import wrap
 from mo_dots.lists import FlatList
 from mo_logs import Log
@@ -671,7 +671,7 @@ class RangeDomain(Domain):
             if not self.key:
                 Log.error("Must have a key value")
 
-            parts = list(listwrap(self.partitions))
+            parts =listwrap(self.partitions)
             for i, p in enumerate(parts):
                 self.min = MIN([self.min, p.min])
                 self.max = MAX([self.max, p.max])
@@ -683,10 +683,10 @@ class RangeDomain(Domain):
 
             # VERIFY PARTITIONS DO NOT OVERLAP, HOLES ARE FINE
             for p, q in itertools.product(parts, parts):
-                if p is not q and p.min <= q.min and q.min < p.max:
+                if p.min <= q.min and q.min < p.max and unwrap(p) is not unwrap(q):
                     Log.error("partitions overlap!")
 
-            self.partitions = parts
+            self.partitions = wrap(parts)
             return
         elif any([self.min == None, self.max == None, self.interval == None]):
             Log.error("Can not handle missing parameter")

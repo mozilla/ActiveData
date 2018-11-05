@@ -11,13 +11,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import TRUE, AndOp, ScriptOp, EsNestedOp
-
+from jx_base.expressions import TRUE, AndOp, EsNestedOp
 from jx_elasticsearch.es52.expressions import Variable
-from mo_dots import wrap, startswith_field, literal_field
+from mo_dots import wrap, literal_field
 from mo_future import text_type, sort_using_key
-from mo_json import STRING, BOOLEAN, NUMBER, OBJECT
+from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL
 from mo_logs import Log
+from pyLibrary.convert import value2boolean
 
 
 def es_query_template(path):
@@ -169,3 +169,11 @@ def es_script(term):
 
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}
+
+
+pull_functions = {
+    IS_NULL: lambda x: None,
+    STRING: lambda x: x,
+    NUMBER: lambda x: float(x) if x !=None else None,
+    BOOLEAN: value2boolean
+}

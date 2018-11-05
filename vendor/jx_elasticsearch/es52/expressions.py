@@ -27,7 +27,7 @@ from mo_logs import Log, suppress_exception
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, OR
 from mo_times import Date
-from pyLibrary.convert import string2regexp
+from pyLibrary.convert import string2regexp, value2boolean
 
 NUMBER_TO_STRING = """
 Optional.of({{expr}}).map(
@@ -1181,12 +1181,21 @@ def to_esfilter(self, schema):
     if isinstance(self.value, Variable):
         var = self.value.var
         cols = schema.leaves(var)
-        if cols:
-            var = first(cols).es_column
-        if isinstance(self.superset, Literal) and not isinstance(self.superset.value, (list, tuple)):
-            return {"term": {var: self.superset.value}}
+        if not cols:
+            Log.error("expecting {{var}} to be a column", var=var)
+        col = first(cols)
+        var = col.es_column
+
+        if col.jx_type == BOOLEAN:
+            if isinstance(self.superset, Literal) and not isinstance(self.superset.value, (list, tuple)):
+                return {"term": {var: value2boolean(self.superset.value)}}
+            else:
+                return {"terms": {var: map(value2boolean, self.superset.value)}}
         else:
-            return {"terms": {var: self.superset.value}}
+            if isinstance(self.superset, Literal) and not isinstance(self.superset.value, (list, tuple)):
+                return {"term": {var: self.superset.value}}
+            else:
+                return {"terms": {var: self.superset.value}}
     else:
         return ScriptOp("script",  self.to_es_script(schema).script(schema)).to_esfilter(schema)
 

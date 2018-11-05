@@ -2059,6 +2059,34 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_boolean_on_edge(self):
+        test = {
+            "data": [
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "edges": ["result.ok"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"result": {"ok": True}, "count": 4},
+                    {"result": {"ok": False}, "count": 5}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
 
 
 # TODO: ALLOW USE OF EDGE VARIABLES IN QUERY

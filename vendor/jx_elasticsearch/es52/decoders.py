@@ -170,19 +170,11 @@ class SetDecoder(AggsDecoder):
 
     def append_query(self, query_path, es_query):
         domain = self.domain
-
         domain_key = domain.key
-        include, text_include = transpose(*(
-            (
-                float(v) if isinstance(v, (int, float)) else v,
-                text_type(float(v)) if isinstance(v, (int, float)) else v
-            )
-            for v in (p[domain_key] for p in domain.partitions)
-        ))
+        include = tuple(p[domain_key] for p in domain.partitions)
         value = self.edge.value
 
         exists = AndOp("and", [
-            # value.exists(),  # TODO: is this needed?
             InOp("in", [value, Literal("literal", include)])
         ]).partial_eval()
 
@@ -725,9 +717,3 @@ class DimFieldListDecoder(SetDecoder):
         return len(self.fields)
 
 
-pull_functions = {
-    IS_NULL: lambda x: None,
-    STRING: lambda x: x,
-    NUMBER: lambda x: float(x) if x !=None else None,
-    BOOLEAN: value2boolean
-}

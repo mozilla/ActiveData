@@ -369,7 +369,20 @@ class ElasticsearchMetadata(Namespace):
                 })
                 count = result.hits.total
                 cardinality = 2
-                multi = 1
+
+                DEBUG and Log.note("{{table}}.{{field}} has {{num}} parts", table=column.es_index, field=column.es_column, num=cardinality)
+                self.meta.columns.update({
+                    "set": {
+                        "count": count,
+                        "cardinality": cardinality,
+                        "partitions": [False, True],
+                        "multi": 1,
+                        "last_updated": now
+                    },
+                    "clear": ["partitions"],
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
+                })
+                return
             else:
                 es_query = {
                     "aggs": {

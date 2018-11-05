@@ -30,7 +30,7 @@ from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
 from pyLibrary.convert import value2boolean
 
-DEBUG = True
+DEBUG = False
 
 
 class AggsDecoder(object):

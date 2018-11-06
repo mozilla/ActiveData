@@ -14,17 +14,17 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY, AndOp, TRUE, EsNestedOp
+from jx_base.expressions import IDENTITY, AndOp
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_path
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_path, MATCH_ALL
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_and, es_or
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
-from mo_future import transpose, sort_using_key
+from mo_future import transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
@@ -64,7 +64,7 @@ def es_setop(es, query):
             es_select = split_select[path] = ESSelect(path)
         return es_select
 
-    nested_filter = FlatList()
+
     selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
 
@@ -168,10 +168,10 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            split_scripts = split_expression_by_path(select.value.partial_eval(), schema)
+            split_scripts = split_expression_by_path(select.value, schema)
             for p, script in split_scripts.items():
                 es_select = get_select(p)
-                es_select.scripts[select.name]=script
+                es_select.scripts[select.name] = {"script": script[0].partial_eval().to_es_script(schema).script(schema)}
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function("fields." + literal_field(select.name)),
@@ -201,6 +201,8 @@ def es_setop(es, query):
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
+
+    Log.note("{{output}}", output=T)
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
@@ -406,6 +408,7 @@ def es_query_proto(path, selects, wheres, schema):
     :return: (es_query, filters_map) TUPLE
     """
     output = None
+    last_where = MATCH_ALL
     for p in reversed(sorted( wheres.keys() | set(selects.keys()))):
         where = wheres.get(p)
         select = selects.get(p)
@@ -413,12 +416,17 @@ def es_query_proto(path, selects, wheres, schema):
         if where:
             where = AndOp("and", where).partial_eval().to_esfilter(schema)
             if output:
-                where = {"bool": {"filter": [where, output]}}
+                where = es_or([es_and([output, where]), where])
         else:
             if output:
-                where = output
+                if last_where is MATCH_ALL:
+                    where = es_or([output, MATCH_ALL])
+                else:
+                    where = output
             else:
-                where = {"match_all": {}}
+                where = MATCH_ALL
+
+
 
         if p == ".":
             output = set_default(
@@ -433,8 +441,9 @@ def es_query_proto(path, selects, wheres, schema):
         else:
             output = {"nested": {
                 "path": p,
-                "inner_hits": set_default({"size": 100000}, select.to_es()),
+                "inner_hits": set_default({"size": 100000}, select.to_es()) if select else None,
                 "query": where
             }}
 
+        last_where = where
     return output

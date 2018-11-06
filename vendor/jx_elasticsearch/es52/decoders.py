@@ -171,8 +171,9 @@ class SetDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
         domain = self.domain
         domain_key = domain.key
-        include = tuple(p[domain_key] for p in domain.partitions)
         value = self.edge.value
+        cnv = pull_functions[value.type]
+        include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
         exists = AndOp("and", [
             InOp("in", [value, Literal("literal", include)])

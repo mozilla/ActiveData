@@ -413,14 +413,14 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "data": [
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
                     {"ab": 0, "b": 1},
                     {"ab": 1, "b": 1},
-                    {"ab": 0, "b": 0},
                     {"ab": 3, "b": 1},
-                    {"ab": 0, "b": 0},
                     {"ab": 5, "b": 1},
-                    {"ab": 0, "b": 0},
-                    {"ab": 0, "b": 0},
                     {"ab": 8, "b": 1},
                     {"ab": NULL, "b": 1},
                     {"ab": NULL, "b": 0}

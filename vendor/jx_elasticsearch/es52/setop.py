@@ -14,7 +14,7 @@ from __future__ import unicode_literals
 from collections import Mapping
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY
+from jx_base.expressions import IDENTITY, AndOp
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_path, MATCH_ALL

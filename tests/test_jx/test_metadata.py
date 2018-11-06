@@ -220,6 +220,6 @@ class TestMetadata(BaseTestCase):
                 ]
             }
         }
-        subtest = wrap(pre_test)
+        subtest = wrap(test)
         subtest.name = text_type(extract_stack()[1]['method'])
         self.utils.send_queries(subtest)

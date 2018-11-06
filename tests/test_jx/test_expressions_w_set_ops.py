@@ -382,7 +382,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("boolean in when is not using false")
     def test_select_mult_w_when(self):
         test = {
             "data": [

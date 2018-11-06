@@ -327,8 +327,35 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-
+    def test_eq_with_boolean(self):
+        test = {
+            "data": [
+                {"v": True},
+                {"v": True},
+                {"v": True},
+                {"v": False},
+                {"v": False},
+                {"v": False},
+                {"v": None},
+                {"v": None},
+                {"v": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"eq":{"v":"T"}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list"
+                },
+                "data": [
+                    {"v": True},
+                    {"v": True},
+                    {"v": True}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
 
 
 

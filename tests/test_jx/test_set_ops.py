@@ -518,7 +518,7 @@ class TestSetOps(BaseTestCase):
                         "type": "nested",
                         "properties": {
                             "y": {
-                                "type": "string"
+                                "type": "keyword"
                             },
                             "b": {
                                 "type": "nested",
@@ -529,7 +529,7 @@ class TestSetOps(BaseTestCase):
                                 }
                             },
                             "z": {
-                                "type": "string"
+                                "type": "keyword"
                             }
                         }
                     }
@@ -617,7 +617,7 @@ class TestSetOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test)
+        self.utils.execute_tests(test, typed=False)
 
     @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
@@ -790,10 +790,10 @@ class TestSetOps(BaseTestCase):
     def test_select_expression(self):
         test = {
             "data": [
-                       {"a": {"b": 0, "c": 0}},
-                       {"a": {"b": 0, "c": 1}},
-                       {"a": {"b": 1, "c": 0}},
-                       {"a": {"b": 1, "c": 1}},
+                {"a": {"b": 0, "c": 0}},
+                {"a": {"b": 0, "c": 1}},
+                {"a": {"b": 1, "c": 0}},
+                {"a": {"b": 1, "c": 1}},
             ],
             "query": {
                 "from": TEST_TABLE,
@@ -1105,7 +1105,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("was working")
+    # @skip("was working")
     def test_select_array_as_value(self):
         test = {
             "data": [
@@ -1281,3 +1281,20 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def select_id_and_source(self):
+        test = {
+            "data": [
+                {"_id": "test_id", "v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": ["_id", {"name": "_source", "value": "."}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"_id": "test_id", "_source":{"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]}}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)

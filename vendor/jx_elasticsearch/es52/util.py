@@ -58,38 +58,6 @@ def es_query_template(path):
         return output, wrap([f0])
 
 
-def es_query_proto(path, wheres, schema):
-    """
-    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
-    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
-    :param wheres: MAP FROM path TO LIST OF WHERE CONDITIONS
-    :return: (es_query, filters_map) TUPLE
-    """
-
-    literal_path = literal_field(path)
-    if literal_path not in wheres:
-        wheres[literal_path] += [TRUE]
-
-    for p, filter in sort_using_key(wheres.items(), lambda r: -len(r[0])):
-        if p == path:
-            if p == ".":
-                output = wrap({
-                    "from": 0,
-                    "size": 0,
-                    "sort": []
-                })
-            else:
-                output = {"nested": {
-                    "path": p,
-                    "inner_hits": {"size": 100000}
-                }}
-        else:
-            # parent filter
-            wheres[literal_path] += [EsNestedOp("nested", [Variable(p), AndOp("and", filter)])]
-
-    output.query = AndOp("and", wheres[literal_path]).partial_eval().to_esfilter(schema)
-    return output
-
 
 def jx_sort_to_es_sort(sort, schema):
     if not sort:

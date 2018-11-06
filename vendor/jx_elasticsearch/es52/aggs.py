@@ -431,6 +431,8 @@ def es_aggsop(es, frum, query):
     with Timer("ES query time", silent=not DEBUG) as es_duration:
         result = es_post(es, es_query, query.limit)
 
+    # Log.note("{{output}}", output=result)
+
     try:
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:

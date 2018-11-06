@@ -98,10 +98,10 @@ def es_deepop(es, query):
     new_select = FlatList()
 
     put_index = 0
-    for s in selects:
-        if isinstance(s.value, LeavesOp) and isinstance(s.value.term, Variable):
+    for select in selects:
+        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
             # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-            leaves = schema.leaves(s.value.term.var)
+            leaves = schema.leaves(select.value.term.var)
             col_names = set()
             for c in leaves:
                 if c.nested_path[0] == ".":
@@ -111,9 +111,9 @@ def es_deepop(es, query):
                 c_name = untype_path(relative_field(c.name, query_path))
                 col_names.add(c_name)
                 new_select.append({
-                    "name": concat_field(s.name, c_name),
+                    "name": concat_field(select.name, c_name),
                     "nested_path": c.nested_path[0],
-                    "put": {"name": concat_field(s.name, literal_field(c_name)), "index": put_index, "child": "."},
+                    "put": {"name": concat_field(select.name, literal_field(c_name)), "index": put_index, "child": "."},
                     "pull": get_pull_function(c)
                 })
                 put_index += 1
@@ -123,13 +123,13 @@ def es_deepop(es, query):
                 if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
                     n.put.name = n.name = n.name.lstrip(".")
                     col_names.add(n.name)
-        elif isinstance(s.value, Variable):
-            net_columns = schema.leaves(s.value.var)
+        elif isinstance(select.value, Variable):
+            net_columns = schema.leaves(select.value.var)
             if not net_columns:
                 new_select.append({
-                    "name": s.name,
+                    "name": select.name,
                     "nested_path": ".",
-                    "put": {"name": s.name, "index": put_index, "child": "."},
+                    "put": {"name": select.name, "index": put_index, "child": "."},
                     "pull": NULL
                 })
             else:
@@ -143,8 +143,8 @@ def es_deepop(es, query):
                     # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
                     for np in n.nested_path:
                         c_name = untype_path(relative_field(n.name, np))
-                        if startswith_field(c_name, s.value.var):
-                            child = relative_field(c_name, s.value.var)
+                        if startswith_field(c_name, select.value.var):
+                            child = relative_field(c_name, select.value.var)
                             break
                     else:
                         continue
@@ -152,18 +152,18 @@ def es_deepop(es, query):
                         # child = relative_field(untype_path(relative_field(n.name, n.nested_path[0])), s.value.var)
 
                     new_select.append({
-                        "name": s.name,
+                        "name": select.name,
                         "pull": pull,
                         "nested_path": n.nested_path[0],
                         "put": {
-                            "name": s.name,
+                            "name": select.name,
                             "index": put_index,
                             "child": child
                         }
                     })
             put_index += 1
         else:
-            expr = s.value
+            expr = select.value
             for v in expr.vars():
                 for c in schema[v.var]:
                     if c.nested_path[0] == ".":
@@ -171,16 +171,16 @@ def es_deepop(es, query):
                     # else:
                     #     Log.error("deep field not expected")
 
-            pull_name = EXPRESSION_PREFIX + s.name
+            pull_name = EXPRESSION_PREFIX + select.name
             map_to_local = MapToLocal(schema)
             pull = jx_expression_to_function(pull_name)
             post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
 
             new_select.append({
-                "name": s.name if is_list else ".",
+                "name": select.name if is_list else ".",
                 "pull": pull,
                 "value": expr.__data__(),
-                "put": {"name": s.name, "index": put_index, "child": "."}
+                "put": {"name": select.name, "index": put_index, "child": "."}
             })
             put_index += 1
 

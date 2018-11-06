@@ -861,7 +861,6 @@ class BinaryOp(Expression):
         return BinaryOp(self.op, [lhs, rhs])
 
 
-
 class InequalityOp(Expression):
     has_simple_form = True
     data_type = BOOLEAN
@@ -2540,7 +2539,9 @@ class BetweenOp(Expression):
     def map(self, map_):
         return BetweenOp(
             "between",
-            [self.value.map(map_), self.prefix.map(map_), self.suffix.map(map_)],
+            self.value.map(map_),
+            self.prefix.map(map_),
+            self.suffix.map(map_),
             default=self.default.map(map_),
             start=self.start.map(map_)
         )
@@ -3014,13 +3015,22 @@ class BasicEqOp(Expression):
 
 class BasicMultiOp(Expression):
     """
-    PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
+    PLACEHOLDER FOR BASIC OPERATOR (CAN NOT DEAL WITH NULLS)
     """
     data_type = NUMBER
 
     def __init__(self, op, terms):
         self.op = op
         self.terms = terms
+
+    def vars(self):
+        output = set()
+        for t in self.terms:
+            output.update(t.vars())
+        return output
+
+    def map(self, map):
+        return BasicMultiOp(self.op, [t.map(map) for t in self.terms])
 
     def __data__(self):
         return {"basic."+self.op: [t.__data__() for t in self.terms]}

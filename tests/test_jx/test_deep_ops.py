@@ -187,6 +187,7 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    @skip("table headers are different")
     def test_select_whole_document(self):
         test = {
             "data": [
@@ -1537,7 +1538,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("broken")
     def test_from_shallow_select_deep_column(self):
         # QUERY AS IF _a.b IS A NULTI-VALUED COLUMN
         test = {

@@ -13,20 +13,18 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-
-
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY, AndOp
+from jx_base.expressions import IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_depth, split_expression_by_path
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template, es_and, es_or, es_script, es_query_proto
+from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_path
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_script, es_query_proto
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
-from mo_future import transpose, zip_longest
+from mo_future import transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
@@ -201,6 +199,9 @@ def es_setop(es, query):
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
+
+
+
 
     with Timer("call to ES") as call_timer:
         data = es_post(es, es_query, query.limit)

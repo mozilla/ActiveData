@@ -19,16 +19,16 @@ from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
 from jx_python.jx import first
-from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
+from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, concat_field
 from mo_future import text_type, transpose
-from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL, EXISTS, OBJECT
+from mo_json import STRING, EXISTS, OBJECT
 from mo_json.typed_encoder import untype_path, NESTED_TYPE, EXISTS_TYPE
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
-from pyLibrary.convert import value2boolean
 
 DEBUG = False
 

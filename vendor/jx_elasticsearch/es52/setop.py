@@ -127,7 +127,14 @@ def es_setop(es, query):
                     for c in leaves:
                         c_nested_path = c.nested_path[0]
                         if c_nested_path == ".":
-                            if c.jx_type == NESTED:
+                            if c.es_column == "_id":
+                                new_select.append({
+                                    "name": select.name,
+                                    "value": Variable(c.es_column),
+                                    "put": {"name": select.name, "index": put_index, "child": "."},
+                                    "pull": lambda row: row._id
+                                })
+                            elif c.jx_type == NESTED:
                                 get_select('.').use_source = True
                                 pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
@@ -425,8 +432,6 @@ def es_query_proto(path, selects, wheres, schema):
                     where = output
             else:
                 where = MATCH_ALL
-
-
 
         if p == ".":
             output = set_default(

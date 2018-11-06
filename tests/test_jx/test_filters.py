@@ -342,7 +342,7 @@ class TestFilters(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "where": {"eq":{"v":"T"}}
+                "where": {"eq": {"v": "T"}}
             },
             "expecting_list": {
                 "meta": {

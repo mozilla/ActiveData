@@ -202,7 +202,7 @@ def es_setop(es, query):
 
     T = data.hits.hits
 
-    Log.note("{{output}}", output=T)
+    # Log.note("{{output}}", output=T)
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]

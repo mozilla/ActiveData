@@ -112,7 +112,7 @@ def es_setop(es, query):
             if leaves:
                 if any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
-                    get_select('.').use_source = ["_source"]
+                    get_select('.').use_source = True
                     for c in leaves:
                         if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRST LEVEL PROPERTIES
                             pre_child = join_field(decode_property(n) for n in split_field(c.name))

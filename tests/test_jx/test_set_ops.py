@@ -518,7 +518,7 @@ class TestSetOps(BaseTestCase):
                         "type": "nested",
                         "properties": {
                             "y": {
-                                "type": "string"
+                                "type": "keyword"
                             },
                             "b": {
                                 "type": "nested",
@@ -529,7 +529,7 @@ class TestSetOps(BaseTestCase):
                                 }
                             },
                             "z": {
-                                "type": "string"
+                                "type": "keyword"
                             }
                         }
                     }
@@ -617,7 +617,7 @@ class TestSetOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test)
+        self.utils.execute_tests(test, typed=False)
 
     @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
@@ -1105,7 +1105,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("was working")
+    # @skip("was working")
     def test_select_array_as_value(self):
         test = {
             "data": [

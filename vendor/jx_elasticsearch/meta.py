@@ -153,7 +153,7 @@ class ElasticsearchMetadata(Namespace):
 
     def _parse_properties(self, alias, mapping):
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
-        if any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
+        if DEBUG and any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
                 "Some columns are not stored {{names}}",
                 names=[
@@ -369,7 +369,20 @@ class ElasticsearchMetadata(Namespace):
                 })
                 count = result.hits.total
                 cardinality = 2
-                multi = 1
+
+                DEBUG and Log.note("{{table}}.{{field}} has {{num}} parts", table=column.es_index, field=column.es_column, num=cardinality)
+                self.meta.columns.update({
+                    "set": {
+                        "count": count,
+                        "cardinality": cardinality,
+                        "partitions": [False, True],
+                        "multi": 1,
+                        "last_updated": now
+                    },
+                    "clear": ["partitions"],
+                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
+                })
+                return
             else:
                 es_query = {
                     "aggs": {

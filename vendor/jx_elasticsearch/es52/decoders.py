@@ -19,18 +19,18 @@ from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
 from jx_python.jx import first
-from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist, concat_field
+from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, concat_field
 from mo_future import text_type, transpose
-from mo_json import STRING, NUMBER, BOOLEAN, IS_NULL, EXISTS, OBJECT
+from mo_json import STRING, EXISTS, OBJECT
 from mo_json.typed_encoder import untype_path, NESTED_TYPE, EXISTS_TYPE
 from mo_logs import Log
 from mo_logs.strings import quote, expand_template
 from mo_math import MAX, MIN, Math
-from pyLibrary.convert import value2boolean
 
-DEBUG = True
+DEBUG = False
 
 
 class AggsDecoder(object):
@@ -68,7 +68,7 @@ class AggsDecoder(object):
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.cardinality == None:
-                    Log.warning(
+                    DEBUG and Log.warning(
                         "metadata for column {{name|quote}} (id={{id}}) is not ready",
                         name=concat_field(col.es_index, col.es_column),
                         id=id(col)
@@ -170,19 +170,12 @@ class SetDecoder(AggsDecoder):
 
     def append_query(self, query_path, es_query):
         domain = self.domain
-
         domain_key = domain.key
-        include, text_include = transpose(*(
-            (
-                float(v) if isinstance(v, (int, float)) else v,
-                text_type(float(v)) if isinstance(v, (int, float)) else v
-            )
-            for v in (p[domain_key] for p in domain.partitions)
-        ))
         value = self.edge.value
+        cnv = pull_functions[value.type]
+        include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
         exists = AndOp("and", [
-            # value.exists(),  # TODO: is this needed?
             InOp("in", [value, Literal("literal", include)])
         ]).partial_eval()
 
@@ -725,9 +718,3 @@ class DimFieldListDecoder(SetDecoder):
         return len(self.fields)
 
 
-pull_functions = {
-    IS_NULL: lambda x: None,
-    STRING: lambda x: x,
-    NUMBER: lambda x: float(x) if x !=None else None,
-    BOOLEAN: value2boolean
-}

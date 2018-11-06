@@ -12,6 +12,8 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from unittest import skip
+
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from tests.test_jx import BaseTestCase, TEST_TABLE
@@ -380,6 +382,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    # @skip("boolean in when is not using false")
     def test_select_mult_w_when(self):
         test = {
             "data": [
@@ -413,14 +416,14 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "data": [
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
+                    {"ab": 0, "b": 0},
                     {"ab": 0, "b": 1},
                     {"ab": 1, "b": 1},
-                    {"ab": 0, "b": 0},
                     {"ab": 3, "b": 1},
-                    {"ab": 0, "b": 0},
                     {"ab": 5, "b": 1},
-                    {"ab": 0, "b": 0},
-                    {"ab": 0, "b": 0},
                     {"ab": 8, "b": 1},
                     {"ab": NULL, "b": 1},
                     {"ab": NULL, "b": 0}
@@ -1092,6 +1095,42 @@ class TestSetOps(BaseTestCase):
         }
 
         self.utils.execute_tests(test)
+
+    def test_boolean_in_where_clause(self):
+        test = {
+            "data": [
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {
+                    "in": {
+                        "result.ok": [
+                            "F"
+                        ]
+                    }
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"result": {"ok": False}},
+                    {"result": {"ok": False}},
+                    {"result": {"ok": False}},
+                    {"result": {"ok": False}}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
 
     def test_in_with_singlton(self):
         test = {

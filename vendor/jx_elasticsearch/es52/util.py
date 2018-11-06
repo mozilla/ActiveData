@@ -11,13 +11,13 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import TRUE, AndOp, ScriptOp, EsNestedOp
-
+from jx_base.expressions import TRUE, AndOp, EsNestedOp
 from jx_elasticsearch.es52.expressions import Variable
-from mo_dots import wrap, startswith_field, literal_field
+from mo_dots import wrap, literal_field
 from mo_future import text_type, sort_using_key
-from mo_json import STRING, BOOLEAN, NUMBER, OBJECT
+from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL
 from mo_logs import Log
+from pyLibrary.convert import value2boolean
 
 
 def es_query_template(path):
@@ -57,38 +57,6 @@ def es_query_template(path):
         })
         return output, wrap([f0])
 
-
-def es_query_proto(path, wheres, schema):
-    """
-    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
-    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
-    :param wheres: MAP FROM path TO LIST OF WHERE CONDITIONS
-    :return: (es_query, filters_map) TUPLE
-    """
-
-    literal_path = literal_field(path)
-    if literal_path not in wheres:
-        wheres[literal_path] += [TRUE]
-
-    for p, filter in sort_using_key(wheres.items(), lambda r: -len(r[0])):
-        if p == path:
-            if p == ".":
-                output = wrap({
-                    "from": 0,
-                    "size": 0,
-                    "sort": []
-                })
-            else:
-                output = {"nested": {
-                    "path": p,
-                    "inner_hits": {"size": 100000}
-                }}
-        else:
-            # parent filter
-            wheres[literal_path] += [EsNestedOp("nested", [Variable(p), AndOp("and", filter)])]
-
-    output.query = AndOp("and", wheres[literal_path]).partial_eval().to_esfilter(schema)
-    return output
 
 
 def jx_sort_to_es_sort(sort, schema):
@@ -169,3 +137,11 @@ def es_script(term):
 
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}
+
+
+pull_functions = {
+    IS_NULL: lambda x: None,
+    STRING: lambda x: x,
+    NUMBER: lambda x: float(x) if x !=None else None,
+    BOOLEAN: value2boolean
+}

@@ -66,10 +66,10 @@ def es_setop(es, query):
 
     split_select = Data()
     nested_filter = FlatList()
+    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
 
     put_index = 0
-    selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
@@ -382,3 +382,35 @@ def get_pull_stats(stats_name, median_name):
         {"name": "median", "value": join_field([median_name, "values", "50.0"])}
     ]})
 
+
+class ESquery(object):
+
+
+    def __init__(self):
+        self._source = True
+        self.fields = []
+        self.path = '.'
+
+    def to_es(self):
+        if self.path == '.':
+            output = wrap({
+                "from": 0,
+                "size": 0,
+                "sort": [],
+                "_source": self._source,
+                "stored_fields": self.fields if not self._source else None
+            })
+        else:
+            output = {"nested": {
+                "path": self.path,
+                "inner_hits": {
+                    "size": 100000,
+                    "_source": self._source,
+                    "stored_fields": self.fields if not self._source else None
+                }
+            }}
+        else:
+            # parent filter
+            wheres[literal_path] += [EsNestedOp("nested", [Variable(p), AndOp("and", filter)])]
+
+    output.query = AndOp("and", wheres[literal_path]).partial_eval().to_esfilter(schema)

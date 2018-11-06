@@ -358,5 +358,4 @@ class TestFilters(BaseTestCase):
         self.utils.execute_tests(test)
 
 
-
 # TODO:  ADD TEST TO ENSURE BOOLEAN COLUMNS (WITH 'T' and 'F' VALUES) CAN BE USED WITH true AND false FILTERS

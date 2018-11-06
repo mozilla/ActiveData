@@ -1561,13 +1561,14 @@ def split_expression_by_path(where, schema, output=None, var_to_columns=None):
         var_to_columns = {v.var: schema.leaves(v.var) for v in where.vars()}
         output = wrap({schema.query_path[0]: []})
         if not var_to_columns:
+            output["\\."] += [where]  # LEGIT EXPRESSIONS OF ZERO VARIABLES
             return output
 
     where_vars = where.vars()
     all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
 
     if len(all_paths) == 0:
-        pass
+        Log.error("never happens")
     elif len(all_paths) == 1:
         output[literal_field(first(all_paths))] += [where.map({v.var: c.es_column for v in where.vars() for c in var_to_columns[v.var]})]
     elif isinstance(where, AndOp):

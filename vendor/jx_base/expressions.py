@@ -2539,7 +2539,9 @@ class BetweenOp(Expression):
     def map(self, map_):
         return BetweenOp(
             "between",
-            [self.value.map(map_), self.prefix.map(map_), self.suffix.map(map_)],
+            self.value.map(map_),
+            self.prefix.map(map_),
+            self.suffix.map(map_),
             default=self.default.map(map_),
             start=self.start.map(map_)
         )

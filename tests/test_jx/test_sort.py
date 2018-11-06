@@ -94,7 +94,6 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("2d sorting is broken")
     def test_2edge_and_sort(self):
         test = {
             "data": [
@@ -277,7 +276,6 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("2d sorting is broken")
     def test_groupby2a_and_sort(self):
         test = {
             "data": [
@@ -325,7 +323,6 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("2d sorting is broken")
     def test_groupby2b_and_sort(self):
         test = {
             "data": [
@@ -391,7 +388,6 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("2d sorting is broken")
     def test_groupby2c_and_sort(self):
         test = {
             "data": [

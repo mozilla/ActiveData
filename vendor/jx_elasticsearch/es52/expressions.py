@@ -18,7 +18,7 @@ from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, Scr
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp
-from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing
+from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing, pull_functions
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
 from mo_future import text_type
@@ -517,6 +517,8 @@ def to_esfilter(self, schema):
                     ]).partial_eval().to_esfilter(schema)
 
         for c in cols:
+            if c.jx_type == BOOLEAN:
+                rhs = pull_functions[c.jx_type](rhs)
             if python_type_to_json_type[rhs.__class__] == c.jx_type:
                 return {"term": {c.es_column: rhs}}
         return FALSE.to_esfilter(schema)

@@ -1105,7 +1105,6 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("was working")
     def test_select_array_as_value(self):
         test = {
             "data": [
@@ -1281,7 +1280,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def select_id_and_source(self):
+    def test_select_id_and_source(self):
         test = {
             "data": [
                 {"_id": "test_id", "v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]},
@@ -1293,7 +1292,7 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"_id": "test_id", "_source":{"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]}}
+                    {"_id": "test_id", "_source": {"v": 4, "a": [{"b": 1}, {"b": 2}, {"b": 2}]}}
                 ]
             }
         }

@@ -22,6 +22,7 @@ from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
 from mo_json import scrub, IS_NULL, OBJECT, BOOLEAN, NUMBER, INTEGER, STRING, python_type_to_json_type
+from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Log, Except
 from mo_math import Math, MAX, MIN, UNION
 from mo_times.dates import Date, unicode2Date
@@ -40,6 +41,13 @@ def extend(cls):
         setattr(cls, get_function_name(func), func)
         return func
     return extender
+
+
+def last(values):
+    if len(values):
+        return values[-1]
+    else:
+        return Null
 
 
 def simplified(func):
@@ -242,10 +250,13 @@ class Variable(Expression):
     def __init__(self, var):
         """
         :param var:  DOT DELIMITED PATH INTO A DOCUMENT
-        :param verify: True - VERIFY THIS IS A VALID NAME (use False for trusted code only)
+
         """
         Expression.__init__(self, "", None)
         self.var = get_property_name(var)
+        jx_type = inserter_type_to_json_type.get(last(split_field(var)))
+        if jx_type:
+            self.data_type = jx_type
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -3072,6 +3083,7 @@ _merge_score = {
     OBJECT: 5
 }
 _merge_types = {v: k for k, v in _merge_score.items()}
+
 
 operators = {
     "add": MultiOp,

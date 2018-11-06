@@ -507,7 +507,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("Too complicated")
+    @skip("Too complicated")
     def test_select_into_children(self):
         test = {
             "name": "select into children to table",

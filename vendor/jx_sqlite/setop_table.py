@@ -181,7 +181,7 @@ class SetOpTable(InsertTable):
                 finally:
                     si += 1
 
-        where_clause = BooleanOp("boolean", query.where).partial_eval().to_sql(schema, boolean=True)[0].sql.b
+        where_clause = BooleanOp(query.where).partial_eval().to_sql(schema, boolean=True)[0].sql.b
         unsorted_sql = self._make_sql_for_one_nest_in_set_op(
             ".",
             sql_selects,

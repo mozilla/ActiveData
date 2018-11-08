@@ -56,11 +56,11 @@ class QueryOp(Expression):
     #         setattr(output, s, None)
     #     return output
 
-    def __init__(self, op, frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
+    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
         if isinstance(frum, jx_base.Table):
             pass
         else:
-            Expression.__init__(self, op, frum)
+            Expression.__init__(self,frum)
         self.frum = frum
         self.select = select
         self.edges = edges
@@ -183,9 +183,7 @@ class QueryOp(Expression):
         else:
             select = map_select(self.select, map_)
 
-        return QueryOp(
-            "from",
-            frum=self.frum.map(map_),
+        return QueryOp(Queryfrum=self.frum.map(map_),
             select=select,
             edges=wrap([map_edge(e, map_) for e in self.edges]),
             groupby=wrap([g.map(map_) for g in self.groupby]),
@@ -211,7 +209,6 @@ class QueryOp(Expression):
         table = container.get_table(query['from'])
         schema = table.schema
         output = QueryOp(
-            op="from",
             frum=table,
             format=query.format,
             limit=Math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
@@ -353,7 +350,7 @@ def _normalize_select(select, frum, schema=None):
                 output.append([
                     set_default(
                         {
-                            "value": LeavesOp("leaves", value, prefix=select.prefix),
+                            "value": LeavesOp(value, prefix=select.prefix),
                             "format": "dict"  # MARKUP FOR DECODING
                         },
                         canonical
@@ -397,14 +394,14 @@ def _normalize_select_no_context(select, schema=None):
         if select.value.endswith(".*"):
             name = select.value[:-2].lstrip(".")
             output.name = coalesce(select.name,  name)
-            output.value = LeavesOp("leaves", Variable(name), prefix=coalesce(select.prefix, name))
+            output.value = LeavesOp(Variable(name), prefix=coalesce(select.prefix, name))
         else:
             if select.value == ".":
                 output.name = coalesce(select.name, select.aggregate, ".")
                 output.value = jx_expression(select.value, schema=schema)
             elif select.value == "*":
                 output.name = coalesce(select.name, select.aggregate, ".")
-                output.value = LeavesOp("leaves", Variable("."))
+                output.value = LeavesOp(Variable("."))
             else:
                 output.name = coalesce(select.name, select.value.lstrip("."), select.aggregate)
                 output.value = jx_expression(select.value, schema=schema)
@@ -554,7 +551,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 return wrap([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
-                    "value": LeavesOp(None, Variable(prefix)),
+                    "value": LeavesOp(Variable(prefix)),
                     "allowNulls": True,
                     "dim":dim_index,
                     "domain": {"type": "default"}
@@ -614,7 +611,7 @@ def _normalize_window(window, schema=None):
         if hasattr(v, "__call__"):
             expr = v
         else:
-            expr = ScriptOp("script", v)
+            expr = ScriptOp(v)
 
     return Data(
         name=coalesce(window.name, window.value),
@@ -776,7 +773,7 @@ def _normalize_sort(sort=None):
         elif isinstance(s, Expression):
             output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
-            output.append({"value": OffsetOp("offset", s), "sort": 1})
+            output.append({"value": OffsetOp(s), "sort": 1})
         elif not s.sort and not s.value and all(d in sort_direction for d in s.values()):
             for v, d in s.items():
                 output.append({"value": jx_expression(v), "sort": sort_direction[d]})

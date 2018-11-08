@@ -13,21 +13,20 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from mo_future import text_type
-from mo_dots import split_field
-from mo_dots import unwrap
-from mo_json import json2value
-from mo_logs import Log
-from mo_logs.strings import quote
-from pyLibrary import convert
-
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
     extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, BaseMultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
+    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, RangeOp, CaseOp, AndOp, \
     ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp, IntegerOp, BasicEqOp, BaseInequalityOp, BaseMultiOp
 from jx_python.expression_compiler import compile_expression
+from mo_dots import split_field
+from mo_dots import unwrap
+from mo_future import text_type
+from mo_json import json2value
+from mo_logs import Log
+from mo_logs.strings import quote
 from mo_times.dates import Date
+from pyLibrary import convert
 
 
 def jx_expression_to_function(expr):
@@ -83,7 +82,7 @@ def to_python(self, not_null=False, boolean=False, many=False):
 
 @extend(RowsOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    agg = "rows[rownum+" + IntegerOp("", self.offset).to_python() + "]"
+    agg = "rows[rownum+" + IntegerOp(self.offset).to_python() + "]"
     path = split_field(json2value(self.var.json))
     if not path:
         return agg

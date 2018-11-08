@@ -47,7 +47,7 @@ class Normal(Namespace):
         #     Log.error('Expecting from clause to be a Container')
         query = wrap(query)
 
-        output = QueryOp("from", None)
+        output = QueryOp(None)
         output["from"] = self._convert_from(query["from"])
 
         output.format = query.format

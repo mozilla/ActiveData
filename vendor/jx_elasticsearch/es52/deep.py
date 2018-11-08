@@ -62,14 +62,14 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for f, w in zip_longest(es_filters, wheres):
-        script = AndOp("and", w).partial_eval().to_esfilter(schema)
+        script = AndOp(w).partial_eval().to_esfilter(schema)
         set_default(f, script)
 
     if not wheres[1]:
         # INCLUDE DOCS WITH NO NESTED DOCS
         more_filter = {
             "bool": {
-                "filter": [AndOp("and", wheres[0]).partial_eval().to_esfilter(schema)],
+                "filter": [AndOp(wheres[0]).partial_eval().to_esfilter(schema)],
                 "must_not": {
                     "nested": {
                         "path": query_path,

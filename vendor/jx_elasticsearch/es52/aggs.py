@@ -339,7 +339,7 @@ def es_aggsop(es, frum, query):
                     dir = -1
                     op = 'min'
 
-                nully = TupleOp("tuple", [NULL]*len(s.value.terms)).partial_eval().to_es_script(schema).expr
+                nully = TupleOp([NULL]*len(s.value.terms)).partial_eval().to_es_script(schema).expr
                 selfy = s.value.partial_eval().to_es_script(schema).expr
 
                 script = {"scripted_metric": {
@@ -419,7 +419,7 @@ def es_aggsop(es, frum, query):
             start += d.num_columns
 
         if where:
-            acc = FilterAggs("_filter", AndOp("and", where), None).add(acc)
+            acc = FilterAggs("_filter", AndOp(where), None).add(acc)
         acc = NestedAggs(path).add(acc)
 
     acc = NestedAggs('.').add(acc)

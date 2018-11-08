@@ -423,7 +423,7 @@ def es_query_proto(path, selects, wheres, schema):
         select = selects.get(p)
 
         if where:
-            where = AndOp("and", where).partial_eval().to_esfilter(schema)
+            where = AndOp(where).partial_eval().to_esfilter(schema)
             if output:
                 where = es_or([es_and([output, where]), where])
         else:

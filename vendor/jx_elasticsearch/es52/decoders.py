@@ -18,7 +18,7 @@ from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, BaseInequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
 from jx_python.jx import first
@@ -175,8 +175,8 @@ class SetDecoder(AggsDecoder):
         cnv = pull_functions[value.type]
         include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
-        exists = AndOp("and", [
-            InOp("in", [value, Literal("literal", include)])
+        exists = AndOp([
+            InOp([value, Literal(include)])
         ]).partial_eval()
 
         limit = coalesce(self.limit, len(domain.partitions))
@@ -212,7 +212,7 @@ class SetDecoder(AggsDecoder):
                 if p == query_path:
                     # MISSING AT THE QUERY DEPTH
                     output.add(
-                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(None, exists), self).add(es_query))
+                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
                     )
                 else:
                     # PARENT HAS NO CHILDREN, SO MISSING
@@ -221,7 +221,7 @@ class SetDecoder(AggsDecoder):
                         NestedAggs(column.nested_path[0]).add(
                             FilterAggs(
                                 "_missing1",
-                                NotOp(None, ExistsOp(None, Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE)))),
+                                NotOp(ExistsOp(Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE)))),
                                 self
                             ).add(es_query)
                         )
@@ -256,10 +256,10 @@ def _range_composer(self, edge, domain, es_query, to_float, schema):
     if edge.allowNulls:
         output.add(FilterAggs(
             "_missing",
-            NotOp("not", AndOp("and", [
+            NotOp(AndOp([
                 edge.value.exists(),
-                GteOp("gte", [edge.value, Literal(None, to_float(_min))]),
-                LtOp("lt", [edge.value, Literal(None, to_float(_max))])
+                GteOp([edge.value, Literal(to_float(_min))]),
+                LtOp([edge.value, Literal(to_float(_max))])
             ]).partial_eval()),
             self
         ).add(es_query))
@@ -327,9 +327,9 @@ class GeneralRangeDecoder(AggsDecoder):
 
         aggs = Aggs()
         for i, p in enumerate(domain.partitions):
-            filter_ = AndOp("and", [
-                LteOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                GtOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+            filter_ = AndOp([
+                LteOp([range.min, Literal(self.to_float(p.min))]),
+                GtOp([range.max, Literal(self.to_float(p.min))])
             ])
             aggs.add(FilterAggs("_match" + text_type(i), filter_, self).add(es_query))
 
@@ -362,12 +362,12 @@ class GeneralSetDecoder(AggsDecoder):
         notty = []
         for p in parts:
             w = p.where
-            filters.append(AndOp("and", [w] + notty))
-            notty.append(NotOp("not", w))
+            filters.append(AndOp([w] + notty))
+            notty.append(NotOp(w))
 
         output = Aggs().add(FiltersAggs("_match", filters, self).add(es_query))
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
-            output.add(FilterAggs("_missing", AndOp("and", notty), self).add(es_query))
+            output.add(FilterAggs("_missing", AndOp(notty), self).add(es_query))
 
         return output
 
@@ -523,7 +523,7 @@ class ObjectDecoder(AggsDecoder):
                     "size": self.domain.limit
                 }, decoder).add(es_query)
             ).add(
-                FilterAggs("_missing", MissingOp("missing", Variable(v)), decoder).add(es_query)
+                FilterAggs("_missing", MissingOp(Variable(v)), decoder).add(es_query)
             )
             es_query = nest
             decoder = None
@@ -586,7 +586,7 @@ class DefaultDecoder(SetDecoder):
         self.script = self.edge.value.partial_eval().to_es_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
         self.missing = self.script.miss.partial_eval()
-        self.exists = NotOp("not", self.missing).partial_eval()
+        self.exists = NotOp(self.missing).partial_eval()
 
         # WHEN SORT VALUE AND EDGE VALUE MATCHES, WE SORT BY TERM
         sort_candidates = [s for s in self.query.sort if s.value == self.edge.value]
@@ -682,7 +682,7 @@ class DimFieldListDecoder(SetDecoder):
                 "field": first(self.schema.leaves(v.var)).es_column,
                 "size": self.domain.limit
             }, decoder).add(es_query))
-            nest.add(FilterAggs("_missing", NotOp("not", exists), decoder).add(es_query))
+            nest.add(FilterAggs("_missing", NotOp(exists), decoder).add(es_query))
             es_query = nest
             decoder = None
 

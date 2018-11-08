@@ -168,9 +168,9 @@ class SetDecoder(AggsDecoder):
             for v in (p[domain_key] for p in domain.partitions)
         ))
         value = self.edge.value
-        exists = AndOp("and", [
+        exists = AndOp([
             value.exists(),
-            InOp("in", [value, Literal("literal", include)])
+            InOp([value, Literal(include)])
         ]).partial_eval()
 
         limit = coalesce(self.limit, len(domain.partitions))
@@ -190,7 +190,7 @@ class SetDecoder(AggsDecoder):
 
         if self.edge.allowNulls:
             missing = set_default(
-                {"filter": NotOp("not", exists).to_es14_filter(self.schema)},
+                {"filter": NotOp(exists).to_es14_filter(self.schema)},
                 es_query
             )
         else:
@@ -232,10 +232,10 @@ def _range_composer(edge, domain, es_query, to_float, schema):
     if edge.allowNulls:
         missing_filter = set_default(
             {
-                "filter": NotOp("not", AndOp("and", [
+                "filter": NotOp(AndOp([
                     edge.value.exists(),
-                    GteOp("gte", [edge.value, Literal(None, to_float(_min))]),
-                    LtOp("lt", [edge.value, Literal(None, to_float(_max))])
+                    GteOp([edge.value, Literal(to_float(_min))]),
+                    LtOp([edge.value, Literal(to_float(_max))])
                 ]).partial_eval()).to_es14_filter(schema)
             },
             es_query
@@ -312,9 +312,9 @@ class GeneralRangeDecoder(AggsDecoder):
 
         aggs = {}
         for i, p in enumerate(domain.partitions):
-            filter_ = AndOp("and", [
-                LteOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                GtOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+            filter_ = AndOp([
+                LteOp([range.min, Literal(self.to_float(p.min))]),
+                GtOp([range.max, Literal(self.to_float(p.min))])
             ])
             aggs["_join_" + text_type(i)] = set_default(
                 {"filter": filter_.to_es14_filter(self.schema)},
@@ -350,13 +350,13 @@ class GeneralSetDecoder(AggsDecoder):
 
         for p in parts:
             w = p.where
-            filters.append(AndOp("and", [w] + notty).to_es14_filter(self.schema))
-            notty.append(NotOp("not", w))
+            filters.append(AndOp([w] + notty).to_es14_filter(self.schema))
+            notty.append(NotOp(w))
 
         missing_filter = None
         if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
             missing_filter = set_default(
-                {"filter": AndOp("and", notty).to_es14_filter(self.schema)},
+                {"filter": AndOp(notty).to_es14_filter(self.schema)},
                 es_query
             )
 
@@ -572,7 +572,7 @@ class DefaultDecoder(SetDecoder):
         self.script = self.edge.value.partial_eval().to_es14_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
         self.missing = self.script.miss.partial_eval()
-        self.exists = NotOp("not", self.missing).partial_eval()
+        self.exists = NotOp(self.missing).partial_eval()
 
         # WHEN SORT VALUE AND EDGE VALUE MATCHES, WE SORT BY TERM
         sort_candidates = [s for s in self.query.sort if s.value == self.edge.value]
@@ -696,7 +696,7 @@ class DimFieldListDecoder(SetDecoder):
                 }}, es_query)}
             }}})
             nest.aggs._missing = set_default(
-                {"filter": NotOp("not", exists).to_es14_filter(self.schema)},
+                {"filter": NotOp(exists).to_es14_filter(self.schema)},
                 es_query
             )
             es_query = nest

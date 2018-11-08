@@ -32,7 +32,7 @@ class Namespace(object):
         raise NotImplementedError()
 
     def _convert_query(self, query):
-        output = QueryOp("from", None)
+        output = QueryOp(None)
         output.select = self._convert_clause(query.select)
         output.where = self.convert(query.where)
         output["from"] = self._convert_from(query["from"])

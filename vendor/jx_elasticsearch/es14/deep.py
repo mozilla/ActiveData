@@ -63,7 +63,7 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for i, f in enumerate(es_filters):
-        script = AndOp("and", wheres[i]).partial_eval().to_es14_filter(schema)
+        script = AndOp(wheres[i]).partial_eval().to_es14_filter(schema)
         set_default(f, script)
 
     if not wheres[1]:

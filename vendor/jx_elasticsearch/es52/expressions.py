@@ -665,7 +665,7 @@ def to_esfilter(self, schema):
         if len(columns) == 0:
             return {"match_all": {}}
         elif len(columns) == 1:
-            return es_not({"term": {columns[0].es_column: self.rhs.value}})
+            return es_not({"term": {first(columns).es_column: self.rhs.value}})
         else:
             Log.error("column split to multiple, not handled")
     else:
@@ -1125,7 +1125,7 @@ def to_esfilter(self, schema):
     if not self.value:
         return {"match_all": {}}
     elif isinstance(self.value, Variable) and isinstance(self.prefix, Literal):
-        var = schema.leaves(self.value.var)[0].es_column
+        var = first(schema.leaves(self.value.var)).es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         output = self.to_es_script(schema)
@@ -1164,7 +1164,7 @@ def to_esfilter(self, schema):
     if not self.suffix:
         return {"match_all": {}}
     elif isinstance(self.expr, Variable) and isinstance(self.suffix, Literal):
-        var = schema.leaves(self.expr.var)[0].es_column
+        var = first(schema.leaves(self.expr.var)).es_column
         return {"regexp": {var: ".*"+string2regexp(self.suffix.value)}}
     else:
         return ScriptOp(self.to_es_script(schema).script(schema)).to_esfilter(schema)

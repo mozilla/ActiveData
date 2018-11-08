@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+from jx_base import first
 from jx_base.domains import SetDomain
 from jx_base.expressions import TupleOp, NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
@@ -161,7 +162,7 @@ def es_aggsop(es, frum, query):
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = literal_field(canonical_name + " percentile")
 
-                es_query.aggs[key].percentiles.field = columns[0].es_column
+                es_query.aggs[key].percentiles.field = first(columns).es_column
                 es_query.aggs[key].percentiles.percents += [50]
                 s.pull = jx_expression_to_function(key + ".values.50\\.0")
             elif s.aggregate == "percentile":
@@ -173,7 +174,7 @@ def es_aggsop(es, frum, query):
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
                 percent = Math.round(s.percentile * 100, decimal=6)
 
-                es_query.aggs[key].percentiles.field = columns[0].es_column
+                es_query.aggs[key].percentiles.field = first(columns).es_column
                 es_query.aggs[key].percentiles.percents += [percent]
                 es_query.aggs[key].percentiles.compression = 2
                 s.pull = jx_expression_to_function(key + ".values." + literal_field(text_type(percent)))
@@ -192,11 +193,11 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                es_query.aggs[stats_name].extended_stats.field = columns[0].es_column
+                es_query.aggs[stats_name].extended_stats.field = first(columns).es_column
 
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + "_percentile")
-                es_query.aggs[median_name].percentiles.field = columns[0].es_column
+                es_query.aggs[median_name].percentiles.field = first(columns).es_column
                 es_query.aggs[median_name].percentiles.percents += [50]
 
                 s.pull = get_pull_stats(stats_name, median_name)
@@ -235,7 +236,7 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
 
                 # PULL VALUE OUT OF THE stats AGGREGATE
-                es_query.aggs[literal_field(canonical_name)].extended_stats.field = columns[0].es_column
+                es_query.aggs[literal_field(canonical_name)].extended_stats.field = first(columns).es_column
                 s.pull = jx_expression_to_function({"coalesce": [literal_field(canonical_name) + "." + aggregates[s.aggregate], s.default]})
 
     for i, s in enumerate(formula):
@@ -303,7 +304,7 @@ def es_aggsop(es, frum, query):
             Log.error("Where clause is too deep")
 
         for d in decoders[1]:
-            es_query = d.append_query(".", es_query, start)
+            es_query = d.append_query(es_query, start)
             start += d.num_columns
 
         if split_where[1]:
@@ -325,7 +326,7 @@ def es_aggsop(es, frum, query):
 
     if decoders:
         for d in jx.reverse(decoders[0]):
-            es_query = d.append_query(".", es_query, start)
+            es_query = d.append_query(es_query, start)
             start += d.num_columns
 
     if split_where[0]:

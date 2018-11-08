@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 import itertools
 
-from jx_base.expressions import Variable, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
-    WhenOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
+from jx_base.expressions import Variable, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
+    WhenOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE
+    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BaseInequalityOp
 from jx_elasticsearch.es14.util import es_not, es_script, es_or, es_and, es_missing
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field
@@ -105,11 +105,11 @@ class EsScript(Expression):
             return False
 
 
-@extend(BinaryOp)
+@extend(BaseBinaryOp)
 def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     lhs = NumberOp("number", self.lhs).partial_eval().to_es14_script(schema).expr
     rhs = NumberOp("number", self.rhs).partial_eval().to_es14_script(schema).expr
-    script = "(" + lhs + ") " + BinaryOp.operators[self.op] + " (" + rhs + ")"
+    script = "(" + lhs + ") " + BaseBinaryOp.operators[self.op] + " (" + rhs + ")"
     missing = OrOp("or", [self.lhs.missing(), self.rhs.missing()])
 
     return WhenOp(
@@ -123,16 +123,16 @@ def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     ).partial_eval().to_es14_script(schema)
 
 
-@extend(BinaryOp)
+@extend(BaseBinaryOp)
 def to_es14_filter(self, schema):
-    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BinaryOp.operators:
+    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BaseBinaryOp.operators:
         return self.to_es14_script(schema).to_es14_filter(schema)
 
     if self.op in ["eq", "term"]:
         return {"term": {self.lhs.var: self.rhs.to_es14_filter(schema)}}
     elif self.op in ["ne", "neq"]:
         return es_not({"term": {self.lhs.var: self.rhs.to_es14_filter(schema)}})
-    elif self.op in BinaryOp.ineq_ops:
+    elif self.op in BaseBinaryOp.ineq_ops:
         return {"range": {self.lhs.var: {self.op: self.rhs.value}}}
     else:
         Log.error("Logic error")
@@ -369,11 +369,12 @@ def to_es14_filter(self, schema):
     Log.error("not supported")
 
 
-@extend(InequalityOp)
+
+@extend(BaseInequalityOp)
 def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     lhs = NumberOp("number", self.lhs).partial_eval().to_es14_script(schema).expr
     rhs = NumberOp("number", self.rhs).partial_eval().to_es14_script(schema).expr
-    script = "(" + lhs + ") " + InequalityOp.operators[self.op] + " (" + rhs + ")"
+    script = "(" + lhs + ") " + operators[self.op] + " (" + rhs + ")"
 
     output = WhenOp(
         "when",
@@ -387,7 +388,7 @@ def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     return output
 
 
-@extend(InequalityOp)
+@extend(BaseInequalityOp)
 def to_es14_filter(self, schema):
     if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
         cols = schema.leaves(self.lhs.var)
@@ -922,8 +923,15 @@ _painless_operators = {
     "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
     "sum": (" + ", "0"),
     "mul": (" * ", "1"),
-    "mult": (" * ", "1"),
-    "multiply": (" * ", "1")
+    "sub": ("-", None),
+    "div": ("/", None),
+    "exp": ("**", None),
+    "mod": ("%", None),
+    "gt": (">", None),
+    "gte": (">=", None),
+    "lte": ("<=", None),
+    "lt": ("<", None)
+
 }
 
 

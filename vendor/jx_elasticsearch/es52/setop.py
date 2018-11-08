@@ -204,7 +204,7 @@ def es_setop(es, query):
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
-    with Timer("call to ES") as call_timer:
+    with Timer("call to ES", silent=True) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -213,7 +213,9 @@ def es_setop(es, query):
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
-        output = formatter(T, new_select, query)
+
+        with Timer("formatter", silent=True):
+            output = formatter(T, new_select, query)
         output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query

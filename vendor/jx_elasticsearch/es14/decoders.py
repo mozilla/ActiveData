@@ -15,7 +15,7 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, TRUE
+from jx_base.expressions import TupleOp, TRUE, LtOp, GteOp, GtOp, LteOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es14.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.es_query import TermsAggs
@@ -234,8 +234,8 @@ def _range_composer(edge, domain, es_query, to_float, schema):
             {
                 "filter": NotOp("not", AndOp("and", [
                     edge.value.exists(),
-                    InequalityOp("gte", [edge.value, Literal(None, to_float(_min))]),
-                    InequalityOp("lt", [edge.value, Literal(None, to_float(_max))])
+                    GteOp("gte", [edge.value, Literal(None, to_float(_min))]),
+                    LtOp("lt", [edge.value, Literal(None, to_float(_max))])
                 ]).partial_eval()).to_es14_filter(schema)
             },
             es_query
@@ -313,8 +313,8 @@ class GeneralRangeDecoder(AggsDecoder):
         aggs = {}
         for i, p in enumerate(domain.partitions):
             filter_ = AndOp("and", [
-                InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+                LteOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
+                GtOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
             aggs["_join_" + text_type(i)] = set_default(
                 {"filter": filter_.to_es14_filter(self.schema)},

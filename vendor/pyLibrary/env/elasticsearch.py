@@ -40,6 +40,7 @@ ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
 INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
+SUFFIX_PATTERN = r'\d{8}_\d{6}'
 
 STALE_METADATA = 10 * MINUTE
 
@@ -666,7 +667,7 @@ class Cluster(object):
         indexes = jx.sort(
             [
                 ai_pair
-                for pattern in [re.escape(index) + r'\d{8}_\d{6}']
+                for pattern in [re.escape(index) + SUFFIX_PATTERN]
                 for ai_pair in self.get_aliases()
                 for a, i in [(ai_pair.alias, ai_pair.index)]
                 if (a == index and alias == None) or
@@ -702,7 +703,6 @@ class Cluster(object):
             if re.match(re.escape(prefix) + "\\d{8}_\\d{6}", a.index) and a.index != name:
                 self.delete_index(a.index)
 
-
     @override
     def create_index(
         self,
@@ -719,10 +719,15 @@ class Cluster(object):
         if kwargs.tjson != None:
             Log.error("used `typed` parameter, not `tjson`")
         if not alias:
-            alias = kwargs.alias = kwargs.index
-            index = kwargs.index = proto_name(alias, create_timestamp)
+            requested_name = kwargs.index
 
-        if kwargs.alias == index:
+            index = kwargs.index = proto_name(requested_name, create_timestamp)
+            if requested_name == index:
+                kwargs.alias = None
+            else:
+                kwargs.alias = requested_name
+
+        if not re.match('.*' + SUFFIX_PATTERN, index):
             Log.error("Expecting index name to conform to pattern")
 
         if kwargs.schema_file:
@@ -1010,6 +1015,12 @@ class Cluster(object):
 
 
 def proto_name(prefix, timestamp=None):
+    suffix = re.search(SUFFIX_PATTERN, prefix)
+    if suffix:
+        start, stop = suffix.regs[0]
+        if stop == len(prefix):
+            return prefix
+
     if not timestamp:
         timestamp = Date.now()
     else:

@@ -345,7 +345,7 @@ def es_aggsop(es, frum, query):
         result = es_post(es, es_query, query.limit)
 
     try:
-        format_time = Timer("formatting")
+        format_time = Timer("formatting", silent=True)
         with format_time:
             decoders = [d for ds in decoders for d in ds]
             result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE

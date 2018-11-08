@@ -15,10 +15,10 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp
+from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, InequalityOp, LeavesOp, LIST_TO_PIPE
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, BaseInequalityOp, LeavesOp, LIST_TO_PIPE
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
 from jx_python.jx import first
@@ -258,8 +258,8 @@ def _range_composer(self, edge, domain, es_query, to_float, schema):
             "_missing",
             NotOp("not", AndOp("and", [
                 edge.value.exists(),
-                InequalityOp("gte", [edge.value, Literal(None, to_float(_min))]),
-                InequalityOp("lt", [edge.value, Literal(None, to_float(_max))])
+                GteOp("gte", [edge.value, Literal(None, to_float(_min))]),
+                LtOp("lt", [edge.value, Literal(None, to_float(_max))])
             ]).partial_eval()),
             self
         ).add(es_query))
@@ -328,8 +328,8 @@ class GeneralRangeDecoder(AggsDecoder):
         aggs = Aggs()
         for i, p in enumerate(domain.partitions):
             filter_ = AndOp("and", [
-                InequalityOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
-                InequalityOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
+                LteOp("lte", [range.min, Literal("literal", self.to_float(p.min))]),
+                GtOp("gt", [range.max, Literal("literal", self.to_float(p.min))])
             ])
             aggs.add(FilterAggs("_match" + text_type(i), filter_, self).add(es_query))
 

@@ -21,11 +21,11 @@ from mo_logs import Log
 from mo_logs.strings import quote
 from pyLibrary import convert
 
-from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, ScriptOp, \
-    InequalityOp, extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
+from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
+    extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp, IntegerOp, BasicEqOp
+    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp, IntegerOp, BasicEqOp, BaseInequalityOp
 from jx_python.expression_compiler import compile_expression
 from mo_times.dates import Date
 
@@ -165,14 +165,14 @@ def to_python(self, not_null=False, boolean=False, many=False):
     return "Data(" + self.term.to_python() + ").leaves()"
 
 
-@extend(BinaryOp)
+@extend(BaseBinaryOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    return "(" + self.lhs.to_python() + ") " + BinaryOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
+    return "(" + self.lhs.to_python() + ") " + _python_operators[self.op][0] + " (" + self.rhs.to_python() + ")"
 
 
-@extend(InequalityOp)
+@extend(BaseInequalityOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    return "(" + self.lhs.to_python() + ") " + InequalityOp.operators[self.op] + " (" + self.rhs.to_python() + ")"
+    return "(" + self.lhs.to_python() + ") " + _python_operators[self.op][0] + " (" + self.rhs.to_python() + ")"
 
 
 @extend(InOp)
@@ -263,8 +263,14 @@ _python_operators = {
     "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
     "sum": (" + ", "0"),
     "mul": (" * ", "1"),
-    "mult": (" * ", "1"),
-    "multiply": (" * ", "1")
+    "sub": ("-", None),
+    "div": ("/", None),
+    "exp": ("**", None),
+    "mod": ("%", None),
+    "gt": (">", None),
+    "gte": (">=", None),
+    "lte": ("<=", None),
+    "lt": ("<", None)
 }
 
 

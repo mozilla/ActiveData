@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BinaryOp, OrOp, InequalityOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
+from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
     NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, FromUnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, InOp, RangeOp, CaseOp, AndOp, \
     ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp
@@ -215,17 +215,17 @@ def to_sql(self, schema, not_null=False, boolean=False):
 def to_sql(self, schema, not_null=False, boolean=False):
     value = self.value.to_sql(schema)[0].sql.s
     start = MultiOp("add", [self.start, Literal(None, 1)]).partial_eval().to_sql(schema)[0].sql.n
-    length = BinaryOp("subtract", [self.end, self.start]).partial_eval().to_sql(schema)[0].sql.n
+    length = BaseBinaryOp("subtract", [self.end, self.start]).partial_eval().to_sql(schema)[0].sql.n
 
     return wrap([{"name": ".", "sql": {"s": "SUBSTR" + sql_iso(value + "," + start + ", " + length)}}])
 
 
-@extend(BinaryOp)
+@extend(BaseBinaryOp)
 def to_sql(self, schema, not_null=False, boolean=False):
     lhs = self.lhs.to_sql(schema)[0].sql.n
     rhs = self.rhs.to_sql(schema)[0].sql.n
 
-    return wrap([{"name": ".", "sql": {"n": sql_iso(lhs) + " " + BinaryOp.operators[self.op] + " " + sql_iso(rhs)}}])
+    return wrap([{"name": ".", "sql": {"n": sql_iso(lhs) + " " + BaseBinaryOp.operators[self.op] + " " + sql_iso(rhs)}}])
 
 
 @extend(MinOp)
@@ -240,7 +240,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     return wrap([{"name": ".", "sql": {"n": "max" + sql_iso((sql_list(terms)))}}])
 
 
-@extend(InequalityOp)
+@extend(BaseInequalityOp)
 def to_sql(self, schema, not_null=False, boolean=False):
     lhs = self.lhs.to_sql(schema, not_null=True)[0].sql
     rhs = self.rhs.to_sql(schema, not_null=True)[0].sql
@@ -249,7 +249,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 
     if len(lhs) == 1 and len(rhs) == 1:
         return wrap([{"name": ".", "sql": {
-            "b": sql_iso(lhs.values()[0]) + " " + InequalityOp.operators[self.op] + " " + sql_iso(rhs.values()[0])
+            "b": sql_iso(lhs.values()[0]) + " " + operators[self.op] + " " + sql_iso(rhs.values()[0])
         }}])
 
     ors = []
@@ -264,7 +264,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
             elif r == l:
                 ors.append(
                     sql_iso(lhs_exists[l]) + SQL_AND + sql_iso(rhs_exists[r]) + SQL_AND + sql_iso(lhs[l]) + " " +
-                    InequalityOp.operators[self.op] + " " + sql_iso(rhs[r])
+                    operators[self.op] + " " + sql_iso(rhs[r])
                 )
             elif (l > r and self.op in ["gte", "gt"]) or (l < r and self.op in ["lte", "lt"]):
                 ors.append(
@@ -468,9 +468,8 @@ _sql_operators = {
     "basic.add": (SQL(" + "), SQL_ZERO),  # (operator, zero-array default value) PAIR
     "sum": (SQL(" + "), SQL_ZERO),
     "mul": (SQL(" * "), SQL_ONE),
-    "mult": (SQL(" * "), SQL_ONE),
     "multiply": (SQL(" * "), SQL_ONE),
-    "basic.mult": (SQL(" * "), SQL_ONE)
+    "basic.mul": (SQL(" * "), SQL_ONE)
 }
 
 
@@ -716,7 +715,7 @@ def partial_eval(self):
 
     return BasicSubstringOp("substring", [
         value,
-        MaxOp("max", [ZERO, MinOp("min", [max_length, BinaryOp("sub", [max_length, length])])]),
+        MaxOp("max", [ZERO, MinOp("min", [max_length, BaseBinaryOp("sub", [max_length, length])])]),
         max_length
     ])
 
@@ -744,7 +743,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     if boolean:
         return test.to_sql(schema)
     else:
-        offset = BinaryOp("sub", [self.start, ONE]).partial_eval()
+        offset = BaseBinaryOp("sub", [self.start, ONE]).partial_eval()
         index = MultiOp("add", [test, offset]).partial_eval()
         temp = index.to_sql(schema)
         return WhenOp(

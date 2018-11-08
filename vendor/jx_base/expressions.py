@@ -365,7 +365,7 @@ class RowsOp(Expression):
         return self.var.vars() | self.offset.vars() | {"rows", "rownum"}
 
     def map(self, map_):
-        return BinaryOp("rows", [self.var.map(map_), self.offset.map(map_)])
+        return RowsOp("rows", [self.var.map(map_), self.offset.map(map_)])
 
 
 class GetOp(Expression):
@@ -385,7 +385,7 @@ class GetOp(Expression):
         return self.var.vars() | self.offset.vars()
 
     def map(self, map_):
-        return BinaryOp("get", [self.var.map(map_), self.offset.map(map_)])
+        return GetOp("get", [self.var.map(map_), self.offset.map(map_)])
 
 
 class SelectOp(Expression):
@@ -817,34 +817,19 @@ class LeavesOp(Expression):
         return FALSE
 
 
-class BinaryOp(Expression):
+class BaseBinaryOp(Expression):
     has_simple_form = True
     data_type = NUMBER
-
-    operators = {
-        "sub": "-",
-        "subtract": "-",
-        "minus": "-",
-        "mul": "*",
-        "mult": "*",
-        "multiply": "*",
-        "div": "/",
-        "divide": "/",
-        "exp": "**",
-        "mod": "%"
-    }
+    op = None
 
     def __init__(self, op, terms, default=NULL):
         Expression.__init__(self, op, terms)
-        if op not in BinaryOp.operators:
-            Log.error("{{op|quote}} not a recognized operator", op=op)
-        self.op = op
         self.lhs, self.rhs = terms
         self.default = default
 
     @property
     def name(self):
-        return self.op;
+        return self.op
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -856,7 +841,7 @@ class BinaryOp(Expression):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
 
     def map(self, map_):
-        return BinaryOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+        return self.__class__(None, [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
         if self.default.exists():
@@ -867,32 +852,55 @@ class BinaryOp(Expression):
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
+        default = self.default.partial_eval()
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return Literal("literal", builtin_ops[self.op](lhs.value, rhs.value))
-        return BinaryOp(self.op, [lhs, rhs])
+        return self.__class__(self.op, [lhs, rhs], default=default)
 
 
-class InequalityOp(Expression):
+class SubOp(BaseBinaryOp):
+    op = "sub"
+
+
+class ExpOp(BaseBinaryOp):
+    op = "exp"
+
+
+class ModOp(BaseBinaryOp):
+    op = "mod"
+
+
+class DivOp(BaseBinaryOp):
+    op = "div"
+
+    def missing(self):
+        return AndOp("and", [
+            self.default.missing(),
+            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])])
+        ]).partial_eval()
+
+    def partial_eval(self):
+        default = self.default.partial_eval()
+        rhs = self.rhs.partial_eval()
+        if rhs is ZERO:
+            return default
+        lhs = self.lhs.partial_eval()
+        if isinstance(lhs, Literal) and isinstance(rhs, Literal):
+            return Literal("literal", builtin_ops[self.op](lhs.value, rhs.value))
+        return self.__class__(self.op, [lhs, rhs], default=default)
+
+class BaseInequalityOp(Expression):
     has_simple_form = True
     data_type = BOOLEAN
-
-    operators = {
-        "gt": ">",
-        "gte": ">=",
-        "lte": "<=",
-        "lt": "<"
-    }
+    op = None
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
-        if op not in InequalityOp.operators:
-            Log.error("{{op|quote}} not a recognized operator", op=op)
-        self.op = op
         self.lhs, self.rhs = terms
 
     @property
     def name(self):
-        return self.op;
+        return self.op
 
     def __data__(self):
         if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
@@ -901,7 +909,7 @@ class InequalityOp(Expression):
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()]}
 
     def __eq__(self, other):
-        if not isinstance(other, InequalityOp):
+        if not isinstance(other, self.__class__):
             return False
         return self.op == other.op and self.lhs == other.lhs and self.rhs == other.rhs
 
@@ -909,7 +917,7 @@ class InequalityOp(Expression):
         return self.lhs.vars() | self.rhs.vars()
 
     def map(self, map_):
-        return InequalityOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
+        return self.__class__(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
         return FALSE
@@ -922,35 +930,23 @@ class InequalityOp(Expression):
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return Literal(None, builtin_ops[self.op](lhs, rhs))
 
-        return InequalityOp(self.op, [lhs, rhs])
+        return self.__class__(self.op, [lhs, rhs])
 
 
-class DivOp(Expression):
-    has_simple_form = True
-    data_type = NUMBER
+class GtOp(BaseInequalityOp):
+    op = "gt"
 
-    def __init__(self, op, terms, default=NULL):
-        Expression.__init__(self, op, terms)
-        self.lhs, self.rhs = terms
-        self.default = default
 
-    def __data__(self):
-        if isinstance(self.lhs, Variable) and isinstance(self.rhs, Literal):
-            return {"div": {self.lhs.var, self.rhs.value}, "default": self.default}
-        else:
-            return {"div": [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
+class GteOp(BaseInequalityOp):
+    op = "gte"
 
-    def vars(self):
-        return self.lhs.vars() | self.rhs.vars() | self.default.vars()
 
-    def map(self, map_):
-        return DivOp("div", [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+class LtOp(BaseInequalityOp):
+    op = "lt"
 
-    def missing(self):
-        return AndOp("and", [
-            self.default.missing(),
-            OrOp("or", [self.lhs.missing(), self.rhs.missing(), EqOp("eq", [self.rhs, ZERO])])
-        ]).partial_eval()
+
+class LteOp(BaseInequalityOp):
+    op = "lte"
 
 
 class FloorOp(Expression):
@@ -1759,7 +1755,7 @@ _jx_identity = {
     "add": ZERO,
     "sum": ZERO,
     "mul": ONE,
-    "mult": ONE,
+    "mul": ONE,
     "multiply": ONE
 }
 
@@ -1863,7 +1859,7 @@ def AddOp(op, terms, **clauses):
 
 
 def MultOp(op, terms, **clauses):
-    return MultiOp("mult", terms, **clauses)
+    return MultiOp("mul", terms, **clauses)
 
 
 class RegExpOp(Expression):
@@ -2328,7 +2324,7 @@ class RightOp(Expression):
             **{
                 "else": BasicSubstringOp("substring", [
                     value,
-                    MaxOp("max", [ZERO, MinOp("min", [max_length, BinaryOp("sub", [max_length, length])])]),
+                    MaxOp("max", [ZERO, MinOp("min", [max_length, SubOp("sub", [max_length, length])])]),
                     max_length
                 ])
             }
@@ -2374,7 +2370,7 @@ class NotRightOp(Expression):
                 "else": BasicSubstringOp("substring", [
                     value,
                     ZERO,
-                    MaxOp("max", [ZERO, MinOp("min", [max_length, BinaryOp("sub", [max_length, length])])])
+                    MaxOp("max", [ZERO, MinOp("min", [max_length, SubOp("sub", [max_length, length])])])
                 ])
             }
         ).partial_eval()
@@ -3098,14 +3094,14 @@ operators = {
     "divide": DivOp,
     "eq": EqOp,
     "exists": ExistsOp,
-    "exp": BinaryOp,
+    "exp": ExpOp,
     "find": FindOp,
     "first": FirstOp,
     "floor": FloorOp,
     "from_unix": FromUnixOp,
     "get": GetOp,
-    "gt": InequalityOp,
-    "gte": InequalityOp,
+    "gt": GtOp,
+    "gte": GteOp,
     "in": InOp,
     "instr": FindOp,
     "is_number": IsNumberOp,
@@ -3114,13 +3110,13 @@ operators = {
     "left": LeftOp,
     "length": LengthOp,
     "literal": Literal,
-    "lt": InequalityOp,
-    "lte": InequalityOp,
+    "lt": LtOp,
+    "lte": LteOp,
     "match_all": TrueOp,
     "max": MaxOp,
-    "minus": BinaryOp,
+    "minus": SubOp,
     "missing": MissingOp,
-    "mod": BinaryOp,
+    "mod": ModOp,
     "mul": MultiOp,
     "mult": MultiOp,
     "multiply": MultiOp,
@@ -3145,8 +3141,8 @@ operators = {
     "split": SplitOp,
     "string": StringOp,
     "suffix": SuffixOp,
-    "sub": BinaryOp,
-    "subtract": BinaryOp,
+    "sub": SubOp,
+    "subtract": SubOp,
     "sum": MultiOp,
     "term": EqOp,
     "terms": InOp,

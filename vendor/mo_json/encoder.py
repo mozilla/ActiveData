@@ -333,7 +333,7 @@ def pretty_json(value):
                     Log.note("return value of length {{length}}", length=len(output))
                     return output
                 except BaseException as f:
-                    Log.warning("can not even explicit convert {{type}}", type=f.__class__.__name__, cause=f)
+                    Log.warning("can not convert {{type}} to json", type=f.__class__.__name__, cause=f)
                     return "null"
         elif isinstance(value, list):
             if not value:

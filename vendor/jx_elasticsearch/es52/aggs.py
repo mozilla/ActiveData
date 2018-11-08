@@ -330,7 +330,7 @@ def es_aggsop(es, frum, query):
         if isinstance(s.value, TupleOp):
             if s.aggregate == "count":
                 # TUPLES ALWAYS EXIST, SO COUNTING THEM IS EASY
-                s.pull = jx_expression_to_function(join_field([ "doc_count"]))
+                s.pull = jx_expression_to_function("doc_count")
             elif s.aggregate in ('max', 'maximum', 'min', 'minimum'):
                 if s.aggregate in ('max', 'maximum'):
                     dir = 1
@@ -431,12 +431,10 @@ def es_aggsop(es, frum, query):
     with Timer("ES query time", silent=not DEBUG) as es_duration:
         result = es_post(es, es_query, query.limit)
 
-    # Log.note("{{output}}", output=result)
-
     try:
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:
-            result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+            # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
             aggs = unwrap(result.aggregations)
 
             formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]

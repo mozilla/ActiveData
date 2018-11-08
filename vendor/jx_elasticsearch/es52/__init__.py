@@ -11,7 +11,11 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base import container
+import itertools
+
+from mo_future import sort_using_key
+
+from jx_base import container, Column
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
@@ -22,11 +26,12 @@ from jx_elasticsearch.es52.setop import is_setop, es_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, unwrap, coalesce, split_field, join_field, wrap, listwrap
-from mo_json import value2json
+from mo_dots import Data, unwrap, coalesce, split_field, join_field, wrap, listwrap, startswith_field
+from mo_json import value2json, OBJECT, EXISTS
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Log, Except
+from mo_times import Date
 from pyLibrary.env import elasticsearch, http
 
 
@@ -85,6 +90,41 @@ class ES52(Container):
             if is_typed != typed:
                 Log.error("Expecting given typed {{typed}} to match {{is_typed}}", typed=typed, is_typed=is_typed)
             self.typed = typed
+
+        if not typed:
+            # ADD EXISTENCE COLUMNS
+            all_paths = {".": None}  # MAP FROM path TO parent TO MAKE A TREE
+
+            def nested_path_of(v):
+                if not v:
+                    return []
+                else:
+                    return [v] + nested_path_of(all_paths[v])
+
+            all = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
+            for step in sorted(all):
+                if step in all_paths:
+                    continue
+                else:
+                    best = '.'
+                    for candidate in all_paths.keys():
+                        if startswith_field(step, candidate):
+                            if startswith_field(candidate, best):
+                                best = candidate
+                    all_paths[step] = best
+            for p in all_paths.keys():
+                nested_path = nested_path_of(all_paths[p])
+                if not nested_path:
+                    nested_path = ['.']
+                self.namespace.meta.columns.add(Column(
+                    name=p,
+                    es_column=p,
+                    es_index=self.name,
+                    es_type=OBJECT,
+                    jx_type=EXISTS,
+                    nested_path=nested_path,
+                    last_updated=Date.now()
+                ))
 
     @property
     def snowflake(self):

@@ -1839,7 +1839,7 @@ class BaseMultiOp(Expression):
                 AndOp([t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": operators["basic." + self.op](None, [
+                    "else": operators["basic." + self.op]([
                         CoalesceOp([t, _jx_identity[self.op]])
                         for t in terms
                     ])
@@ -1854,7 +1854,7 @@ class BaseMultiOp(Expression):
                 OrOp([t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": operators["basic." + self.op](None, terms)
+                    "else": operators["basic." + self.op](terms)
                 }
             ).partial_eval()
 
@@ -2509,7 +2509,8 @@ class BetweenOp(Expression):
     def define(cls, expr):
         term = expr.between
         if isinstance(term, list):
-            return BetweenOp(Betweenvalue=jx_expression(term[0]),
+            return BetweenOp(
+                value=jx_expression(term[0]),
                 prefix=jx_expression(term[1]),
                 suffix=jx_expression(term[2]),
                 default=jx_expression(expr.default),
@@ -2518,7 +2519,8 @@ class BetweenOp(Expression):
         elif isinstance(term, Mapping):
             var, vals = term.items()[0]
             if isinstance(vals, list) and len(vals) == 2:
-                return BetweenOp(Betweenvalue=Variable(var),
+                return BetweenOp(
+                    value=Variable(var),
                     prefix=Literal(vals[0]),
                     suffix=Literal(vals[1]),
                     default=jx_expression(expr.default),

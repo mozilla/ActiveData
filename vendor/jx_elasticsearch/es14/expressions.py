@@ -15,7 +15,7 @@ import itertools
 
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
     WhenOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
+    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BaseInequalityOp
 from jx_elasticsearch.es14.util import es_not, es_script, es_or, es_and, es_missing
@@ -935,7 +935,7 @@ _painless_operators = {
 }
 
 
-@extend(MultiOp)
+@extend(BaseMultiOp)
 def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     op, unit = _painless_operators[self.op]
     if self.nulls:

@@ -1760,13 +1760,13 @@ _jx_identity = {
 }
 
 
-class MultiOp(Expression):
+class BaseMultiOp(Expression):
     has_simple_form = True
     data_type = NUMBER
+    op = None
 
     def __init__(self, op, terms, **clauses):
         Expression.__init__(self, op, terms)
-        self.op = op
         self.terms = terms
         self.default = coalesce(clauses.get("default"), NULL)
         self.nulls = coalesce(clauses.get("nulls"), FALSE)  # nulls==True WILL HAVE OP RETURN null ONLY IF ALL OPERANDS ARE null
@@ -1781,7 +1781,7 @@ class MultiOp(Expression):
         return output
 
     def map(self, map_):
-        return MultiOp(self.op, [t.map(map_) for t in self.terms], **{"default": self.default, "nulls": self.nulls})
+        return self.__class__(self.op, [t.map(map_) for t in self.terms], **{"default": self.default, "nulls": self.nulls})
 
     def missing(self):
         if self.nulls:
@@ -1831,7 +1831,7 @@ class MultiOp(Expression):
                 AndOp("and", [t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": BasicMultiOp("basic." + self.op, [
+                    "else": operators["basic." + self.op](None, [
                         CoalesceOp("coalesce", [t, _jx_identity[self.op]])
                         for t in terms
                     ])
@@ -1847,19 +1847,19 @@ class MultiOp(Expression):
                 OrOp("or", [t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": BasicMultiOp("basic." + self.op, terms)
+                    "else": operators["basic." + self.op](None, terms)
                 }
             ).partial_eval()
 
         return output
 
 
-def AddOp(op, terms, **clauses):
-    return MultiOp("add", terms, **clauses)
+class AddOp(BaseMultiOp):
+    op = "add"
 
 
-def MultOp(op, terms, **clauses):
-    return MultiOp("mul", terms, **clauses)
+class MulOp(BaseMultiOp):
+    op = "mul"
 
 
 class RegExpOp(Expression):
@@ -2592,11 +2592,11 @@ class BetweenOp(Expression):
                 WhenOp("when", start_index.missing(), **{"then": NULL}),
                 WhenOp("when", self.suffix.missing(), **{"then": LengthOp("length", value)}),
                 WhenOp("when", IsNumberOp("is_number", self.suffix), **{"then": MinOp("min", [self.suffix, LengthOp("length", value)])}),
-                FindOp("find", [value, self.suffix], start=MultiOp("add", [start_index, len_prefix]))
+                FindOp("find", [value, self.suffix], start=AddOp("add", [start_index, len_prefix]))
             ]
         ).partial_eval()
 
-        start_index = MultiOp("add", [start_index, len_prefix]).partial_eval()
+        start_index = AddOp("add", [start_index, len_prefix]).partial_eval()
         substring = BasicSubstringOp("substring", [value, start_index, end_index]).partial_eval()
 
         between = WhenOp(
@@ -3025,9 +3025,9 @@ class BasicMultiOp(Expression):
     PLACEHOLDER FOR BASIC OPERATOR (CAN NOT DEAL WITH NULLS)
     """
     data_type = NUMBER
+    op = None
 
     def __init__(self, op, terms):
-        self.op = op
         self.terms = terms
 
     def vars(self):
@@ -3037,13 +3037,21 @@ class BasicMultiOp(Expression):
         return output
 
     def map(self, map):
-        return BasicMultiOp(self.op, [t.map(map) for t in self.terms])
+        return self.__class__(self.op, [t.map(map) for t in self.terms])
 
     def __data__(self):
-        return {"basic."+self.op: [t.__data__() for t in self.terms]}
+        return {self.op: [t.__data__() for t in self.terms]}
 
     def missing(self):
         return FALSE
+
+
+class BasicAddOp(BaseMultiOp):
+    op = "basic.add"
+
+
+class BasicMulOp(BaseMultiOp):
+    op = "basic.mul"
 
 
 class BasicSubstringOp(Expression):
@@ -3082,7 +3090,7 @@ _merge_types = {v: k for k, v in _merge_score.items()}
 
 
 operators = {
-    "add": MultiOp,
+    "add": AddOp,
     "and": AndOp,
     "between": BetweenOp,
     "case": CaseOp,
@@ -3117,9 +3125,9 @@ operators = {
     "minus": SubOp,
     "missing": MissingOp,
     "mod": ModOp,
-    "mul": MultiOp,
-    "mult": MultiOp,
-    "multiply": MultiOp,
+    "mul": MulOp,
+    "mult": MulOp,
+    "multiply": MulOp,
     "ne": NeOp,
     "neq": NeOp,
     "not": NotOp,
@@ -3143,7 +3151,7 @@ operators = {
     "suffix": SuffixOp,
     "sub": SubOp,
     "subtract": SubOp,
-    "sum": MultiOp,
+    "sum": AddOp,
     "term": EqOp,
     "terms": InOp,
     "tuple": TupleOp,

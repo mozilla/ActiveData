@@ -15,7 +15,7 @@ import itertools
 
 from jx_base.expressions import Variable, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
     WhenOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
+    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, BaseMultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
     ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp, BaseInequalityOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing, pull_functions
@@ -131,19 +131,20 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     ).partial_eval().to_es_script(schema)
 
 
-@extend(BaseBinaryOp)
+@extend(EqOp)
 def to_esfilter(self, schema):
-    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal) or self.op in BaseBinaryOp.operators:
+    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
         return self.to_es_script(schema).to_esfilter(schema)
 
-    if self.op in ["eq", "term"]:
-        return {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}
-    elif self.op in ["ne", "neq"]:
-        return es_not({"term": {self.lhs.var: self.rhs.to_esfilter(schema)}})
-    elif self.op in BaseBinaryOp.ineq_ops:
-        return {"range": {self.lhs.var: {self.op: self.rhs.value}}}
-    else:
-        Log.error("Logic error")
+    return {"term": {self.lhs.var: self.rhs.to_esfilter(schema)}}
+
+
+@extend(NeOp)
+def to_esfilter(self, schema):
+    if not isinstance(self.lhs, Variable) or not isinstance(self.rhs, Literal):
+        return self.to_es_script(schema).to_esfilter(schema)
+
+    return es_not({"term": {self.lhs.var: self.rhs.to_esfilter(schema)}})
 
 
 @extend(CaseOp)
@@ -1003,7 +1004,7 @@ _painless_operators = {
 }
 
 
-@extend(MultiOp)
+@extend(BaseMultiOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     op, unit = _painless_operators[self.op]
     if self.nulls:

@@ -12,9 +12,9 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
+    NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, UnixOp, FromUnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp
+    ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp, AddOp, SubOp
 from jx_base.queries import get_property_name
 from jx_sqlite import quoted_GUID, GUID
 from mo_dots import coalesce, wrap, Null, split_field, listwrap, startswith_field
@@ -214,18 +214,19 @@ def to_sql(self, schema, not_null=False, boolean=False):
 @extend(BasicSubstringOp)
 def to_sql(self, schema, not_null=False, boolean=False):
     value = self.value.to_sql(schema)[0].sql.s
-    start = MultiOp("add", [self.start, Literal(None, 1)]).partial_eval().to_sql(schema)[0].sql.n
-    length = BaseBinaryOp("subtract", [self.end, self.start]).partial_eval().to_sql(schema)[0].sql.n
+    start = AddOp("add", [self.start, Literal(None, 1)]).partial_eval().to_sql(schema)[0].sql.n
+    length = SubOp("subtract", [self.end, self.start]).partial_eval().to_sql(schema)[0].sql.n
 
     return wrap([{"name": ".", "sql": {"s": "SUBSTR" + sql_iso(value + "," + start + ", " + length)}}])
 
 
 @extend(BaseBinaryOp)
 def to_sql(self, schema, not_null=False, boolean=False):
+    op, zero = _sql_operators[self.op]
     lhs = self.lhs.to_sql(schema)[0].sql.n
     rhs = self.rhs.to_sql(schema)[0].sql.n
 
-    return wrap([{"name": ".", "sql": {"n": sql_iso(lhs) + " " + BaseBinaryOp.operators[self.op] + " " + sql_iso(rhs)}}])
+    return wrap([{"name": ".", "sql": {"n": sql_iso(lhs) + " " + op + " " + sql_iso(rhs)}}])
 
 
 @extend(MinOp)
@@ -734,7 +735,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     test = SqlInstrOp("substr", [
         SqlSubstrOp("substr", [
             self.value,
-            MultiOp("add", [self.start, ONE]),
+            AddOp("add", [self.start, ONE]),
             NULL
         ]),
         self.find
@@ -743,8 +744,8 @@ def to_sql(self, schema, not_null=False, boolean=False):
     if boolean:
         return test.to_sql(schema)
     else:
-        offset = BaseBinaryOp("sub", [self.start, ONE]).partial_eval()
-        index = MultiOp("add", [test, offset]).partial_eval()
+        offset = SubOp("sub", [self.start, ONE]).partial_eval()
+        index = AddOp("add", [test, offset]).partial_eval()
         temp = index.to_sql(schema)
         return WhenOp(
             "when",

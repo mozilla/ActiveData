@@ -23,9 +23,9 @@ from pyLibrary import convert
 
 from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
     extend, RowsOp, OffsetOp, GetOp, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, MultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
+    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, BaseMultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
     PrefixOp, NotLeftOp, RightOp, NotRightOp, FindOp, BetweenOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp, IntegerOp, BasicEqOp, BaseInequalityOp
+    ConcatOp, InOp, jx_expression, Expression, WhenOp, MaxOp, SplitOp, NULL, SelectOp, SuffixOp, LastOp, IntegerOp, BasicEqOp, BaseInequalityOp, BaseMultiOp
 from jx_python.expression_compiler import compile_expression
 from mo_times.dates import Date
 
@@ -92,9 +92,11 @@ def to_python(self, not_null=False, boolean=False, many=False):
         agg = agg + ".get(" + convert.value2quote(p) + ", EMPTY_DICT)"
     return agg + ".get(" + convert.value2quote(path[-1]) + ")"
 
+
 @extend(IntegerOp)
 def to_python(self, not_null=False, boolean=False, many=False):
     return "int(" + self.term.to_python() + ")"
+
 
 @extend(GetOp)
 def to_python(self, not_null=False, boolean=False, many=False):
@@ -258,32 +260,31 @@ def to_python(self, not_null=False, boolean=False, many=False):
     return "max(["+(','.join(t.to_python() for t in self.terms))+"])"
 
 
-
 _python_operators = {
     "add": (" + ", "0"),  # (operator, zero-array default value) PAIR
     "sum": (" + ", "0"),
     "mul": (" * ", "1"),
-    "sub": ("-", None),
-    "div": ("/", None),
-    "exp": ("**", None),
-    "mod": ("%", None),
-    "gt": (">", None),
-    "gte": (">=", None),
-    "lte": ("<=", None),
-    "lt": ("<", None)
+    "sub": (" - ", None),
+    "div": (" / ", None),
+    "exp": (" ** ", None),
+    "mod": (" % ", None),
+    "gt": (" > ", None),
+    "gte": (" >= ", None),
+    "lte": (" <= ", None),
+    "lt": (" < ", None)
 }
 
 
-
-@extend(MultiOp)
+@extend(BaseMultiOp)
 def to_python(self, not_null=False, boolean=False, many=False):
-    sign, zero =_python_operators[self.op]
+    sign, zero = _python_operators[self.op]
     if len(self.terms) == 0:
         return self.default.to_python()
     elif self.default is NULL:
         return sign.join("coalesce(" + t.to_python() + ", " + zero + ")" for t in self.terms)
     else:
         return "coalesce(" + sign.join("(" + t.to_python() + ")" for t in self.terms) + ", " + self.default.to_python() + ")"
+
 
 @extend(RegExpOp)
 def to_python(self, not_null=False, boolean=False, many=False):

@@ -60,7 +60,7 @@ class AggsDecoder(object):
                     return object.__new__(DefaultDecoder, e)
                 if len(cols) != 1:
                     return object.__new__(ObjectDecoder, e)
-                col = cols[0]
+                col = first(cols)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
 
                 if col.partitions != None:

@@ -13,11 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 
-from jx_base.expressions import Variable, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, \
-    WhenOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, BaseMultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
-    PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, \
-    ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp, BaseInequalityOp
+from jx_base.expressions import Variable, TupleOp, LeavesOp, BaseBinaryOp, OrOp, ScriptOp, WhenOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, EqOp, NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, BaseMultiOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, PrefixOp, NotLeftOp, InOp, CaseOp, AndOp, ConcatOp, IsNumberOp, Expression, BasicIndexOfOp, MaxOp, MinOp, BasicEqOp, BooleanOp, IntegerOp, BasicSubstringOp, ZERO, NULL, FirstOp, FALSE, TRUE, SuffixOp, simplified, ONE, BasicStartsWithOp, BasicMultiOp, UnionOp, merge_types, EsNestedOp, BaseInequalityOp
 from jx_elasticsearch.es52.util import es_not, es_script, es_or, es_and, es_missing, pull_functions
 from jx_python.jx import first
 from mo_dots import coalesce, wrap, Null, set_default, literal_field, Data
@@ -65,7 +61,7 @@ class EsScript(Expression):
         self.data_type = type
         self.expr = expr
         self.many = many  # True if script returns multi-value
-        self.frum = frum
+        self.frum = frum  # THE ORIGINAL EXPRESSION THAT MADE expr
 
     @property
     def type(self):
@@ -84,13 +80,6 @@ class EsScript(Expression):
             return "null"
 
         return "(" + missing.to_es_script(schema).expr + ")?null:(" + box(self) + ")"
-
-    # def partial_eval(self):
-    #     frum = self.frum.partial_eval()
-    #     if frum is self.frum:
-    #         return self
-    #
-    #     return frum.to_es_script(Null)
 
     def to_esfilter(self, schema):
         return {"script": es_script(self.script(schema))}
@@ -200,7 +189,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         acc.append("(" + val.partial_eval().to_es_script(schema).expr + ")")
     expr_ = "(" + "+".join(acc) + ").substring(" + LengthOp(separator).to_es_script(schema).expr + ")"
 
-    if isinstance(self.default, NullOp):
+    if self.default is NULL:
         return EsScript(
             miss=self.missing(),
             type=STRING,
@@ -1132,6 +1121,14 @@ def to_esfilter(self, schema):
         if output is false_script:
             return MATCH_NONE
         return ScriptOp(output.script(schema)).to_esfilter(schema)
+
+
+@extend(PrefixOp)
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    if not self.field:
+        return "true"
+    else:
+        return "(" + self.field.to_es_script(schema) + ").startsWith(" + self.prefix.to_es_script(schema) + ")"
 
 
 @extend(PrefixOp)

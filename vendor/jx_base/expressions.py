@@ -1023,7 +1023,7 @@ class EqOp(Expression):
         return self.lhs.vars() | self.rhs.vars()
 
     def map(self, map_):
-        return EqOp(self.op, [self.lhs.map(map_), self.rhs.map(map_)])
+        return EqOp(None, [self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
         return FALSE

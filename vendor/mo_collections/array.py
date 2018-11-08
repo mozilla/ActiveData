@@ -100,6 +100,7 @@ MORE_MATH = {
     "subtract": lambda a, b: a - b,
     "sub": lambda a, b: a - b,
     "multiply": lambda a, b: a * b,
+    "mul": lambda a, b: a * b,
     "mult": lambda a, b: a * b,
     "divide": lambda a, b: a / b,
     "div": lambda a, b: a / b

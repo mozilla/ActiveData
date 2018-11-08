@@ -1006,7 +1006,6 @@ class EqOp(Expression):
 
     def __init__(self, op, terms):
         Expression.__init__(self, op, terms)
-        self.op = op
         self.lhs, self.rhs = terms
 
     def __data__(self):
@@ -1753,10 +1752,7 @@ class MinOp(Expression):
 
 _jx_identity = {
     "add": ZERO,
-    "sum": ZERO,
-    "mul": ONE,
-    "mul": ONE,
-    "multiply": ONE
+    "mul": ONE
 }
 
 
@@ -1818,7 +1814,7 @@ class BaseMultiOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             if acc == None:
-                return NULL
+                return self.default.partial_eval()
             else:
                 return Literal(None, acc)
         elif self.nulls:
@@ -3028,6 +3024,7 @@ class BasicMultiOp(Expression):
     op = None
 
     def __init__(self, op, terms):
+        Expression.__init__(self, op, terms)
         self.terms = terms
 
     def vars(self):
@@ -3045,12 +3042,38 @@ class BasicMultiOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
+    def partial_eval(self):
+        acc = None
+        terms = []
+        for t in self.terms:
+            simple = t.partial_eval()
+            if isinstance(simple, NullOp):
+                pass
+            elif isinstance(simple, Literal):
+                if acc is None:
+                    acc = simple.value
+                else:
+                    acc = builtin_ops[self.op](acc, simple.value)
+            else:
+                terms.append(simple)
+        if len(terms) == 0:
+            if acc == None:
+                return self.default.partial_eval()
+            else:
+                return Literal(None, acc)
+        else:
+            if acc is not None:
+                terms.append(Literal("literal", acc))
 
-class BasicAddOp(BaseMultiOp):
+            return self.__class__(None, terms)
+
+
+class BasicAddOp(BasicMultiOp):
     op = "basic.add"
 
 
-class BasicMulOp(BaseMultiOp):
+class BasicMulOp(BasicMultiOp):
     op = "basic.mul"
 
 
@@ -3092,6 +3115,8 @@ _merge_types = {v: k for k, v in _merge_score.items()}
 operators = {
     "add": AddOp,
     "and": AndOp,
+    "basic.add": BasicAddOp,
+    "basic.mul": BasicMulOp,
     "between": BetweenOp,
     "case": CaseOp,
     "coalesce": CoalesceOp,
@@ -3170,10 +3195,7 @@ builtin_ops = {
     "lt": operator.lt,
     "add": operator.add,
     "sub": operator.sub,
-    "sum": operator.add,
     "mul": operator.mul,
-    "mult": operator.mul,
-    "multiply": operator.mul,
     "max": lambda *v: max(v),
     "min": lambda *v: min(v)
 }

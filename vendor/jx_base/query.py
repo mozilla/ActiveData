@@ -183,7 +183,8 @@ class QueryOp(Expression):
         else:
             select = map_select(self.select, map_)
 
-        return QueryOp(Queryfrum=self.frum.map(map_),
+        return QueryOp(
+            frum=self.frum.map(map_),
             select=select,
             edges=wrap([map_edge(e, map_) for e in self.edges]),
             groupby=wrap([g.map(map_) for g in self.groupby]),

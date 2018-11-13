@@ -1526,37 +1526,61 @@ def diff_schema(A, B):
 DEFAULT_DYNAMIC_TEMPLATES = wrap([
     {
         "default_typed_boolean": {
-            "mapping": {"type": "boolean", "store": True},
+            "mapping": {
+                "type": "boolean",
+                "store": True,
+                "norms": False
+            },
             "match": BOOLEAN_TYPE
         }
     },
     {
         "default_typed_number": {
-            "mapping": {"type": "double", "store": True},
+            "mapping": {
+                "type": "double",
+                "store": True,
+                "norms": False
+            },
             "match": NUMBER_TYPE
         }
     },
     {
         "default_typed_string": {
-            "mapping": {"type": "keyword", "store": True},
+            "mapping": {
+                "type": "keyword",
+                "store": True,
+                "norms": False
+            },
             "match": STRING_TYPE
         }
     },
     {
         "default_typed_exist": {
-            "mapping": {"type": "long", "store": True},
+            "mapping": {
+                "type": "long",
+                "store": True,
+                "norms": False
+            },
             "match": EXISTS_TYPE
         }
     },
     {
         "default_typed_nested": {
-            "mapping": {"type": "nested", "store": True},
+            "mapping": {
+                "type": "nested",
+                "store": True,
+                "norms": False
+            },
             "match": NESTED_TYPE
         }
     },
     {
         "default_string": {
-            "mapping": {"type": "keyword", "store": True},
+            "mapping": {
+                "type": "keyword",
+                "store": True,
+                "norms": False
+            },
             "match_mapping_type": "string"
         }
     },

@@ -19,7 +19,7 @@ from decimal import Decimal
 
 from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null, SLOT
 from mo_dots.objects import DataObject
-from mo_future import text_type, none_type, long, binary_type, PY2
+from mo_future import text_type, none_type, long, binary_type, PY2, items
 from mo_logs import Except, strings, Log
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
@@ -97,6 +97,7 @@ def float2json(value):
 
 
 def _snap_to_base_10(mantissa):
+    # TODO: https://lists.nongnu.org/archive/html/gcl-devel/2012-10/pdfkieTlklRzN.pdf
     digits = mantissa.replace('.', '')
     if SNAP_TO_BASE_10:
         f9 = strings.find(digits, '999')
@@ -387,7 +388,6 @@ python_type_to_json_type = {
     int: NUMBER,
     text_type: STRING,
     float: NUMBER,
-    None: OBJECT,
     bool: BOOLEAN,
     NullType: OBJECT,
     none_type: OBJECT,
@@ -406,6 +406,24 @@ if PY2:
     python_type_to_json_type[str] = STRING
     python_type_to_json_type[long] = NUMBER
 
+for k, v in items(python_type_to_json_type):
+    python_type_to_json_type[k.__name__] = v
+
+
+_merge_order= {
+    BOOLEAN: 1,
+    INTEGER: 2,
+    NUMBER: 3,
+    STRING: 4,
+    OBJECT: 5,
+    NESTED: 6
+}
+
+
+def _merge_json_type(A, B):
+    a = _merge_order[A]
+    b = _merge_order[B]
+    return A if a >= b else B
 
 
 from mo_json.decoder import json_decoder

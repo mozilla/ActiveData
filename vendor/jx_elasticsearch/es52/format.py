@@ -194,19 +194,35 @@ def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
         groupby = query.groupby
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims)
+        give_me_zeros = query.sort and not query.groupby
 
-        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=(query.sort and not query.groupby)):
+        finishes = []
+        # IRREGULAR DEFAULTS MESS WITH union(), SET THEM AT END, IF ANY
+        for s in all_selects:
+            if s.default != canonical_aggregates[s.aggregate].default:
+                s.finish = s.default
+                s.default = None
+                finishes.append(s)
+
+        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=give_me_zeros):
             output = is_sent[coord]
             if output == None:
                 output = is_sent[coord] = Data()
                 for g, d, c in zip(groupby, decoders, coord):
                     output[g.put.name] = d.get_value(c)
                 for s in all_selects:
-                    output[s.name] = None
+                    output[s.name] = s.default
                 yield output
             # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
             for s in _selects:
                 union(output, s.name, s.pull(agg), s.aggregate)
+
+        if finishes:
+            # SET ANY DEFAULTS
+            for c, o in is_sent:
+                for s in finishes:
+                    if o[s.name] == None:
+                        o[s.name] = s.finish
 
     for g in query.groupby:
         g.put.name = coalesce(g.put.name, g.name)

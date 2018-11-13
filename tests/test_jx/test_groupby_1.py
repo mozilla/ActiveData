@@ -283,6 +283,52 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_default(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": [
+                {"a": "c"},
+                {"a": "b", "v": 2},
+                {"v": 3},
+                {"a": "b"},
+                {"a": "c"},
+                {"a": "c"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {"value": "v", "aggregate": "sum", "default": 0},
+                "groupby": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "v": 2},
+                    {"a": "c", "v": 0},
+                    {"a": NULL, "v": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "v"],
+                "data": [
+                    ["b", 2],
+                    ["c", 0],
+                    [None, 3]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "a", "domain": {"partitions": [
+                    {"value": "b"},
+                    {"value": "c"}
+                ]}}],
+                "data": {
+                    "v": [2, 0, 3]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
     def test_many_aggs_on_one_column(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
         test = {

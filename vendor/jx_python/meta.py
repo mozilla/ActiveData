@@ -14,19 +14,15 @@ from __future__ import unicode_literals
 import sqlite3
 from collections import Mapping
 from contextlib import contextmanager
-from datetime import date
-from datetime import datetime
-from decimal import Decimal
-
-from mo_files import File
 
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, coalesce, Null
-from mo_future import none_type, text_type, long, PY2
+from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, Null
+from mo_files import File
+from mo_future import none_type, text_type, items, reduce
 from mo_json import python_type_to_json_type, STRUCT, NUMBER, INTEGER, STRING, json2value, value2json
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log, Except
@@ -65,13 +61,13 @@ class ColumnList(Table, jx_base.Container):
 
     @contextmanager
     def _db_transaction(self):
-        self.db.execute("BEGIN")
+        self.db.execute(str("BEGIN"))
         try:
             yield
-            self.db.execute("COMMIT")
+            self.db.execute(str("COMMIT"))
         except Exception as e:
             e = Except.wrap(e)
-            self.db.execute("ROLLBACK")
+            self.db.execute(str("ROLLBACK"))
             Log.error("Transaction failed", cause=e)
 
     def _query(self, query):
@@ -492,9 +488,10 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
     """
 
     for d in frum:
-        row_type = _type_to_name[d.__class__]
+        row_type = python_type_to_json_type[d.__class__]
 
         if row_type != "object":
+            # EXPECTING PRIMITIVE VALUE
             full_name = parent
             column = columns[full_name]
             if not column:
@@ -502,14 +499,14 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                     name=concat_field(table_name, full_name),
                     es_column=full_name,
                     es_index=".",
-                    jx_type=python_type_to_json_type[d.__class__],
-                    es_type=row_type,
+                    es_type=c.__class__.__name__,
+                    jx_type=None,   # WILL BE SET BELOW
                     last_updated=Date.now(),
                     nested_path=nested_path
                 )
                 columns.add(column)
-            column.es_type = _merge_type[column.es_type][row_type]
-            column.jx_type = _merge_type[coalesce(column.jx_type, "undefined")][row_type]
+            column.es_type = _merge_python_type(column.es_type, row_type)
+            column.jx_type = python_type_to_json_type[column.es_type]
         else:
             for name, value in d.items():
                 full_name = concat_field(parent, name)
@@ -519,7 +516,8 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                         name=concat_field(table_name, full_name),
                         es_column=full_name,
                         es_index=".",
-                        es_type="undefined",
+                        es_type=value.__class__.__name__,
+                        jx_type=None,   # WILL BE SET BELOW
                         last_updated=Date.now(),
                         nested_path=nested_path
                     )
@@ -527,21 +525,19 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                 if isinstance(value, (list, set)):  # GET TYPE OF MULTIVALUE
                     v = list(value)
                     if len(v) == 0:
-                        this_type = "undefined"
+                        this_type = none_type.__name__
                     elif len(v) == 1:
-                        this_type = _type_to_name[v[0].__class__]
+                        this_type = v[0].__class__.__name__
                     else:
-                        this_type = _type_to_name[v[0].__class__]
-                        if this_type == "object":
-                            this_type = "nested"
+                        this_type = reduce(_merge_python_type, (vi.__class__.__name__ for vi in value))
                 else:
-                    this_type = _type_to_name[value.__class__]
-                new_type = _merge_type[column.es_type][this_type]
-                column.es_type = new_type
+                    this_type = value.__class__.__name__
+                column.es_type = _merge_python_type(column.es_type, this_type)
+                column.jx_type = python_type_to_json_type[column.es_type]
 
-                if this_type == "object":
+                if this_type in {"object", "dict", "Mapping", "Data"}:
                     _get_schema_from_list([value], table_name, full_name, nested_path, columns)
-                elif this_type == "nested":
+                elif this_type in {"list", "FlatList"}:
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0]) + [name])] + np)
                     _get_schema_from_list(value, table_name, full_name, newpath, columns)
@@ -630,147 +626,39 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO A
     ]
 )
 
-_type_to_name = {
-    none_type: "undefined",
-    NullType: "undefined",
-    bool: "boolean",
-    str: "string",
-    text_type: "string",
-    int: "integer",
-    float: "double",
-    Data: "object",
-    dict: "object",
-    set: "nested",
-    list: "nested",
-    FlatList: "nested",
-    Date: "double",
-    Decimal: "double",
-    datetime: "double",
-    date: "double"
+
+_merge_order = {
+    none_type: 0,
+    NullType: 1,
+    bool: 2,
+    int: 3,
+    Date: 4,
+    float: 5,
+    text_type: 6,
+    object: 7,
+    dict: 8,
+    Mapping: 9,
+    Data: 10,
+    list: 11,
+    FlatList: 12
 }
 
-if PY2:
-    _type_to_name[long] = "integer"
+for k,v in items(_merge_order):
+    _merge_order[k.__name__] = v
 
-_merge_type = {
-    "undefined": {
-        "undefined": "undefined",
-        "boolean": "boolean",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": "object",
-        "nested": "nested"
-    },
-    "boolean": {
-        "undefined": "boolean",
-        "boolean": "boolean",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "integer": {
-        "undefined": "integer",
-        "boolean": "integer",
-        "integer": "integer",
-        "long": "long",
-        "float": "float",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "long": {
-        "undefined": "long",
-        "boolean": "long",
-        "integer": "long",
-        "long": "long",
-        "float": "double",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "float": {
-        "undefined": "float",
-        "boolean": "float",
-        "integer": "float",
-        "long": "double",
-        "float": "float",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "double": {
-        "undefined": "double",
-        "boolean": "double",
-        "integer": "double",
-        "long": "double",
-        "float": "double",
-        "double": "double",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "number": {
-        "undefined": "number",
-        "boolean": "number",
-        "integer": "number",
-        "long": "number",
-        "float": "number",
-        "double": "number",
-        "number": "number",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "string": {
-        "undefined": "string",
-        "boolean": "string",
-        "integer": "string",
-        "long": "string",
-        "float": "string",
-        "double": "string",
-        "number": "string",
-        "string": "string",
-        "object": None,
-        "nested": None
-    },
-    "object": {
-        "undefined": "object",
-        "boolean": None,
-        "integer": None,
-        "long": None,
-        "float": None,
-        "double": None,
-        "number": None,
-        "string": None,
-        "object": "object",
-        "nested": "nested"
-    },
-    "nested": {
-        "undefined": "nested",
-        "boolean": None,
-        "integer": None,
-        "long": None,
-        "float": None,
-        "double": None,
-        "number": None,
-        "string": None,
-        "object": "nested",
-        "nested": "nested"
-    }
-}
+
+def _merge_python_type(A, B):
+    a = _merge_order[A]
+    b = _merge_order[B]
+
+    if a >= b:
+        output = A
+    else:
+        output = B
+
+    if isinstance(output, str):
+        return output
+    else:
+        return output.__name__
+
+

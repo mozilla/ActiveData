@@ -35,6 +35,7 @@ if PY3:
     from functools import cmp_to_key
     from configparser import ConfigParser
     from itertools import zip_longest
+    from functools import reduce
 
     izip = zip
     zip_longest = itertools.zip_longest
@@ -115,6 +116,7 @@ else:
     from __builtin__ import zip as transpose
     from itertools import izip
 
+    reduce = __builtin__.reduce
     text_type = __builtin__.unicode
     string_types = (str, unicode)
     binary_type = str

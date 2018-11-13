@@ -12,6 +12,8 @@ from __future__ import division
 from __future__ import unicode_literals
 
 import itertools
+from datetime import datetime, date
+from decimal import Decimal
 
 import jx_base
 from jx_base import TableDesc
@@ -20,9 +22,9 @@ from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field
+from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field, NullType, FlatList
 from mo_files import URL
-from mo_future import text_type
+from mo_future import text_type, none_type, PY2
 from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, STRING_TYPE, BOOLEAN_TYPE, NUMBER_TYPE
 from mo_kwargs import override
@@ -893,6 +895,154 @@ def jx_type(column):
     if column.es_column.endswith(EXISTS_TYPE):
         return EXISTS
     return es_type_to_json_type[column.es_type]
+
+
+python_type_to_es_type = {
+    none_type: "undefined",
+    NullType: "undefined",
+    bool: "boolean",
+    str: "string",
+    text_type: "string",
+    int: "integer",
+    float: "double",
+    Data: "object",
+    dict: "object",
+    set: "nested",
+    list: "nested",
+    FlatList: "nested",
+    Date: "double",
+    Decimal: "double",
+    datetime: "double",
+    date: "double"
+}
+
+if PY2:
+    python_type_to_es_type[long] = "integer"
+
+_merge_es_type = {
+    "undefined": {
+        "undefined": "undefined",
+        "boolean": "boolean",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": "object",
+        "nested": "nested"
+    },
+    "boolean": {
+        "undefined": "boolean",
+        "boolean": "boolean",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "integer": {
+        "undefined": "integer",
+        "boolean": "integer",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "long": {
+        "undefined": "long",
+        "boolean": "long",
+        "integer": "long",
+        "long": "long",
+        "float": "double",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "float": {
+        "undefined": "float",
+        "boolean": "float",
+        "integer": "float",
+        "long": "double",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "double": {
+        "undefined": "double",
+        "boolean": "double",
+        "integer": "double",
+        "long": "double",
+        "float": "double",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "number": {
+        "undefined": "number",
+        "boolean": "number",
+        "integer": "number",
+        "long": "number",
+        "float": "number",
+        "double": "number",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "string": {
+        "undefined": "string",
+        "boolean": "string",
+        "integer": "string",
+        "long": "string",
+        "float": "string",
+        "double": "string",
+        "number": "string",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "object": {
+        "undefined": "object",
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "number": None,
+        "string": None,
+        "object": "object",
+        "nested": "nested"
+    },
+    "nested": {
+        "undefined": "nested",
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "number": None,
+        "string": None,
+        "object": "nested",
+        "nested": "nested"
+    }
+}
+
+
 
 
 OBJECTS = (OBJECT, EXISTS)

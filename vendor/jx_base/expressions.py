@@ -397,6 +397,9 @@ class SelectOp(Expression):
     has_simple_form = True
 
     def __init__(self, terms):
+        """
+        :param terms: list OF {"name":name, "value":value} DESCRIPTORS
+        """
         self.terms = terms
 
     @classmethod

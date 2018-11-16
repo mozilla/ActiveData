@@ -11,6 +11,7 @@ Problems
 * 
 
 Good
+
 * Dev is part of the ETL 
 * Dynamic typed database stays flexible  
 

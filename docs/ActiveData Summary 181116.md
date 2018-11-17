@@ -7,14 +7,14 @@ ActiveData is a query translation service; accepting parsed SQL-like expressions
 
 ActiveData provides two important features inspired by MDX:
 
-1. Nested object arrays can be queried like any other table; as if joined with the parent documents. This simplifies queries avoiding Elasticsearch's "nested" queries, or SQL's join-with-explode idiom.  
+1. Nested object arrays can be queried like any other table; as if joined with the parent documents. This simplifies queries; avoiding Elasticsearch's "nested" queries, or SQL's join-with-explode idiom.  
 2. Ability to query into a dynamically typed JSON document storage; The strict schema is managed by code, and ActiveData's query expressions need little or no change as the schema expands (migrates) over time.
 
 ## Short History
 
-ActiveData has been around since 2015 and has been using Elasticsearch v1.4, or v1.7, since that time. These early versions of Elasticsearch allowed us to pour just about any JSON document into it, and it would "just work". ActiveData was a relatively simple translation service that simplified queries, especially ones involving multiple dimensions.   
+ActiveData has been around since 2015 and has been using Elasticsearch v1.4, or v1.7, since that time. These early versions of Elasticsearch allowed us to pour just about any JSON document into it, and it would "just work". ActiveData was a relatively simple translation service that simplified queries, especially ones involving multiple dimensions or not-simple expressions.   
 
-Elasticsearch 2.x, and beyond, demand a strict JSON schema; you could no longer dump documents into it, and worry about the schema later. Now, the user had to ensure the schema stayed consistent at insert time, rather than waiting for query time. ActiveData would require an upgrade; it must take over the handling of dynamic schemas.
+Elasticsearch 2.x, and beyond, demand a strict JSON schema; the later versions could no longer accept documents dumps, leaving worry about the schema later. Now, the user had to ensure the schema stayed consistent at insert time, rather than waiting for query time. ActiveData would require an upgrade; it must take over the handling of dynamic schemas.
 
 ## Understanding the Effort
 
@@ -42,7 +42,7 @@ Which would make our document look like:
 
 but that form is never realized inside Elasticsearch: Storing type information in the column names should have no impact on storage size or query speed.
 
-### One tiny detail
+### Nested Object Arrays
 
 While we rewrite column names, we can do the same for nested object arrays:
 
@@ -58,11 +58,13 @@ While we rewrite column names, we can do the same for nested object arrays:
 
 we use the `~N~`, for "nested", to distinguish between the inner object `{"b":3}` and same-named nested array `[{"b":3}]`.  Again, this would have little impact on Elasticsearch, but gives use the ability to, truely, store any document, of any shape, and have it properly indexed.
 
+## Upgrade Overview
+
 <img alt="chart of hours" src="./ActiveData%20Summary%20181116%20hours.png"/>
 
 ## Start Upgrade
 
-On July 2017, work begun to upgrade ActiveData from Elastisearch 1.7 to 5.x. The work was packaged as an Outreachy project: [Change ActiveData so it can handle the extra type information in the column names](Outreachy%20Proposal.md). There was already a primitive JSON rewriter; converting JSON into "typed JSON"; which is used to insert the correct JSON documents into ES; and can be used by the test harness to leverage the existing test suite.
+In May 2017, work begun to upgrade ActiveData from Elastisearch 1.7 to 5.x. The work was packaged as an Outreachy project: [Change ActiveData so it can handle the extra type information in the column names](Outreachy%20Proposal.md). There was already a primitive JSON rewriter; converting JSON into "typed JSON"; which is used to insert the correct JSON documents into ES; and can be used by the test harness to leverage the existing test suite.
 
 And then ...
 
@@ -102,17 +104,16 @@ September, October and November was spent passing tests that required Painless s
 
 As 2017 came to a close ActiveData was ready for deployment. A few nodes of the new cluster were setup, and ingestion was started.  The various services were connected to find the long tail of production bugs 
 
-
 ## Slow Cluster Problems
 
 The new cluster was showing poor performance despite handling a small fraction of the data. Ingestion was so slow it could not keep up with the ETL pipeline. Moving 10gig shards of data between nodes took days instead of minutes.  
 
 The new cluster and the old cluster had the same hardware: Same instance types, same ephemeral drives, same EBS drives.  The new cluster showed no noticeable CPU usage, no noticeable network usage, no drive usage. Random drive tests showed they performed as expected. Still ingestion was slow.  
 
-* **Could it be the new Typed JSON?** - No, the actual JSON was larger, but the old cluster was not showing more disk usage then he old cluster, like theory predicted.  And that would not explain the very slow shard movement, which seemed to work out to a very low kilobytes per second.
+* **Could it be the new Typed JSON?** - No, the actual JSON was larger, but the old cluster was not showing more disk usage than the old cluster, like theory predicted. Plus, it would not explain the very slow shard movement, which seemed to work out to kilobytes per second.
 * **Could it be the EBS drives?** - No, they are the same drives as the old cluster used. 
 
-After reviewing the esoteric Elasticsearch settings, turning off JFS on linux, attempting different ingestion techniques, and in desperation, as the months go by with no upgrade, I tested `d2` instances with thier large, local, ephemeral storage: Performance was acceptable!
+After reviewing the esoteric Elasticsearch settings, turning off JFS on linux and attempting different ingestion techniques, the months go by with no solution. In desperation, I decided to brute force a solution: I setup a new cluster using `d2` instances with their large local storage. Performance was acceptable!
 
 Was it the EBS drives? Yes, and no: Amazon had changed the billing structure on EBS sometime during 2017; ***new drives were billed according to the new rules and new performance characteristics, while the old drives maintained their legacy billing and legacy performance***. Old EBS magnetic drives did not impact network usage; either the drives were on a separate NAS network, or their network usage was not metered. The new EBS usage showed up in network usage, was bounded by network limits, and had new pricing limits based on request rate or data volume.     
 
@@ -120,27 +121,27 @@ We could no longer use EBS with Elasticsearch. In theory, it should never have b
 
 ## Dockerize Bugzilla-ETL with ActiveData
 
-ActiveData is a query translation service, and it works on any Elasticsearch cluster. Mozilla had a Elasticsearch v0.9 cluster, which stored all Bugzilla bug snapshots over all time, that required upgrading.  Summer 2018 was spent dockerizing the ETL pipeline, and ActiveData to work on a Elasticsearch-as-a-service.  
+ActiveData is a query translation service, and it works on any Elasticsearch cluster. Mozilla had a Elasticsearch v0.9 cluster, which stored all Bugzilla bug snapshots over all time, and it required upgrading.  Summer 2018 was spent dockerizing the ETL pipeline, and ActiveData to work on a Elasticsearch-as-a-service.  
 
 The biggest blocker, noticed during the Bugzilla-ETL deploy, was the metadata management in ActiveData was too slow. A database was required to save data between instances and runs because it was proving too expensive to accumulate at startup. Metadata management was turned off on the Bugzilla-ETL instance to ensure it was performant; it caused test breakage, but it was a breakage we can live with in the short term.    
 
-During this time, ActiveData was deployed: Not officially, and it still did not pass all tests, but it was good enough for Coverage queries and good enough to support the ETL pipeline. 
+During this time, the main ActiveData instance was deployed: Not officially, and it still did not pass all tests, but it was good enough for Coverage queries and good enough to support the ETL pipeline. 
 
-## Finish Upgrade ActiveData. No, Really.
+## Final Upgrade
 
 The fourth quarter of 2018 was to start. The ActiveData upgrade was looking like a failure. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
-
-A database was added to metadata management. But the production deployment showed it was still too slow.
 
 The IP was redirected on Sunday October 21st.
 
 ### Everything breaks
 
-The IP redirect revealed the number of services and dashboards and services that were using ActiveData, and it showed the range of queries it was failing to process properly.  Since going backward is more work than going forward, I started a two week, intense, post-deploy fire fighting operation. 
+Production deployment showed metadata management, backed by a database was still too slow. It was turned off, except for a couple of columns, to ensure production queries still work
 
-Essentially, ActiveData's test suite did not cover all use cases, and the real word exposed them.
+The IP redirect revealed the number of services and dashboards that were using ActiveData, and it showed the range of queries it was failing to process properly. Since going backward is more work than going forward: I started a two week, post-deploy, fire fighting operation. 
 
-* The queries into nested object arrays is more prevalent, and diverse, than imagined. With Typed JSON working, Elasticsearch queries on nested documents was now giving correct results, and were more complicated than before. I added the required tests, but for each test I would pass, another would break. I was spending too much time trying to make the code templates work before I realized  the problem: The query translator had to move from using code templates to using first order expressions so that they could be rearranged to get the correct result.
+Essentially, ActiveData's test suite did not cover all use cases; moving to production exposed the suite's deficiencies.
+
+* Queries into nested object arrays is more prevalent, and diverse, than imagined. With Typed JSON working, Elasticsearch queries on nested documents was now giving correct results, but were more complicated than before. I added the required tests, but for each test I would pass, another would break. I was spending too much time trying to make the code templates work before I realized  the problem: The query translator had to move from using code templates to using first order expressions so that they could be rearranged to get the correct result.
 * Elasticsearch is strictly typed; it can store Boolean columns. This broke a number of tests. Elasticsearch v1.7 stored Booleans as strings `"T"` and `"F"`. As a result, there were queries that used the following logic:
 ```
 {"when": {"eq": {"result.ok": "F"}}, "then": 1}
@@ -148,13 +149,31 @@ Essentially, ActiveData's test suite did not cover all use cases, and the real w
 The query translator had to identify `result.ok` as a Boolean column, and `"F"` as equivalent to `false`.
 * Elasticsearch aggregation over a Boolean column results in `1` or `0` not `true` or `false`. More logic was added to ensure ActiveData did not make the same error.
   
+## Success &#9785;
+
+The ActiveData Upgrade was an upgrade disguised as a complete rewrite. Elasticsearch v1.7 had almost nothing in common with Elasticsearch v5.x. I consider it a good example of the effort it takes to change a backend data store in an application. The upgrade took so long there is no justification for pride or pleasure.
+
+## Things Learnt
+
+If you got here, then please [email me with your thoughts](mailto:klahnakoski@mozilla.com)
+
+Here are some things that could be improved
+
+* **Always start with the most powerful hardware** - The slow ingestion problem was a time sink that could have been avoided if the most powerful hardware was deployed first; then scaled back to match demand. Now that I have arrived at this strategy, I see it stated elsewhere in Elasticsearch documents: Start big to avoid confounding scaling problems with configuration problems; then scale back until you measure a performance impact.<br>There is a cost to deploying expensive hardware, and there is a cost to measurement, especially if you are measuring a large cluster.
+* **Replay production queries on new cluster** - It simply did not occur to me to replay the produciton queries on the new cluster until it was too late. I think a dumb mistake like this can be avoided by having a second person being intimately familiar with the project, and verifying the upgrade checklist.<br>This has two costs: There would be no firefight at the end, but that development time would have spread over more weeks, delaying the upgrade even more. Plus, having a second person to ask the right questions and catch this type of error is also a cost, either in training or expertise.
+
+Here things that felt bad, and I have no solution for: 
+
+* **Why did I spend time on constant propagation?** - This took a lot of time, and feels bad because this has been solved many times before: Why can I not download code, like an abstract compiler, to do this for me? If I can, then why is it harder to use than just coding my own solution? This problem is a example of a class of problems I experience quite often: Solutions to common problems can be found in a multitude of software, yet no one has written a library to solve the problem in isolation. Here is a small example: Topological ordering of nodes in a cyclic graph, is something I must write for every new language I learn.
+* **  
+
 
 
 ----------
 
+## Notes
 
-
-## Gritty Details
+Point form notes as I review my timesheets
 
 ### Dec 2016
 

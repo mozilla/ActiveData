@@ -126,7 +126,7 @@ The biggest blocker, noticed during the Bugzilla-ETL deploy, was the metadata ma
 
 During this time, ActiveData was deployed: Not officially, and it still did not pass all tests, but it was good enough for Coverage queries and good enough to support the ETL pipeline. 
 
-## Upgrade ActiveData. No, Really.
+## Finish Upgrade ActiveData. No, Really.
 
 The fourth quarter of 2018 was to start. The ActiveData upgrade was looking like a failure. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
 
@@ -134,7 +134,7 @@ A database was added to metadata management. But the production deployment showe
 
 The IP was redirected on Sunday October 21st.
 
-## Everything breaks
+### Everything breaks
 
 The IP redirect revealed the number of services and dashboards and services that were using ActiveData, and it showed the range of queries it was failing to process properly.  Since going backward is more work than going forward, I started a two week, intense, post-deploy fire fighting operation. 
 
@@ -149,6 +149,8 @@ The query translator had to identify `result.ok` as a Boolean column, and `"F"` 
 * Elasticsearch aggregation over a Boolean column results in `1` or `0` not `true` or `false`. More logic was added to ensure ActiveData did not make the same error.
   
 
+
+----------
 
 
 

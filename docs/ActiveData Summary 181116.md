@@ -90,12 +90,12 @@ Implementing constant propagation was a problem; ActiveData was not designed for
 
 Transpiling comes in 4 major forms, each has benefits and detriments:
 
-* **String Concatenation** - Transpiling can be super simple: Concatenate strings to achieve the desired code. For example in SQL:<br>&nbsp;&nbsp;&nbsp;`&nbsp;sql = "SELECT id FROM " + quote_column(my_table) + " WHERE name = " + quote(my_name)`
-* **Code Templates** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>&nbsp;&nbsp;&nbsp;`template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
-* **First order expressions** - to perform constant propagation we need to rearrange instructions. To rearrange instructions we need an object representation of each instruction for the code to manipulate. The ActiveData script translator added a class for each instruction. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagation that Painless required. Of course, this form opened up allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
+* **String Concatenation** - Transpiling can be super simple: Concatenate strings to achieve the desired code. For example in SQL:<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = "SELECT id FROM " + quote_column(my_table) + " WHERE name = " + quote(my_name)`
+* **Code Templates** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>&nbsp;&nbsp;&nbsp;&nbsp;`template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
+* **First order expressions** - to perform constant propagation we need to rearrange operations. To rearrange operations we need an object representation of each operation for the code to manipulate. The ActiveData script translator added a class for each operation. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagation that Painless required. Of course, this form opened up allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
 * **Optimizing Compiler** - Beyond expression simplification are a host of optimization strategies and the data structures used to support them. This is not done in ActiveData.   
 
-When writing a transpiler consider the level of complexity you require. The jump from code templates to expression simplification is large enough to demand pause: Consider if there would be another strategy for the overall problem. In this case I should have considered if ActiveData should be retired. My search for an ActiveData replacement was more pronounced now: Can we use Amplitude? Can we use Spark? Why do all the Dremel encoding libraries suck a nested object encodings? There appeared to be no good solutions 
+When writing a transpiler consider the level of complexity you require. The jump from code templates to expression simplification is large enough to demand pause: Consider if there would be another strategy for the overall problem. In this case I should have considered if ActiveData should be retired. My search for an ActiveData replacement was more pronounced now: Can we use Amplitude? Can we use Spark? Why do all the Dremel encoding libraries suck at nested object encodings? There appeared to be no good solutions 
 
 ## 2nd Attempt (Q3 2017)
 
@@ -109,14 +109,14 @@ The new cluster was showing poor performance despite handling a small fraction o
 
 The new cluster and the old cluster had the same hardware: Same instance types, same ephemeral drives, same EBS drives.  The new cluster showed no noticeable CPU usage, no noticeable network usage, no drive usage. Random drive tests showed they performed as expected. Still ingestion was slow.  
 
-* **Could it be the new Typed JSON?** - No, the actual JSON was larger, but the old cluster was not showing more disk usage than the old cluster, like theory predicted. Plus, it would not explain the very slow shard movement, which seemed to work out to kilobytes per second.
+* **Could it be the new Typed JSON?** - No, the actual JSON was larger, but the old cluster was not showing more bytes stored than the old cluster, like theory predicted. Plus, it would not explain the very slow shard movement, which seemed to work out to kilobytes per second.
 * **Could it be the EBS drives?** - No, they are the same drives as the old cluster used. 
 
 After reviewing the esoteric Elasticsearch settings, turning off JFS on linux and attempting different ingestion techniques, the months go by with no solution. In desperation, I decided to brute force a solution: I setup a new cluster using `d2` instances with their large local storage. Performance was acceptable!
 
 Was it the EBS drives? Yes, and no: Amazon had changed the billing structure on EBS sometime during 2017; ***new drives were billed according to the new rules and new performance characteristics, while the old drives maintained their legacy billing and legacy performance***. Old EBS magnetic drives did not impact network usage; either the drives were on a separate NAS network, or their network usage was not metered. The new EBS usage showed up in network usage, was bounded by network limits, and had new pricing limits based on request rate or data volume.     
 
-We could no longer use EBS with Elasticsearch. In theory, it should never have been used on EBS, but the Magnetic EBS drives were a sweet deal while it lasted.
+We could no longer use EBS with Elasticsearch. In theory, Elasticsearch should never have been used on EBS, but the Magnetic EBS drives were a sweet deal while it lasted.
 
 ## Dockerize Bugzilla-ETL with ActiveData
 
@@ -124,11 +124,11 @@ ActiveData is a query translation service, and it works on any Elasticsearch clu
 
 The biggest blocker, noticed during the Bugzilla-ETL deploy, was the metadata management in ActiveData was too slow. A database was required to save data between instances and runs because it was proving too expensive to accumulate at startup. Metadata management was turned off on the Bugzilla-ETL instance to ensure it was performant; it caused test breakage, but it was a breakage we can live with in the short term.    
 
-During this time, the main ActiveData instance was deployed: Not officially, and it still did not pass all tests, but it was good enough for Coverage queries and good enough to support the ETL pipeline. 
+During this time, the main ActiveData instance was deployed: Not officially, and it still did not pass all tests, but it was good enough for CodeCoverage queries and good enough to support the ETL pipeline. 
 
 ## Final Upgrade
 
-The fourth quarter of 2018 was to start. The ActiveData upgrade was looking like a failure. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
+AS the fourth quarter of 2018 was about to start, the ActiveData upgrade was looking like a failure. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
 
 The IP was redirected on Sunday October 21st.
 
@@ -136,16 +136,12 @@ The IP was redirected on Sunday October 21st.
 
 Production deployment showed metadata management, backed by a database was still too slow. It was turned off, except for a couple of columns, to ensure production queries still work
 
-The IP redirect revealed the number of services and dashboards that were using ActiveData, and it showed the range of queries it was failing to process properly. Since going backward is more work than going forward: I started a two week, post-deploy, fire fighting operation. 
+The IP redirect revealed the number of services and dashboards that were using ActiveData, and it showed the range of queries that were failing. Since going backward is more work than going forward: I started a two week, post-deploy, fire fighting operation. 
 
 Essentially, ActiveData's test suite did not cover all use cases; moving to production exposed the suite's deficiencies.
 
 * Queries into nested object arrays is more prevalent, and diverse, than imagined. With Typed JSON working, Elasticsearch queries on nested documents was now giving correct results, but were more complicated than before. I added the required tests, but for each test I would pass, another would break. I was spending too much time trying to make the code templates work before I realized  the problem: The query translator had to move from using code templates to using first order expressions so that they could be rearranged to get the correct result.
-* Elasticsearch is strictly typed; it can store Boolean columns. This broke a number of tests. Elasticsearch v1.7 stored Booleans as strings `"T"` and `"F"`. As a result, there were queries that used the following logic:
-```
-{"when": {"eq": {"result.ok": "F"}}, "then": 1}
-```
-The query translator had to identify `result.ok` as a Boolean column, and `"F"` as equivalent to `false`.
+* Elasticsearch is strictly typed; it can store Boolean columns. This broke a number of tests. Elasticsearch v1.7 stored Booleans as strings `"T"` and `"F"`. As a result, there were queries that used the following logic:<br>&nbsp;&nbsp;&nbsp;&nbsp;`{"when": {"eq": {"result.ok": "F"}}, "then": 1}`<br>The query translator had to identify `result.ok` as a Boolean column, and `"F"` as equivalent to `false`.
 * Elasticsearch aggregation over a Boolean column results in `1` or `0` not `true` or `false`. More logic was added to ensure ActiveData did not make the same error.
   
 ## Success &#9785;

@@ -91,7 +91,7 @@ Implementing constant propagation was a problem; ActiveData was not designed for
 Transpiling comes in 4 major forms, each has benefits and detriments:
 
 * **String Concatenation** - Transpiling can be super simple: Concatenate strings to achieve the desired code. For example in SQL:<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = "SELECT id FROM " + quote_column(my_table) + " WHERE name = " + quote(my_name)`
-* **Code Templates** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>&nbsp;&nbsp;&nbsp;&nbsp;`template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
+* **Code Templates (macros)** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>&nbsp;&nbsp;&nbsp;&nbsp;`template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
 * **First order expressions** - to perform constant propagation we need to rearrange operations. To rearrange operations we need an object representation of each operation for the code to manipulate. The ActiveData script translator added a class for each operation. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagation that Painless required. Of course, this form opened up allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
 * **Optimizing Compiler** - Beyond expression simplification are a host of optimization strategies and the data structures used to support them. This is not done in ActiveData.   
 
@@ -146,7 +146,7 @@ Essentially, ActiveData's test suite did not cover all use cases; moving to prod
   
 ## Success &#9785;
 
-The ActiveData Upgrade was an upgrade disguised as a complete rewrite. Elasticsearch v1.7 had almost nothing in common with Elasticsearch v5.x. I consider it a good example of the effort it takes to change a backend data store in an application. The upgrade took so long there is no justification for pride or pleasure.
+The ActiveData Upgrade was an upgrade disguised as a complete rewrite. Elasticsearch v1.7 had almost nothing in common with Elasticsearch v5.x. I imagine that this is a good example of what changing a backend data store in any application can look like. The upgrade took so long there is no justification for pride or pleasure.
 
 ## Things Learnt
 
@@ -160,7 +160,7 @@ Here are some things that could be improved
 Here things that felt bad, and I have no solution for: 
 
 * **Why did I spend time on constant propagation?** - This took a lot of time, and feels bad because this has been solved many times before: Why can I not download code, like an abstract compiler, to do this for me? If I can, then why is it harder to use than just coding my own solution? This problem is a example of a class of problems I experience quite often: Solutions to common problems can be found in a multitude of software, yet no one has written a library to solve the problem in isolation. Here is a small example: Topological ordering of nodes in a cyclic graph, is something I must write for every new language I learn.
-* **  
+* **Why did I not see the need for first order expressions earlier?** - After the final deploy, and more test cases were added, I was still attempting to use code templates to compose complex nested Elasticsearch queries. This was separate from the script translation, despite it sharing a similar story. Much of my time was spent fixing one test, just to cause a regression somewhere else; a game of wack-a-mole if you will. The code got more complex, but I was always able to get to a green build, eventually. Recognizing I had the wrong abstraction would have helped: How do you know when to stop coding and rethink the problem?
 
 
 

@@ -58,41 +58,40 @@ While we rewrite column names, we can do the same for nested object arrays:
 
 we use the `~N~`, for "nested", to distinguish between the inner object `{"b":3}` and same-named nested array `[{"b":3}]`.  Again, this would have little impact on Elasticsearch, but gives use the ability to, truely, store any document, of any shape, and have it properly indexed.
 
+[Read more about the original project plan](Outreachy%20Proposal%20170223.md)
+
 ## Upgrade Overview
 
 <img alt="chart of hours" src="./ActiveData%20Summary%20181116%20hours.png"/>
 
 ## Start Upgrade
 
-In May 2017, work begun to upgrade ActiveData from Elastisearch 1.7 to 5.x. The work was packaged as an Outreachy project: [Change ActiveData so it can handle the extra type information in the column names](Outreachy%20Proposal.md). There was already a primitive JSON rewriter; converting JSON into "typed JSON"; which is used to insert the correct JSON documents into ES; and can be used by the test harness to leverage the existing test suite.
+In May 2017, work begun to upgrade ActiveData from Elastisearch 1.7 to 5.x. The work was packaged as an Outreachy project: [Change ActiveData so it can handle the extra type information in the column names](Outreachy%20Proposal%20170223.md). There was already a primitive JSON rewriter; converting JSON into "typed JSON"; which is used to insert the correct JSON documents into ES; and can be used by the test harness to leverage the existing test suite.
 
 And then ...
 
 ### Reality
 
-**HTTP protocol is more strict** - ESv5 required mimetype headers, and distinguished between GET/POST in ways the old version did nt care. This is not a big deal, except the student had to start with debugging the test harness and startup rather than fixing tests. 
+**HTTP protocol is more strict** - ESv5 required mimetype headers, and distinguished between GET/POST in ways the old version did not care. This is not a big deal, except the student had to start by learning the details of HTTP to debug the test harness and startup rather than working on the project. 
 
-**Query Translation** - The known work progressed as expected. There was going to be some complication with nested queries, but they were not a priority for the Outreachy student.
+**Query Translation** - The known work progressed as expected. There was going to be some complication with nested queries, but they were not a priority for the Outreachy student until late in the project.
 
-**New expression language** - ElasticSearch is on its 3rd (?4th?), scripting language. The first was MVEL (version 0.9), next was Groovy (version 1.7), and the latest is called Painless. There are other scripting languages, but they are not important to this story. This was more than enough work for the student; the script translator was copied and changed to handle the new language. By having two, but similar script translators we can use a text `diff` to ensure fixes in one can be translated to the other.
+**New expression language** - ElasticSearch is on its 3rd (?4th?), scripting language. The first was MVEL (version 0.9), next was Groovy (version 1.7), and the latest is called Painless. There are other scripting languages, but they are not important to this story. This was more than enough work for the student; the script translator was copied, and then changed to handle the new language. By having two, but similar, script translators we can use a text `diff` to ensure fixes in one can be translated to the other.
 
 **Rejecting constants!?!** - The script translator showed an interesting problem; [the following script does not compile](https://github.com/elastic/elasticsearch/issues/25729):
 
     false ? 0 : 1 
   
-Such code would never be written by a human, but the ActiveData script translator simply compounded parametric code strings to generate code. Elasticseach's Painless would recognizing the constant, and reject it. I was surprised such code was added to make Painless *harder* to use. If ActiveData was going to generate Painless, it would have to perform constant propagation. That's a problem. 
+Such code would never be written by a human, but the ActiveData script translator simply compounded parametric code strings to generate code. Elasticseach's Painless would recognizing the constant, and reject it. I was surprised such a check was added to make Painless *harder* to use. If ActiveData was going to generate Painless, it must also perform constant propagation. That's a problem. 
 
 ### Retrospective Tangent
 
-Transpiling comes in 4 major forms, each has benefits and detriments. ActiveData did not pick the correct form
+Implementing constant propagation was a problem; ActiveData was not designed for it, and required a rewrite. To better explain, I must go off on a tangent. 
 
-* **String Concatenation** - Transpiling can be super simple: Simply concatenate code to achieve the desired code. For example in SQL:<br>`sql = "SELECT id FROM "+quote_column(my_table)+" WHERE name = "+quote(my_name)`<br> 
-* **Code Templates** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:
-```sql
-template = "SELECT id FROM {{table}} WHERE name = {{name}}"
-sql = expand(template, table=my_table, name=my_name)
-```
-this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
+Transpiling comes in 4 major forms, each has benefits and detriments:
+
+* **String Concatenation** - Transpiling can be super simple: Concatenate strings to achieve the desired code. For example in SQL:<br>`    sql = "SELECT id FROM "+quote_column(my_table)+" WHERE name = "+quote(my_name)`
+* **Code Templates** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>`    template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>`    sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
 * **First order expressions** - to perform constant propagation we need to rearrange instructions. To rearrange instructions we need an object representation of each instruction for the code to manipulate. The ActiveData script translator added a class for each instruction. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagation that Painless required. Of course, this form opened up allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
 * **Optimizing Compiler** - Beyond expression simplification are a host of optimization strategies and the data structures used to support them. This is not done in ActiveData.   
 

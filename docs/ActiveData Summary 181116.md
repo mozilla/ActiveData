@@ -58,13 +58,15 @@ While we rewrite column names, we can do the same for nested object arrays:
 
 we use the `~N~`, for "nested", to distinguish between the inner object `{"b":3}` and same-named nested array `[{"b":3}]`.  Again, this would have little impact on Elasticsearch, but gives use the ability to, truely, store any document, of any shape, and have it properly indexed.
 
-## The Great Leap Forward!
+<img alt="chart of hours" src="./ActiveData%20Summary%20181116%20hours.png"/>
+
+## Start Upgrade
 
 On July 2017, work begun to upgrade ActiveData from Elastisearch 1.7 to 5.x. The work was packaged as an Outreachy project: [Change ActiveData so it can handle the extra type information in the column names](Outreachy%20Proposal.md). There was already a primitive JSON rewriter; converting JSON into "typed JSON"; which is used to insert the correct JSON documents into ES; and can be used by the test harness to leverage the existing test suite.
 
-And then it got complicated
+And then ...
 
-## Reality
+### Reality
 
 **HTTP protocol is more strict** - ESv5 required mimetype headers, and distinguished between GET/POST in ways the old version did nt care. This is not a big deal, except the student had to start with debugging the test harness and startup rather than fixing tests. 
 
@@ -78,7 +80,7 @@ And then it got complicated
   
 Such code would never be written by a human, but the ActiveData script translator simply compounded parametric code strings to generate code. Elasticseach's Painless would recognizing the constant, and reject it. I was surprised such code was added to make Painless *harder* to use. If ActiveData was going to generate Painless, it would have to perform constant propagation. That's a problem. 
 
-### Retrospective
+### Retrospective Tangent
 
 Transpiling comes in 4 major forms, each has benefits and detriments. ActiveData did not pick the correct form
 
@@ -94,14 +96,14 @@ this is what ActiveData did, and it worked well; the only problem is the resulti
 
 When writing a transpiler consider the level of complexity you require. The jump from code templates to expression simplification is large enough to demand pause: Consider if there would be another strategy for the overall problem. In this case I should have considered if ActiveData should be retired. My search for an ActiveData replacement was more pronounced now: Can we use Amplitude? Can we use Spark? Why do all the Dremel encoding libraries suck a nested object encodings? There appeared to be no good solutions 
 
-## Upgrade resumes! (Q3 2017)
+## 2nd Attempt (Q3 2017)
 
 September, October and November was spent passing tests that required Painless scripting.
 
 As 2017 came to a close ActiveData was ready for deployment. A few nodes of the new cluster were setup, and ingestion was started.  The various services were connected to find the long tail of production bugs 
 
 
-## AWS - now worse!
+## Slow Cluster Problems
 
 The new cluster was showing poor performance despite handling a small fraction of the data. Ingestion was so slow it could not keep up with the ETL pipeline. Moving 10gig shards of data between nodes took days instead of minutes.  
 
@@ -144,18 +146,10 @@ Essentially, ActiveData's test suite did not cover all use cases, and the real w
 {"when": {"eq": {"result.ok": "F"}}, "then": 1}
 ```
 The query translator had to identify `result.ok` as a Boolean column, and `"F"` as equivalent to `false`.
-* Elasticsearch aggregation over a Boolean column results in `1` and `0` not `true` and `false` like would be expected. More logic was added to ensure ActiveData did not make the same error.
+* Elasticsearch aggregation over a Boolean column results in `1` or `0` not `true` or `false`. More logic was added to ensure ActiveData did not make the same error.
   
 
-## Blockers
 
-Typed JSON
-Expression evaluation 
-Metadata management
-Query re-writing
-
-
-<img alt="chart of hours" src="./ActiveData%20Summary%20181116%20hours.png"/>
 
 
 ## Gritty Details

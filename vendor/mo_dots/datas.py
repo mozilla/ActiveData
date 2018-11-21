@@ -12,7 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from collections import MutableMapping, Mapping
-from copy import deepcopy
+from copy import deepcopy, copy
 from decimal import Decimal
 
 from mo_future import text_type, PY2, iteritems, none_type, generator_types, long
@@ -253,11 +253,18 @@ class Data(MutableMapping):
         return dict.__len__(d)
 
     def copy(self):
-        return Data(**self)
+        d = self._internal_dict
+        if isinstance(d, dict):
+            return Data(**self)
+        else:
+            return copy(d)
 
     def __copy__(self):
         d = self._internal_dict
-        return Data(**d)
+        if isinstance(d, dict):
+            return Data(**self)
+        else:
+            return copy(d)
 
     def __deepcopy__(self, memo):
         d = self._internal_dict

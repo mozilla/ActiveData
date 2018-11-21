@@ -77,7 +77,7 @@ class FlatList(list):
                 j = max(min(j, length), 0)
             return FlatList(_get_list(self)[i:j])
 
-        if index < 0 or len(_get_list(self)) <= index:
+        if not isinstance(index, int) or index < 0 or len(_get_list(self)) <= index:
             return Null
         return wrap(_get_list(self)[index])
 

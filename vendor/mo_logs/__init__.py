@@ -363,10 +363,7 @@ class Log(object):
         stack_depth
     ):
         """
-        :param context:  THE TYPE OF MESSAGE
-        :param format:   THE FORMAT FOR HUMANE TEXT MESSAGE
-        :param template: THE CALLERS template
-        :param params:   THE CALLERS PARAMETERS
+        :param itemt:  A LogItemTHE TYPE OF MESSAGE
         :param stack_depth: FOR TRACKING WHAT LINE THIS CAME FROM
         :return:
         """

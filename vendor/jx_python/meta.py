@@ -186,7 +186,7 @@ class ColumnList(Table, jx_base.Container):
                                 Log.warning("problem updataing database", cause=e)
 
             except Exception as e:
-                Log.warning("problem updataing database", cause=e)
+                Log.warning("problem updating database", cause=e)
 
             (Till(seconds=10) | please_stop).wait()
 

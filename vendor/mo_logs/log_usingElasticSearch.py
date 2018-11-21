@@ -16,7 +16,7 @@ from collections import Mapping
 from datetime import date, datetime
 
 from jx_python import jx
-from mo_dots import wrap, coalesce, FlatList
+from mo_dots import wrap, coalesce, FlatList, listwrap
 from mo_future import text_type, binary_type, number_types
 from mo_json import value2json, json2value, datetime2unix
 from mo_kwargs import override
@@ -34,9 +34,19 @@ LOG_STRING_LENGTH = 2000
 PAUSE_AFTER_GOOD_INSERT = 1
 PAUSE_AFTER_BAD_INSERT = 60
 
+
 class StructuredLogger_usingElasticSearch(StructuredLogger):
     @override
-    def __init__(self, host, index, port=9200, type="log", queue_size=1000, batch_size=100, kwargs=None):
+    def __init__(
+        self,
+        host,
+        index,
+        port=9200,
+        type="log",
+        queue_size=1000,
+        batch_size=100,
+        kwargs=None,
+    ):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
@@ -48,7 +58,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
             schema=json2value(value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             typed=True,
-            kwargs=kwargs
+            kwargs=kwargs,
         )
         self.batch_size = batch_size
         self.es.add_alias(coalesce(kwargs.alias, kwargs.index))
@@ -81,7 +91,10 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
                             please_stop.go()
                             continue
                         try:
-                            scrubbed.append(_deep_json_to_string(message, depth=3))
+                            messages = flatten_causal_chain(message.value)
+                            scrubbed.append(
+                                {"value": [_deep_json_to_string(m, depth=3) for m in messages]}
+                            )
                         except Exception as e:
                             Log.warning("Problem adding to scrubbed list", cause=e)
 
@@ -91,7 +104,10 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
                 Log.warning("Problem inserting logs into ES", cause=f)
                 bad_count += 1
                 if bad_count > MAX_BAD_COUNT:
-                    Log.warning("Given up trying to write debug logs to ES index {{index}}", index=self.es.settings.index)
+                    Log.warning(
+                        "Given up trying to write debug logs to ES index {{index}}",
+                        index=self.es.settings.index,
+                    )
                 Till(seconds=PAUSE_AFTER_BAD_INSERT).wait()
 
         self.es.flush()
@@ -111,6 +127,16 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         with suppress_exception:
             self.queue.close()
         self.worker.join()
+
+
+def flatten_causal_chain(log_item, output=None):
+    output = output or []
+
+    output.append(log_item)
+    for c in listwrap(log_item.cause):
+        flatten_causal_chain(c, output)
+    log_item.cause = None
+    return output
 
 
 def _deep_json_to_string(value, depth):
@@ -140,12 +166,11 @@ def _deep_json_to_string(value, depth):
 
 SCHEMA = {
     "settings": {"index.number_of_shards": 2, "index.number_of_replicas": 2},
-    "mappings": {"_default_": {
-        "dynamic_templates": [
-            {"everything_else": {
-                "match": "*",
-                "mapping": {"index": False}
-            }}
-        ]
-    }}
+    "mappings": {
+        "_default_": {
+            "dynamic_templates": [
+                {"everything_else": {"match": "*", "mapping": {"index": False}}}
+            ]
+        }
+    },
 }

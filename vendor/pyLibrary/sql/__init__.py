@@ -12,30 +12,24 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from itertools import groupby
-from operator import itemgetter
-
+import pyLibrary.sql
 from mo_future import text_type, PY3
 from mo_logs import Log
-from mo_logs.strings import expand_template
-
-import pyLibrary.sql
 
 
 class SQL(text_type):
     """
     ACTUAL SQL, DO NOT QUOTE THIS STRING
     """
-    def __init__(self, template='', param=None):
+    def __init__(self, value):
         text_type.__init__(self)
-        if isinstance(template, SQL):
+        if isinstance(value, SQL):
             Log.error("Expecting text, not SQL")
-        self.template = template
-        self.param = param
+        self.value = value
 
     @property
     def sql(self):
-        return expand_template(self.template, self.param)
+        return self.value  # expand_template(self.template, self.param)
 
     def __add__(self, other):
         if not isinstance(other, SQL):
@@ -125,7 +119,7 @@ def sql_list(list_):
     list_ = list(list_)
     if not all(isinstance(s, SQL) for s in list_):
         Log.error("Can only join other SQL")
-    return SQL(" " + ", ".join(l.template for l in list_) + " ")
+    return SQL(" " + ", ".join(l.value for l in list_) + " ")
 
 
 def sql_iso(sql):

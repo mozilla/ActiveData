@@ -172,7 +172,7 @@ class ColumnList(Table, jx_base.Container):
                         + SQL_FROM
                         + db_table_name
                         + SQL_WHERE
-                        + "last_updated>"
+                        + "last_updated > "
                         + quote_value(self.last_load)
                         + SQL_ORDERBY
                         + sql_list(map(quote_column, ["es_index", "name", "es_column"]))

@@ -114,7 +114,7 @@ The new cluster and the old cluster had the same hardware: Same instance types, 
 
 After reviewing the esoteric Elasticsearch settings, turning off JFS on linux and attempting different ingestion techniques, the months go by with no solution. In desperation, I decided to brute force a solution: I setup a new cluster using `d2` instances with their large local storage. Performance was acceptable!
 
-Was it the EBS drives? Yes, and no: Amazon had changed the billing structure on EBS sometime during 2017; ***new drives were billed according to the new rules and new performance characteristics, while the old drives maintained their legacy billing and legacy performance***. Old EBS magnetic drives did not impact network usage; either the drives were on a separate NAS network, or their network usage was not metered. The new EBS usage showed up in network usage, was bounded by network limits, and had new pricing limits based on request rate or data volume.     
+Was it the EBS drives? Yes, and no: Amazon had changed the billing structure on EBS sometime during 2017; ***new drives were billed according to the new rules and new performance characteristics, while the old drives maintained their legacy billing and legacy performance***. Old EBS magnetic drives did not impact network usage; either the drives were on a separate NAS network, or their network usage was not metered. The new EBS usage showed up in network usage, was bounded by network limits, and had new pricing limits based on request rate or data volume.
 
 We could no longer use EBS with Elasticsearch. In theory, Elasticsearch should never have been used on EBS, but the Magnetic EBS drives were a sweet deal while it lasted.
 
@@ -122,13 +122,15 @@ We could no longer use EBS with Elasticsearch. In theory, Elasticsearch should n
 
 ActiveData is a query translation service, and it works on any Elasticsearch cluster. Mozilla had a Elasticsearch v0.9 cluster, which stored all Bugzilla bug snapshots over all time, and it required upgrading.  Summer 2018 was spent dockerizing the ETL pipeline, and ActiveData to work on a Elasticsearch-as-a-service.  
 
-The biggest blocker, noticed during the Bugzilla-ETL deploy, was the metadata management in ActiveData was too slow. A database was required to save data between instances and runs because it was proving too expensive to accumulate at startup. Metadata management was turned off on the Bugzilla-ETL instance to ensure it was performant; it caused test breakage, but it was a breakage we can live with in the short term.    
+The biggest blocker, noticed during the Bugzilla-ETL deploy, was the metadata management in ActiveData was too slow. A database was required to save data between instances and runs because it was proving too expensive to accumulate at startup. Metadata management was turned off on the Bugzilla-ETL instance to ensure it was performant; it caused test breakage, but it was a breakage we can live with in the short term.
+
+> **Metadata Management** - Is the term used to describe the tracking columns; their count, and cardinality.  With "only" thousands of columns, I did not expect tracking metadata to be slow.    
 
 During this time, the main ActiveData instance was deployed: Not officially, and it still did not pass all tests, but it was good enough for CodeCoverage queries and good enough to support the ETL pipeline. 
 
 ## Final Upgrade
 
-AS the fourth quarter of 2018 was about to start, the ActiveData upgrade was looking like a failure. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
+As the fourth quarter of 2018 was about to start, the ActiveData upgrade was still not complete. So, with the cluster working for months now, and other projects being done, I was ready for the final deploy.
 
 The IP was redirected on Sunday October 21st.
 
@@ -154,7 +156,7 @@ If you got here, then please [email me with your thoughts](mailto:klahnakoski@mo
 
 Here are some things that could be improved
 
-* **Always start with the most powerful hardware** - The slow ingestion problem was a time sink that could have been avoided if the most powerful hardware was deployed first; then scaled back to match demand. Now that I have arrived at this strategy, I see it stated elsewhere in Elasticsearch documents: Start big to avoid confounding scaling problems with configuration problems; then scale back until you measure a performance impact.<br>There is a cost to deploying expensive hardware, and there is a cost to measurement, especially if you are measuring a large cluster.
+* **Always start with the most powerful hardware** - The slow ingestion problem was a time sink that could have been avoided if the most powerful hardware was deployed first; then scaled back to match demand. Now that I have arrived at this strategy, I see it stated elsewhere in Elasticsearch documents: Start big to avoid confounding scaling problems with configuration problems; then scale back until you measure a performance impact.<br>But, there is a cost to deploying expensive hardware, and there is a cost to measurement, especially if you are measuring a large cluster.
 * **Replay production queries on new cluster** - It simply did not occur to me to replay the produciton queries on the new cluster until it was too late. I think a dumb mistake like this can be avoided by having a second person being intimately familiar with the project, and verifying the upgrade checklist.<br>This has two costs: There would be no firefight at the end, but that development time would have spread over more weeks, delaying the upgrade even more. Plus, having a second person to ask the right questions and catch this type of error is also a cost, either in training or expertise.
 
 Here things that felt bad, and I have no solution for: 

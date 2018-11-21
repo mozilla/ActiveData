@@ -67,7 +67,7 @@
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
 				"port": 9200,
-				"index": "debug_active_data",
+				"index": "debug-activedata",
 				"type": "active_data"
 			}
 		]

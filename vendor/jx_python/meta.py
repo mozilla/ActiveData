@@ -20,22 +20,50 @@ from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, concat_field, listwrap, unwraplist, NullType, FlatList, split_field, join_field, ROOT_PATH, wrap, Null
+from mo_dots import (
+    Data,
+    concat_field,
+    listwrap,
+    unwraplist,
+    NullType,
+    FlatList,
+    split_field,
+    join_field,
+    ROOT_PATH,
+    wrap,
+    Null,
+)
 from mo_files import File
 from mo_future import none_type, text_type, items, reduce
-from mo_json import python_type_to_json_type, STRUCT, NUMBER, INTEGER, STRING, json2value, value2json
+from mo_json import (
+    python_type_to_json_type,
+    STRUCT,
+    NUMBER,
+    INTEGER,
+    STRING,
+    json2value,
+    value2json,
+)
 from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log, Except
 from mo_threads import Lock, Till, Queue, Thread
 from mo_times.dates import Date
-from pyLibrary.sql import sql_iso, sql_list, SQL_SELECT, SQL_ORDERBY, SQL_FROM, SQL_WHERE, SQL_AND
+from pyLibrary.sql import (
+    sql_iso,
+    sql_list,
+    SQL_SELECT,
+    SQL_ORDERBY,
+    SQL_FROM,
+    SQL_WHERE,
+    SQL_AND,
+)
 from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_value
 
 DEBUG = False
 singlton = None
 db_table_name = quote_column("meta.columns")
 
-INSERT, UPDATE, DELETE, EXECUTE = 'insert', 'update', 'delete', 'execute'
+INSERT, UPDATE, DELETE, EXECUTE = "insert", "update", "delete", "execute"
 
 
 class ColumnList(Table, jx_base.Container):
@@ -50,12 +78,12 @@ class ColumnList(Table, jx_base.Container):
         self.locker = Lock()
         self._schema = None
         self.db = sqlite3.connect(
-            database=self.db_file.abspath,
-            check_same_thread=False,
-            isolation_level=None
+            database=self.db_file.abspath, check_same_thread=False, isolation_level=None
         )
         self.last_load = Null
-        self.todo = Queue("update columns to db")  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
+        self.todo = Queue(
+            "update columns to db"
+        )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
         Thread.run("update " + name, self._db_worker)
 
@@ -81,15 +109,24 @@ class ColumnList(Table, jx_base.Container):
     def _db_create(self):
         with self._db_transaction():
             self.db.execute(
-                "CREATE TABLE " + db_table_name +
-                sql_iso(sql_list(
-                    [
-                        quote_column(c.name) + " " + json_type_to_sqlite_type[c.jx_type]
-                        for c in METADATA_COLUMNS
-                    ] + [
-                        "PRIMARY KEY" + sql_iso(sql_list(map(quote_column, ["es_index", "es_column"])))
-                    ]
-                ))
+                "CREATE TABLE "
+                + db_table_name
+                + sql_iso(
+                    sql_list(
+                        [
+                            quote_column(c.name)
+                            + " "
+                            + json_type_to_sqlite_type[c.jx_type]
+                            for c in METADATA_COLUMNS
+                        ]
+                        + [
+                            "PRIMARY KEY"
+                            + sql_iso(
+                                sql_list(map(quote_column, ["es_index", "es_column"]))
+                            )
+                        ]
+                    )
+                )
             )
 
             for c in METADATA_COLUMNS:
@@ -100,21 +137,24 @@ class ColumnList(Table, jx_base.Container):
         self.last_load = Date.now()
 
         result = self._query(
-            SQL_SELECT + "name" +
-            SQL_FROM + "sqlite_master" +
-            SQL_WHERE + SQL_AND.join([
-                "name=" + db_table_name,
-                "type=" + quote_value("table")
-            ])
+            SQL_SELECT
+            + "name"
+            + SQL_FROM
+            + "sqlite_master"
+            + SQL_WHERE
+            + SQL_AND.join(["name=" + db_table_name, "type=" + quote_value("table")])
         )
         if not result.data:
             self._db_create()
             return
 
         result = self._query(
-            SQL_SELECT + all_columns +
-            SQL_FROM + db_table_name +
-            SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
+            SQL_SELECT
+            + all_columns
+            + SQL_FROM
+            + db_table_name
+            + SQL_ORDERBY
+            + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
         )
 
         with self.locker:
@@ -127,10 +167,15 @@ class ColumnList(Table, jx_base.Container):
             try:
                 with self._db_transaction():
                     result = self._query(
-                        SQL_SELECT + all_columns +
-                        SQL_FROM + db_table_name +
-                        SQL_WHERE + "last_updated>" + quote_value(self.last_load) +
-                        SQL_ORDERBY + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
+                        SQL_SELECT
+                        + all_columns
+                        + SQL_FROM
+                        + db_table_name
+                        + SQL_WHERE
+                        + "last_updated>"
+                        + quote_value(self.last_load)
+                        + SQL_ORDERBY
+                        + sql_list(map(quote_column, ["es_index", "name", "es_column"]))
                     )
 
                 with self.locker:
@@ -141,37 +186,65 @@ class ColumnList(Table, jx_base.Container):
                             self.last_load = c.last_updated
 
                 updates = self.todo.pop_all()
-                DEBUG and updates and Log.note("{{num}} columns to push to db", num=len(updates))
+                DEBUG and updates and Log.note(
+                    "{{num}} columns to push to db", num=len(updates)
+                )
                 for action, column in updates:
                     while not please_stop:
                         try:
                             with self._db_transaction():
-                                DEBUG and Log.note("{{action}} db for {{table}}.{{column}}", action=action, table=column.es_index, column=column.es_column)
+                                DEBUG and Log.note(
+                                    "{{action}} db for {{table}}.{{column}}",
+                                    action=action,
+                                    table=column.es_index,
+                                    column=column.es_column,
+                                )
                                 if action is EXECUTE:
                                     self.db.execute(column)
                                 elif action is UPDATE:
                                     self.db.execute(
-                                        "UPDATE" + db_table_name +
-                                        "SET" + sql_list([
-                                            "count=" + quote_value(column.count),
-                                            "cardinality=" + quote_value(column.cardinality),
-                                            "multi=" + quote_value(column.multi),
-                                            "partitions=" + quote_value(value2json(column.partitions)),
-                                            "last_updated=" + quote_value(column.last_updated)
-                                        ]) +
-                                        SQL_WHERE + SQL_AND.join([
-                                            "es_index = " + quote_value(column.es_index),
-                                            "es_column = " + quote_value(column.es_column),
-                                            "last_updated < " + quote_value(column.last_updated)
-                                        ])
+                                        "UPDATE"
+                                        + db_table_name
+                                        + "SET"
+                                        + sql_list(
+                                            [
+                                                "count=" + quote_value(column.count),
+                                                "cardinality="
+                                                + quote_value(column.cardinality),
+                                                "multi=" + quote_value(column.multi),
+                                                "partitions="
+                                                + quote_value(
+                                                    value2json(column.partitions)
+                                                ),
+                                                "last_updated="
+                                                + quote_value(column.last_updated),
+                                            ]
+                                        )
+                                        + SQL_WHERE
+                                        + SQL_AND.join(
+                                            [
+                                                "es_index = "
+                                                + quote_value(column.es_index),
+                                                "es_column = "
+                                                + quote_value(column.es_column),
+                                                "last_updated < "
+                                                + quote_value(column.last_updated),
+                                            ]
+                                        )
                                     )
                                 elif action is DELETE:
                                     self.db.execute(
-                                        "DELETE FROM" + db_table_name +
-                                        SQL_WHERE + SQL_AND.join([
-                                            "es_index = " + quote_value(column.es_index),
-                                            "es_column = " + quote_value(column.es_column)
-                                        ])
+                                        "DELETE FROM"
+                                        + db_table_name
+                                        + SQL_WHERE
+                                        + SQL_AND.join(
+                                            [
+                                                "es_index = "
+                                                + quote_value(column.es_index),
+                                                "es_column = "
+                                                + quote_value(column.es_column),
+                                            ]
+                                        )
                                     )
                                 else:
                                     self._db_insert_column(column)
@@ -193,11 +266,20 @@ class ColumnList(Table, jx_base.Container):
     def _db_insert_column(self, column):
         try:
             self.db.execute(
-                "INSERT INTO" + db_table_name + sql_iso(all_columns) +
-                "VALUES" + sql_iso(sql_list([
-                    quote_value(column[c.name]) if c.name not in ("nested_path", "partitions") else quote_value(value2json(column[c.name]))
-                    for c in METADATA_COLUMNS
-                ]))
+                "INSERT INTO"
+                + db_table_name
+                + sql_iso(all_columns)
+                + "VALUES"
+                + sql_iso(
+                    sql_list(
+                        [
+                            quote_value(column[c.name])
+                            if c.name not in ("nested_path", "partitions")
+                            else quote_value(value2json(column[c.name]))
+                            for c in METADATA_COLUMNS
+                        ]
+                    )
+                )
             )
         except Exception as e:
             e = Except.wrap(e)
@@ -207,13 +289,11 @@ class ColumnList(Table, jx_base.Container):
             else:
                 Log.error("do not know how to handle", cause=e)
 
-
     def __copy__(self):
         output = object.__new__(ColumnList)
         Table.__init__(output, "meta.columns")
         output.data = {
-            t: {c: list(cs) for c, cs in dd.items()}
-            for t, dd in self.data.items()
+            t: {c: list(cs) for c, cs in dd.items()} for t, dd in self.data.items()
         }
         output.locker = Lock()
         output._schema = None
@@ -320,30 +400,39 @@ class ColumnList(Table, jx_base.Container):
             return iter(self._all_columns())
 
     def __len__(self):
-        return self.data['meta.columns']['es_index'].count
+        return self.data["meta.columns"]["es_index"].count
 
     def update(self, command):
         self.dirty = True
         try:
             command = wrap(command)
-            DEBUG and Log.note("Update {{timestamp}}: {{command|json}}", command=command, timestamp=Date(command['set'].last_updated))
+            DEBUG and Log.note(
+                "Update {{timestamp}}: {{command|json}}",
+                command=command,
+                timestamp=Date(command["set"].last_updated),
+            )
             eq = command.where.eq
             if eq.es_index:
                 if len(eq) == 1:
                     if unwraplist(command.clear) == ".":
                         with self.locker:
                             del self.data[eq.es_index]
-                        self.todo.add((EXECUTE, "DELETE FROM "+db_table_name+SQL_WHERE+" es_index="+quote_value(eq.es_index)))
+                        self.todo.add(
+                            (
+                                EXECUTE,
+                                "DELETE FROM "
+                                + db_table_name
+                                + SQL_WHERE
+                                + " es_index="
+                                + quote_value(eq.es_index),
+                            )
+                        )
                         return
 
                     # FASTEST
                     all_columns = self.data.get(eq.es_index, {}).values()
                     with self.locker:
-                        columns = [
-                            c
-                            for cs in all_columns
-                            for c in cs
-                        ]
+                        columns = [c for cs in all_columns for c in cs]
                 elif eq.es_column and len(eq) == 2:
                     # FASTER
                     all_columns = self.data.get(eq.es_index, {}).values()
@@ -363,7 +452,9 @@ class ColumnList(Table, jx_base.Container):
                             c
                             for cs in all_columns
                             for c in cs
-                            if all(c[k] == v for k, v in eq.items())  # THIS LINE IS VERY SLOW
+                            if all(
+                                c[k] == v for k, v in eq.items()
+                            )  # THIS LINE IS VERY SLOW
                         ]
             else:
                 columns = list(self)
@@ -371,7 +462,11 @@ class ColumnList(Table, jx_base.Container):
 
             with self.locker:
                 for col in columns:
-                    DEBUG and Log.note("update column {{table}}.{{column}}", table=col.es_index, column=col.es_column)
+                    DEBUG and Log.note(
+                        "update column {{table}}.{{column}}",
+                        table=col.es_index,
+                        column=col.es_column,
+                    )
                     for k in command["clear"]:
                         if k == ".":
                             self.todo.add((DELETE, col))
@@ -391,8 +486,6 @@ class ColumnList(Table, jx_base.Container):
                             col[k] = v
                         self.todo.add((UPDATE, col))
 
-
-
         except Exception as e:
             Log.error("should not happen", cause=e)
 
@@ -402,10 +495,13 @@ class ColumnList(Table, jx_base.Container):
         with self.locker:
             self._update_meta()
             if not self._schema:
-                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
+                self._schema = Schema(
+                    ".", [c for cs in self.data["meta.columns"].values() for c in cs]
+                )
             snapshot = self._all_columns()
 
         from jx_python.containers.list_usingPythonList import ListContainer
+
         query.frum = ListContainer("meta.columns", snapshot, self._schema)
         return jx.run(query)
 
@@ -419,7 +515,9 @@ class ColumnList(Table, jx_base.Container):
         if not self._schema:
             with self.locker:
                 self._update_meta()
-                self._schema = Schema(".", [c for cs in self.data["meta.columns"].values() for c in cs])
+                self._schema = Schema(
+                    ".", [c for cs in self.data["meta.columns"].values() for c in cs]
+                )
         return self._schema
 
     @property
@@ -449,7 +547,7 @@ class ColumnList(Table, jx_base.Container):
                     "count": c.count,
                     "nested_path": [unnest_path(n) for n in c.nested_path],
                     "es_type": c.es_type,
-                    "type": c.jx_type
+                    "type": c.jx_type,
                 }
                 for tname, css in self.data.items()
                 for cname, cs in css.items()
@@ -458,13 +556,11 @@ class ColumnList(Table, jx_base.Container):
             ]
 
         from jx_python.containers.list_usingPythonList import ListContainer
+
         return ListContainer(
             self.name,
             data=output,
-            schema=jx_base.Schema(
-                "meta.columns",
-                SIMPLE_METADATA_COLUMNS
-            )
+            schema=jx_base.Schema("meta.columns", SIMPLE_METADATA_COLUMNS),
         )
 
 
@@ -500,9 +596,9 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                     es_column=full_name,
                     es_index=".",
                     es_type=c.__class__.__name__,
-                    jx_type=None,   # WILL BE SET BELOW
+                    jx_type=None,  # WILL BE SET BELOW
                     last_updated=Date.now(),
-                    nested_path=nested_path
+                    nested_path=nested_path,
                 )
                 columns.add(column)
             column.es_type = _merge_python_type(column.es_type, row_type)
@@ -517,9 +613,9 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                         es_column=full_name,
                         es_index=".",
                         es_type=value.__class__.__name__,
-                        jx_type=None,   # WILL BE SET BELOW
+                        jx_type=None,  # WILL BE SET BELOW
                         last_updated=Date.now(),
-                        nested_path=nested_path
+                        nested_path=nested_path,
                     )
                     columns.add(column)
                 if isinstance(value, (list, set)):  # GET TYPE OF MULTIVALUE
@@ -529,18 +625,24 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                     elif len(v) == 1:
                         this_type = v[0].__class__.__name__
                     else:
-                        this_type = reduce(_merge_python_type, (vi.__class__.__name__ for vi in value))
+                        this_type = reduce(
+                            _merge_python_type, (vi.__class__.__name__ for vi in value)
+                        )
                 else:
                     this_type = value.__class__.__name__
                 column.es_type = _merge_python_type(column.es_type, this_type)
                 column.jx_type = python_type_to_json_type[column.es_type]
 
                 if this_type in {"object", "dict", "Mapping", "Data"}:
-                    _get_schema_from_list([value], table_name, full_name, nested_path, columns)
+                    _get_schema_from_list(
+                        [value], table_name, full_name, nested_path, columns
+                    )
                 elif this_type in {"list", "FlatList"}:
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0]) + [name])] + np)
-                    _get_schema_from_list(value, table_name, full_name, newpath, columns)
+                    _get_schema_from_list(
+                        value, table_name, full_name, newpath, columns
+                    )
 
 
 METADATA_COLUMNS = (
@@ -552,10 +654,19 @@ METADATA_COLUMNS = (
             es_type="keyword",
             jx_type=STRING,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
-        for c in ["name", "es_type", "jx_type", "nested_path", "es_column", "es_index", "partitions"]
-    ] + [
+        for c in [
+            "name",
+            "es_type",
+            "jx_type",
+            "nested_path",
+            "es_column",
+            "es_index",
+            "partitions",
+        ]
+    ]
+    + [
         Column(
             name=c,
             es_index="meta.columns",
@@ -563,10 +674,11 @@ METADATA_COLUMNS = (
             es_type="integer",
             jx_type=INTEGER,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
         for c in ["count", "cardinality", "multi"]
-    ] + [
+    ]
+    + [
         Column(
             name="last_updated",
             es_index="meta.columns",
@@ -574,17 +686,21 @@ METADATA_COLUMNS = (
             es_type="double",
             jx_type=NUMBER,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
     ]
 )
 
 
 def row_to_column(header, row):
-    return Column(**{
-        h: c if c is None or h not in ("nested_path", "partitions") else json2value(c)
-        for h, c in zip(header, row)
-    })
+    return Column(
+        **{
+            h: c
+            if c is None or h not in ("nested_path", "partitions")
+            else json2value(c)
+            for h, c in zip(header, row)
+        }
+    )
 
 
 all_columns = sql_list([quote_column(c.name) for c in METADATA_COLUMNS])
@@ -599,10 +715,11 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO A
             es_type="string",
             jx_type=STRING,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
         for c in ["table", "name", "type", "nested_path"]
-    ] + [
+    ]
+    + [
         Column(
             name=c,
             es_index="meta.columns",
@@ -610,10 +727,11 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO A
             es_type="long",
             jx_type=INTEGER,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
         for c in ["count", "cardinality", "multi"]
-    ] + [
+    ]
+    + [
         Column(
             name="last_updated",
             es_index="meta.columns",
@@ -621,7 +739,7 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO A
             es_type="time",
             jx_type=NUMBER,
             last_updated=Date.now(),
-            nested_path=ROOT_PATH
+            nested_path=ROOT_PATH,
         )
     ]
 )
@@ -640,10 +758,10 @@ _merge_order = {
     Mapping: 9,
     Data: 10,
     list: 11,
-    FlatList: 12
+    FlatList: 12,
 }
 
-for k,v in items(_merge_order):
+for k, v in items(_merge_order):
     _merge_order[k.__name__] = v
 
 
@@ -660,5 +778,3 @@ def _merge_python_type(A, B):
         return output
     else:
         return output.__name__
-
-

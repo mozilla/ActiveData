@@ -3,18 +3,18 @@
 
 ## About ActiveData
 
-ActiveData is a query translation service; accepting parsed SQL-like expressions, translating to ES query language, and compacting the results.
+ActiveData is a query translation service; accepting parsed SQL-like expressions, translating to Elasticsearch query language, and compacting the results coming from Elasticsearch.
 
-ActiveData provides two important features inspired by MDX:
+ActiveData provides two important features inspired by [MDX](https://en.wikipedia.org/wiki/MultiDimensional_eXpressions):
 
 1. Nested object arrays can be queried like any other table; as if joined with the parent documents. This simplifies queries; avoiding Elasticsearch's "nested" queries, or SQL's join-with-explode idiom.  
 2. Ability to query into a dynamically typed JSON document storage; The strict schema is managed by code, and ActiveData's query expressions need little or no change as the schema expands (migrates) over time.
 
 ## Short History
 
-ActiveData has been around since 2015 and has been using Elasticsearch v1.4, or v1.7, since that time. These early versions of Elasticsearch allowed us to pour just about any JSON document into it, and it would "just work". ActiveData was a relatively simple translation service that simplified queries, especially ones involving multiple dimensions or not-simple expressions.   
+ActiveData has been around since 2015 and has been using Elasticsearch v1.4, or v1.7, since that time. These early versions of Elasticsearch allowed us to pour just about any JSON document into it, and it would "just work". ActiveData was a relatively simple translation service that simplified queries, especially ones involving multiple dimensions or complex expressions.   
 
-Elasticsearch 2.x, and beyond, demand a strict JSON schema; the later versions could no longer accept documents dumps, leaving worry about the schema later. Now, the user had to ensure the schema stayed consistent at insert time, rather than waiting for query time. ActiveData would require an upgrade; it must take over the handling of dynamic schemas.
+Elasticsearch v2.x and beyond, demand a strict JSON schema; these later versions can no longer accept documents dumps. Now, the user must ensure the schema stays consistent at insert time, rather than waiting for query time. ActiveData would require an upgrade; it must take over the handling of dynamic schemas.
 
 ## Understanding the Effort
 
@@ -27,13 +27,13 @@ Elasticsearch is fast because it indexes everything and stores nothing. If it is
 **ES logical representation**
 
 | `a.b` |
-| ----- |
+|:-----:|
 |   3   |
 
 With this understanding, If we include the datatype in the column name, we can store multiple types in the same "property".  In this case we use `~n~` to indicate numbers:
 
 | `a.b.~n~` |
-| --------- |
+|:---------:|
 |     3     |
   
 Which would make our document look like:
@@ -92,10 +92,10 @@ Transpiling comes in 4 major forms, each has benefits and detriments:
 
 * **String Concatenation** - Transpiling can be super simple: Concatenate strings to achieve the desired code. For example in SQL:<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = "SELECT id FROM " + quote_column(my_table) + " WHERE name = " + quote(my_name)`
 * **Code Templates (macros)** - When string concatenation gets arduous, routine, or dangerous we can use parametric code templates that help with correctness and complexity:<br>&nbsp;&nbsp;&nbsp;&nbsp;`template = "SELECT id FROM {{table}} WHERE name = {{name}}"`<br>&nbsp;&nbsp;&nbsp;&nbsp;`sql = expand(template, table=my_table, name=my_name)`<br> this is what ActiveData did, and it worked well; the only problem is the resulting code can be obtuse. But that was for the machines to worry about.
-* **First order expressions** - to perform constant propagation we need to rearrange operations. To rearrange operations we need an object representation of each operation for the code to manipulate. The ActiveData script translator added a class for each operation. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagation that Painless required. Of course, this form opened up allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
+* **First order expressions** - to perform constant propagation we need to rearrange operations. To rearrange operations we need an object representation of each operation for the code to manipulate. The ActiveData script translator added a class for each operation. This was not complicated, just arduous, as there is a lot of boilerplate for each operation. It was necessary for the few constant propagations that Painless required. Of course, this form opened up the allure of expression simplification in general; not just for code optimization, but to generate code that is less obtuse, which made it easier to verify correctness during debugging.
 * **Optimizing Compiler** - Beyond expression simplification are a host of optimization strategies and the data structures used to support them. This is not done in ActiveData.   
 
-When writing a transpiler consider the level of complexity you require. The jump from code templates to expression simplification is large enough to demand pause: Consider if there would be another strategy for the overall problem. In this case I should have considered if ActiveData should be retired. My search for an ActiveData replacement was more pronounced now: Can we use Amplitude? Can we use Spark? Why do all the Dremel encoding libraries suck at nested object encodings? There appeared to be no good solutions 
+When writing a transpiler consider the level of complexity you require. The jump from code templates to expression simplification is large enough to demand pause: Consider if there would be another strategy for the overall problem. In this case I should have considered if ActiveData should be retired. My search for an ActiveData replacement was more pronounced: Can we use Amplitude? Can we use Spark? Why do all the Dremel encoding libraries suck at nested object encodings? There appeared to be no good solutions 
 
 ## 2nd Attempt (Q3 2017)
 

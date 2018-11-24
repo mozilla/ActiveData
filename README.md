@@ -7,7 +7,7 @@ Provide high speed filtering and aggregation over data see [ActiveData Wiki Page
 |------------|---------|
 |master      | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=master)](https://travis-ci.org/mozilla/ActiveData) |
 |dev         | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=dev)](https://travis-ci.org/mozilla/ActiveData)    |
-|frontend6   | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=frontend6)](https://travis-ci.org/mozilla/ActiveData)    |
+|v1.7        | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=v1.7)](https://travis-ci.org/mozilla/ActiveData)    |
 
 
 
@@ -66,7 +66,7 @@ you should expect something like
 
 ## Installation
 
-It is still too early for PyPi install, so please clone `master` branch off of github:
+There is no PyPi install. Please clone `master` branch off of Github:
 
     git clone https://github.com/klahnakoski/ActiveData.git
     git checkout master
@@ -80,7 +80,7 @@ and install your requirements:
 
 The ActiveData service requires a configuration file that will point to the
 default Elasticsearch index. You can find a few sample config files in
-`tests/config`. `simple_settings.json` is simplest one:
+`resources/config`. `simple_settings.json` is simplest one:
 
 ```javascript
     {
@@ -114,7 +114,7 @@ Jump to your git project directory, set your `PYTHONPATH` and run `app.py`:
 
 ```bash
     cd ~/ActiveData
-    export PYTHONPATH=.
+    export PYTHONPATH=.:vendor
     python active_data/app.py --settings=resources/config/simple_settings.json
 ```
 
@@ -142,7 +142,7 @@ cluster which are filled, queried, and destroyed**
 
 ```bash
     cd ~/ActiveData
-    export PYTHONPATH=.
+    export PYTHONPATH=.:vendor
     # OPTIONAL, TEST_SETTINGS already defaults to this file
     export TEST_SETTINGS=tests/config/test_simple_settings.json
     python -m unittest discover -v -s tests

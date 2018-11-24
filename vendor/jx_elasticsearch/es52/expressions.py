@@ -102,6 +102,22 @@ class EsScript(Expression):
             return False
 
 
+@extend(Variable)
+def to_esfilter(self, schema):
+    v = self.var
+    cols = schema.values(v, (OBJECT, NESTED))
+    if len(cols) == 0:
+        return MATCH_NONE
+    elif len(cols) == 1:
+        c = first(cols)
+        return {"term": {c.es_column: True}} if c.es_type == BOOLEAN else {"exists": {"field": c.es_column}}
+    else:
+        return es_and([
+            {"term": {c.es_column: True}} if c.es_type == BOOLEAN else {"exists": {"field": c.es_column}}
+            for c in cols
+        ])
+
+
 @extend(BaseBinaryOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     lhs = NumberOp(self.lhs).partial_eval().to_es_script(schema).expr

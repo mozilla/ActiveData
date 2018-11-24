@@ -1096,7 +1096,7 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    def test_boolean_in_where_clause(self):
+    def test_boolean_in_where_clause1(self):
         test = {
             "data": [
                 {"result": {"ok": True}},
@@ -1122,6 +1122,36 @@ class TestSetOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"result": {"ok": False}},
+                    {"result": {"ok": False}},
+                    {"result": {"ok": False}},
+                    {"result": {"ok": False}}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
+    def test_boolean_in_where_clause2(self):
+        test = {
+            "data": [
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {"ok": True}},
+                {"result": {}},
+                {"result": {}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}},
+                {"result": {"ok": False}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"not": "result.ok"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"result": {}},
+                    {"result": {}},
                     {"result": {"ok": False}},
                     {"result": {"ok": False}},
                     {"result": {"ok": False}}

@@ -595,13 +595,13 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                     name=concat_field(table_name, full_name),
                     es_column=full_name,
                     es_index=".",
-                    es_type=c.__class__.__name__,
+                    es_type=d.__class__.__name__,
                     jx_type=None,  # WILL BE SET BELOW
                     last_updated=Date.now(),
                     nested_path=nested_path,
                 )
                 columns.add(column)
-            column.es_type = _merge_python_type(column.es_type, row_type)
+            column.es_type = _merge_python_type(column.es_type, d.__class__)
             column.jx_type = python_type_to_json_type[column.es_type]
         else:
             for name, value in d.items():

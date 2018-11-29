@@ -1602,8 +1602,10 @@ class StringOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.term
-        if isinstance(term, Variable) and term.type == STRING:
+        if term.type is STRING:
             return term
+        elif term.type is IS_NULL:
+            return NULL
         term = FirstOp(term).partial_eval()
         if isinstance(term, CoalesceOp):
             return CoalesceOp([StringOp(t).partial_eval() for t in term.terms])

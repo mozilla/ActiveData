@@ -140,8 +140,6 @@ class TestESSpecial(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-
     def test_db_is_busy(self):
         FILENAME = "metadata.localhost.sqlite"
         db_file = File(FILENAME)
@@ -173,3 +171,31 @@ class TestESSpecial(BaseTestCase):
         finally:
             self.db.execute("COMMIT")
 
+    def test_prefix_uses_prefix(self):
+        test = {
+            "data": [
+                {"a": "test"},
+                {"a": "testkyle"},
+                {"a": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"prefix": {"a": "test"}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list",
+                    "es_query": {
+                        "from": 0,
+                        "query": {"prefix": {"a.~s~": "test"}},
+                        "size": 10
+                    }
+                },
+                "data": [
+                    {"a": "test"},
+                    {"a": "testkyle"}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)

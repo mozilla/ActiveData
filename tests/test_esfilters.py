@@ -17,6 +17,7 @@ from jx_elasticsearch.es52.expressions import EsScript, simplify_esfilter
 from jx_elasticsearch.es52.util import es_and
 from mo_dots import wrap
 from mo_json import OBJECT, NUMBER, STRING
+from mo_json.typed_encoder import STRING_TYPE
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date
 
@@ -78,13 +79,19 @@ class TestESFilters(FuzzyTestCase):
         result = jx_expression(where).partial_eval().to_esfilter(identity_schema)
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
+    def test_prefix(self):
+        k = "k."+STRING_TYPE
+        where = {"prefix": {k: "v"}}
+        result = jx_expression(where).partial_eval().to_esfilter(identity_schema)
+        self.assertEqual(result, {"prefix": {k: "v"}})
+
     def test_painless(self):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
         a = EsScript(type=OBJECT, expr=NULL, frum=NULL)
 
 
 class S(object):
-    def values(self, name):
+    def values(self, name, exclude=None):
         return wrap([{"es_column": name}])
 
     def leaves(self, name):

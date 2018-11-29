@@ -1140,12 +1140,26 @@ def to_esfilter(self, schema):
 
 
 @extend(PrefixOp)
-def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-    if not self.field:
-        return "true"
-    else:
-        return "(" + self.field.to_es_script(schema) + ").startsWith(" + self.prefix.to_es_script(schema) + ")"
+def partial_eval(self):
+    expr = StringOp(self.expr).partial_eval()
+    prefix = StringOp(self.prefix).partial_eval()
 
+    if not self.expr:
+        return TRUE
+
+    return PrefixOp([expr, prefix])
+
+
+@extend(PrefixOp)
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    if not self.expr:
+        return true_script
+    else:
+        return EsScript(
+            type=BOOLEAN,
+            expr= "(" + self.expr.to_es_script(schema).script(schema) + ").startsWith(" + self.prefix.to_es_script(schema).script(schema) + ")",
+            frum=self
+        )
 
 @extend(PrefixOp)
 def to_esfilter(self, schema):

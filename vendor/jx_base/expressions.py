@@ -20,7 +20,7 @@ import mo_json
 from jx_base import first
 from jx_base.queries import is_variable_name, get_property_name
 from mo_dots import coalesce, wrap, Null, split_field
-from mo_future import text_type, utf8_json_encoder, get_function_name, zip_longest
+from mo_future import items as items_, text_type, utf8_json_encoder, get_function_name, zip_longest
 from mo_json import scrub, IS_NULL, OBJECT, BOOLEAN, NUMBER, INTEGER, STRING, python_type_to_json_type
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Log, Except
@@ -96,9 +96,9 @@ def _jx_expression(expr):
     elif isinstance(expr, (list, tuple)):
         return TupleOp(list(map(jx_expression, expr)))  # FORMALIZE
 
-    expr = wrap(expr)
+    # expr = wrap(expr)
     try:
-        items = expr.items()
+        items = items_(expr)
     except Exception as e:
         Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
 
@@ -141,7 +141,7 @@ class Expression(object):
         """
 
         try:
-            items = expr.items()
+            items = items_(expr)
         except Exception as e:
             Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
 
@@ -505,7 +505,7 @@ class Literal(Expression):
             return TRUE
         if term is False:
             return FALSE
-        if isinstance(term, Mapping) and term.date:
+        if isinstance(term, Mapping) and term.get('date'):
             # SPECIAL CASE
             return DateOp(term.date)
         return object.__new__(cls)
@@ -517,7 +517,7 @@ class Literal(Expression):
 
     @classmethod
     def define(cls, expr):
-        return Literal(expr.literal)
+        return Literal(expr.get('literal'))
 
     def __nonzero__(self):
         return True
@@ -1601,7 +1601,10 @@ class StringOp(Expression):
 
     @simplified
     def partial_eval(self):
-        term = FirstOp(self.term).partial_eval()
+        term = self.term
+        if isinstance(term, Variable) and term.type == STRING:
+            return term
+        term = FirstOp(term).partial_eval()
         if isinstance(term, CoalesceOp):
             return CoalesceOp([StringOp(t).partial_eval() for t in term.terms])
         elif isinstance(term, Literal):

@@ -1082,10 +1082,10 @@ def to_es14_filter(self, schema):
 
 @extend(PrefixOp)
 def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
-    if not self.field:
+    if not self.expr:
         return "true"
     else:
-        return "(" + self.field.to_es14_script(schema) + ").startsWith(" + self.prefix.to_es14_script(schema) + ")"
+        return "(" + self.expr.to_es14_script(schema) + ").startsWith(" + self.prefix.to_es14_script(schema) + ")"
 
 
 @extend(PrefixOp)

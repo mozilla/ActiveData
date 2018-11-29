@@ -48,6 +48,23 @@ def download(filename):
             Log.error("Could not get file {{file}}", file=filename, cause=e)
 
 
+@cors_wrapper
+def send_favicon():
+    with RegisterThread():
+        try:
+            record_request(flask.request, None, flask.request.get_data(), None)
+            content, status, mimetype = _read_file("favicon.ico")
+            return Response(
+                content,
+                status=status,
+                headers={
+                    "Content-Type": "image/x-icon"
+                }
+            )
+        except Exception as e:
+            Log.error("Could not get file {{file}}", file="favicon.ico", cause=e)
+
+
 @cache(duration=DAY)
 def _read_file(filename):
     try:

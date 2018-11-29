@@ -37,6 +37,13 @@ class TestBasicRequests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
 
+    def test_favicon(self):
+        url = URL(self.utils.testing.query)
+        url.path = "/favicon.ico"
+
+        response = self.utils.try_till_response(str(url), data=b"")
+        self.assertEqual(response.status_code, 200)
+
     def test_bad_file_request(self):
         url = URL(self.utils.testing.query)
         url.path = "/tools/../../README.md"

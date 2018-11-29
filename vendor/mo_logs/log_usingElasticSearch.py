@@ -15,6 +15,8 @@ import sys
 from collections import Mapping
 from datetime import date, datetime
 
+from mo_math.randoms import Random
+
 from jx_python import jx
 from mo_dots import wrap, coalesce, FlatList, listwrap
 from mo_future import text_type, binary_type, number_types
@@ -53,6 +55,8 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         kwargs.timeout = Duration(coalesce(kwargs.timeout, "30second")).seconds
         kwargs.retry.times = coalesce(kwargs.retry.times, 3)
         kwargs.retry.sleep = Duration(coalesce(kwargs.retry.sleep, MINUTE)).seconds
+
+        kwargs.host = Random.sample(listwrap(host), 1)[0]
 
         self.es = Cluster(kwargs).get_or_create_index(
             schema=json2value(value2json(SCHEMA), leaves=True),
@@ -131,6 +135,10 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
 
 def flatten_causal_chain(log_item, output=None):
     output = output or []
+
+    if isinstance(log_item, text_type):
+        output.append({"template": log_item})
+        return
 
     output.append(log_item)
     for c in listwrap(log_item.cause):

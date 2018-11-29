@@ -561,7 +561,7 @@ def json_schema_to_markdown(schema):
 
     def _inner(schema, parent_name, indent):
         more_lines = []
-        for k,v in schema.items():
+        for k, v in schema.items():
             full_name = concat_field(parent_name, k)
             details = indent+"* "+_md_code(full_name)
             if v.type:
@@ -578,7 +578,7 @@ def json_schema_to_markdown(schema):
 
     lines = []
     if schema.title:
-        lines.append("#"+schema.title)
+        lines.append("# "+schema.title)
 
     lines.append(schema.description)
     lines.append("")
@@ -586,7 +586,7 @@ def json_schema_to_markdown(schema):
     for k, v in jx.sort(schema.properties.items(), 0):
         full_name = k
         if v.type in ["object", "array", "nested"]:
-            lines.append("##"+_md_code(full_name)+" Property")
+            lines.append("## "+_md_code(full_name)+" Property")
             if v.description:
                 lines.append(v.description)
             lines.append("")
@@ -594,7 +594,7 @@ def json_schema_to_markdown(schema):
             if v.type in ["object", "array", "nested"]:
                 lines.extend(_inner(v.properties, full_name, "  "))
         else:
-            lines.append("##"+_md_code(full_name)+" ("+v.type+")")
+            lines.append("## "+_md_code(full_name)+" ("+v.type+")")
             if v.description:
                 lines.append(v.description)
 

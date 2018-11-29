@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from time import sleep, time
 
 
-from mo_dots import Data, unwraplist
+from mo_dots import Data, unwraplist, coalesce
 from mo_future import get_ident, start_new_thread, get_function_name, text_type, allocate_lock, PY3
 from mo_logs import Log, Except
 from mo_threads.lock import Lock
@@ -209,7 +209,7 @@ class Thread(BaseThread):
 
     def __init__(self, name, target, *args, **kwargs):
         BaseThread.__init__(self, -1)
-        self.name = name
+        self.name = coalesce(name, "thread_" + text_type(object.__hash__(self)))
         self.target = target
         self.end_of_thread = Data()
         self.synch_lock = Lock("response synch lock")

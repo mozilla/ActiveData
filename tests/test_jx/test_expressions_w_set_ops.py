@@ -1059,7 +1059,6 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-
     def test_boolean_in_expression(self):
         test = {
             "data": [

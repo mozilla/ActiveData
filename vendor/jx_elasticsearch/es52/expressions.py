@@ -1141,10 +1141,13 @@ def to_esfilter(self, schema):
 
 @extend(PrefixOp)
 def partial_eval(self):
+    if not self.expr:
+        return TRUE
+
     expr = StringOp(self.expr).partial_eval()
     prefix = StringOp(self.prefix).partial_eval()
 
-    if not self.expr:
+    if self.expr is NULL:
         return TRUE
 
     return PrefixOp([expr, prefix])
@@ -1161,19 +1164,28 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
             frum=self
         )
 
+
 @extend(PrefixOp)
 def to_esfilter(self, schema):
     if isinstance(self.prefix, Literal) and not self.prefix.value:
         return {"match_all": {}}
-    elif self.expr is NULL:
+
+    expr = self.expr
+
+    if expr is NULL:
         return es_not({"match_all": {}})
-    elif not self.expr:
+    elif not expr:
         return {"match_all": {}}
-    elif isinstance(self.expr, Variable) and isinstance(self.prefix, Literal):
-        var = first(schema.leaves(self.expr.var)).es_column
+
+    if isinstance(expr, StringOp):
+        expr = expr.term
+
+    if isinstance(expr, Variable) and isinstance(self.prefix, Literal):
+        var = first(schema.leaves(expr.var)).es_column
         return {"prefix": {var: self.prefix.value}}
     else:
         return ScriptOp(self.to_es_script(schema).script(schema)).to_esfilter(schema)
+
 
 @extend(SuffixOp)
 def to_es_script(self, schema, not_null=False, boolean=False, many=True):

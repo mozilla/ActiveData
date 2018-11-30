@@ -10,7 +10,7 @@ branches:
 
 env:
   global:
-      - ES_VERSION=6.4.2
+      - ES_VERSION=6.5.1
       - ES_DOWNLOAD_URL=https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-$ES_VERSION.tar.gz
 
 install:

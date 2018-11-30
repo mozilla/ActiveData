@@ -404,6 +404,7 @@ class SelectOp(Expression):
 
     @classmethod
     def define(cls, expr):
+        expr=wrap(expr)
         term = expr.select
         terms = []
         if not isinstance(term, list):
@@ -763,7 +764,7 @@ class DateOp(Literal):
         if isinstance(term, text_type):
             self.date = term
         else:
-            self.date = coalesce(term.literal, term)
+            self.date = coalesce(term.get('literal'), term)
         v = unicode2Date(self.date)
         if isinstance(v, Date):
             Literal.__init__(self, v.unix)
@@ -772,7 +773,7 @@ class DateOp(Literal):
 
     @classmethod
     def define(cls, expr):
-        return DateOp(expr.date)
+        return DateOp(expr.get('date'))
 
     def __data__(self):
         return {"date": self.date}
@@ -1602,12 +1603,12 @@ class StringOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.term
-        if term.type is STRING:
-            return term
-        elif term.type is IS_NULL:
+        if term.type is IS_NULL:
             return NULL
         term = FirstOp(term).partial_eval()
-        if isinstance(term, CoalesceOp):
+        if isinstance(term, StringOp):
+            return term.term.partial_eval()
+        elif isinstance(term, CoalesceOp):
             return CoalesceOp([StringOp(t).partial_eval() for t in term.terms])
         elif isinstance(term, Literal):
             if term.type == STRING:

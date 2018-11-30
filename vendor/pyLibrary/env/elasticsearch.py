@@ -39,11 +39,10 @@ DEBUG_METADATA_UPDATE = False
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
 ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
+
 INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
 SUFFIX_PATTERN = r'\d{8}_\d{6}'
-
 STALE_METADATA = 10 * MINUTE
-
 DATA_KEY = text_type("data")
 
 

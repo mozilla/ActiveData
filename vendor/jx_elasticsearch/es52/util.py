@@ -11,10 +11,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_base.expressions import TRUE, AndOp, EsNestedOp
 from jx_elasticsearch.es52.expressions import Variable
-from mo_dots import wrap, literal_field
-from mo_future import text_type, sort_using_key
+from mo_dots import wrap
+from mo_future import text_type
 from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL
 from mo_logs import Log
 from pyLibrary.convert import value2boolean
@@ -118,7 +117,6 @@ aggregates = {
 
 NON_STATISTICAL_AGGS = {"none", "one"}
 
-
 def es_and(terms):
     return wrap({"bool": {"filter": terms}})
 
@@ -137,6 +135,14 @@ def es_script(term):
 
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}
+
+
+def es_exists(term):
+    return {"exists": {"field": term}}
+
+
+MATCH_ALL = wrap({"match_all": {}})
+MATCH_NONE = es_not({"match_all": {}})
 
 
 pull_functions = {

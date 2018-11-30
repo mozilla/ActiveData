@@ -1160,7 +1160,7 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
     else:
         return EsScript(
             type=BOOLEAN,
-            expr= "(" + self.expr.to_es_script(schema).script(schema) + ").startsWith(" + self.prefix.to_es_script(schema).script(schema) + ")",
+            expr = "(" + self.expr.to_es_script(schema).script(schema) + ").startsWith(" + self.prefix.to_es_script(schema).script(schema) + ")",
             frum=self
         )
 

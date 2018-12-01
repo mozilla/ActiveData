@@ -15,10 +15,10 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp
+from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp, LeavesOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp, LeavesOp
+from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx

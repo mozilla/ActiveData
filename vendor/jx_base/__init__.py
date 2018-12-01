@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 from uuid import uuid4
 
+import jx_python
+from jx_python.expressions import Literal
 from mo_dots import wrap, coalesce, listwrap
 from mo_future import text_type
 from mo_json import value2json
@@ -33,10 +35,6 @@ def generateGuid():
     print(uuid.UUID(a).hex)
     """
     return text_type(uuid4())
-
-
-def first(values):
-    return iter(values).next()
 
 
 def _exec(code, name):
@@ -76,7 +74,7 @@ def DataClass(name, columns, constraint=None):
     :return: The class that has been created
     """
 
-    from jx_python.expressions import jx_expression
+    from jx_python.expressions import _jx_expression
 
     columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, text_type) else c for c in columns])
     slots = columns.name
@@ -174,12 +172,12 @@ class {{class_name}}(Mapping):
             "slots": "(" + (", ".join(quote(s) for s in slots)) + ")",
             "required": "{" + (", ".join(quote(s) for s in required)) + "}",
             "nulls": "{" + (", ".join(quote(s) for s in nulls)) + "}",
-            "defaults": jx_expression({"literal": defaults}).to_python(),
+            "defaults": Literal(defaults).to_python(),
             "len_slots": len(slots),
             "dict": "{" + (", ".join(quote(s) + ": self." + s for s in slots)) + "}",
             "assign": "; ".join("_set(output, "+quote(s)+", self."+s+")" for s in slots),
             "types": "{" + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items())) + "}",
-            "constraint_expr": jx_expression(constraint).to_python(),
+            "constraint_expr": _jx_expression(constraint, jx_python.expressions.language).to_python(),
             "constraint": value2json(constraint)
         }
     )

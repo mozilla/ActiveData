@@ -1282,10 +1282,6 @@ def to_es14_script(self, schema, not_null=False, boolean=False, many=True):
     )
 
 
-MATCH_ALL = wrap({"match_all": {}})
-MATCH_NONE = es_not({"match_all": {}})
-
-
 def simplify_esfilter(esfilter):
     try:
         output = wrap(_normalize(wrap(esfilter)))

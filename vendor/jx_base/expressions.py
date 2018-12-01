@@ -17,8 +17,8 @@ from collections import Mapping
 from decimal import Decimal
 
 import mo_json
-from jx_base import first
 from jx_base.queries import is_variable_name, get_property_name
+from jx_base.utils import first, define_language, BaseExpression, operators
 from mo_dots import coalesce, wrap, Null, split_field
 from mo_future import items as items_, text_type, utf8_json_encoder, get_function_name, zip_longest
 from mo_json import scrub, IS_NULL, OBJECT, BOOLEAN, NUMBER, INTEGER, STRING, python_type_to_json_type
@@ -68,9 +68,10 @@ def simplified(func):
 
 def jx_expression(expr, schema=None):
     # UPDATE THE VARIABLE WITH THIER KNOWN TYPES
-    output = _jx_expression(expr)
     if not schema:
+        output = _jx_expression(expr, language)
         return output
+    output = _jx_expression(expr, language)
     for v in output.vars():
         leaves = schema.leaves(v.var)
         if len(leaves) == 0:
@@ -80,55 +81,72 @@ def jx_expression(expr, schema=None):
     return output
 
 
-def _jx_expression(expr):
+def _jx_expression(expr, lang):
     """
     WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
     """
     if isinstance(expr, Expression):
-        Log.error("Expecting JSON, not expression")
+        # CONVERT TO lang
+        op = expr.name
+        new_op = getattr(lang, op, None)
+        if not new_op:
+            # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
+            return _jx_expression(expr.partial_eval(), lang)
+        expr.__class__ = new_op
+        return expr
+        # return new_op(expr.args)  # THIS CAN BE DONE, BUT IT NEEDS MORE CODING, AND I WOULD EXPECT IT TO BE SLOW
 
     if expr is None:
         return TRUE
     elif expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
-        return Literal(expr)
+        return lang.Literal(expr)
     elif isinstance(expr, text_type):
-        return Variable(expr)
+        return lang.Variable(expr)
     elif isinstance(expr, (list, tuple)):
-        return TupleOp(list(map(jx_expression, expr)))  # FORMALIZE
+        return lang.TupleOp([_jx_expression(e, lang) for e in expr])
 
     # expr = wrap(expr)
     try:
         items = items_(expr)
+
+        for op, term in items:
+            # ONE OF THESE IS THE OPERATOR
+            full_op = operators.get(op)
+            if full_op:
+                class_ = getattr(lang, full_op, None)
+                if class_:
+                    return class_.define(expr)
+
+                # THIS LANGUAGE DOES NOT SUPPORT THIS OPERATOR, GOTO BASE LANGUAGE AND GET THE MACRO
+                class_ = getattr(language, full_op)
+                output = class_.define(expr).partial_eval()
+                return _jx_expression(output, lang)
+        else:
+            if not items:
+                return NULL
+            raise Log.error("{{instruction|json}} is not known", instruction=items)
+
     except Exception as e:
         Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
 
-    for item in items:
-        op, term = item
-        class_ = operators.get(op)
-        if class_:
-            return class_.define(expr)
-    else:
-        if not items:
-            return NULL
-        raise Log.error("{{operator|quote}} is not a known operator", operator=op)
 
-
-class Expression(object):
+class Expression(BaseExpression):
+    # lang = None
     data_type = OBJECT
     has_simple_form = False
 
-    def __init__(self, terms):
+    def __init__(self, args):
         self.simplified = False
-        if isinstance(terms, (list, tuple)):
-            if not all(isinstance(t, Expression) for t in terms):
+        if isinstance(args, (list, tuple)):
+            if not all(isinstance(t, Expression) for t in args):
                 Log.error("Expecting an expression")
-        elif isinstance(terms, Mapping):
-            if not all(isinstance(k, Variable) and isinstance(v, Literal) for k, v in terms.items()):
+        elif isinstance(args, Mapping):
+            if not all(isinstance(k, Variable) and isinstance(v, Literal) for k, v in args.items()):
                 Log.error("Expecting an {<variable>: <literal>}")
-        elif terms == None:
+        elif args == None:
             pass
         else:
-            if not isinstance(terms, Expression):
+            if not isinstance(args, Expression):
                 Log.error("Expecting an expression")
 
     @classmethod
@@ -137,45 +155,47 @@ class Expression(object):
         GENERAL SUPPORT FOR BUILDING EXPRESSIONS FROM JSON EXPRESSIONS
         OVERRIDE THIS IF AN OPERATOR EXPECTS COMPLICATED PARAMETERS
         :param expr: Data representing a JSON Expression
-        :return: Python parse tree
+        :return: parse tree
         """
 
         try:
+            lang = cls.lang
             items = items_(expr)
+            for item in items:
+                op, term = item
+                full_op = operators.get(op)
+                if full_op:
+                    class_ = getattr(lang, full_op)
+                    clauses = {k: _jx_expression(v, lang) for k, v in expr.items() if k != op}
+                    break
+            else:
+                if not items:
+                    return NULL
+                raise Log.error("{{operator|quote}} is not a known operator", operator=op)
+
+            if term == None:
+                return class_([], **clauses)
+            elif isinstance(term, list):
+                terms = [_jx_expression(t, cls.lang) for t in term]
+                return class_(terms, **clauses)
+            elif isinstance(term, Mapping):
+                items = term.items()
+                if class_.has_simple_form:
+                    if len(items) == 1:
+                        k, v = items[0]
+                        return class_([lang.Variable(k), lang.Literal(v)], **clauses)
+                    else:
+                        return class_({k: lang.Literal(v) for k, v in items}, **clauses)
+                else:
+                    return class_(_jx_expression(term, lang), **clauses)
+            else:
+                if op in ["literal", "date", "offset"]:
+                    return class_(term, **clauses)
+                else:
+                    return class_(_jx_expression(term, lang), **clauses)
         except Exception as e:
             Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
 
-        for item in items:
-            op, term = item
-            class_ = operators.get(op)
-            if class_:
-                clauses = {k: jx_expression(v) for k, v in expr.items() if k != op}
-                break
-        else:
-            if not items:
-                return NULL
-            raise Log.error("{{operator|quote}} is not a known operator", operator=op)
-
-        if term == None:
-            return class_([], **clauses)
-        elif isinstance(term, list):
-            terms = list(map(_jx_expression, term))
-            return class_(terms, **clauses)
-        elif isinstance(term, Mapping):
-            items = term.items()
-            if class_.has_simple_form:
-                if len(items) == 1:
-                    k, v = items[0]
-                    return class_([Variable(k), Literal(v)], **clauses)
-                else:
-                    return class_({k: Literal(v) for k, v in items}, **clauses)
-            else:
-                return class_(jx_expression(term), **clauses)
-        else:
-            if op in ["literal", "date", "offset"]:
-                return class_(term, **clauses)
-            else:
-                return class_(_jx_expression(term), **clauses)
 
     @property
     def name(self):
@@ -205,7 +225,7 @@ class Expression(object):
         """
         if self.type == BOOLEAN:
             Log.error("programmer error")
-        return MissingOp(self)
+        return self.__class__.lang.MissingOp(self)
 
     def exists(self):
         """
@@ -213,7 +233,7 @@ class Expression(object):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
-        return NotOp(self.missing())
+        return self.__class__.lang.NotOp(self.missing())
 
     def is_true(self):
         """
@@ -256,6 +276,9 @@ class Variable(Expression):
 
         """
         Expression.__init__(self, None)
+
+        # if self.lang != self.__class_.lang:
+        #     pass
         self.var = get_property_name(var)
         jx_type = inserter_type_to_json_type.get(last(split_field(var)))
         if jx_type:
@@ -304,7 +327,7 @@ class Variable(Expression):
         if self.var == "_id":
             return FALSE
         else:
-            return MissingOp(self)
+            return self.__class__.lang.MissingOp(self)
 
 
 IDENTITY = Variable(".")
@@ -370,7 +393,7 @@ class RowsOp(Expression):
         return self.var.vars() | self.offset.vars() | {"rows", "rownum"}
 
     def map(self, map_):
-        return RowsOp([self.var.map(map_), self.offset.map(map_)])
+        return self.__class__.lang.RowsOp([self.var.map(map_), self.offset.map(map_)])
 
 
 class GetOp(Expression):
@@ -390,7 +413,7 @@ class GetOp(Expression):
         return self.var.vars() | self.offset.vars()
 
     def map(self, map_):
-        return GetOp([self.var.map(map_), self.offset.map(map_)])
+        return self.__class__.lang.GetOp([self.var.map(map_), self.offset.map(map_)])
 
 
 class SelectOp(Expression):
@@ -413,7 +436,7 @@ class SelectOp(Expression):
             if isinstance(t, text_type):
                 if not is_variable_name(t):
                     Log.error("expecting {{value}} a simple dot-delimited path name", value=t)
-                terms.append({"name": t, "value": jx_expression(t)})
+                terms.append({"name": t, "value": _jx_expression(t, cls.lang)})
             elif t.name == None:
                 if t.value == None:
                     Log.error("expecting select parameters to have name and value properties")
@@ -421,12 +444,12 @@ class SelectOp(Expression):
                     if not is_variable_name(t):
                         Log.error("expecting {{value}} a simple dot-delimited path name", value=t.value)
                     else:
-                        terms.append({"name": t.value, "value": jx_expression(t.value)})
+                        terms.append({"name": t.value, "value": _jx_expression(t.value, cls.lang)})
                 else:
                     Log.error("expecting a name property")
             else:
-                terms.append({"name": t.name, "value": jx_expression(t.value)})
-        return SelectOp(terms)
+                terms.append({"name": t.name, "value": _jx_expression(t.value)})
+        return cls.lang.SelectOp(terms)
 
     def __data__(self):
         return {"select": [
@@ -441,7 +464,7 @@ class SelectOp(Expression):
         return UNION(t.value for t in self.terms)
 
     def map(self, map_):
-        return SelectOp([
+        return self.__class__.lang.SelectOp([
             {"name": t.name, "value": t.value.map(map_)}
             for t in self.terms
         ])
@@ -464,7 +487,7 @@ class ScriptOp(Expression):
     def define(cls, expr):
         if ALLOW_SCRIPTING:
             Log.warning("Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}", script=expr.script.term)
-            return ScriptOp(expr.script)
+            return cls.lang.ScriptOp(expr.script)
         else:
             Log.error("scripting is disabled")
 
@@ -508,7 +531,7 @@ class Literal(Expression):
             return FALSE
         if isinstance(term, Mapping) and term.get('date'):
             # SPECIAL CASE
-            return DateOp(term.date)
+            return cls.lang.DateOp(term.date)
         return object.__new__(cls)
 
     def __init__(self, term):
@@ -518,7 +541,7 @@ class Literal(Expression):
 
     @classmethod
     def define(cls, expr):
-        return Literal(expr.get('literal'))
+        return cls.lang.Literal(expr.get('literal'))
 
     def __nonzero__(self):
         return True
@@ -773,7 +796,7 @@ class DateOp(Literal):
 
     @classmethod
     def define(cls, expr):
-        return DateOp(expr.get('date'))
+        return cls.lang.self.__class__.lang.DateOp(expr.get('date'))
 
     def __data__(self):
         return {"date": self.date}
@@ -804,7 +827,7 @@ class TupleOp(Expression):
         return output
 
     def map(self, map_):
-        return TupleOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.TupleOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -828,7 +851,7 @@ class LeavesOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return LeavesOp(self.term.map(map_))
+        return self.__class__.lang.LeavesOp(self.term.map(map_))
 
     def missing(self):
         return FALSE
@@ -864,7 +887,7 @@ class BaseBinaryOp(Expression):
         if self.default.exists():
             return FALSE
         else:
-            return OrOp([self.lhs.missing(), self.rhs.missing()])
+            return self.__class__.lang.OrOp([self.lhs.missing(), self.rhs.missing()])
 
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
@@ -891,9 +914,9 @@ class DivOp(BaseBinaryOp):
     op = "div"
 
     def missing(self):
-        return AndOp([
+        return self.__class__.lang.AndOp([
             self.default.missing(),
-            OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])
+            self.__class__.lang.OrOp([self.lhs.missing(), self.rhs.missing(), self.__class__.lang.EqOp([self.rhs, ZERO])])
         ]).partial_eval()
 
     def partial_eval(self):
@@ -990,13 +1013,13 @@ class FloorOp(Expression):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
 
     def map(self, map_):
-        return FloorOp([self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
+        return self.__class__.lang.FloorOp([self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_))
 
     def missing(self):
         if self.default.exists():
             return FALSE
         else:
-            return OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])
+            return self.__class__.lang.OrOp([self.lhs.missing(), self.rhs.missing(), self.__class__.lang.EqOp([self.rhs, ZERO])])
 
 
 class EqOp(Expression):
@@ -1010,17 +1033,17 @@ class EqOp(Expression):
         items = terms.items()
         if len(items) == 1:
             if isinstance(items[0][1], list):
-                return InOp(items[0])
+                return cls.lang.InOp(items[0])
             else:
-                return EqOp(items[0])
+                return cls.lang.EqOp(items[0])
         else:
             acc = []
             for lhs, rhs in items:
                 if rhs.json.startswith("["):
-                    acc.append(InOp([Variable(lhs), rhs]))
+                    acc.append(cls.lang.InOp([Variable(lhs), rhs]))
                 else:
-                    acc.append(EqOp([Variable(lhs), rhs]))
-            return AndOp(acc)
+                    acc.append(cls.lang.EqOp([Variable(lhs), rhs]))
+            return cls.lang.AndOp(acc)
 
     def __init__(self, terms):
         Expression.__init__(self, terms)
@@ -1041,7 +1064,7 @@ class EqOp(Expression):
         return self.lhs.vars() | self.rhs.vars()
 
     def map(self, map_):
-        return EqOp([self.lhs.map(map_), self.rhs.map(map_)])
+        return self.__class__.lang.EqOp([self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
         return FALSE
@@ -1057,11 +1080,11 @@ class EqOp(Expression):
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
             return TRUE if builtin_ops["eq"](lhs.value, rhs.value) else FALSE
         else:
-            return CaseOp(
+            return self.__class__.lang.CaseOp(
                 [
-                    WhenOp(lhs.missing(), **{"then": rhs.missing()}),
-                    WhenOp(rhs.missing(), **{"then": FALSE}),
-                    BasicEqOp([lhs, rhs])
+                    self.__class__.lang.WhenOp(lhs.missing(), **{"then": rhs.missing()}),
+                    self.__class__.lang.WhenOp(rhs.missing(), **{"then": FALSE}),
+                    self.__class__.lang.BasicEqOp([lhs, rhs])
                 ]
             ).partial_eval()
 
@@ -1089,14 +1112,14 @@ class NeOp(Expression):
         return self.lhs.vars() | self.rhs.vars()
 
     def map(self, map_):
-        return NeOp([self.lhs.map(map_), self.rhs.map(map_)])
+        return self.__class__.lang.NeOp([self.lhs.map(map_), self.rhs.map(map_)])
 
     def missing(self):
         return FALSE  # USING THE decisive EQUAILTY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
 
     @simplified
     def partial_eval(self):
-        output = NotOp(EqOp([self.lhs, self.rhs])).partial_eval()
+        output = self.__class__.lang.NotOp(self.__class__.lang.EqOp([self.lhs, self.rhs])).partial_eval()
         return output
 
 
@@ -1119,7 +1142,7 @@ class NotOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return NotOp(self.term.map(map_))
+        return self.__class__.lang.NotOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1136,33 +1159,33 @@ class NotOp(Expression):
             elif isinstance(term, Literal):
                 Log.error("`not` operator expects a Boolean term")
             elif isinstance(term, WhenOp):
-                output = WhenOp(
+                output = self.__class__.lang.WhenOp(
                     term.when,
                     **{"then": inverse(term.then), "else": inverse(term.els_)}
                 ).partial_eval()
             elif isinstance(term, CaseOp):
-                output = CaseOp(
+                output = self.__class__.lang.CaseOp(
                     [
-                        WhenOp(w.when, **{"then": inverse(w.then)}) if isinstance(w, WhenOp) else inverse(w)
+                        self.__class__.lang.WhenOp(w.when, **{"then": inverse(w.then)}) if isinstance(w, WhenOp) else inverse(w)
                         for w in term.whens
                     ]
                 ).partial_eval()
             elif isinstance(term, AndOp):
-                output = OrOp([inverse(t) for t in term.terms]).partial_eval()
+                output = self.__class__.lang.OrOp([inverse(t) for t in term.terms]).partial_eval()
             elif isinstance(term, OrOp):
-                output = AndOp([inverse(t) for t in term.terms]).partial_eval()
+                output = self.__class__.lang.AndOp([inverse(t) for t in term.terms]).partial_eval()
             elif isinstance(term, MissingOp):
-                output = NotOp(term.expr.missing())
+                output = self.__class__.lang.NotOp(term.expr.missing())
             elif isinstance(term, ExistsOp):
                 output = term.field.missing().partial_eval()
             elif isinstance(term, NotOp):
                 output = term.term.partial_eval()
             elif isinstance(term, NeOp):
-                output = EqOp([term.lhs, term.rhs]).partial_eval()
+                output = self.__class__.lang.EqOp([term.lhs, term.rhs]).partial_eval()
             elif isinstance(term, (BasicIndexOfOp, BasicSubstringOp)):
                 return FALSE
             else:
-                output = NotOp(term)
+                output = self.__class__.lang.NotOp(term)
 
             return output
 
@@ -1197,7 +1220,7 @@ class AndOp(Expression):
         return output
 
     def map(self, map_):
-        return AndOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.AndOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -1206,7 +1229,7 @@ class AndOp(Expression):
     def partial_eval(self):
         or_terms = [[]]  # LIST OF TUPLES FOR or-ing and and-ing
         for i, t in enumerate(self.terms):
-            simple = BooleanOp(t).partial_eval()
+            simple = self.__class__.lang.BooleanOp(t).partial_eval()
             if simple is TRUE:
                 continue
             elif simple is FALSE:
@@ -1226,7 +1249,7 @@ class AndOp(Expression):
                 Log.error("expecting boolean value")
 
             for and_terms in list(or_terms):
-                if NotOp(simple).partial_eval() in and_terms:
+                if self.__class__.lang.NotOp(simple).partial_eval() in and_terms:
                     or_terms.remove(and_terms)
                 elif simple not in and_terms:
                     and_terms.append(simple)
@@ -1240,10 +1263,10 @@ class AndOp(Expression):
             elif len(and_terms) == 1:
                 return and_terms[0]
             else:
-                return AndOp(and_terms)
+                return self.__class__.lang.AndOp(and_terms)
 
-        return OrOp([
-            AndOp(and_terms) if len(and_terms) > 1 else and_terms[0]
+        return self.__class__.lang.OrOp([
+            self.__class__.lang.AndOp(and_terms) if len(and_terms) > 1 else and_terms[0]
             for and_terms in or_terms
         ])
 
@@ -1265,7 +1288,7 @@ class OrOp(Expression):
         return output
 
     def map(self, map_):
-        return OrOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.OrOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -1311,7 +1334,7 @@ class OrOp(Expression):
             return FALSE
         if len(terms) == 1:
             return terms[0]
-        return OrOp(terms)
+        return self.__class__.lang.OrOp(terms)
 
 
 class LengthOp(Expression):
@@ -1332,7 +1355,7 @@ class LengthOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return LengthOp(self.term.map(map_))
+        return self.__class__.lang.LengthOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1346,7 +1369,7 @@ class LengthOp(Expression):
             else:
                 return NULL
         else:
-            return LengthOp(term)
+            return self.__class__.lang.LengthOp(term)
 
 
 class FirstOp(Expression):
@@ -1362,7 +1385,7 @@ class FirstOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return LastOp(self.term.map(map_))
+        return self.__class__.lang.LastOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1379,7 +1402,7 @@ class FirstOp(Expression):
         elif isinstance(term, Literal):
             Log.error("not handled yet")
         else:
-            return FirstOp(term)
+            return self.__class__.lang.FirstOp(term)
 
 
 class LastOp(Expression):
@@ -1395,7 +1418,7 @@ class LastOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return LastOp(self.term.map(map_))
+        return self.__class__.lang.LastOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1416,7 +1439,7 @@ class LastOp(Expression):
                 return NULL
             return term
         else:
-            return LastOp(term)
+            return self.__class__.lang.LastOp(term)
 
 
 class BooleanOp(Expression):
@@ -1433,7 +1456,7 @@ class BooleanOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return BooleanOp(self.term.map(map_))
+        return self.__class__.lang.BooleanOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1448,7 +1471,7 @@ class BooleanOp(Expression):
         elif term.type == BOOLEAN:
             return term
 
-        is_missing = NotOp(term.missing()).partial_eval()
+        is_missing = self.__class__.lang.NotOp(term.missing()).partial_eval()
         return is_missing
 
 
@@ -1466,7 +1489,7 @@ class IsBooleanOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return IsBooleanOp(self.term.map(map_))
+        return self.__class__.lang.IsBooleanOp(self.term.map(map_))
 
     def missing(self):
         return FALSE
@@ -1486,19 +1509,19 @@ class IntegerOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return IntegerOp(self.term.map(map_))
+        return self.__class__.lang.IntegerOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
 
     @simplified
     def partial_eval(self):
-        term = FirstOp(self.term).partial_eval()
+        term = self.lang.FirstOp(self.term).partial_eval()
         if isinstance(term, CoalesceOp):
-            return CoalesceOp([IntegerOp(t) for t in term.terms])
+            return self.__class__.lang.CoalesceOp([self.__class__.lang.IntegerOp(t) for t in term.terms])
         if term.type == INTEGER:
             return term
-        return IntegerOp(term)
+        return self.__class__.lang.IntegerOp(term)
 
 
 class IsIntegerOp(Expression):
@@ -1515,7 +1538,7 @@ class IsIntegerOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return IsIntegerOp(self.term.map(map_))
+        return self.__class__.lang.IsIntegerOp(self.term.map(map_))
 
     def missing(self):
         return FALSE
@@ -1535,16 +1558,16 @@ class NumberOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return NumberOp(self.term.map(map_))
+        return self.__class__.lang.NumberOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
 
     @simplified
     def partial_eval(self):
-        term = FirstOp(self.term).partial_eval()
+        term = self.__class__.lang.FirstOp(self.term).partial_eval()
         if isinstance(term, CoalesceOp):
-            return CoalesceOp([NumberOp(t) for t in term.terms])
+            return self.__class__.lang.CoalesceOp([self.__class__.lang.NumberOp(t) for t in term.terms])
         return self
 
 
@@ -1562,7 +1585,7 @@ class IsNumberOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return IsNumberOp(self.term.map(map_))
+        return self.__class__.lang.IsNumberOp(self.term.map(map_))
 
     def missing(self):
         return FALSE
@@ -1595,7 +1618,7 @@ class StringOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return StringOp(self.term.map(map_))
+        return self.__class__.lang.StringOp(self.term.map(map_))
 
     def missing(self):
         return self.term.missing()
@@ -1605,11 +1628,11 @@ class StringOp(Expression):
         term = self.term
         if term.type is IS_NULL:
             return NULL
-        term = FirstOp(term).partial_eval()
+        term = self.__class__.lang.FirstOp(term).partial_eval()
         if isinstance(term, StringOp):
             return term.term.partial_eval()
         elif isinstance(term, CoalesceOp):
-            return CoalesceOp([StringOp(t).partial_eval() for t in term.terms])
+            return self.__class__.lang.CoalesceOp([self.__class__.lang.StringOp(t).partial_eval() for t in term.terms])
         elif isinstance(term, Literal):
             if term.type == STRING:
                 return term
@@ -1632,7 +1655,7 @@ class IsStringOp(Expression):
         return self.term.vars()
 
     def map(self, map_):
-        return IsStringOp(self.term.map(map_))
+        return self.__class__.lang.IsStringOp(self.term.map(map_))
 
     def missing(self):
         return FALSE
@@ -1646,7 +1669,7 @@ class CountOp(Expression):
         Expression.__init__(self, terms)
         if isinstance(terms, list):
             # SHORTCUT: ASSUME AN ARRAY OF IS A TUPLE
-            self.terms = TupleOp(terms)
+            self.terms = self.__class__.lang.TupleOp(terms)
         else:
             self.terms = terms
 
@@ -1657,7 +1680,7 @@ class CountOp(Expression):
         return self.terms.vars()
 
     def map(self, map_):
-        return CountOp(self.terms.map(map_))
+        return self.__class__.lang.CountOp(self.terms.map(map_))
 
     def missing(self):
         return FALSE
@@ -1688,7 +1711,7 @@ class MaxOp(Expression):
         return output
 
     def map(self, map_):
-        return MaxOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.MaxOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -1712,9 +1735,9 @@ class MaxOp(Expression):
                 return Literal(maximum)
         else:
             if maximum == None:
-                output = MaxOp(terms)
+                output = self.__class__.lang.MaxOp(terms)
             else:
-                output = MaxOp([Literal(maximum)] + terms)
+                output = self.__class__.lang.MaxOp([Literal(maximum)] + terms)
 
         return output
 
@@ -1741,7 +1764,7 @@ class MinOp(Expression):
         return output
 
     def map(self, map_):
-        return MinOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.MinOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -1765,9 +1788,9 @@ class MinOp(Expression):
                 return Literal(minimum)
         else:
             if minimum == None:
-                output = MinOp(terms)
+                output = self.__class__.lang.MinOp(terms)
             else:
-                output = MinOp([Literal(minimum)] + terms)
+                output = self.__class__.lang.MinOp([Literal(minimum)] + terms)
 
         return output
 
@@ -1804,20 +1827,20 @@ class BaseMultiOp(Expression):
     def missing(self):
         if self.nulls:
             if isinstance(self.default, NullOp):
-                return AndOp([t.missing() for t in self.terms])
+                return self.__class__.lang.AndOp([t.missing() for t in self.terms])
             else:
                 return TRUE
         else:
             if isinstance(self.default, NullOp):
-                return OrOp([t.missing() for t in self.terms])
+                return self.__class__.lang.OrOp([t.missing() for t in self.terms])
             else:
                 return FALSE
 
     def exists(self):
         if self.nulls:
-            return OrOp([t.exists() for t in self.terms])
+            return self.__class__.lang.OrOp([t.exists() for t in self.terms])
         else:
-            return AndOp([t.exists() for t in self.terms])
+            return self.__class__.lang.AndOp([t.exists() for t in self.terms])
 
     @simplified
     def partial_eval(self):
@@ -1834,22 +1857,24 @@ class BaseMultiOp(Expression):
                     acc = builtin_ops[self.op](acc, simple.value)
             else:
                 terms.append(simple)
+
+        lang =self.__class__.lang
         if len(terms) == 0:
             if acc == None:
                 return self.default.partial_eval()
             else:
-                return Literal(acc)
+                return lang.Literal(acc)
         elif self.nulls:
             # DECISIVE
             if acc is not None:
                 terms.append(Literal(acc))
 
-            output = WhenOp(
-                AndOp([t.missing() for t in terms]),
+            output = lang.WhenOp(
+                lang.AndOp([t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": operators["basic." + self.op]([
-                        CoalesceOp([t, _jx_identity[self.op]])
+                    "else": getattr(lang, operators["basic." + self.op])([
+                        lang.CoalesceOp([t, _jx_identity[self.op]])
                         for t in terms
                     ])
                 }
@@ -1857,13 +1882,13 @@ class BaseMultiOp(Expression):
         else:
             # CONSERVATIVE
             if acc is not None:
-                terms.append(Literal(acc))
+                terms.append(lang.Literal(acc))
 
-            output = WhenOp(
-                OrOp([t.missing() for t in terms]),
+            output = lang.WhenOp(
+                lang.OrOp([t.missing() for t in terms]),
                 **{
                     "then": self.default,
-                    "else": operators["basic." + self.op](terms)
+                    "else": getattr(lang, operators["basic." + self.op])(terms)
                 }
             ).partial_eval()
 
@@ -1893,7 +1918,7 @@ class RegExpOp(Expression):
         return {self.var}
 
     def map(self, map_):
-        return RegExpOp([self.var.map(map_), self.pattern])
+        return self.__class__.lang.RegExpOp([self.var.map(map_), self.pattern])
 
     def missing(self):
         return FALSE
@@ -1920,7 +1945,7 @@ class CoalesceOp(Expression):
 
     def missing(self):
         # RETURN true FOR RECORDS THE WOULD RETURN NULL
-        return AndOp([v.missing() for v in self.terms])
+        return self.__class__.lang.AndOp([v.missing() for v in self.terms])
 
     def vars(self):
         output = set()
@@ -1929,13 +1954,13 @@ class CoalesceOp(Expression):
         return output
 
     def map(self, map_):
-        return CoalesceOp([v.map(map_) for v in self.terms])
+        return self.__class__.lang.CoalesceOp([v.map(map_) for v in self.terms])
 
     @simplified
     def partial_eval(self):
         terms = []
         for t in self.terms:
-            simple = FirstOp(t).partial_eval()
+            simple = self.__class__.lang.FirstOp(t).partial_eval()
             if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
@@ -1949,7 +1974,7 @@ class CoalesceOp(Expression):
         elif len(terms) == 1:
             return terms[0]
         else:
-            return CoalesceOp(terms)
+            return self.__class__.lang.CoalesceOp(terms)
 
 
 class MissingOp(Expression):
@@ -1972,7 +1997,7 @@ class MissingOp(Expression):
         return self.expr.vars()
 
     def map(self, map_):
-        return MissingOp(self.expr.map(map_))
+        return self.__class__.lang.MissingOp(self.expr.map(map_))
 
     def missing(self):
         return FALSE
@@ -2003,7 +2028,7 @@ class ExistsOp(Expression):
         return self.field.vars()
 
     def map(self, map_):
-        return ExistsOp(self.field.map(map_))
+        return self.__class__.lang.ExistsOp(self.field.map(map_))
 
     def missing(self):
         return FALSE
@@ -2013,7 +2038,7 @@ class ExistsOp(Expression):
 
     @simplified
     def partial_eval(self):
-        return NotOp(self.field.missing()).partial_eval()
+        return self.__class__.lang.NotOp(self.field.missing()).partial_eval()
 
 
 class PrefixOp(Expression):
@@ -2047,7 +2072,7 @@ class PrefixOp(Expression):
         if not self.expr:
             return self
         else:
-            return PrefixOp([self.expr.map(map_), self.prefix.map(map_)])
+            return self.__class__.lang.PrefixOp([self.expr.map(map_), self.prefix.map(map_)])
 
     def missing(self):
         return FALSE
@@ -2056,9 +2081,9 @@ class PrefixOp(Expression):
         if not self.expr:
             return TRUE
 
-        return WhenOp(
-            AndOp([self.expr.exists(), self.prefix.exists()]),
-            **{"then": BasicStartsWithOp([self.expr, self.prefix]), "else": FALSE}
+        return self.__class__.lang.WhenOp(
+            self.__class__.lang.AndOp([self.expr.exists(), self.prefix.exists()]),
+            **{"then": self.__class__.lang.BasicStartsWithOp([self.expr, self.prefix]), "else": FALSE}
         ).partial_eval()
 
 
@@ -2100,7 +2125,7 @@ class SuffixOp(Expression):
         if self.expr is None:
             return TRUE
         else:
-            return SuffixOp([self.expr.map(map_), self.suffix.map(map_)])
+            return self.__class__.lang.SuffixOp([self.expr.map(map_), self.suffix.map(map_)])
 
     def partial_eval(self):
         if self.expr is None:
@@ -2108,9 +2133,9 @@ class SuffixOp(Expression):
         if not isinstance(self.suffix, Literal) and self.suffix.type == STRING:
             Log.error("can only hanlde literal suffix ")
 
-        return WhenOp(
-            AndOp([self.expr.exists(), self.suffix.exists()]),
-            **{"then": RegExpOp([self.expr, Literal(".*" + re.escape(self.suffix.value))]), "else": FALSE}
+        return self.__class__.lang.WhenOp(
+            self.__class__.lang.AndOp([self.expr.exists(), self.suffix.exists()]),
+            **{"then": self.__class__.lang.RegExpOp([self.expr, Literal(".*" + re.escape(self.suffix.value))]), "else": FALSE}
         ).partial_eval()
 
 
@@ -2138,7 +2163,7 @@ class ConcatOp(Expression):
         else:
             terms = map(jx_expression, term)
 
-        return ConcatOp(
+        return cls.lang.ConcatOp(
             terms,
             **{k: Literal(v) for k, v in expr.items() if k in ["default", "separator"]}
         )
@@ -2158,10 +2183,10 @@ class ConcatOp(Expression):
         return set.union(*(t.vars() for t in self.terms))
 
     def map(self, map_):
-        return ConcatOp([t.map(map_) for t in self.terms], separator=self.separator)
+        return self.__class__.lang.ConcatOp([t.map(map_) for t in self.terms], separator=self.separator)
 
     def missing(self):
-        return AndOp([t.missing() for t in self.terms] + [self.default.missing()]).partial_eval()
+        return self.__class__.lang.AndOp([t.missing() for t in self.terms] + [self.default.missing()]).partial_eval()
 
 
 class UnixOp(Expression):
@@ -2179,7 +2204,7 @@ class UnixOp(Expression):
         return self.value.vars()
 
     def map(self, map_):
-        return UnixOp(self.value.map(map_))
+        return self.__class__.lang.UnixOp(self.value.map(map_))
 
     def missing(self):
         return self.value.missing()
@@ -2199,7 +2224,7 @@ class FromUnixOp(Expression):
         return self.value.vars()
 
     def map(self, map_):
-        return FromUnixOp(self.value.map(map_))
+        return self.__class__.lang.FromUnixOp(self.value.map(map_))
 
     def missing(self):
         return self.value.missing()
@@ -2226,24 +2251,24 @@ class LeftOp(Expression):
         return self.value.vars() | self.length.vars()
 
     def map(self, map_):
-        return LeftOp([self.value.map(map_), self.length.map(map_)])
+        return self.__class__.lang.LeftOp([self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        return OrOp([self.value.missing(), self.length.missing()]).partial_eval()
+        return self.__class__.lang.OrOp([self.value.missing(), self.length.missing()]).partial_eval()
 
     @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
-        max_length = LengthOp(value)
+        max_length = self.__class__.lang.LengthOp(value)
 
-        return WhenOp(
+        return self.__class__.lang.WhenOp(
             self.missing(),
             **{
-                "else": BasicSubstringOp([
+                "else": self.__class__.lang.BasicSubstringOp([
                     value,
                     ZERO,
-                    MaxOp([ZERO, MinOp([length, max_length])])
+                    self.__class__.lang.MaxOp([ZERO, self.__class__.lang.MinOp([length, max_length])])
                 ])
             }
         ).partial_eval()
@@ -2270,23 +2295,23 @@ class NotLeftOp(Expression):
         return self.value.vars() | self.length.vars()
 
     def map(self, map_):
-        return NotLeftOp([self.value.map(map_), self.length.map(map_)])
+        return self.__class__.lang.NotLeftOp([self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        return OrOp([self.value.missing(), self.length.missing()])
+        return self.__class__.lang.OrOp([self.value.missing(), self.length.missing()])
 
     @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
-        max_length = LengthOp(value)
+        max_length = self.__class__.lang.LengthOp(value)
 
-        return WhenOp(
+        return self.__class__.lang.WhenOp(
             self.missing(),
             **{
-                "else": BasicSubstringOp([
+                "else": self.__class__.lang.BasicSubstringOp([
                     value,
-                    MaxOp([ZERO, MinOp([length, max_length])]),
+                    self.__class__.lang.MaxOp([ZERO, self.__class__.lang.MinOp([length, max_length])]),
                     max_length
                 ])
             }
@@ -2314,23 +2339,23 @@ class RightOp(Expression):
         return self.value.vars() | self.length.vars()
 
     def map(self, map_):
-        return RightOp([self.value.map(map_), self.length.map(map_)])
+        return self.__class__.lang.RightOp([self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        return OrOp([self.value.missing(), self.length.missing()])
+        return self.__class__.lang.OrOp([self.value.missing(), self.length.missing()])
 
     @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
-        max_length = LengthOp(value)
+        max_length = self.__class__.lang.LengthOp(value)
 
-        return WhenOp(
+        return self.__class__.lang.WhenOp(
             self.missing(),
             **{
-                "else": BasicSubstringOp([
+                "else": self.__class__.lang.BasicSubstringOp([
                     value,
-                    MaxOp([ZERO, MinOp([max_length, SubOp([max_length, length])])]),
+                    self.__class__.lang.MaxOp([ZERO, self.__class__.lang.MinOp([max_length, self.__class__.lang.SubOp([max_length, length])])]),
                     max_length
                 ])
             }
@@ -2358,24 +2383,24 @@ class NotRightOp(Expression):
         return self.value.vars() | self.length.vars()
 
     def map(self, map_):
-        return NotRightOp([self.value.map(map_), self.length.map(map_)])
+        return self.__class__.lang.NotRightOp([self.value.map(map_), self.length.map(map_)])
 
     def missing(self):
-        return OrOp([self.value.missing(), self.length.missing()])
+        return self.__class__.lang.OrOp([self.value.missing(), self.length.missing()])
 
     @simplified
     def partial_eval(self):
         value = self.value.partial_eval()
         length = self.length.partial_eval()
-        max_length = LengthOp(value)
+        max_length = self.__class__.lang.LengthOp(value)
 
-        return WhenOp(
+        return self.__class__.lang.WhenOp(
             self.missing(),
             **{
-                "else": BasicSubstringOp([
+                "else": self.__class__.lang.BasicSubstringOp([
                     value,
                     ZERO,
-                    MaxOp([ZERO, MinOp([max_length, SubOp([max_length, length])])])
+                    self.__class__.lang.MaxOp([ZERO, self.__class__.lang.MinOp([max_length, self.__class__.lang.SubOp([max_length, length])])])
                 ])
             }
         ).partial_eval()
@@ -2415,19 +2440,19 @@ class FindOp(Expression):
         return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
 
     def map(self, map_):
-        return FindOp(
+        return self.__class__.lang.FindOp(
             [self.value.map(map_), self.find.map(map_)],
             start=self.start.map(map_),
             default=self.default.map(map_)
         )
 
     def missing(self):
-        output = AndOp([
+        output = self.__class__.lang.AndOp([
             self.default.missing(),
-            OrOp([
+            self.__class__.lang.OrOp([
                 self.value.missing(),
                 self.find.missing(),
-                EqOp([BasicIndexOfOp([
+                self.__class__.lang.EqOp([self.__class__.lang.BasicIndexOfOp([
                     self.value,
                     self.find,
                     self.start
@@ -2441,17 +2466,17 @@ class FindOp(Expression):
 
     @simplified
     def partial_eval(self):
-        index = BasicIndexOfOp([
+        index = self.__class__.lang.BasicIndexOfOp([
             self.value,
             self.find,
             self.start
         ]).partial_eval()
 
-        output = WhenOp(
-            OrOp([
+        output = self.__class__.lang.WhenOp(
+            self.__class__.lang.OrOp([
                 self.value.missing(),
                 self.find.missing(),
-                BasicEqOp([index, Literal(-1)])
+                self.__class__.lang.BasicEqOp([index, Literal(-1)])
             ]),
             **{"then": self.default, "else": index}
         ).partial_eval()
@@ -2475,7 +2500,7 @@ class SplitOp(Expression):
         return self.value.vars() | self.find.vars() | self.default.vars() | self.start.vars()
 
     def map(self, map_):
-        return FindOp(
+        return self.__class__.lang.FindOp(
             [self.value.map(map_), self.find.map(map_)],
             start=self.start.map(map_),
             default=self.default.map(map_)
@@ -2486,12 +2511,12 @@ class SplitOp(Expression):
         find = self.find.to_es_script(not_null=True)
         index = v + ".indexOf(" + find + ", " + self.start.to_es_script() + ")"
 
-        return AndOp([
+        return self.__class__.lang.AndOp([
             self.default.missing(),
-            OrOp([
+            self.__class__.lang.OrOp([
                 self.value.missing(),
                 self.find.missing(),
-                EqOp([ScriptOp(index), Literal(-1)])
+                self.__class__.lang.EqOp([self.__class__.lang.ScriptOp(index), Literal(-1)])
             ])
         ])
 
@@ -2518,22 +2543,22 @@ class BetweenOp(Expression):
     def define(cls, expr):
         term = expr.between
         if isinstance(term, list):
-            return BetweenOp(
-                value=jx_expression(term[0]),
-                prefix=jx_expression(term[1]),
-                suffix=jx_expression(term[2]),
-                default=jx_expression(expr.default),
-                start=jx_expression(expr.start)
+            return cls.lang.BetweenOp(
+                value=_jx_expression(term[0]),
+                prefix=_jx_expression(term[1]),
+                suffix=_jx_expression(term[2]),
+                default=_jx_expression(expr.default),
+                start=_jx_expression(expr.start)
             )
         elif isinstance(term, Mapping):
             var, vals = term.items()[0]
             if isinstance(vals, list) and len(vals) == 2:
-                return BetweenOp(
+                return cls.lang.BetweenOp(
                     value=Variable(var),
                     prefix=Literal(vals[0]),
                     suffix=Literal(vals[1]),
-                    default=jx_expression(expr.default),
-                    start=jx_expression(expr.start)
+                    default=_jx_expression(expr.default),
+                    start=_jx_expression(expr.start)
                 )
             else:
                 Log.error("`between` parameters are expected to be in {var: [prefix, suffix]} form")
@@ -2544,7 +2569,7 @@ class BetweenOp(Expression):
         return self.value.vars() | self.prefix.vars() | self.suffix.vars() | self.default.vars() | self.start.vars()
 
     def map(self, map_):
-        return BetweenOp(
+        return self.__class__.lang.BetweenOp(
             self.value.map(map_),
             self.prefix.map(map_),
             self.suffix.map(map_),
@@ -2567,33 +2592,33 @@ class BetweenOp(Expression):
     def partial_eval(self):
         value = self.value.partial_eval()
 
-        start_index = CaseOp([
-                WhenOp(self.prefix.missing(), **{"then": ZERO}),
-                WhenOp(IsNumberOp(self.prefix), **{"then": MaxOp([ZERO, self.prefix])}),
-                FindOp([value, self.prefix], start=self.start)
+        start_index = self.__class__.lang.CaseOp([
+                self.__class__.lang.WhenOp(self.prefix.missing(), **{"then": ZERO}),
+                self.__class__.lang.WhenOp(self.__class__.lang.IsNumberOp(self.prefix), **{"then": self.__class__.lang.MaxOp([ZERO, self.prefix])}),
+                self.__class__.lang.FindOp([value, self.prefix], start=self.start)
             ]
         ).partial_eval()
 
-        len_prefix = CaseOp([
-                WhenOp(self.prefix.missing(), **{"then": ZERO}),
-                WhenOp(IsNumberOp(self.prefix), **{"then": ZERO}),
-                LengthOp(self.prefix)
+        len_prefix = self.__class__.lang.CaseOp([
+                self.__class__.lang.WhenOp(self.prefix.missing(), **{"then": ZERO}),
+                self.__class__.lang.WhenOp(self.__class__.lang.IsNumberOp(self.prefix), **{"then": ZERO}),
+                self.__class__.lang.LengthOp(self.prefix)
             ]
         ).partial_eval()
 
-        end_index = CaseOp(
+        end_index = self.__class__.lang.CaseOp(
             [
-                WhenOp(start_index.missing(), **{"then": NULL}),
-                WhenOp(self.suffix.missing(), **{"then": LengthOp(value)}),
-                WhenOp(IsNumberOp(self.suffix), **{"then": MinOp([self.suffix, LengthOp(value)])}),
-                FindOp([value, self.suffix], start=AddOp([start_index, len_prefix]))
+                self.__class__.lang.WhenOp(start_index.missing(), **{"then": NULL}),
+                self.__class__.lang.WhenOp(self.suffix.missing(), **{"then": self.__class__.lang.LengthOp(value)}),
+                self.__class__.lang.WhenOp(self.__class__.lang.IsNumberOp(self.suffix), **{"then": self.__class__.lang.MinOp([self.suffix, self.__class__.lang.LengthOp(value)])}),
+                self.__class__.lang.FindOp([value, self.suffix], start=self.__class__.lang.AddOp([start_index, len_prefix]))
             ]
         ).partial_eval()
 
-        start_index = AddOp([start_index, len_prefix]).partial_eval()
-        substring = BasicSubstringOp([value, start_index, end_index]).partial_eval()
+        start_index = self.__class__.lang.AddOp([start_index, len_prefix]).partial_eval()
+        substring = self.__class__.lang.BasicSubstringOp([value, start_index, end_index]).partial_eval()
 
-        between = WhenOp(
+        between = self.__class__.lang.WhenOp(
             end_index.missing(),
             **{
                 "then": self.default,
@@ -2612,7 +2637,7 @@ class InOp(Expression):
         if isinstance(terms[0], Variable) and isinstance(terms[1], Literal):
             name, value = terms
             if not isinstance(value.value, (list, tuple)):
-                return EqOp([name, Literal([value.value])])
+                return cls.lang.EqOp([name, Literal([value.value])])
         return object.__new__(cls)
 
     def __init__(self, term):
@@ -2634,7 +2659,7 @@ class InOp(Expression):
         return self.value.vars()
 
     def map(self, map_):
-        return InOp([self.value.map(map_), self.superset.map(map_)])
+        return self.__class__.lang.InOp([self.value.map(map_), self.superset.map(map_)])
 
     @simplified
     def partial_eval(self):
@@ -2661,7 +2686,7 @@ class RangeOp(Expression):
     def __new__(cls, term, *args):
         Expression.__new__(cls, *args)
         field, comparisons = term  # comparisons IS A Literal()
-        return AndOp([operators[op](op, [field, Literal(value)]) for op, value in comparisons.value.items()])
+        return cls.lang.AndOp([getattr(cls.lang, operators[op])([field, Literal(value)]) for op, value in comparisons.value.items()])
 
     def __init__(self, term):
         Log.error("Should never happen!")
@@ -2693,17 +2718,17 @@ class WhenOp(Expression):
         return self.when.vars() | self.then.vars() | self.els_.vars()
 
     def map(self, map_):
-        return WhenOp(self.when.map(map_), **{"then": self.then.map(map_), "else": self.els_.map(map_)})
+        return self.__class__.lang.WhenOp(self.when.map(map_), **{"then": self.then.map(map_), "else": self.els_.map(map_)})
 
     def missing(self):
-        return OrOp([
-            AndOp([self.when, self.then.missing()]),
-            AndOp([NotOp(self.when), self.els_.missing()])
+        return self.__class__.lang.OrOp([
+            self.__class__.lang.AndOp([self.when, self.then.missing()]),
+            self.__class__.lang.AndOp([self.__class__.lang.NotOp(self.when), self.els_.missing()])
         ]).partial_eval()
 
     @simplified
     def partial_eval(self):
-        when = BooleanOp(self.when).partial_eval()
+        when = self.__class__.lang.BooleanOp(self.when).partial_eval()
 
         if when is TRUE:
             return self.then.partial_eval()
@@ -2724,9 +2749,9 @@ class WhenOp(Expression):
             if els_ is FALSE:
                 return FALSE
             elif els_ is TRUE:
-                return NotOp(when).partial_eval()
+                return self.__class__.lang.NotOp(when).partial_eval()
 
-        return WhenOp(when, **{"then": then, "else": els_})
+        return self.__class__.lang.WhenOp(when, **{"then": then, "else": els_})
 
 
 class CaseOp(Expression):
@@ -2756,7 +2781,7 @@ class CaseOp(Expression):
         return output
 
     def map(self, map_):
-        return CaseOp([w.map(map_) for w in self.whens])
+        return self.__class__.lang.CaseOp([w.map(map_) for w in self.whens])
 
     def missing(self):
         m = self.whens[-1].missing()
@@ -2767,7 +2792,7 @@ class CaseOp(Expression):
             elif when is TRUE:
                 m = w.then.partial_eval().missing()
             else:
-                m = OrOp([AndOp([when, w.then.partial_eval().missing()]), m])
+                m = self.__class__.lang.OrOp([self.__class__.lang.AndOp([when, w.then.partial_eval().missing()]), m])
         return m.partial_eval()
 
     @simplified
@@ -2781,14 +2806,14 @@ class CaseOp(Expression):
             elif when is FALSE:
                 pass
             else:
-                whens.append(WhenOp(when, **{"then": w.then.partial_eval()}))
+                whens.append(self.__class__.lang.WhenOp(when, **{"then": w.then.partial_eval()}))
         else:
             whens.append(self.whens[-1].partial_eval())
 
         if len(whens) == 1:
             return whens[0]
         else:
-            return CaseOp(whens)
+            return self.__class__.lang.CaseOp(whens)
 
     @property
     def type(self):
@@ -2824,7 +2849,7 @@ class UnionOp(Expression):
         return output
 
     def map(self, map_):
-        return UnionOp([t.map(map_) for t in self.terms])
+        return self.__class__.lang.UnionOp([t.map(map_) for t in self.terms])
 
     def missing(self):
         return FALSE
@@ -2848,9 +2873,9 @@ class UnionOp(Expression):
                 return Literal(minimum)
         else:
             if minimum == None:
-                output = UnionOp(terms)
+                output = self.__class__.lang.UnionOp(terms)
             else:
-                output = UnionOp([Literal(minimum)] + terms)
+                output = self.__class__.lang.UnionOp([Literal(minimum)] + terms)
 
         return output
 
@@ -2867,7 +2892,7 @@ class EsNestedOp(Expression):
     def partial_eval(self):
         if self.path.var == '.':
             return self.query.partial_eval()
-        return EsNestedOp("es.nested", [self.path, self.query.partial_eval()])
+        return self.__class__.lang.EsNestedOp("es.nested", [self.path, self.query.partial_eval()])
 
     def __data__(self):
         return {"es.nested": {self.path.var: self.query.__data__()}}
@@ -2903,9 +2928,9 @@ class BasicStartsWithOp(Expression):
 
     @simplified
     def partial_eval(self):
-        return BasicStartsWithOp([
-            StringOp(self.value).partial_eval(),
-            StringOp(self.prefix).partial_eval(),
+        return self.__class__.lang.BasicStartsWithOp([
+            self.__class__.lang.StringOp(self.value).partial_eval(),
+            self.__class__.lang.StringOp(self.prefix).partial_eval(),
         ])
 
 
@@ -2930,10 +2955,10 @@ class BasicIndexOfOp(Expression):
 
     @simplified
     def partial_eval(self):
-        start = IntegerOp(MaxOp([ZERO, self.start])).partial_eval()
-        return BasicIndexOfOp([
-            StringOp(self.value).partial_eval(),
-            StringOp(self.find).partial_eval(),
+        start = self.__class__.lang.IntegerOp(self.__class__.lang.MaxOp([ZERO, self.start])).partial_eval()
+        return self.__class__.lang.BasicIndexOfOp([
+            self.__class__.lang.StringOp(self.value).partial_eval(),
+            self.__class__.lang.StringOp(self.find).partial_eval(),
             start
         ])
 
@@ -3091,6 +3116,9 @@ class BasicSubstringOp(Expression):
         return FALSE
 
 
+language = define_language(None, vars())
+
+
 def merge_types(jx_types):
     """
     :param jx_types: ITERABLE OF jx TYPES
@@ -3108,79 +3136,6 @@ _merge_score = {
     OBJECT: 5
 }
 _merge_types = {v: k for k, v in _merge_score.items()}
-
-operators = {
-    "add": AddOp,
-    "and": AndOp,
-    "basic.add": BasicAddOp,
-    "basic.mul": BasicMulOp,
-    "between": BetweenOp,
-    "case": CaseOp,
-    "coalesce": CoalesceOp,
-    "concat": ConcatOp,
-    "count": CountOp,
-    "date": DateOp,
-    "div": DivOp,
-    "divide": DivOp,
-    "eq": EqOp,
-    "exists": ExistsOp,
-    "exp": ExpOp,
-    "find": FindOp,
-    "first": FirstOp,
-    "floor": FloorOp,
-    "from_unix": FromUnixOp,
-    "get": GetOp,
-    "gt": GtOp,
-    "gte": GteOp,
-    "in": InOp,
-    "instr": FindOp,
-    "is_number": IsNumberOp,
-    "is_string": IsStringOp,
-    "last": LastOp,
-    "left": LeftOp,
-    "length": LengthOp,
-    "literal": Literal,
-    "lt": LtOp,
-    "lte": LteOp,
-    "match_all": TrueOp,
-    "max": MaxOp,
-    "minus": SubOp,
-    "missing": MissingOp,
-    "mod": ModOp,
-    "mul": MulOp,
-    "mult": MulOp,
-    "multiply": MulOp,
-    "ne": NeOp,
-    "neq": NeOp,
-    "not": NotOp,
-    "not_left": NotLeftOp,
-    "not_right": NotRightOp,
-    "null": NullOp,
-    "number": NumberOp,
-    "offset": OffsetOp,
-    "or": OrOp,
-    "postfix": SuffixOp,
-    "prefix": PrefixOp,
-    "range": RangeOp,
-    "regex": RegExpOp,
-    "regexp": RegExpOp,
-    "right": RightOp,
-    "rows": RowsOp,
-    "script": ScriptOp,
-    "select": SelectOp,
-    "split": SplitOp,
-    "string": StringOp,
-    "suffix": SuffixOp,
-    "sub": SubOp,
-    "subtract": SubOp,
-    "sum": AddOp,
-    "term": EqOp,
-    "terms": InOp,
-    "tuple": TupleOp,
-    "union": UnionOp,
-    "unix": UnixOp,
-    "when": WhenOp,
-}
 
 builtin_ops = {
     "ne": operator.ne,

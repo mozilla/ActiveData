@@ -20,6 +20,7 @@ from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, NestedAggs, TermsAggs, FilterAggs, simplify, ComplexAggs
 from jx_elasticsearch.es52.expressions import AndOp, Variable, NullOp, split_expression_by_path
+from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
@@ -187,7 +188,7 @@ def es_aggsop(es, frum, query):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         elif s.aggregate:
-            split_select = split_expression_by_path(s.value, schema)
+            split_select = split_expression_by_path(s.value, schema, lang=Painless)
             for si_key, si_value in split_select.items():
                 if si_value:
                     if s.query_path:
@@ -315,7 +316,7 @@ def es_aggsop(es, frum, query):
                     s.pull = jx_expression_to_function(aggregates[s.aggregate])
 
     for i, s in enumerate(formula):
-        s_path = [k for k, v in split_expression_by_path(s.value, schema=schema).items() if v]
+        s_path = [k for k, v in split_expression_by_path(s.value, schema=schema, lang=Painless).items() if v]
         if len(s_path) == 0:
             # FOR CONSTANTS
             nest = NestedAggs(query_path)
@@ -403,7 +404,7 @@ def es_aggsop(es, frum, query):
 
     acc = NestedAggs(query_path).add(acc)
     split_decoders = get_decoders_by_path(query)
-    split_wheres = split_expression_by_path(query.where, schema=frum.schema)
+    split_wheres = split_expression_by_path(query.where, schema=frum.schema, lang=ES52)
 
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))

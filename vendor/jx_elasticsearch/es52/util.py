@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
-from jx_elasticsearch.es52.expressions import Variable
+from jx_base.expressions import Variable
 from mo_dots import wrap
 from mo_future import text_type
 from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL

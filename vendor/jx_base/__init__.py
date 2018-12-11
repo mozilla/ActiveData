@@ -13,8 +13,8 @@ from __future__ import unicode_literals
 
 from uuid import uuid4
 
-import jx_python
-from jx_python.expressions import Literal
+from jx_base.expressions import jx_expression
+from jx_python.expressions import Literal, Python
 from mo_dots import wrap, coalesce, listwrap
 from mo_future import text_type
 from mo_json import value2json
@@ -73,8 +73,6 @@ def DataClass(name, columns, constraint=None):
     :param constraint: a JSON query Expression for extra constraints (return true if all constraints are met)
     :return: The class that has been created
     """
-
-    from jx_python.expressions import _jx_expression
 
     columns = wrap([{"name": c, "required": True, "nulls": False, "type": object} if isinstance(c, text_type) else c for c in columns])
     slots = columns.name
@@ -177,7 +175,7 @@ class {{class_name}}(Mapping):
             "dict": "{" + (", ".join(quote(s) + ": self." + s for s in slots)) + "}",
             "assign": "; ".join("_set(output, "+quote(s)+", self."+s+")" for s in slots),
             "types": "{" + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items())) + "}",
-            "constraint_expr": _jx_expression(constraint, jx_python.expressions.language).to_python(),
+            "constraint_expr": Python[jx_expression(constraint)].to_python(),
             "constraint": value2json(constraint)
         }
     )

@@ -14,10 +14,10 @@ from __future__ import unicode_literals
 from jx_base.expressions import NULL, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp
+from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, ES52
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_query_template
-from jx_python.expressions import compile_expression, jx_expression_to_function
+from jx_python.expressions import jx_expression_to_function
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field, wrap, unwrap
 from mo_future import zip_longest
 from mo_json import NESTED
@@ -62,7 +62,7 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for f, w in zip_longest(es_filters, wheres):
-        script = AndOp(w).partial_eval().to_esfilter(schema)
+        script = ES52[AndOp(w)].partial_eval().to_esfilter(schema)
         set_default(f, script)
 
     if not wheres[1]:
@@ -174,7 +174,7 @@ def es_deepop(es, query):
             pull_name = EXPRESSION_PREFIX + select.name
             map_to_local = MapToLocal(schema)
             pull = jx_expression_to_function(pull_name)
-            post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
+            post_expressions[pull_name] = jx_expression_to_function(expr.map(map_to_local))
 
             new_select.append({
                 "name": select.name if is_list else ".",

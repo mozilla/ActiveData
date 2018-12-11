@@ -15,11 +15,11 @@ from collections import Mapping
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp, LeavesOp
+from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp, LeavesOp, Variable
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
-from jx_elasticsearch.es52.expressions import Variable, NotOp, InOp, Literal, AndOp
-from jx_elasticsearch.es52.painless import LIST_TO_PIPE
+from jx_elasticsearch.es52.expressions import NotOp, InOp, Literal, AndOp
+from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
 from jx_python.jx import first
@@ -172,13 +172,13 @@ class SetDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
         domain = self.domain
         domain_key = domain.key
-        value = self.edge.value
+        value = Painless[self.edge.value]
         cnv = pull_functions[value.type]
         include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
-        exists = AndOp([
+        exists = Painless[AndOp([
             InOp([value, Literal(include)])
-        ]).partial_eval()
+        ])].partial_eval()
 
         limit = coalesce(self.limit, len(domain.partitions))
 
@@ -197,10 +197,7 @@ class SetDecoder(AggsDecoder):
             match = TermsAggs(
                 "_match",
                 {
-                    "script": {
-                        "lang": "painless",
-                        "inline": value.to_es_script(self.schema).script(self.schema)
-                    },
+                    "script": text_type(value.to_es_script(self.schema)),
                     "size": limit
                 },
                 self
@@ -268,7 +265,7 @@ def _range_composer(self, edge, domain, es_query, to_float, schema):
     if isinstance(edge.value, Variable):
         calc = {"field": first(schema.leaves(edge.value.var)).es_column}
     else:
-        calc = {"script": edge.value.to_es_script(schema).script(schema)}
+        calc = {"script": text_type(Painless[edge.value].to_es_script(schema))}
     calc['ranges'] = [{"from": to_float(p.min), "to": to_float(p.max)} for p in domain.partitions]
 
     return output.add(RangeAggs("_match", calc, self).add(es_query))
@@ -584,7 +581,7 @@ class DefaultDecoder(SetDecoder):
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
-        self.script = self.edge.value.partial_eval().to_es_script(self.schema)
+        self.script = Painless[self.edge.value].partial_eval().to_es_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
         self.missing = self.script.miss.partial_eval()
         self.exists = NotOp(self.missing).partial_eval()

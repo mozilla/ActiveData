@@ -639,7 +639,7 @@ def _normalize_range(range):
 def _normalize_where(where, schema=None):
     if where == None:
         return TRUE
-    return jx_expression(where, schema=schema).partial_eval()
+    return jx_expression(where, schema=schema)
 
 
 def _map_term_using_schema(master, path, term, schema_edges):
@@ -770,9 +770,9 @@ def _normalize_sort(sort=None):
     output = FlatList()
     for s in listwrap(sort):
         if isinstance(s, text_type):
-            output.append({"value": s, "sort": 1})
+            output.append({"value": jx_expression(s), "sort": 1})
         elif isinstance(s, Expression):
-            output.append({"value": s.__data__(), "sort": 1})
+            output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
             output.append({"value": {"offset": s}, "sort": 1})
         elif not s.sort and not s.value and all(d in sort_direction for d in s.values()):

@@ -13,9 +13,10 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.expressions import jx_expression, NULL
-from jx_elasticsearch.es52.expressions import EsScript, simplify_esfilter
+from jx_elasticsearch.es52.expressions import simplify_esfilter, ES52
+from jx_elasticsearch.es52.painless import EsScript
 from jx_elasticsearch.es52.util import es_and
-from mo_dots import wrap
+from mo_dots import wrap, Null
 from mo_json import OBJECT, NUMBER, STRING
 from mo_json.typed_encoder import STRING_TYPE
 from mo_testing.fuzzytestcase import FuzzyTestCase
@@ -30,7 +31,7 @@ class TestESFilters(FuzzyTestCase):
             {"lt": {"a": 40}}
         ]}
 
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, {"range": {"a": {"gt": 20, "lt": 40}}})
 
     def test_range_packing2(self):
@@ -39,12 +40,12 @@ class TestESFilters(FuzzyTestCase):
             {"lt": {"build.date": 1429920000}}
         ]}
 
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, {"range": {"build.date": {"gte": Date("23 APR 2015").unix, "lt": Date("25 APR 2015").unix}}})
 
     def test_eq1(self):
         where = {"eq": {"a": 20}}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, {"term": {"a": 20}})
 
     def test_eq2(self):
@@ -52,7 +53,7 @@ class TestESFilters(FuzzyTestCase):
             "a": 1,
             "b": 2
         }}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, es_and([{"term": {"a": 1}}, {"term": {"b": 2}}]))
 
     def test_eq3(self):
@@ -60,37 +61,39 @@ class TestESFilters(FuzzyTestCase):
             "a": 1,
             "b": [2, 3]
         }}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, es_and([{"term": {"a": 1}}, {"terms": {"b": [2, 3]}}]))
 
     def test_ne1(self):
         where = {"ne": {"a": 1}}
 
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_ne2(self):
         where = {"neq": {"a": 1}}
-        result = simplify_esfilter(jx_expression(where).partial_eval().to_esfilter(identity_schema))
+        result = simplify_esfilter(ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema))
         self.assertEqual(result, {"bool": {"must_not": {"term": {"a": 1}}}})
 
     def test_in(self):
         where = {"in": {"a": [1, 2]}}
-        result = jx_expression(where).partial_eval().to_esfilter(identity_schema)
+        result = ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema)
         self.assertEqual(result, {"terms": {"a": [1, 2]}})
 
     def test_prefix(self):
         k = "k."+STRING_TYPE
         where = {"prefix": {k: "v"}}
-        result = jx_expression(where).partial_eval().to_esfilter(identity_schema)
+        result = ES52[jx_expression(where)].partial_eval().to_esfilter(identity_schema)
         self.assertEqual(result, {"prefix": {k: "v"}})
 
     def test_painless(self):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
-        a = EsScript(type=OBJECT, expr=NULL, frum=NULL)
+        a = EsScript(type=OBJECT, expr=NULL, frum=NULL, schema=identity_schema)
 
 
 class S(object):
+    snowflake = Null
+
     def values(self, name, exclude=None):
         return wrap([{"es_column": name}])
 
@@ -98,6 +101,7 @@ class S(object):
         return wrap([
             {"es_column": name, "jx_type": NUMBER}
         ])
+
 
 identity_schema = S()
 

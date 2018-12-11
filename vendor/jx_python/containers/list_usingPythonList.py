@@ -19,7 +19,7 @@ import jx_base
 from jx_base import Container
 from jx_base.expressions import jx_expression, Expression, Variable, TRUE
 from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function
+from jx_python.expressions import jx_expression_to_function, Python
 from jx_python.lists.aggs import is_aggs, list_aggs
 from jx_python.meta import get_schema_from_list
 from mo_collections import UniqueIndex
@@ -146,9 +146,9 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
     def where(self, where):
         if isinstance(where, Mapping):
-            temp = compile_expression(jx_expression(where).to_python())
+            temp = jx_expression_to_function(where)
         elif isinstance(where, Expression):
-            temp = compile_expression(where.to_python())
+            temp = jx_expression_to_function(where)
         else:
             temp = where
 

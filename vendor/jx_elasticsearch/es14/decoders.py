@@ -13,11 +13,11 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
-from jx_base import first
 from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, TRUE, LtOp, GteOp, GtOp, LteOp
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
+from jx_base.utils import first
 from jx_elasticsearch.es14.expressions import Variable, NotOp, InOp, Literal, AndOp,LeavesOp, LIST_TO_PIPE
 from jx_python import jx
 from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, unwraplist

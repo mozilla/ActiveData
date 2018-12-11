@@ -30,12 +30,12 @@ from pyLibrary import convert
 
 import mo_dots
 from jx_base.container import Container
-from jx_base.expressions import TRUE, FALSE, NullOp, _jx_expression
+from jx_base.expressions import TRUE, FALSE, NullOp, _jx_expression, jx_expression
 from jx_base.query import QueryOp, _normalize_selects
 from jx_python.containers.cube import Cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function, language
+from jx_python.expressions import jx_expression_to_function, Python
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
@@ -533,7 +533,7 @@ def sort(data, fieldnames=None, already_normalized=False):
         else:
             formal = query._normalize_sort(fieldnames)
 
-        funcs = [(compile_expression(_jx_expression(f.value, language).to_python()), f.sort) for f in formal]
+        funcs = [(jx_expression_to_function(f.value), f.sort) for f in formal]
 
         def comparer(left, right):
             for func, sort_ in funcs:

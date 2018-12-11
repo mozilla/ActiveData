@@ -47,15 +47,23 @@ class Connection(object):
 
         self.stdout = LogStream(host, "stdout")
         self.stderr = LogStream(host, "stderr")
-        config = Config(**unwrap(set_default(
-            {},
-            config,
-            {"overrides": {"run": {
-                # "hide": True,
-                "out_stream": self.stdout,
-                "err_stream": self.stderr,
-            }}},
-        )))
+        config = Config(
+            **unwrap(
+                set_default(
+                    {},
+                    config,
+                    {
+                        "overrides": {
+                            "run": {
+                                # "hide": True,
+                                "out_stream": self.stdout,
+                                "err_stream": self.stderr,
+                            }
+                        }
+                    },
+                )
+            )
+        )
 
         self.warn = False
         self.conn = _Connection(

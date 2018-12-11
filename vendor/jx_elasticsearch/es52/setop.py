@@ -16,6 +16,7 @@ from collections import Mapping
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
+from jx_base.utils import first
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import split_expression_by_path, AndOp, ES52
 from jx_elasticsearch.es52.painless import Painless
@@ -25,7 +26,7 @@ from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
 from mo_dots.lists import FlatList
-from mo_future import transpose
+from mo_future import transpose, text_type
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
 from mo_logs import Log
@@ -179,7 +180,7 @@ def es_setop(es, query):
             split_scripts = split_expression_by_path(select.value, schema, lang=Painless)
             for p, script in split_scripts.items():
                 es_select = get_select(p)
-                es_select.scripts[select.name] = {"script": script[0].partial_eval().to_es_script(schema).script(schema)}
+                es_select.scripts[select.name] = {"script": text_type(Painless[first(script)].partial_eval().to_es_script(schema))}
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function("fields." + literal_field(select.name)),

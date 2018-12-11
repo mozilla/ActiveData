@@ -130,7 +130,7 @@ def es_not(term):
 
 
 def es_script(term):
-    return wrap({"script": {"lang": "painless", "inline": term}})
+    return wrap({"script": {"lang": "painless", "source": term}})
 
 
 def es_missing(term):

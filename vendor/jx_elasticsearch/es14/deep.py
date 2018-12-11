@@ -19,7 +19,7 @@ from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es14.expressions import split_expression_by_depth, AndOp, Variable, LeavesOp
 from jx_elasticsearch.es14.setop import format_dispatch, get_pull_function, get_pull
 from jx_elasticsearch.es14.util import jx_sort_to_es_sort, es_query_template
-from jx_python.expressions import compile_expression, jx_expression_to_function
+from jx_python.expressions import compile_expression, jx_expression_to_function, Python
 from mo_dots import split_field, FlatList, listwrap, literal_field, coalesce, Data, concat_field, set_default, relative_field, startswith_field
 from mo_json import NESTED
 from mo_json.typed_encoder import untype_path, EXISTS_TYPE
@@ -165,7 +165,7 @@ def es_deepop(es, query):
             pull_name = EXPRESSION_PREFIX + s.name
             map_to_local = MapToLocal(schema)
             pull = jx_expression_to_function(pull_name)
-            post_expressions[pull_name] = compile_expression(expr.map(map_to_local).to_python())
+            post_expressions[pull_name] = jx_expression_to_function(expr.map(map_to_local))
 
             new_select.append({
                 "name": s.name if is_list else ".",

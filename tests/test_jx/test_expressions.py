@@ -15,7 +15,9 @@ from __future__ import unicode_literals
 from jx_base.expressions import jx_expression
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es52 import expressions
-from mo_dots import Null, wrap
+from jx_elasticsearch.es52.expressions import ES52
+from jx_python.expressions import Python
+from mo_dots import Null
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times import Date, MONTH
 
@@ -56,22 +58,21 @@ class TestExpressions(FuzzyTestCase):
         expr = {"date": {"literal": "today-month"}}
 
         from jx_python.expression_compiler import compile_expression
-        result = compile_expression(jx_expression(expr).partial_eval().to_python())(None)
+        result = compile_expression(Python[jx_expression(expr).partial_eval()].to_python())(None)
         expected = (Date.today()-MONTH).unix
         self.assertEqual(result, expected)
 
     def test_null_startswith(self):
-        filter = jx_expression({"prefix": [{"null": {}}, {"literal": "something"}]}).to_esfilter(Null)
+        filter = ES52[jx_expression({"prefix": [{"null": {}}, {"literal": "something"}]})].to_esfilter(Null)
         expected = {"bool": {"must_not": {"match_all": {}}}}
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)
 
     def test_null_startswith_null(self):
-        filter = jx_expression({"prefix": [{"null": {}}, {"literal": ""}]}).to_esfilter(Null)
+        filter = ES52[jx_expression({"prefix": [{"null": {}}, {"literal": ""}]})].to_esfilter(Null)
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)
-
 
 
 class S(object):

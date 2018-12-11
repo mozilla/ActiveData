@@ -11,6 +11,7 @@ from __future__ import unicode_literals
 
 from collections import Mapping
 
+from jx_elasticsearch.es52.expressions import ES52
 from mo_dots import startswith_field
 from mo_future import text_type
 from mo_json import value2json
@@ -118,7 +119,7 @@ class FilterAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filter'] = self.filter.partial_eval().to_esfilter(schema)
+        output['filter'] = ES52[self.filter].partial_eval().to_esfilter(schema)
         return output
 
     def copy(self):

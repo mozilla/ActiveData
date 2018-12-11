@@ -22,7 +22,7 @@ from mo_math import UNION
 
 from jx_base.domains import SimpleSetDomain, DefaultDomain
 from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function
+from jx_python.expressions import jx_expression_to_function, Python
 from mo_collections.matrix import Matrix
 from mo_times.dates import Date
 
@@ -49,7 +49,7 @@ def list_aggs(frum, query):
         else:
             pass
 
-    s_accessors = [(ss.name, compile_expression(ss.value.to_python())) for ss in select]
+    s_accessors = [(ss.name, jx_expression_to_function(ss.value)) for ss in select]
 
     result = {
         s.name: Matrix(

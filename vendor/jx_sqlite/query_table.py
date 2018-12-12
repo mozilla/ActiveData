@@ -15,7 +15,6 @@ from __future__ import unicode_literals
 
 
 
-import mo_json
 from jx_base.domains import SimpleSetDomain
 from jx_base.expressions import jx_expression, Variable, TupleOp
 from jx_base.query import QueryOp
@@ -26,7 +25,8 @@ from jx_sqlite.groupby_table import GroupbyTable
 from mo_collections.matrix import Matrix, index_to_coordinate
 from mo_dots import listwrap, coalesce, Data, wrap, startswith_field, unwrap, unwraplist, concat_field, relative_field, Null
 from mo_future import text_type
-from mo_json.typed_encoder import STRUCT
+import mo_json
+from mo_json import STRUCT, STRING
 from mo_logs import Log
 from pyLibrary.sql import SQL, SQL_WHERE, SQL_FROM, SQL_SELECT, sql_list, sql_iso, SQL_ORDERBY, sql_count
 from pyLibrary.sql.sqlite import quote_column
@@ -366,7 +366,7 @@ class QueryTable(GroupbyTable):
         if columns[-1].es_column != GUID:
             columns.append(Column(
                 name=GUID,
-                jx_type="string",
+                jx_type=STRING,
                 es_column=GUID,
                 es_index=self.sf.fact,
                 nested_path=["."]

@@ -7,11 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
+
+from mo_dots import Data, NullType, listwrap
+from mo_future import PY2, boolean_type, long, none_type, text_type
+from mo_logs import Log
+from mo_times import Date
+
+builtin_tuple = tuple
+_range = range
 
 Expression = None
 expression_module = None
@@ -113,4 +119,87 @@ def define_language(lang_name, module_vars):
 
 
     return language
+
+
+
+
+def value_compare(left, right, ordering=1):
+    """
+    SORT VALUES, NULL IS THE LEAST VALUE
+    :param left: LHS
+    :param right: RHS
+    :param ordering: (-1, 0, 0) TO AFFECT SORT ORDER
+    :return: The return value is negative if x < y, zero if x == y and strictly positive if x > y.
+    """
+
+    try:
+        if isinstance(left, list) or isinstance(right, list):
+            if left == None:
+                return ordering
+            elif right == None:
+                return - ordering
+
+            left = listwrap(left)
+            right = listwrap(right)
+            for a, b in zip(left, right):
+                c = value_compare(a, b) * ordering
+                if c != 0:
+                    return c
+
+            if len(left) < len(right):
+                return - ordering
+            elif len(left) > len(right):
+                return ordering
+            else:
+                return 0
+
+        ltype = type(left)
+        rtype = type(right)
+        ltype_num = TYPE_ORDER.get(ltype, 10)
+        rtype_num = TYPE_ORDER.get(rtype, 10)
+        type_diff = ltype_num - rtype_num
+        if type_diff != 0:
+            return ordering if type_diff > 0 else -ordering
+
+        if ltype_num == 9:
+            return 0
+        elif ltype is builtin_tuple:
+            for a, b in zip(left, right):
+                c = value_compare(a, b)
+                if c != 0:
+                    return c * ordering
+            return 0
+        elif ltype in (dict, Data):
+            for k in sorted(set(left.keys()) | set(right.keys())):
+                c = value_compare(left.get(k), right.get(k)) * ordering
+                if c != 0:
+                    return c
+            return 0
+        elif left > right:
+            return ordering
+        elif left < right:
+            return -ordering
+        else:
+            return 0
+    except Exception as e:
+        Log.error("Can not compare values {{left}} to {{right}}", left=left, right=right, cause=e)
+
+
+TYPE_ORDER = {
+    boolean_type: 0,
+    int: 1,
+    float: 1,
+    Date: 1,
+    text_type: 2,
+    list: 3,
+    builtin_tuple: 3,
+    dict: 4,
+    Data: 4,
+    none_type: 9,
+    NullType: 9
+}
+
+if PY2:
+    TYPE_ORDER[long] = 1
+
 

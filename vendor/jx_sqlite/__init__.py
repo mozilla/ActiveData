@@ -19,7 +19,7 @@ from copy import copy
 from jx_base import DataClass
 from mo_dots import Data, split_field, join_field, concat_field
 from mo_future import text_type
-from mo_json import json2value
+from mo_json import json2value, BOOLEAN, NUMBER, NESTED, OBJECT, STRING
 from mo_kwargs import override
 from mo_math.randoms import Random
 from mo_times import Date
@@ -61,15 +61,15 @@ def get_type(v):
     if v == None:
         return None
     elif isinstance(v, bool):
-        return "boolean"
+        return BOOLEAN
     elif isinstance(v, text_type):
-        return "string"
+        return STRING
     elif isinstance(v, Mapping):
-        return "object"
+        return OBJECT
     elif isinstance(v, (int, float, Date)):
-        return "number"
+        return NUMBER
     elif isinstance(v, list):
-        return "nested"
+        return NESTED
     return None
 
 

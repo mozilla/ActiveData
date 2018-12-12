@@ -774,14 +774,14 @@ def _normalize_sort(sort=None):
         elif isinstance(s, Expression):
             output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
-            output.append({"value": {"offset": s}, "sort": 1})
+            output.append({"value": jx_expression({"offset": s}), "sort": 1})
         elif not s.sort and not s.value and all(d in sort_direction for d in s.values()):
             for v, d in s.items():
-                output.append({"value": v, "sort": sort_direction[d]})
+                output.append({"value": jx_expression(v), "sort": sort_direction[d]})
         elif not s.sort and not s.value:
             Log.error("`sort` clause must have a `value` property")
         else:
-            output.append({"value": coalesce(s.value, s.field), "sort": coalesce(sort_direction[s.sort], 1)})
+            output.append({"value": jx_expression(coalesce(s.value, s.field)), "sort": sort_direction[s.sort]})
     return output
 
 

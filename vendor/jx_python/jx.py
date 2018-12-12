@@ -8,21 +8,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.utils import value_compare
 
 _range = range
 
-from mo_times import Date
 from collections import Mapping
 from jx_base import query
 from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by
-from mo_dots import listwrap, wrap, unwrap, FlatList, NullType
+from mo_dots import listwrap, wrap, unwrap, FlatList
 from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
-from mo_future import text_type, boolean_type, none_type, long, generator_types, sort_using_cmp, PY2
+from mo_future import text_type, generator_types, sort_using_cmp
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MIN
@@ -30,12 +28,12 @@ from pyLibrary import convert
 
 import mo_dots
 from jx_base.container import Container
-from jx_base.expressions import TRUE, FALSE, NullOp, _jx_expression, jx_expression
+from jx_base.expressions import TRUE, FALSE
 from jx_base.query import QueryOp, _normalize_selects
 from jx_python.containers.cube import Cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function, Python
+from jx_python.expressions import jx_expression_to_function
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
@@ -564,85 +562,6 @@ def first(values):
 def count(values):
     return sum((1 if v!=None else 0) for v in values)
 
-
-def value_compare(left, right, ordering=1):
-    """
-    SORT VALUES, NULL IS THE LEAST VALUE
-    :param left: LHS
-    :param right: RHS
-    :param ordering: (-1, 0, 0) TO AFFECT SORT ORDER
-    :return: The return value is negative if x < y, zero if x == y and strictly positive if x > y.
-    """
-
-    try:
-        if isinstance(left, list) or isinstance(right, list):
-            if left == None:
-                return ordering
-            elif right == None:
-                return - ordering
-
-            left = listwrap(left)
-            right = listwrap(right)
-            for a, b in zip(left, right):
-                c = value_compare(a, b) * ordering
-                if c != 0:
-                    return c
-
-            if len(left) < len(right):
-                return - ordering
-            elif len(left) > len(right):
-                return ordering
-            else:
-                return 0
-
-        ltype = type(left)
-        rtype = type(right)
-        ltype_num = TYPE_ORDER.get(ltype, 10)
-        rtype_num = TYPE_ORDER.get(rtype, 10)
-        type_diff = ltype_num - rtype_num
-        if type_diff != 0:
-            return ordering if type_diff > 0 else -ordering
-
-        if ltype_num == 9:
-            return 0
-        elif ltype is builtin_tuple:
-            for a, b in zip(left, right):
-                c = value_compare(a, b)
-                if c != 0:
-                    return c * ordering
-            return 0
-        elif ltype in (dict, Data):
-            for k in sorted(set(left.keys()) | set(right.keys())):
-                c = value_compare(left.get(k), right.get(k)) * ordering
-                if c != 0:
-                    return c
-            return 0
-        elif left > right:
-            return ordering
-        elif left < right:
-            return -ordering
-        else:
-            return 0
-    except Exception as e:
-        Log.error("Can not compare values {{left}} to {{right}}", left=left, right=right, cause=e)
-
-TYPE_ORDER = {
-    boolean_type: 0,
-    int: 1,
-    float: 1,
-    Date: 1,
-    text_type: 2,
-    list: 3,
-    builtin_tuple: 3,
-    dict: 4,
-    Data: 4,
-    none_type: 9,
-    NullType: 9,
-    NullOp: 9
-}
-
-if PY2:
-    TYPE_ORDER[long] = 1
 
 
 def pairwise(values):

@@ -20,7 +20,7 @@ from jx_python.jx import first
 from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, quoted_PARENT, quoted_ORDER
 from mo_dots import startswith_field, Null, relative_field, concat_field, set_default, wrap, tail_field, coalesce, listwrap
 from mo_future import text_type
-from mo_json import STRING, OBJECT, EXISTS, STRUCT
+from mo_json import STRING, OBJECT, EXISTS, STRUCT, NUMBER, INTEGER
 from mo_logs import Log
 from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
 from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type
@@ -66,7 +66,7 @@ class Namespace(jx_base.Namespace):
                 cname, ctype = untyped_column(name)
                 self._columns.add(Column(
                     name=cname,  # I THINK COLUMNS HAVE THIER FULL PATH
-                    jx_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
+                    jx_type=coalesce(ctype, {"TEXT": STRING, "REAL": NUMBER, "INTEGER": INTEGER}.get(dtype)),
                     nested_path=full_nested_path,
                     es_type=dtype,
                     es_column=name,
@@ -91,7 +91,7 @@ class Namespace(jx_base.Namespace):
             else:
                 c = Column(
                     name=u,
-                    jx_type="string",
+                    jx_type=STRING,
                     es_column=typed_column(u, "string"),
                     es_index=fact_name
                 )

@@ -17,24 +17,22 @@ Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
 LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import operator
-import re
 from collections import Mapping
 from decimal import Decimal
+import operator
+import re
 
+from jx_base.queries import get_property_name, is_variable_name
+from jx_base.utils import BaseExpression, define_language, first, TYPE_ORDER, value_compare, JX
+from mo_dots import Null, coalesce, split_field, wrap
+from mo_future import get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest
 import mo_json
-from jx_base.queries import is_variable_name, get_property_name
-from jx_base.utils import first, define_language, BaseExpression
-from mo_dots import coalesce, wrap, Null, split_field
-from mo_future import items as items_, text_type, utf8_json_encoder, get_function_name, zip_longest
-from mo_json import scrub, IS_NULL, OBJECT, BOOLEAN, NUMBER, INTEGER, STRING, python_type_to_json_type
+from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
-from mo_logs import Log, Except
-from mo_math import Math, MAX, MIN, UNION
+from mo_logs import Except, Log
+from mo_math import MAX, MIN, Math, UNION
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -266,12 +264,12 @@ class Expression(BaseExpression):
         return self.data_type
 
     def __eq__(self, other):
-        self_class = self.__class__
-        Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
         if other is None:
             return False
-        if not isinstance(other, self_class):
+        if self.id != other.id:
             return False
+        self_class = self.__class__
+        Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
         return self.__data__() == other.__data__()
 
 
@@ -699,6 +697,7 @@ class NullOp(Literal):
 
 
 NULL = NullOp()
+TYPE_ORDER[NullOp] = 9
 
 
 class TrueOp(Literal):
@@ -1101,7 +1100,7 @@ class EqOp(Expression):
         rhs = self.lang[self.rhs].partial_eval()
 
         if isinstance(lhs, Literal) and isinstance(rhs, Literal):
-            return TRUE if builtin_ops["eq"](lhs.value, rhs.value) else FALSE
+            return FALSE if value_compare(lhs.value, rhs.value) else TRUE
         else:
             return self.lang[CaseOp(
                 [

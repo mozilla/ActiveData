@@ -14,6 +14,8 @@ from __future__ import unicode_literals
 from collections import Mapping
 from copy import copy
 
+from mo_future import text_type
+
 from mo_dots import Data
 from mo_dots import FlatList
 from mo_dots import coalesce, Null

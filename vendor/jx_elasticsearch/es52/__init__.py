@@ -238,7 +238,6 @@ class ES52(Container):
         es_index = self.es.cluster.get_index(read_only=False, alias=None, kwargs=self.es.settings)
 
         schema = table.schema
-        es_filter = jx_expression(command.where).to_esfilter(schema)
 
         # GET IDS OF DOCUMENTS
         query = {
@@ -275,6 +274,7 @@ class ES52(Container):
 
         # DELETE BY QUERY, IF NEEDED
         if "." in listwrap(command.clear):
+            es_filter = self.es.cluster.lang[jx_expression(command.where)].to_esfilter(schema)
             self.es.delete_record(es_filter)
             return
 

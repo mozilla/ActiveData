@@ -73,7 +73,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.jx_type == type:
+                    if c.jx_type is type:
                         if s.sort == -1:
                             output.append({c.es_column: "desc"})
                         else:

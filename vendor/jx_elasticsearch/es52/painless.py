@@ -7,77 +7,74 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
-    Variable as Variable_,
-    TupleOp as TupleOp_,
-    LeavesOp as LeavesOp_,
-    SubOp as SubOp_,
-    ExpOp as ExpOp_,
-    ModOp as ModOp_,
-    OrOp as OrOp_,
-    WhenOp as WhenOp_,
-    Literal as Literal_,
-    DateOp as DateOp_,
-    NullOp as NullOp_,
-    TrueOp as TrueOp_,
-    FalseOp as FalseOp_,
-    DivOp as DivOp_,
-    FloorOp as FloorOp_,
-    EqOp as EqOp_,
-    NeOp as NeOp_,
-    NotOp as NotOp_,
-    LengthOp as LengthOp_,
-    NumberOp as NumberOp_,
-    StringOp as StringOp_,
-    CountOp as CountOp_,
-    CoalesceOp as CoalesceOp_,
-    MissingOp as MissingOp_,
-    ExistsOp as ExistsOp_,
-    PrefixOp as PrefixOp_,
-    NotLeftOp as NotLeftOp_,
-    InOp as InOp_,
-    CaseOp as CaseOp_,
+    AddOp as AddOp_,
     AndOp as AndOp_,
-    ConcatOp as ConcatOp_,
-    IsNumberOp as IsNumberOp_,
+    BasicAddOp as BasicAddOp_,
+    BasicEqOp as BasicEqOp_,
     BasicIndexOfOp as BasicIndexOfOp_,
+    BasicMulOp as BasicMulOp_,
+    BasicStartsWithOp as BasicStartsWithOp_,
+    BasicSubstringOp as BasicSubstringOp_,
+    BooleanOp as BooleanOp_,
+    CaseOp as CaseOp_,
+    CoalesceOp as CoalesceOp_,
+    ConcatOp as ConcatOp_,
+    CountOp as CountOp_,
+    DateOp as DateOp_,
+    DivOp as DivOp_,
+    EqOp as EqOp_,
+    EsScript as EsScript_,
+    ExistsOp as ExistsOp_,
+    ExpOp as ExpOp_,
+    FALSE,
+    FalseOp as FalseOp_,
+    FirstOp as FirstOp_,
+    FloorOp as FloorOp_,
+    GtOp as GtOp_,
+    GteOp as GteOp_,
+    InOp as InOp_,
+    IntegerOp as IntegerOp_,
+    IsNumberOp as IsNumberOp_,
+    LeavesOp as LeavesOp_,
+    LengthOp as LengthOp_,
+    Literal as Literal_,
+    LtOp as LtOp_,
+    LteOp as LteOp_,
     MaxOp as MaxOp_,
     MinOp as MinOp_,
-    BasicEqOp as BasicEqOp_,
-    BooleanOp as BooleanOp_,
-    IntegerOp as IntegerOp_,
-    BasicSubstringOp as BasicSubstringOp_,
-    FirstOp as FirstOp_,
-    SuffixOp as SuffixOp_,
-    BasicStartsWithOp as BasicStartsWithOp_,
-    BasicMultiOp as BasicMultiOp_,
-    BasicAddOp as BasicAddOp_,
-    BasicMulOp as BasicMulOp_,
-    UnionOp as UnionOp_,
-    AddOp as AddOp_,
+    MissingOp as MissingOp_,
+    ModOp as ModOp_,
     MulOp as MulOp_,
-    EsScript as EsScript_,
-    LtOp as LtOp_,
-    GtOp as GtOp_,
-    LteOp as LteOp_,
-    GteOp as GteOp_,
-    define_language,
-    merge_types,
-    FALSE,
-    TRUE,
     NULL,
-    ZERO,
+    NeOp as NeOp_,
+    NotLeftOp as NotLeftOp_,
+    NotOp as NotOp_,
+    NullOp as NullOp_,
+    NumberOp as NumberOp_,
     ONE,
+    OrOp as OrOp_,
+    PrefixOp as PrefixOp_,
+    StringOp as StringOp_,
+    SubOp as SubOp_,
+    SuffixOp as SuffixOp_,
+    TRUE,
+    TrueOp as TrueOp_,
+    TupleOp as TupleOp_,
+    UnionOp as UnionOp_,
+    Variable as Variable_,
+    WhenOp as WhenOp_,
+    ZERO,
+    define_language,
     extend,
+    merge_types,
 )
 from jx_elasticsearch.es52.util import es_script
-from mo_dots import coalesce, Null
-from mo_future import text_type, PY2
-from mo_json import NUMBER, STRING, BOOLEAN, OBJECT, INTEGER, IS_NULL
+from mo_dots import Null, coalesce
+from mo_future import PY2, text_type
+from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_times import Date
@@ -148,7 +145,7 @@ class EsScript(EsScript_):
         )
 
     def __add__(self, other):
-        return text_type(self)+text_type(other)
+        return text_type(self) + text_type(other)
 
     def __radd__(self, other):
         return text_type(other) + text_type(self)
@@ -261,9 +258,7 @@ def _binary_to_es_script(self, schema, not_null=False, boolean=False, many=True)
             missing,
             **{
                 "then": self.default,
-                "else": EsScript(
-                    type=NUMBER, expr=script, frum=self, schema=schema
-                ),
+                "else": EsScript(type=NUMBER, expr=script, frum=self, schema=schema),
             }
         )
         .partial_eval()
@@ -281,9 +276,6 @@ class ExpOp(ExpOp_):
 
 class ModOp(ModOp_):
     to_es_script = _binary_to_es_script
-
-
-
 
 
 class CaseOp(CaseOp_):
@@ -317,7 +309,7 @@ class ConcatOp(ConcatOp_):
                         + "+"
                         + StringOp(t).partial_eval().to_es_script(schema).expr,
                         frum=t,
-                        schema=schema
+                        schema=schema,
                     )
                     # "else": ConcatOp([sep, t])
                 }
@@ -460,9 +452,7 @@ class TupleOp(TupleOp_):
             )
             + "}"
         )
-        return EsScript(
-            type=OBJECT, expr=expr, many=FALSE, frum=self, schema=schema
-        )
+        return EsScript(type=OBJECT, expr=expr, many=FALSE, frum=self, schema=schema)
 
 
 class LeavesOp(LeavesOp_):
@@ -481,9 +471,7 @@ def _inequality_to_es_script(self, schema, not_null=False, boolean=False, many=T
             OrOp([self.lhs.missing(), self.rhs.missing()]),
             **{
                 "then": FALSE,
-                "else": EsScript(
-                    type=BOOLEAN, expr=script, frum=self, schema=schema
-                ),
+                "else": EsScript(type=BOOLEAN, expr=script, frum=self, schema=schema),
             }
         )
         .partial_eval()
@@ -539,8 +527,8 @@ class DivOp(DivOp_):
 
 class FloorOp(FloorOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        lhs = self.lhs.partial_eval().to_es_script(schema)
-        rhs = self.rhs.partial_eval().to_es_script(schema)
+        lhs = Painless[self.lhs].partial_eval().to_es_script(schema)
+        rhs = Painless[self.rhs].partial_eval().to_es_script(schema)
 
         if rhs.frum is ONE:
             script = "(int)Math.floor(" + lhs.expr + ")"
@@ -557,16 +545,11 @@ class FloorOp(FloorOp_):
                     type=NUMBER, expr=script, frum=self, miss=FALSE, schema=schema
                 ),
             }
-        ).to_es_script(schema)
+        ).partial_eval().to_es_script(schema)
         return output
 
 
 class EqOp(EqOp_):
-    def partial_eval(self):
-        lhs = self.lhs.partial_eval()
-        rhs = self.rhs.partial_eval()
-        return EqOp([lhs, rhs])
-
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return (
             CaseOp(
@@ -671,7 +654,9 @@ class BasicEqOp(BasicEqOp_):
                 )
 
 
-def _basic_binary_op_to_es_script(self, schema, not_null=False, boolean=False, many=True):
+def _basic_binary_op_to_es_script(
+    self, schema, not_null=False, boolean=False, many=True
+):
     op, identity = _painless_operators[self.op]
     if len(self.terms) == 0:
         return Literal(identity).to_es_script(schema)
@@ -681,7 +666,9 @@ def _basic_binary_op_to_es_script(self, schema, not_null=False, boolean=False, m
         return EsScript(
             type=NUMBER,
             expr=op.join(
-                "(" + Painless[t].to_es_script(schema, not_null=True, many=False).expr + ")"
+                "("
+                + Painless[t].to_es_script(schema, not_null=True, many=False).expr
+                + ")"
                 for t in self.terms
             ),
             frum=self,
@@ -695,8 +682,6 @@ class BasicAddOp(BasicAddOp_):
 
 class BasicMulOp(BasicMulOp_):
     to_es_script = _basic_binary_op_to_es_script
-
-
 
 
 class MissingOp(MissingOp_):
@@ -769,7 +754,9 @@ class NotOp(NotOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return EsScript(
             type=BOOLEAN,
-            expr="!(" + Painless[self.term].partial_eval().to_es_script(schema).expr + ")",
+            expr="!("
+            + Painless[self.term].partial_eval().to_es_script(schema).expr
+            + ")",
             frum=self,
             schema=schema,
         )
@@ -783,7 +770,8 @@ class AndOp(AndOp_):
             return EsScript(
                 type=BOOLEAN,
                 expr=" && ".join(
-                    "(" + Painless[t].to_es_script(schema).expr + ")" for t in self.terms
+                    "(" + Painless[t].to_es_script(schema).expr + ")"
+                    for t in self.terms
                 ),
                 frum=self,
                 schema=schema,
@@ -795,7 +783,9 @@ class OrOp(OrOp_):
         return EsScript(
             type=BOOLEAN,
             expr=" || ".join(
-                "(" + Painless[t].to_es_script(schema).expr + ")" for t in self.terms if t
+                "(" + Painless[t].to_es_script(schema).expr + ")"
+                for t in self.terms
+                if t
             ),
             frum=self,
             schema=schema,
@@ -1061,11 +1051,11 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if self.nulls:
         calc = op.join(
             "(("
-            + t.missing().to_es_script(schema).expr
+            + Painless[t.missing()].to_es_script(schema).expr
             + ") ? "
             + unit
             + " : ("
-            + NumberOp(t).partial_eval().to_es_script(schema).expr
+            + Painless[NumberOp(t)].partial_eval().to_es_script(schema).expr
             + "))"
             for t in self.terms
         )
@@ -1074,9 +1064,7 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
                 AndOp([t.missing() for t in self.terms]),
                 **{
                     "then": self.default,
-                    "else": EsScript(
-                        type=NUMBER, expr=calc, frum=self, schema=schema
-                    ),
+                    "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
                 }
             )
             .partial_eval()
@@ -1091,9 +1079,7 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
                 OrOp([t.missing() for t in self.terms]),
                 **{
                     "then": self.default,
-                    "else": EsScript(
-                        type=NUMBER, expr=calc, frum=self, schema=schema
-                    ),
+                    "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
                 }
             )
             .partial_eval()
@@ -1102,11 +1088,11 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
 
 
 class AddOp(AddOp_):
-    to_es_script=_multi_to_es_script
+    to_es_script = _multi_to_es_script
 
 
 class MulOp(MulOp_):
-    to_es_script=_multi_to_es_script
+    to_es_script = _multi_to_es_script
 
 
 class StringOp(StringOp_):
@@ -1298,7 +1284,7 @@ class UnionOp(UnionOp_):
         {{LOOPS}}
         return output.toArray();
         """
-        parts = [t.partial_eval().to_es_script(schema, many=True) for t in self.terms]
+        parts = [Painless[t].partial_eval().to_es_script(schema, many=True) for t in self.terms]
         loops = ["for (v in " + p.expr + ") output.add(v);" for p in parts]
         return EsScript(
             type=merge_types(p.type for p in parts),

@@ -7,66 +7,64 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 
 from jx_base.expressions import (
-    Variable as Variable_,
-    OrOp as OrOp_,
-    ScriptOp as ScriptOp_,
-    WhenOp as WhenOp_,
-    Literal as Literal_,
-    NullOp as NullOp_,
-    TrueOp as TrueOp_,
-    FalseOp as FalseOp_,
+    AndOp as AndOp_,
+    BasicEqOp as BasicEqOp_,
+    BasicStartsWithOp as BasicStartsWithOp_,
+    BooleanOp as BooleanOp_,
+    CaseOp as CaseOp_,
+    CoalesceOp as CoalesceOp_,
+    ConcatOp as ConcatOp_,
     DivOp as DivOp_,
-    FloorOp as FloorOp_,
     EqOp as EqOp_,
+    EsNestedOp as EsNestedOp_,
+    ExistsOp as ExistsOp_,
+    FALSE,
+    FalseOp as FalseOp_,
+    FloorOp as FloorOp_,
+    GtOp as GtOp_,
+    GteOp as GteOp_,
+    InOp as InOp_,
+    LengthOp as LengthOp_,
+    Literal as Literal_,
+    LtOp as LtOp_,
+    LteOp as LteOp_,
+    MissingOp as MissingOp_,
+    NULL,
     NeOp as NeOp_,
     NotOp as NotOp_,
-    LengthOp as LengthOp_,
-    StringOp as StringOp_,
-    RegExpOp as RegExpOp_,
-    CoalesceOp as CoalesceOp_,
-    MissingOp as MissingOp_,
-    ExistsOp as ExistsOp_,
+    NullOp as NullOp_,
+    OrOp as OrOp_,
     PrefixOp as PrefixOp_,
-    InOp as InOp_,
-    CaseOp as CaseOp_,
-    AndOp as AndOp_,
-    ConcatOp as ConcatOp_,
-    BasicEqOp as BasicEqOp_,
-    BooleanOp as BooleanOp_,
-    NULL,
-    FALSE,
-    TRUE,
+    RegExpOp as RegExpOp_,
+    ScriptOp as ScriptOp_,
+    StringOp as StringOp_,
     SuffixOp as SuffixOp_,
-    BasicStartsWithOp as BasicStartsWithOp_,
-    EsNestedOp as EsNestedOp_,
-    LtOp as LtOp_,
-    GtOp as GtOp_,
-    LteOp as LteOp_,
-    GteOp as GteOp_,
+    TRUE,
+    TrueOp as TrueOp_,
+    Variable as Variable_,
+    WhenOp as WhenOp_,
     extend,
 )
-from jx_base.utils import define_language, Language
+from jx_base.utils import Language, define_language
 from jx_elasticsearch.es52.util import (
-    es_not,
-    es_script,
-    es_or,
-    es_and,
-    es_missing,
-    pull_functions,
     MATCH_ALL,
     MATCH_NONE,
+    es_and,
     es_exists,
+    es_missing,
+    es_not,
+    es_or,
+    es_script,
+    pull_functions,
 )
-from jx_python.jx import first
-from mo_dots import wrap, Null, set_default, literal_field, Data
-from mo_json import BOOLEAN, OBJECT, python_type_to_json_type, NESTED
+from jx_python.jx import first, value_compare
+from mo_dots import Data, Null, literal_field, set_default, wrap
+from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
 from mo_math import MAX, OR
 from pyLibrary.convert import string2regexp, value2boolean
@@ -192,15 +190,17 @@ class DivOp(DivOp_):
         return NotOp(self.missing()).partial_eval().to_esfilter(schema)
 
 
-class FloorOp(FloorOp_):
-    def to_esfilter(self, schema):
-        Log.error("Logic error")
-
-
 class EqOp(EqOp_):
     def partial_eval(self):
         lhs = ES52[self.lhs].partial_eval()
         rhs = ES52[self.rhs].partial_eval()
+
+        if isinstance(lhs, Literal_):
+            if isinstance(rhs, Literal_):
+                return FALSE if value_compare(lhs.value, rhs.value) else TRUE
+            else:
+                return EqOp([rhs, lhs])  # FLIP SO WE CAN USE TERMS FILTER
+
         return EqOp([lhs, rhs])
 
     def to_esfilter(self, schema):
@@ -385,7 +385,9 @@ class OrOp(OrOp_):
             return output
         else:
             # VERSION 6.2+
-            return es_or([ES52[t].partial_eval().to_esfilter(schema) for t in self.terms])
+            return es_or(
+                [ES52[t].partial_eval().to_esfilter(schema) for t in self.terms]
+            )
 
 
 class BooleanOp(BooleanOp_):
@@ -721,7 +723,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     if len(all_depths) == 1:
         output[first(all_depths)] += [where]
-    elif isinstance(where, AndOp):
+    elif isinstance(where, AndOp_):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
     else:
@@ -762,7 +764,7 @@ def split_expression_by_path(
                 }
             )
         ]
-    elif isinstance(where, AndOp):
+    elif isinstance(where, AndOp_):
         for w in where.terms:
             split_expression_by_path(w, schema, output, var_to_columns, lang=lang)
     else:
@@ -787,9 +789,9 @@ ES52 = define_language("ES52", vars())
 from jx_elasticsearch.es52.painless import (
     false_script,
     PrefixOp as PainlessPrefixOp,
-    InOp as PainlessInOp,
     SuffixOp as PainlessSuffixOp,
     MissingOp as PainlessMissingOp,
     StringOp as PainlessStringOp,
     BasicStartsWithOp as PainlessBasicStartsWithOp,
-    Painless)
+    Painless,
+)

@@ -21,7 +21,7 @@ from jx_python.meta import Column
 from mo_dots import wrap, FlatList, coalesce, Null, Data, set_default, listwrap, literal_field, ROOT_PATH, concat_field, split_field, SLOT, join_field
 from mo_files.url import URL
 from mo_future import text_type, binary_type, items
-from mo_json import value2json, json2value
+from mo_json import value2json, json2value, NESTED, OBJECT, NUMBER, STRING, BOOLEAN, EXISTS
 from mo_json.typed_encoder import json_type_to_inserter_type, EXISTS_TYPE, BOOLEAN_TYPE, STRING_TYPE, NUMBER_TYPE, NESTED_TYPE, TYPE_PREFIX
 from mo_kwargs import override
 from mo_logs import Log, strings
@@ -552,6 +552,13 @@ class Cluster(object):
         self.debug = debug
         self._version = None
         self.url = URL(host, port=port)
+        self.lang = None
+        if self.version.startswith("6."):
+            from jx_elasticsearch.es52.expressions import ES52
+            self.lang = ES52
+        else:
+            Log.error("Not a know version: {{version}}", version=self.version)
+
 
     @override
     def get_or_create_index(
@@ -1252,7 +1259,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="nested",
-                jx_type='nested',
+                jx_type=NESTED,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))
@@ -1267,7 +1274,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="source" if property.enabled == False else "object",
-                jx_type='object',
+                jx_type=OBJECT,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))
@@ -1314,7 +1321,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_index=index_name,
                 es_column=column_name,
                 es_type="source" if property.enabled == False else "object",
-                jx_type=es_type_to_json_type['object'],
+                jx_type=OBJECT,
                 cardinality=0 if property.store else None,
                 last_updated=Date.now(),
                 nested_path=nested_path
@@ -1605,18 +1612,18 @@ DEFAULT_DYNAMIC_TEMPLATES = wrap([
 
 
 es_type_to_json_type = {
-    "text": "string",
-    "string": "string",
-    "keyword": "string",
-    "float": "number",
-    "double": "number",
-    "long": "number",
-    "integer": "number",
-    "object": "object",
-    "nested": "nested",
+    "text": STRING,
+    "string": STRING,
+    "keyword": STRING,
+    "float": NUMBER,
+    "double": NUMBER,
+    "long": NUMBER,
+    "integer": NUMBER,
+    "object": OBJECT,
+    "nested": NESTED,
     "source": "json",
-    "boolean": "boolean",
-    "exists": "exists"
+    "boolean": BOOLEAN,
+    "exists": EXISTS
 }
 
 

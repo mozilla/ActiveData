@@ -587,7 +587,7 @@ class DefaultDecoder(SetDecoder):
         self.exists = NotOp(self.missing).partial_eval()
 
         # WHEN SORT VALUE AND EDGE VALUE MATCHES, WE SORT BY TERM
-        sort_candidates = [s for s in self.query.sort if s.value == self.edge.value]
+        sort_candidates = [s for s in query.sort if s.value == edge.value]
         if sort_candidates:
             self.es_order = {"_term": {1: "asc", -1: "desc"}[sort_candidates[0].sort]}
         else:

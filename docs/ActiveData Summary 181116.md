@@ -82,7 +82,7 @@ And then ...
 
     false ? 0 : 1 
   
-Such code would never be written by a human, but the ActiveData script translator simply compounded parametric code strings to generate code. Elasticseach's Painless would recognizing the constant, and reject it. I was surprised such a check was added to make Painless *harder* to use. If ActiveData was going to generate Painless, it must also perform constant propagation. That's a problem. 
+Such code would never be written by a human, but the ActiveData script translator simply compounded parametric code strings to generate code. Elasticseach's Painless would recognizing the constant, and reject it. I was surprised such a check was added to make Painless *more painful* to use. If ActiveData was going to generate Painless, it must also perform constant propagation. That's a problem. 
 
 ### Retrospective Tangent
 

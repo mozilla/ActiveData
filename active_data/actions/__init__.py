@@ -6,29 +6,26 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 
 import flask
 from flask import Response
-from future.utils import text_type
 
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
-from jx_elasticsearch.meta import ElasticsearchMetadata, TOO_OLD
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, split_field, set_default
-from mo_json import STRUCT
-from mo_json import value2json
+from mo_dots import coalesce, set_default, split_field
+from mo_future import text_type
+from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
 from mo_times.dates import Date
-from mo_times.durations import MINUTE, SECOND
+from mo_times.durations import MINUTE
 
 DEBUG = True
 QUERY_TOO_LARGE = "Query is too large"

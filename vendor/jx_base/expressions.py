@@ -693,6 +693,7 @@ class NullOp(Literal):
         return b"null"
 
 
+print("SETTING TYPE_ORDER FOR NullOp")
 TYPE_ORDER[NullOp] = 9
 NULL = NullOp()
 

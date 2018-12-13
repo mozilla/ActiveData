@@ -806,8 +806,8 @@ class TestSetOps(BaseTestCase):
                     {"name": "a", "value": {"between": {"v": ["/this/", "/"]}}},
                     {"name": "c", "value": {"between": ["v", {"literal": "/this/"}, {"literal": "/"}]}},
                     {"name": "d", "value": {"between": {"v": [-1, 5]}}},
-                    {"name": "e", "value": {"between": {"v": [NULL, "/is"]}}},
-                    {"name": "f", "value": {"between": {"v": ["/is", NULL]}}}
+                    {"name": "e", "value": {"between": {"v": [None, "/is"]}}},
+                    {"name": "f", "value": {"between": {"v": ["/is", None]}}}
                 ],
                 "from": TEST_TABLE
             },

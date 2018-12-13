@@ -2485,11 +2485,11 @@ class FindOp(Expression):
 
     @simplified
     def partial_eval(self):
-        index = BasicIndexOfOp([
+        index = self.lang[BasicIndexOfOp([
             self.value,
             self.find,
             self.start
-        ]).partial_eval()
+        ])].partial_eval()
 
         output = self.lang[WhenOp(
             OrOp([

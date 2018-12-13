@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy
 
 from mo_dots import Data, NullType, listwrap
-from mo_future import PY2, boolean_type, long, none_type, text_type
+from mo_future import boolean_type, long, none_type, text_type
 from mo_logs import Log
 from mo_times import Date
 
@@ -190,6 +190,7 @@ TYPE_ORDER = {
     int: 1,
     float: 1,
     Date: 1,
+    long: 1,
     text_type: 2,
     list: 3,
     builtin_tuple: 3,
@@ -199,7 +200,5 @@ TYPE_ORDER = {
     NullType: 9
 }
 
-if PY2:
-    TYPE_ORDER[long] = 1
 
 

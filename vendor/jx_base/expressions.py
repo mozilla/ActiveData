@@ -692,12 +692,9 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
-    def __data__(self):
-        return None
 
-
-NULL = NullOp()
 TYPE_ORDER[NullOp] = 9
+NULL = NullOp()
 
 
 class TrueOp(Literal):

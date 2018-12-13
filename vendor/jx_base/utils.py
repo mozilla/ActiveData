@@ -116,19 +116,21 @@ def define_language(lang_name, module_vars):
                 language.ops[new_op.id] = new_op
                 setattr(new_op, "lang", language)
 
-
-
     return language
 
 
-
-
 def value_compare(left, right, ordering=1):
+    result = _value_compare(left, right, ordering)
+    Log.note("{{left}} vs {{right}} == {{result}} (ordering={{ordering}})", left=left, right=right, result=result, ordering=ordering)
+    return result
+
+
+def _value_compare(left, right, ordering=1):
     """
     SORT VALUES, NULL IS THE LEAST VALUE
     :param left: LHS
     :param right: RHS
-    :param ordering: (-1, 0, 0) TO AFFECT SORT ORDER
+    :param ordering: (-1, 0, 1) TO AFFECT SORT ORDER
     :return: The return value is negative if x < y, zero if x == y and strictly positive if x > y.
     """
 

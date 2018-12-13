@@ -161,7 +161,7 @@ def value_compare(left, right, ordering=1):
         rtype_num = TYPE_ORDER.get(rtype, 10)
 
         if ltype_num == 10 or rtype_num == 10:
-            Log.warning("problem with {{left}}, {{right}}", left=left, right=right)
+            Log.warning("problem with {{left|json}}, {{right|json}}", left=left, right=right)
 
         type_diff = ltype_num - rtype_num
         if type_diff != 0:

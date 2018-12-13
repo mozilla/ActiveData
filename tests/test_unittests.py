@@ -8,19 +8,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from unittest import skip
+from __future__ import absolute_import, division, unicode_literals
 
 import os
-from future.utils import text_type
+from unittest import skip
 
-import mo_json_config
 from mo_dots import wrap
+from mo_future import text_type
 from mo_json import json2value
-from mo_logs import Log, Except
+import mo_json_config
+from mo_logs import Except, Log
 from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY

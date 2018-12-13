@@ -37,7 +37,6 @@ from jx_base.expressions import (
     NULL,
     NeOp as NeOp_,
     NotOp as NotOp_,
-    NullOp as NullOp_,
     OrOp as OrOp_,
     PrefixOp as PrefixOp_,
     RegExpOp as RegExpOp_,
@@ -49,7 +48,7 @@ from jx_base.expressions import (
     Variable as Variable_,
     WhenOp as WhenOp_,
     extend,
-)
+    NullOp)
 from jx_base.utils import Language, define_language
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -142,7 +141,7 @@ class ExistsOp(ExistsOp_):
         return self.field.exists().partial_eval().to_esfilter(schema)
 
 
-@extend(NullOp_)
+@extend(NullOp)
 def to_esfilter(self, schema):
     return MATCH_NONE
 

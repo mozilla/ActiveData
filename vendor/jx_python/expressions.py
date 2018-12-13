@@ -28,7 +28,6 @@ from jx_base.expressions import (
     OffsetOp as OffsetOp_,
     GetOp as GetOp_,
     Literal as Literal_,
-    NullOp as NullOp_,
     TrueOp as TrueOp_,
     FalseOp as FalseOp_,
     DivOp as DivOp_,
@@ -72,7 +71,7 @@ from jx_base.expressions import (
     Expression,
     define_language,
     jx_expression,
-    FALSE, TRUE, ONE, ZERO)
+    FALSE, TRUE, ONE, ZERO, extend, NullOp)
 from jx_python.expression_compiler import compile_expression
 from mo_dots import split_field, coalesce
 from mo_dots import unwrap
@@ -261,9 +260,9 @@ class Literal(Literal_):
         return text_type(repr(unwrap(json2value(self.json))))
 
 
-class NullOp(NullOp_):
-    def to_python(self, not_null=False, boolean=False, many=False):
-        return "None"
+@extend(NullOp)
+def to_python(self, not_null=False, boolean=False, many=False):
+    return "None"
 
 
 class TrueOp(TrueOp_):

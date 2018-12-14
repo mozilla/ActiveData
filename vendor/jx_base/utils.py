@@ -161,9 +161,9 @@ def value_compare(left, right, ordering=1):
         rtype_num = TYPE_ORDER.get(rtype, 10)
 
         if rtype_num == 10 and hasattr(rtype, "id"):
-            Log.warning("problem with {{right|json}}, all={{all}}", right=rtype.id, all=[(getattr(k, "id", None), v) for k, v in TYPE_ORDER.items()])
+            Log.warning("problem with {{right|json}}, {{id}}, all={{all}}", right=rtype.__name__, id=id(rtype), all=[(id(k), v) for k, v in TYPE_ORDER.items()])
         if ltype_num == 10 and hasattr(ltype, "id"):
-            Log.warning("problem with {{left|json}}, all={{all}}", left=ltype.id, all=[(getattr(k, "id", None), v) for k, v in TYPE_ORDER.items()])
+            Log.warning("problem with {{left|json}}, {{id}}all={{all}}", left=ltype.__name__, id=id(ltype), all=[(id(k), v) for k, v in TYPE_ORDER.items()])
 
         type_diff = ltype_num - rtype_num
         if type_diff != 0:

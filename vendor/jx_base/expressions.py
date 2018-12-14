@@ -695,7 +695,7 @@ class NullOp(Literal):
 
 TYPE_ORDER[NullOp] = 9
 NULL = NullOp()
-Log.warning("problem with {{id}}, all={{all}}", id=id(NullOp), all=[(id(k), v) for k, v in TYPE_ORDER.items()])
+Log.warning("problem with {{id}}, all={{all}}", id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 
 
 class TrueOp(Literal):

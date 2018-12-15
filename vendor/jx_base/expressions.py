@@ -693,9 +693,10 @@ class NullOp(Literal):
         return b"null"
 
 
-TYPE_ORDER[NullOp] = 9
 NULL = NullOp()
 Log.warning("problem with {{id}}, all={{all}}", id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+TYPE_ORDER[NullOp] = 9
+TYPE_ORDER[NULL] = 9
 
 
 class TrueOp(Literal):

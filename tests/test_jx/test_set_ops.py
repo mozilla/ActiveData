@@ -8,23 +8,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import NULL, NullOp
-from jx_base.utils import TYPE_ORDER
-from mo_dots import wrap
-from mo_logs import Log
-from mo_math import Math
-from unittest import skipIf, skip
+from unittest import skip, skipIf
 
+from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from mo_dots import wrap
+from mo_math import Math
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
-Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+# Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 
 
 class TestSetOps(BaseTestCase):
@@ -74,7 +70,7 @@ class TestSetOps(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_select_on_missing_field(self):
-        Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 
         test = {
             "data": [

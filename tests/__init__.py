@@ -212,7 +212,7 @@ class ESUtils(object):
         return _settings
 
     def send_queries(self, subtest, places=6):
-        Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 
         subtest = wrap(subtest)
 
@@ -294,7 +294,7 @@ class ESUtils(object):
 
 
 def compare_to_expected(query, result, expect, places):
-    Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+    # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 
     query = wrap(query)
     expect = wrap(expect)
@@ -346,7 +346,7 @@ def compare_to_expected(query, result, expect, places):
 
         expect_data, expect_header = cube2list(expect.data)
         expect_header = map(literal_field, expect_header)
-        Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
         expect_data = jx.sort(expect_data, expect_header)
         expect.data = list2cube(expect_data, expect_header)
 

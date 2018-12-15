@@ -18,6 +18,8 @@ import signal
 import subprocess
 from string import ascii_lowercase
 
+from jx_base.expressions import NullOp
+from jx_base.utils import TYPE_ORDER
 import jx_elasticsearch
 import mo_json_config
 from jx_base import container as jx_containers
@@ -210,6 +212,8 @@ class ESUtils(object):
         return _settings
 
     def send_queries(self, subtest, places=6):
+        Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
+
         subtest = wrap(subtest)
 
         try:

@@ -8,29 +8,25 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 import os
 import signal
-import subprocess
 from string import ascii_lowercase
+import subprocess
 
-from jx_base.expressions import NullOp
-from jx_base.utils import TYPE_ORDER
-import jx_elasticsearch
-import mo_json_config
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
+import jx_elasticsearch
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_dots import Data, coalesce, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
 from mo_future import text_type
-from mo_json import value2json, json2value
+from mo_json import json2value, value2json
+import mo_json_config
 from mo_kwargs import override
-from mo_logs import Log, Except, constants
+from mo_logs import Except, Log, constants
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
@@ -212,8 +208,6 @@ class ESUtils(object):
         return _settings
 
     def send_queries(self, subtest, places=6):
-        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
-
         subtest = wrap(subtest)
 
         try:
@@ -294,8 +288,6 @@ class ESUtils(object):
 
 
 def compare_to_expected(query, result, expect, places):
-    # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
-
     query = wrap(query)
     expect = wrap(expect)
 
@@ -346,7 +338,6 @@ def compare_to_expected(query, result, expect, places):
 
         expect_data, expect_header = cube2list(expect.data)
         expect_header = map(literal_field, expect_header)
-        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
         expect_data = jx.sort(expect_data, expect_header)
         expect.data = list2cube(expect_data, expect_header)
 

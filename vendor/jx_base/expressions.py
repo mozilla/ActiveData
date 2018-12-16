@@ -694,9 +694,10 @@ class NullOp(Literal):
 
 
 NULL = NullOp()
-Log.warning("problem with {{id}}, all={{all}}", id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
 TYPE_ORDER[NullOp] = 9
 TYPE_ORDER[NULL] = 9
+
+temp = type(NULL)
 
 
 class TrueOp(Literal):
@@ -1175,7 +1176,7 @@ class NotOp(Expression):
                 return FALSE
             elif term is FALSE:
                 return TRUE
-            elif isinstance(term, NullOp):
+            elif term is NULL:
                 return TRUE
             elif isinstance(term, Literal):
                 Log.error("`not` operator expects a Boolean term")
@@ -1615,7 +1616,7 @@ class IsNumberOp(Expression):
     def partial_eval(self):
         term = self.term.partial_eval()
 
-        if isinstance(term, NullOp):
+        if term is NULL:
             return FALSE
         elif term.type in (INTEGER, NUMBER):
             return TRUE
@@ -1743,7 +1744,7 @@ class MaxOp(Expression):
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
-            if isinstance(simple, NullOp):
+            if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
                 maximum = MAX([maximum, simple.value])
@@ -1847,12 +1848,12 @@ class BaseMultiOp(Expression):
 
     def missing(self):
         if self.nulls:
-            if isinstance(self.default, NullOp):
+            if self.default is NULL:
                 return self.lang[AndOp([t.missing() for t in self.terms])]
             else:
                 return TRUE
         else:
-            if isinstance(self.default, NullOp):
+            if self.default is NULL:
                 return self.lang[OrOp([t.missing() for t in self.terms])]
             else:
                 return FALSE
@@ -1869,7 +1870,7 @@ class BaseMultiOp(Expression):
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
-            if isinstance(simple, NullOp):
+            if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
                 if acc is None:
@@ -2881,7 +2882,7 @@ class UnionOp(Expression):
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
-            if isinstance(simple, NullOp):
+            if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
                 minimum = MIN([minimum, simple.value])
@@ -3040,7 +3041,7 @@ class BasicMultiOp(Expression):
         terms = []
         for t in self.terms:
             simple = t.partial_eval()
-            if isinstance(simple, NullOp):
+            if simple is NULL:
                 pass
             elif isinstance(simple, Literal):
                 if acc is None:

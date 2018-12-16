@@ -145,7 +145,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     """
     Snagged from unittest/case.py, then modified (Aug2014)
     """
-    if expected.__class__.__name__ == "NullOp":
+    if expected is NULL:
         if test == None:
             return
         else:

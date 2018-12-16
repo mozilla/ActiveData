@@ -20,8 +20,6 @@ from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
 
-# Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
-
 
 class TestSetOps(BaseTestCase):
 
@@ -70,8 +68,6 @@ class TestSetOps(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_select_on_missing_field(self):
-        # Log.warning("BEGIN TESTING {{right|json}}, {{id}}, all={{all}}", right=NullOp.__name__, id=id(NullOp), all=[(id(k), k.__name__, v) for k, v in TYPE_ORDER.items()])
-
         test = {
             "data": [
                 {"a": {"b": {"c": 1}}},

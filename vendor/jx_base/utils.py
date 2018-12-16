@@ -17,7 +17,6 @@ from mo_logs import Log
 from mo_times import Date
 
 builtin_tuple = tuple
-_range = range
 
 Expression = None
 expression_module = None
@@ -155,8 +154,8 @@ def value_compare(left, right, ordering=1):
             else:
                 return 0
 
-        ltype = type(left)
-        rtype = type(right)
+        ltype = left.__class__
+        rtype = right.__class__
         ltype_num = TYPE_ORDER.get(ltype, 10)
         rtype_num = TYPE_ORDER.get(rtype, 10)
 

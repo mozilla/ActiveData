@@ -1252,6 +1252,9 @@ class AndOp(Expression):
         or_terms = [[]]  # LIST OF TUPLES FOR or-ing and and-ing
         for i, t in enumerate(self.terms):
             simple = self.lang[BooleanOp(t)].partial_eval()
+            if simple.type != BOOLEAN:
+                simple = simple.exists()
+
             if simple is TRUE:
                 continue
             elif simple is FALSE:
@@ -1267,9 +1270,6 @@ class AndOp(Expression):
                     for and_terms in or_terms
                 ]
                 continue
-            elif simple.type is not BOOLEAN:
-                Log.error("expecting boolean value")
-
             for and_terms in list(or_terms):
                 if self.lang[NotOp(simple)].partial_eval() in and_terms:
                     or_terms.remove(and_terms)
@@ -1288,7 +1288,7 @@ class AndOp(Expression):
                 return self.lang[AndOp(and_terms)]
 
         return self.lang[OrOp([
-            self.lang[AndOp(and_terms)] if len(and_terms) > 1 else and_terms[0]
+            AndOp(and_terms) if len(and_terms) > 1 else and_terms[0]
             for and_terms in or_terms
         ])]
 
@@ -1331,16 +1331,17 @@ class OrOp(Expression):
         ands = []
         for t in self.terms:
             simple = self.lang[t].partial_eval()
+            if simple.type != BOOLEAN:
+                simple = simple.exists()
+
             if simple is TRUE:
                 return TRUE
-            elif simple in (FALSE, NULL):
+            elif simple is FALSE:
                 pass
             elif isinstance(simple, OrOp):
                 terms.extend(tt for tt in simple.terms if tt not in terms)
             elif isinstance(simple, AndOp):
                 ands.append(simple)
-            elif simple.type != BOOLEAN:
-                Log.error("expecting boolean value")
             elif simple not in terms:
                 terms.append(simple)
 

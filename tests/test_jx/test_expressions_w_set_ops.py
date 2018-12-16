@@ -631,6 +631,52 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_or_find(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": NULL},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"or": [{"find": {"v": "test"}}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "not test"}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_and_find(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": NULL},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"and": [{"find": {"v": "test"}}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "not test"}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
     def test_left_in_edge(self):
         test = {
             "data": [

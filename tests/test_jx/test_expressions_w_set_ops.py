@@ -1202,7 +1202,6 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-
     def test_in_with_singlton(self):
         test = {
             "data": [
@@ -1231,6 +1230,33 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_floor_on_float(self):
+        test = {
+            "data": [
+                {"a": -0.1},
+                {"a": -0.0},
+                {"a": 0.1},
+                {"a": 10.9},
+                {"a": 11.0},
+                {"a": 11.1},
+                {"a": 11.9},
+                {"a": 0.1},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {"name": "a", "value": {"floor": {"a": 2}}}
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": -2, "count": 1},
+                    {"a": 0, "count": 3},
+                    {"a": 10, "count": 4}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
 
 
 # TODO: {"left": {variable: sentinel}}

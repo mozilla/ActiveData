@@ -467,18 +467,19 @@ class DivOp(DivOp_):
 
 class FloorOp(FloorOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        lhs = Painless[self.lhs].partial_eval().to_es_script(schema)
-        rhs = Painless[self.rhs].partial_eval().to_es_script(schema)
+        lhs = FirstOp(self.lhs).partial_eval()
+        rhs = FirstOp(self.rhs).partial_eval()
 
-        if rhs.frum is ONE:
-            script = "(int)Math.floor(" + lhs.expr + ")"
+        if rhs == ONE:
+            script = "(int)Math.floor(" + lhs.to_es_script(schema).expr + ")"
         else:
+            rhs = rhs.to_es_script(schema)
             script = (
-                "Math.floor((" + lhs.expr + ") / (" + rhs.expr + "))*(" + rhs.expr + ")"
+                "Math.floor((" + lhs.to_es_script(schema).expr + ") / (" + rhs.expr + "))*(" + rhs.expr + ")"
             )
 
         output = WhenOp(
-            OrOp([lhs.miss, rhs.miss, EqOp([self.rhs, ZERO])]),
+            OrOp([lhs.missing(), rhs.missing(), EqOp([self.rhs, ZERO])]),
             **{
                 "then": self.default,
                 "else": EsScript(

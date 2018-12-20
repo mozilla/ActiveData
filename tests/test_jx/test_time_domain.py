@@ -356,4 +356,3 @@ class TestTime(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
-

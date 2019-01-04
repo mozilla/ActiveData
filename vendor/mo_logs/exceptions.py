@@ -52,7 +52,7 @@ class Except(Exception, LogItem):
             trace=desc.trace
         )
 
-    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null):
+    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null, **_):
         if context == None:
             raise ValueError("expecting context to not be None")
 

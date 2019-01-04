@@ -18,7 +18,7 @@ from datetime import date, datetime
 from mo_math.randoms import Random
 
 from jx_python import jx
-from mo_dots import wrap, coalesce, FlatList, listwrap
+from mo_dots import wrap, coalesce, FlatList, listwrap, Null
 from mo_future import text_type, binary_type, number_types
 from mo_json import value2json, json2value, datetime2unix
 from mo_kwargs import override
@@ -62,6 +62,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
             schema=json2value(value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             typed=True,
+            id={"id": "_id"},  # USE DEFAULT id AND version
             kwargs=kwargs,
         )
         self.batch_size = batch_size

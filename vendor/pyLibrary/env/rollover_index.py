@@ -29,7 +29,8 @@ from pyLibrary.env import elasticsearch
 
 MAX_RECORD_LENGTH = 400000
 DATA_TOO_OLD = "data is too old to be indexed"
-DEBUG=False
+DEBUG = False
+
 
 class RolloverIndex(object):
     """
@@ -42,15 +43,18 @@ class RolloverIndex(object):
         rollover_field,      # the FIELD with a timestamp to use for determining which index to push to
         rollover_interval,   # duration between roll-over to new index
         rollover_max,        # remove old indexes, do not add old records
+        schema,              # es schema
         queue_size=10000,    # number of documents to queue in memory
         batch_size=5000,     # number of documents to push at once
         typed=None,          # indicate if we are expected typed json
         kwargs=None          # plus additional ES settings
     ):
         if kwargs.tjson != None:
-            Log.error
+            Log.error("not expected")
         if typed == None:
             Log.error("not expected")
+
+        schema.settings.index.max_inner_result_window = 100000  # REQUIRED FOR ACTIVEDATA NESTED QUERIES
 
         self.settings = kwargs
         self.locker = Lock("lock for rollover_index")
@@ -201,14 +205,18 @@ class RolloverIndex(object):
                         if rownum > 0 and rownum % 1000 == 0:
                             Log.note("Ingested {{num}} records from {{key}} in bucket {{bucket}}", num=rownum, key=key, bucket=source.name)
 
-                        row, please_stop = fix(key, rownum, line, source, sample_only_filter, sample_size)
-                        if row == None:
+                        insert_me, please_stop = fix(key, rownum, line, source, sample_only_filter, sample_size)
+                        if insert_me == None:
                             continue
+                        value = insert_me['value']
+
+                        if '_id' not in value:
+                            Log.warning("expecting an _id in all S3 records. If missing, there can be duplicates")
 
                         if queue == None:
-                            queue = self._get_queue(row)
+                            queue = self._get_queue(insert_me)
                             if queue == None:
-                                pending.append(row)
+                                pending.append(insert_me)
                                 if len(pending) > 1000:
                                     if done_copy:
                                         done_copy()
@@ -221,7 +229,7 @@ class RolloverIndex(object):
                                 pending = []
 
                         num_keys += 1
-                        queue.add(row)
+                        queue.add(insert_me)
 
                         if please_stop:
                             break

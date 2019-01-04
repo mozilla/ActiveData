@@ -23,7 +23,7 @@ class TypedInserter(object):
     def __init__(self, es=None, id_info=None):
         self.es = es
         self.id_info = id_info
-        self.get_id = jx.get(id_info.id)
+        self.get_id = jx.get(id_info.field)
         self.get_version = jx.get(id_info.version)
 
         if es:
@@ -41,7 +41,7 @@ class TypedInserter(object):
         :return:  dict with id and json properties
         """
         try:
-            value = r['value']
+            value = r.get('value')
             if "json" in r:
                 value = json2value(r["json"])
             elif isinstance(value, Mapping) or value != None:

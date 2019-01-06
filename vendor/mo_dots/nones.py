@@ -17,6 +17,7 @@ from mo_future import text_type, binary_type
 _get = object.__getattribute__
 _set = object.__setattr__
 _zero_list = []
+_null_hash = hash(None)
 
 
 class NullType(object):
@@ -225,7 +226,7 @@ class NullType(object):
         return "Null"
 
     def __hash__(self):
-        return hash(None)
+        return _null_hash
 
 
 Null = NullType()   # INSTEAD OF None!!!

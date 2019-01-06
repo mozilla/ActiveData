@@ -461,7 +461,9 @@ class TempFile(File):
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls)
 
-    def __init__(self):
+    def __init__(self, filename=None):
+        if isinstance(filename, File):
+            return
         self.temp = NamedTemporaryFile(delete=False)
         self.temp.close()
         File.__init__(self, self.temp.name)

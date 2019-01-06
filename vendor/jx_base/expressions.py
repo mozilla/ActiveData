@@ -19,16 +19,16 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
-from decimal import Decimal
 import operator
 import re
+from collections import Mapping
+from decimal import Decimal
 
-from jx_base.queries import get_property_name, is_variable_name
-from jx_base.utils import BaseExpression, define_language, first, TYPE_ORDER, value_compare, JX
-from mo_dots import Null, coalesce, split_field, wrap
-from mo_future import get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest
 import mo_json
+from jx_base.queries import get_property_name, is_variable_name
+from jx_base.utils import BaseExpression, define_language, TYPE_ORDER, value_compare
+from mo_dots import Null, coalesce, split_field, wrap
+from mo_future import get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest, first
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
@@ -184,7 +184,7 @@ class Expression(BaseExpression):
                 terms = [jx_expression(t) for t in term]
                 return class_(terms, **clauses)
             elif isinstance(term, Mapping):
-                items = term.items()
+                items = items_(term)
                 if class_.has_simple_form:
                     if len(items) == 1:
                         k, v = items[0]
@@ -238,7 +238,7 @@ class Expression(BaseExpression):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
-        return self.lang[NotOp(self.missing())]
+        return self.lang[NotOp(self.missing()).partial_eval()]
 
     def is_true(self):
         """
@@ -552,7 +552,7 @@ class Literal(Expression):
             return FALSE
         if isinstance(term, Mapping) and term.get('date'):
             # SPECIAL CASE
-            return cls.lang[DateOp(term.date)]
+            return cls.lang[DateOp(term.get('date'))]
         return object.__new__(cls)
 
     def __init__(self, term):
@@ -692,6 +692,8 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
+    def __hash__(self):
+        return id(None)
 
 NULL = NullOp()
 TYPE_ORDER[NullOp] = 9

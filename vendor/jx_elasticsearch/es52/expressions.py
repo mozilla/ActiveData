@@ -25,7 +25,6 @@ from jx_base.expressions import (
     ExistsOp as ExistsOp_,
     FALSE,
     FalseOp as FalseOp_,
-    FloorOp as FloorOp_,
     GtOp as GtOp_,
     GteOp as GteOp_,
     InOp as InOp_,
@@ -61,8 +60,9 @@ from jx_elasticsearch.es52.util import (
     es_script,
     pull_functions,
 )
-from jx_python.jx import first, value_compare
+from jx_python.jx import value_compare
 from mo_dots import Data, Null, literal_field, set_default, wrap
+from mo_future import first
 from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
 from mo_math import MAX, OR

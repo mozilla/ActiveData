@@ -199,7 +199,8 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
                     append(buffer, QUOTED_NESTED_TYPE)
                     append(buffer, '[{')
                     append(buffer, QUOTED_EXISTS_TYPE)
-                    append(buffer, '1}]' + COMMA)
+                    append(buffer, '1}]')
+                    append(buffer, COMMA)
                     append(buffer, QUOTED_EXISTS_TYPE)
                     append(buffer, '1}')
             else:
@@ -212,7 +213,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
                 else:
                     append(buffer, '{')
                     append(buffer, QUOTED_EXISTS_TYPE)
-                    append(buffer, '0}')
+                    append(buffer, '1}')
         elif _type is binary_type:
             if STRING_TYPE not in sub_schema:
                 sub_schema[STRING_TYPE] = True
@@ -258,16 +259,27 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
         elif _type in (set, list, tuple, FlatList):
             if len(value) == 0:
                 append(buffer, '{')
-                append(buffer, QUOTED_NESTED_TYPE)
-                append(buffer, '[]}')
+                append(buffer, QUOTED_EXISTS_TYPE)
+                append(buffer, '0}')
             elif any(isinstance(v, (Mapping, set, list, tuple, FlatList)) for v in value):
-                if NESTED_TYPE not in sub_schema:
-                    sub_schema[NESTED_TYPE] = {}
-                    net_new_properties.append(path + [NESTED_TYPE])
-                append(buffer, '{')
-                append(buffer, QUOTED_NESTED_TYPE)
-                _list2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, buffer)
-                append(buffer, '}')
+                # THIS IS NOT DONE BECAUSE
+                if len(value) == 1:
+                    if NESTED_TYPE in sub_schema:
+                        append(buffer, '{')
+                        append(buffer, QUOTED_NESTED_TYPE)
+                        _list2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, buffer)
+                        append(buffer, '}')
+                    else:
+                        # NO NEED TO NEST, SO DO NOT DO IT
+                        typed_encode(value[0], sub_schema, path, net_new_properties, buffer)
+                else:
+                    if NESTED_TYPE not in sub_schema:
+                        sub_schema[NESTED_TYPE] = {}
+                        net_new_properties.append(path + [NESTED_TYPE])
+                    append(buffer, '{')
+                    append(buffer, QUOTED_NESTED_TYPE)
+                    _list2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, buffer)
+                    append(buffer, '}')
             else:
                 # ALLOW PRIMITIVE MULTIVALUES
                 value = [v for v in value if v != None]

@@ -17,7 +17,7 @@ import sys
 
 from mo_future import PY3, allocate_lock
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, CR
 
 
 class StructuredLogger_usingStream(StructuredLogger):
@@ -36,7 +36,7 @@ class StructuredLogger_usingStream(StructuredLogger):
         value = expand_template(template, params)
         self.locker.acquire()
         try:
-            self.writer(value + "\n")
+            self.writer(value + CR)
         finally:
             self.locker.release()
 

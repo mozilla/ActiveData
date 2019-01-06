@@ -26,9 +26,8 @@ from mo_dots import coalesce, wrap, get_module, Data
 from mo_future import text_type, xrange, binary_type, round as _round, get_function_name, zip_longest, transpose, PY3
 from mo_logs.convert import datetime2unix, datetime2string, value2json, milli2datetime, unix2datetime
 
-# from mo_files.url import value2url_param
-
 FORMATTERS = {}
+CR = text_type("\n")
 
 _json_encoder = None
 _Log = None
@@ -78,7 +77,7 @@ def datetime(value):
     else:
         value = milli2datetime(value)
 
-    return datetime2string(value, "%Y-%m-%d %H:%M:%S.%f")
+    return datetime2string(value, "%Y-%m-%d %H:%M:%S.%f").rstrip(".000000").rstrip("000")
 
 
 @formatter
@@ -157,7 +156,7 @@ def newline(value):
     """
     ADD NEWLINE, IF SOMETHING
     """
-    return "\n" + toString(value).lstrip("\n")
+    return CR + toString(value).lstrip(CR)
 
 
 @formatter
@@ -195,7 +194,7 @@ def tab(value):
         h, d = transpose(*wrap(value).leaves())
         return (
             "\t".join(map(value2json, h)) +
-            "\n" +
+            CR +
             "\t".join(map(value2json, d))
         )
     else:
@@ -219,7 +218,7 @@ def indent(value, prefix=u"\t", indent=None):
         content = value.rstrip()
         suffix = value[len(content):]
         lines = content.splitlines()
-        return prefix + (u"\n" + prefix).join(lines) + suffix
+        return prefix + (CR + prefix).join(lines) + suffix
     except Exception as e:
         raise Exception(u"Problem with indent of value (" + e.message + u")\n" + text_type(toString(value)))
 
@@ -238,7 +237,7 @@ def outdent(value):
             trim = len(l.lstrip())
             if trim > 0:
                 num = min(num, len(l) - len(l.lstrip()))
-        return u"\n".join([l[num:] for l in lines])
+        return CR.join([l[num:] for l in lines])
     except Exception as e:
         if not _Log:
             _late_import()
@@ -507,7 +506,7 @@ def limit(value, length):
         _Log.error("Not expected", cause=e)
 
 @formatter
-def split(value, sep="\n"):
+def split(value, sep=CR):
     # GENERATOR VERSION OF split()
     # SOMETHING TERRIBLE HAPPENS, SOMETIMES, IN PYPY
     s = 0

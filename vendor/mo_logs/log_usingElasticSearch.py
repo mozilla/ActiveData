@@ -55,14 +55,14 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         kwargs.timeout = Duration(coalesce(kwargs.timeout, "30second")).seconds
         kwargs.retry.times = coalesce(kwargs.retry.times, 3)
         kwargs.retry.sleep = Duration(coalesce(kwargs.retry.sleep, MINUTE)).seconds
-
         kwargs.host = Random.sample(listwrap(host), 1)[0]
 
+        schema = json2value(value2json(SCHEMA), leaves=True)
+        schema.mappings[type].properties["~N~"].type = "nested"
         self.es = Cluster(kwargs).get_or_create_index(
-            schema=json2value(value2json(SCHEMA), leaves=True),
+            schema=schema,
             limit_replicas=True,
             typed=True,
-            id={"id": "_id"},  # USE DEFAULT id AND version
             kwargs=kwargs,
         )
         self.batch_size = batch_size
@@ -98,7 +98,12 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
                         try:
                             messages = flatten_causal_chain(message.value)
                             scrubbed.append(
-                                {"value": [_deep_json_to_string(m, depth=3) for m in messages]}
+                                {
+                                    "value": [
+                                        _deep_json_to_string(m, depth=3)
+                                        for m in messages
+                                    ]
+                                }
                             )
                         except Exception as e:
                             Log.warning("Problem adding to scrubbed list", cause=e)
@@ -180,6 +185,6 @@ SCHEMA = {
             "dynamic_templates": [
                 {"everything_else": {"match": "*", "mapping": {"index": False}}}
             ]
-        }
+        },
     },
 }

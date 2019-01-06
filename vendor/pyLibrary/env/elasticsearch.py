@@ -39,7 +39,7 @@ ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
 
 INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
 SUFFIX_PATTERN = r'\d{8}_\d{6}'
-ID = Data(field='_id', version="etl.timestamp")
+ID = Data(field='_id')
 
 STALE_METADATA = 10 * MINUTE
 DATA_KEY = text_type("data")
@@ -85,9 +85,6 @@ class Index(Features):
         if index==None:
             Log.error("not allowed")
 
-        if isinstance(id, text_type):
-            id = set_default({"id": id}, ID)
-
         self.info = None
         self.debug = debug
         self.settings = kwargs
@@ -131,12 +128,17 @@ class Index(Features):
                 typed = kwargs.typed = False
 
         if not read_only:
+            if isinstance(id, text_type):
+                id_info = set_default({"id": id}, ID)
+            else:
+                id_info = set_default(id, ID)
+
             if typed:
                 from pyLibrary.env.typed_inserter import TypedInserter
 
-                self.encode = TypedInserter(self, id).typed_encode
+                self.encode = TypedInserter(self, id_info).typed_encode
             else:
-                self.encode = get_encoder(id)
+                self.encode = get_encoder(id_info)
 
     @property
     def url(self):
@@ -312,7 +314,7 @@ class Index(Features):
                     id, version, json_bytes = self.encode(r)
 
                 if version:
-                    lines.append(value2json({"index": {"_id": id, "version": int(version), "version_type": "external"}}))
+                    lines.append(value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}))
                 else:
                     lines.append('{"index":{"_id": ' + value2json(id) + '}}')
                 lines.append(json_bytes)
@@ -350,7 +352,10 @@ class Index(Features):
                             fails.append(i)
                 elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
                     for i, item in enumerate(items):
-                        if item.index.status not in [200, 201]:
+                        if item.index.status == 409:  # 409 ARE VERSION CONFLICTS
+                            if "version conflict" not in item.index.error.reason:
+                                fails.append(i)  # IF NOT A VERSION CONFLICT, REPORT AS FAILURE
+                        elif item.index.status not in [200, 201]:
                             fails.append(i)
                 else:
                     Log.error("version not supported {{version}}", version=self.cluster.version)
@@ -1487,7 +1492,7 @@ def retro_properties(properties):
 
 
 def add_typed_annotations(meta):
-    if meta.type in ["text", "keyword", "string", "float", "double", "integer", "nested", "boolean"]:
+    if meta.type in ["text", "keyword", "string", "float", "double", "integer", "boolean"]:
         return {
             "type": "object",
             "dynamic": True,

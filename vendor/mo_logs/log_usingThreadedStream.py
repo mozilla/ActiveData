@@ -20,7 +20,7 @@ from mo_dots import Data
 from mo_future import text_type, PY3
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_logs.strings import expand_template
+from mo_logs.strings import expand_template, CR
 from mo_threads import Thread, THREAD_STOP, Till
 
 DEBUG_LOGGING = False
@@ -113,10 +113,10 @@ def time_delta_pusher(please_stop, appender, queue, interval):
                 Log.warning("Trouble formatting log from {{location}}", location=location, cause=e)
                 # SWALLOW ERROR, GOT TO KEEP RUNNING
         try:
-            appender(u"\n".join(lines) + u"\n")
+            appender(CR.join(lines) + CR)
         except Exception as e:
 
-            sys.stderr.write(str("Trouble with appender: ") + str(e.__class__.__name__) + str("\n"))
+            sys.stderr.write(str("Trouble with appender: ") + str(e.__class__.__name__) + str(CR))
             # SWALLOW ERROR, MUST KEEP RUNNING
 
 

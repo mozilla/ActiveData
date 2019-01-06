@@ -21,7 +21,7 @@ from mo_dots import coalesce, listwrap, wrap, unwraplist, FlatList, Data
 from mo_future import text_type, PY3
 from mo_logs import constants
 from mo_logs.exceptions import Except, suppress_exception, LogItem
-from mo_logs.strings import indent
+from mo_logs.strings import indent, CR
 
 _Thread = None
 if PY3:
@@ -248,7 +248,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        format = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
+        format = ("*" * 80) + CR + indent(template, prefix="** ").strip() + CR + ("*" * 80)
         Log._annotate(
             LogItem(
                 context=exceptions.ALARM,
@@ -376,8 +376,8 @@ class Log(object):
             format = text_type(item)
         else:
             format = item.format.replace("{{", "{{params.")
-        if not format.startswith("\n") and format.find("\n") > -1:
-            format = "\n" + format
+        if not format.startswith(CR) and format.find(CR) > -1:
+            format = CR + format
 
         if cls.trace:
             log_format = item.format = "{{machine.name}} (pid {{machine.pid}}) - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" - ({{location.method}}) - " + format

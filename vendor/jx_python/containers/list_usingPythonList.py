@@ -17,14 +17,13 @@ from copy import copy
 
 import jx_base
 from jx_base import Container
-from jx_base.expressions import jx_expression, Expression, Variable, TRUE
-from jx_python.expression_compiler import compile_expression
-from jx_python.expressions import jx_expression_to_function, Python
+from jx_base.expressions import Expression, Variable, TRUE
+from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from jx_python.meta import get_schema_from_list
 from mo_collections import UniqueIndex
 from mo_dots import Data, wrap, listwrap, unwraplist, unwrap, Null
-from mo_future import sort_using_key
+from mo_future import sort_using_key, first
 from mo_logs import Log
 from mo_threads import Lock
 from pyLibrary import convert
@@ -313,7 +312,3 @@ DUAL = ListContainer(
     data=[{}],
     schema=Schema(table_name="dual", columns=UniqueIndex(keys=("name",)))
 )
-
-
-def first(values):
-    return iter(values).next()

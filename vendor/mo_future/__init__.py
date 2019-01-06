@@ -94,6 +94,9 @@ if PY3:
     def sort_using_key(data, key):
         return sorted(data, key=key)
 
+    def first(values):
+        return iter(values).__next__()
+
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,
         ensure_ascii=False,  # DIFF FROM DEFAULTS
@@ -163,6 +166,9 @@ else:
         #     ((key(d), d) for d in data),
         #     lambda a, b: (1 if (a[0]>b[0]) else (-1 if (a[0]<b[0]) else 0))
         # )
+
+    def first(values):
+        return iter(values).next()
 
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,

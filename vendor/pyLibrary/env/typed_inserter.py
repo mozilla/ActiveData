@@ -29,7 +29,9 @@ class TypedInserter(object):
         if es:
             _schema = Data()
             for c in parse_properties(es.settings.alias, ".", ROOT_PATH, es.get_properties()):
-                if c.es_type not in (OBJECT, NESTED):
+                if c.es_type in (OBJECT, NESTED):
+                    _schema[c.name] = {}
+                else:
                     _schema[c.name] = c
             self.schema = unwrap(_schema)
         else:

@@ -23,6 +23,10 @@ from jx_base.expressions import (
     ModOp as ModOp_,
     BaseBinaryOp as BaseBinaryOp_,
     OrOp as OrOp_,
+    GtOp as GtOp_,
+    GteOp as GteOp_,
+    LteOp as LteOp_,
+    LtOp as LtOp_,
     ScriptOp as ScriptOp_,
     RowsOp as RowsOp_,
     OffsetOp as OffsetOp_,
@@ -76,7 +80,7 @@ from jx_python.expression_compiler import compile_expression
 from mo_dots import split_field, coalesce
 from mo_dots import unwrap
 from mo_future import text_type, PY2
-from mo_json import json2value, NUMBER, INTEGER
+from mo_json import json2value, NUMBER, INTEGER, BOOLEAN
 from mo_logs import Log
 from mo_logs.strings import quote
 from mo_times.dates import Date
@@ -147,7 +151,7 @@ class PythonScript(PythonScript_):
     if PY2:
         __unicode__ = __str__
 
-    def to_python(self, schema, not_null=False, boolean=False, many=True):
+    def to_python(self, not_null=False, boolean=False, many=True):
         return self
 
     def missing(self):
@@ -295,6 +299,43 @@ class LeavesOp(LeavesOp_):
         return "Data(" + Python[self.term].to_python() + ").leaves()"
 
 
+def _inequality_to_python(self, not_null=False, boolean=False, many=True):
+    op, identity = _python_operators[self.op]
+    lhs = NumberOp(self.lhs).partial_eval().to_python(not_null=True)
+    rhs = NumberOp(self.rhs).partial_eval().to_python(not_null=True)
+    script = "(" + lhs + ") " + op + " (" + rhs + ")"
+
+    output = (
+        WhenOp(
+            OrOp([self.lhs.missing(), self.rhs.missing()]),
+            **{
+                "then": FALSE,
+                "else": PythonScript(type=BOOLEAN, expr=script, frum=self),
+            }
+        )
+        .partial_eval()
+        .to_python()
+    )
+    return output
+
+
+class GtOp(GtOp_):
+    to_python = _inequality_to_python
+
+
+class GteOp(GteOp_):
+    to_python = _inequality_to_python
+
+
+class LtOp(LtOp_):
+    to_python = _inequality_to_python
+
+
+class LteOp(LteOp_):
+    to_python = _inequality_to_python
+
+
+
 class BaseBinaryOp(BaseBinaryOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
@@ -427,9 +468,13 @@ class NumberOp(NumberOp_):
             else:
                 return "float(" + Python[self.term].to_python(not_null=True) + ")"
         else:
-            test = Python[self.term.missing()].to_python(boolean=True)
+            exists = self.term.exists()
             value = Python[self.term].to_python(not_null=True)
-            return "float(" + value + ") if (" + test + ") else None"
+
+            if exists is TRUE:
+                return "float(" + value + ")"
+            else:
+                return "float(" + value + ") if (" + Python[exists].to_python() + ") else None"
 
 
 class StringOp(StringOp_):

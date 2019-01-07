@@ -13,7 +13,7 @@ import sys
 
 from mo_future import binary_type, generator_types, text_type
 
-from mo_dots.utils import get_logger, get_module, CLASS
+from mo_dots.utils import get_logger, get_module, CLASS, OBJ
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -520,7 +520,7 @@ def unwrap(v):
     elif _type is NullType:
         return None
     elif _type is DataObject:
-        d = _get(v, "_obj")
+        d = _get(v, OBJ)
         if _get(d, CLASS) in MAPPING_TYPES:
             return d
         else:
@@ -592,7 +592,7 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-from mo_dots.nones import Null, NullType
 from mo_dots.datas import Data, SLOT, MAPPING_TYPES
+from mo_dots.nones import Null, NullType
 from mo_dots.lists import FlatList
 from mo_dots.objects import DataObject

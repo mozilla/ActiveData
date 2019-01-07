@@ -17,7 +17,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
 
-from mo_dots import Data, FlatList, NullType, join_field, split_field, _get, SLOT, DataObject
+from mo_dots import Data, FlatList, NullType, join_field, split_field, _get, SLOT, DataObject, CLASS
+from mo_dots.objects import OBJ
 from mo_future import text_type, binary_type, sort_using_key, long, generator_types
 from mo_json import ESCAPE_DCT, float2json, BOOLEAN, INTEGER, NUMBER, STRING, EXISTS, NESTED, python_type_to_json_type
 from mo_json.encoder import UnicodeBuilder, COLON, COMMA, problem_serializing, json_encoder
@@ -99,7 +100,7 @@ def _untype_dict(value):
 
 
 def _untype_value(value):
-    _type = _get(value, "__class__")
+    _type = _get(value, CLASS)
     if _type is Data:
         return _untype_dict(_get(value, SLOT))
     elif _type is dict:
@@ -111,7 +112,7 @@ def _untype_value(value):
     elif _type is NullType:
         return None
     elif _type is DataObject:
-        return _untype_value(_get(value, "_obj"))
+        return _untype_value(_get(value, OBJ))
     elif _type in generator_types:
         return _untype_list(value)
     else:

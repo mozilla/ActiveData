@@ -18,9 +18,8 @@ from decimal import Decimal
 from mo_dots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr, SLOT, MAPPING_TYPES
 from mo_future import text_type, binary_type, get_function_defaults, get_function_arguments, none_type, generator_types
 
-from mo_dots.utils import CLASS
+from mo_dots.utils import CLASS, OBJ
 
-OBJ = text_type("_obj")
 _get = object.__getattribute__
 _set = object.__setattr__
 WRAPPED_CLASSES = set()
@@ -108,20 +107,14 @@ def datawrap(v):
         m = Data()
         _set(m, SLOT, v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    elif type_ is Data:
+    elif type_ in (Data, DataObject, none_type):
         return v
-    elif type_ is DataObject:
-        return v
-    elif type_ is none_type:
-        return None   # So we allow `is None`
     elif type_ is list:
         return FlatList(v)
     elif type_ in generator_types:
         return (wrap(vv) for vv in v)
-    elif isinstance(v, (text_type, binary_type, int, float, Decimal, datetime, date, FlatList, NullType, none_type)):
+    elif isinstance(v, (text_type, binary_type, int, float, Decimal, datetime, date, FlatList, NullType, Mapping, none_type)):
         return v
-    elif _get(v, CLASS) in MAPPING_TYPES:
-        return DataObject(v)
     elif hasattr(v, "__data__"):
         return v.__data__()
     else:

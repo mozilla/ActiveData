@@ -9,10 +9,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+
 from mo_future import binary_type, text_type
 
 from mo_dots import _setdefault, wrap
-from mo_dots.utils import CLASS
+from mo_dots.utils import CLASS, OBJ
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -36,7 +37,7 @@ class NullType(object):
         key - THE dict ITEM REFERENCE (DOT(.) IS NOT ESCAPED)
         """
         d = _get(self, "__dict__")
-        d["_obj"] = obj
+        d[OBJ] = obj
         d["__key__"] = key
 
     def __bool__(self):
@@ -59,7 +60,7 @@ class NullType(object):
     def __iadd__(self, other):
         try:
             d = _get(self, "__dict__")
-            o = d["_obj"]
+            o = d[OBJ]
             if o is None:
                 return self
             key = d["__key__"]
@@ -169,7 +170,7 @@ class NullType(object):
         key = text_type(key)
 
         d = _get(self, "__dict__")
-        o = wrap(d["_obj"])
+        o = wrap(d[OBJ])
         k = d["__key__"]
         if o is None:
             return Null
@@ -188,7 +189,7 @@ class NullType(object):
         key = text_type(key)
 
         d = _get(self, "__dict__")
-        o = wrap(d["_obj"])
+        o = wrap(d[OBJ])
         k = d["__key__"]
 
         seq = [k] + [key]
@@ -196,7 +197,7 @@ class NullType(object):
 
     def __setitem__(self, key, value):
         d = _get(self, "__dict__")
-        o = d["_obj"]
+        o = d[OBJ]
         if o is None:
             return
         k = d["__key__"]
@@ -243,7 +244,7 @@ def _assign_to_null(obj, path, value, force=True):
             return
         if _get(obj, CLASS) is NullType:
             d = _get(obj, "__dict__")
-            o = d["_obj"]
+            o = d[OBJ]
             p = d["__key__"]
             s = [p]+path
             return _assign_to_null(o, s, value)

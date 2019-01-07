@@ -737,19 +737,19 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "data": [
-                    {"i": 0},
+                    {"i": 0, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 1, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 2, "a": NULL, "b": "a", "c": NULL, "d": "a"},
                     {"i": 3, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
-                    {"i": 4},
+                    {"i": 4, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 5, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 6, "a": NULL, "b": "a", "c": NULL, "d": "a"},
                     {"i": 7, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
-                    {"i": 8},
+                    {"i": 8, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 9, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 10, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
-                    {"i": 12},
+                    {"i": 12, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 13, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 14, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 15, "a": "abcdefg", "b": NULL, "c": "abcdefg", "d": NULL}

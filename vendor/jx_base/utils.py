@@ -115,12 +115,6 @@ def define_language(lang_name, module_vars):
     return language
 
 
-# def value_compare(left, right, ordering=1):
-#     result = _value_compare(left, right, ordering)
-#     Log.note("{{left}} vs {{right}} == {{result}} (ordering={{ordering}})", left=left, right=right, result=result, ordering=ordering)
-#     return result
-
-
 def value_compare(left, right, ordering=1):
     """
     SORT VALUES, NULL IS THE LEAST VALUE

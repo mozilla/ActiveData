@@ -329,13 +329,14 @@ class TestEdge2(BaseTestCase):
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
                     {"a": "y", "b": NULL, "v": 13},
-                    {"a": "z", "b": "m"},
-                    {"a": "z", "b": "n"},
-                    {"a": "z"},
+                    {"a": "z", "b": "m", "v": NULL},
+                    {"a": "z", "b": "n", "v": NULL},
+                    {"a": "z", "b": NULL, "v": NULL},
                     {"a": NULL, "b": "m", "v": 17},
                     {"a": NULL, "b": "n", "v": 19},
-                    {}
-                ]},
+                    {"a": NULL, "b": NULL, "v": NULL}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "b", "v"],

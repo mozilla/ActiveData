@@ -17,6 +17,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
 from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp, LeavesOp, Variable
 from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
+from jx_base.utils import is_op
 from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
 from jx_elasticsearch.es52.expressions import NotOp, InOp, Literal, AndOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
@@ -44,12 +45,12 @@ class AggsDecoder(object):
             if isinstance(e.value, text_type):
                 Log.error("Expecting Variable or Expression, not plain string")
 
-            if isinstance(e.value, LeavesOp):
+            if is_op(e.value, LeavesOp):
                 return object.__new__(ObjectDecoder)
-            elif isinstance(e.value, TupleOp):
+            elif is_op(e.value, TupleOp):
                 # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
                 # JUST PULL THE FIELDS
-                if not all(isinstance(t, Variable) for t in e.value.terms):
+                if not all(is_op(t, Variable) for t in e.value.terms):
                     Log.error("Can only handle variables in tuples")
 
                 e.domain = Data(
@@ -57,7 +58,7 @@ class AggsDecoder(object):
                 )
                 return object.__new__(DimFieldListDecoder)
 
-            elif isinstance(e.value, Variable):
+            elif is_op(e.value, Variable):
                 schema = query.frum.schema
                 cols = schema.leaves(e.value.var)
                 if not cols:
@@ -181,7 +182,7 @@ class SetDecoder(AggsDecoder):
 
         limit = coalesce(self.limit, len(domain.partitions))
 
-        if isinstance(value, Variable):
+        if is_op(value, Variable):
             es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
             match = TermsAggs(
                 "_match",
@@ -261,7 +262,7 @@ def _range_composer(self, edge, domain, es_query, to_float, schema):
             self
         ).add(es_query))
 
-    if isinstance(edge.value, Variable):
+    if is_op(edge.value, Variable):
         calc = {"field": first(schema.leaves(edge.value.var)).es_column}
     else:
         calc = {"script": text_type(Painless[edge.value].to_es_script(schema))}
@@ -493,7 +494,7 @@ class MultivalueDecoder(SetDecoder):
 class ObjectDecoder(AggsDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
-        if isinstance(edge.value, LeavesOp):
+        if is_op(edge.value, LeavesOp):
             prefix = edge.value.term.var
             flatter = lambda k: literal_field(relative_field(k, prefix))
         else:
@@ -593,9 +594,9 @@ class DefaultDecoder(SetDecoder):
             self.es_order = None
 
     def append_query(self, query_path, es_query):
-        if isinstance(self.edge.value, FirstOp) and isinstance(self.edge.value.term, Variable):
+        if is_op(self.edge.value, FirstOp) and is_op(self.edge.value.term, Variable):
             self.edge.value = self.edge.value.term  # ES USES THE FIRST TERM FOR {"terms": } AGGREGATION
-        if not isinstance(self.edge.value, Variable):
+        if not is_op(self.edge.value, Variable):
             terms = TermsAggs(
                 "_match",
                 {

@@ -12,6 +12,7 @@ from __future__ import division
 from __future__ import unicode_literals
 
 from jx_base.expressions import Variable
+from jx_base.utils import is_op
 from mo_dots import wrap
 from mo_future import text_type
 from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL
@@ -64,7 +65,7 @@ def jx_sort_to_es_sort(sort, schema):
 
     output = []
     for s in sort:
-        if isinstance(s.value, Variable):
+        if is_op(s.value, Variable):
             cols = schema.leaves(s.value.var)
             if s.sort == -1:
                 types = OBJECT, STRING, NUMBER, BOOLEAN

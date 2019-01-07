@@ -107,7 +107,7 @@ class EdgesTable(SetOpTable):
                 else:
                     pull = get_column(num_sql_columns)
 
-                if isinstance(query_edge.value, TupleOp):
+                if is_op(query_edge.value, TupleOp):
                     query_edge.allowNulls = False
                     push_child = column_index
                     num_push_columns = len(query_edge.value.terms)
@@ -348,7 +348,7 @@ class EdgesTable(SetOpTable):
         offset = len(query.edges)
         for ssi, s in enumerate(listwrap(query.select)):
             si = ssi + offset
-            if isinstance(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
+            if is_op(s.value, Variable) and s.value.var == "." and s.aggregate == "count":
                 # COUNT RECORDS, NOT ANY ONE VALUE
                 sql = sql_alias(sql_count(EXISTS_COLUMN), quote_column(s.name))
 

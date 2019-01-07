@@ -15,6 +15,7 @@ from __future__ import unicode_literals
 
 from jx_base.expressions import BooleanOp
 from jx_base.queries import get_property_name
+from jx_base.utils import is_op
 from jx_python.meta import Column
 from jx_sqlite import quoted_UID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER
 from jx_sqlite.expressions import sql_type_to_json_type, LeavesOp
@@ -153,7 +154,7 @@ class SetOpTable(InsertTable):
                             column_number = len(sql_selects)
                             column_alias = _make_column_name(column_number)
                             sql_selects.append(sql_alias(unsorted_sql, column_alias))
-                            if startswith_field(primary_nested_path, step) and isinstance(select.value, LeavesOp):
+                            if startswith_field(primary_nested_path, step) and is_op(select.value, LeavesOp):
                                 # ONLY FLATTEN primary_nested_path AND PARENTS, NOT CHILDREN
                                 index_to_column[column_number] = nested_doc_details['index_to_column'][column_number] = ColumnMapping(
                                     push_name=literal_field(get_property_name(concat_field(select.name, column.name))),
@@ -236,7 +237,7 @@ class SetOpTable(InsertTable):
                     if index_to_column:
                         for i, c in index_to_column:
                             value = row[i]
-                            if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
+                            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
                                 relative_field = concat_field(c.push_name, c.push_child)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
@@ -257,7 +258,7 @@ class SetOpTable(InsertTable):
                         nested_value = _accumulate_nested(rows, row, child_details, doc_id, id_coord)
                         if nested_value:
                             push_name = child_details['nested_path'][0]
-                            if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
+                            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
                                 relative_field = relative_field(push_name, curr_nested_path)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
@@ -316,7 +317,7 @@ class SetOpTable(InsertTable):
                     )
                     return output
 
-            if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
+            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
                 num_rows = len(data)
                 temp_data = {c.push_column_name: [None] * num_rows for c in cols}
                 for rownum, d in enumerate(data):
@@ -374,7 +375,7 @@ class SetOpTable(InsertTable):
                         header=header,
                         data=output_data
                     )
-            if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
+            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
                 column_names = [None] * (max(c.push_column for c in cols) + 1)
                 for c in cols:
                     column_names[c.push_column] = c.push_column_name
@@ -423,7 +424,7 @@ class SetOpTable(InsertTable):
                         data=data
                     )
 
-            if isinstance(query.select, list) or isinstance(query.select.value, LeavesOp):
+            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
                 temp_data = []
                 for rownum, d in enumerate(data):
                     row = {}

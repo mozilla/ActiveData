@@ -54,7 +54,7 @@ class Rename(Namespace):
             Log.error("{{name|quote}} is not a valid variable name", name=expr)
         elif isinstance(expr, Date):
             return expr
-        elif isinstance(expr, QueryOp):
+        elif is_op(expr, QueryOp):
             return self._convert_query(expr)
         elif isinstance(expr, Mapping):
             if expr["from"]:

@@ -14,6 +14,7 @@ from __future__ import unicode_literals
 from jx_base.query import canonical_aggregates
 
 from jx_base.expressions import TupleOp
+from jx_base.utils import is_op
 from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
@@ -29,7 +30,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
 
     dims = []
     for e in new_edges:
-        if isinstance(e.value, TupleOp):
+        if is_op(e.value, TupleOp):
             e.allowNulls = False
 
         extra = 0 if e.allowNulls is False else 1

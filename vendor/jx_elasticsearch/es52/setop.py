@@ -16,6 +16,7 @@ from collections import Mapping
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
+from jx_base.utils import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import split_expression_by_path, AndOp, ES52
 from jx_elasticsearch.es52.painless import Painless
@@ -72,7 +73,7 @@ def es_setop(es, query):
     put_index = 0
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
+        if is_op(select.value, LeavesOp) and is_op(select.value.term, Variable):
             term = select.value.term
             leaves = schema.leaves(term.var)
             for c in leaves:
@@ -94,7 +95,7 @@ def es_setop(es, query):
                         "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
                     })
                     put_index += 1
-        elif isinstance(select.value, Variable):
+        elif is_op(select.value, Variable):
             s_column = select.value.var
 
             if s_column == ".":
@@ -190,7 +191,7 @@ def es_setop(es, query):
     for n in new_select:
         if n.pull:
             continue
-        elif isinstance(n.value, Variable):
+        elif is_op(n.value, Variable):
             if get_select('.').use_source:
                 n.pull = get_pull_source(n.value.var)
             elif n.value == "_id":
@@ -261,7 +262,7 @@ def format_list(T, select, query=None):
                     except Exception as e:
                         Log.error("what's happening here?")
             data.append(r if r else None)
-    elif isinstance(query.select.value, LeavesOp):
+    elif is_op(query.select.value, LeavesOp):
         for row in T:
             r = Data()
             for s in select:
@@ -312,7 +313,7 @@ def format_table(T, select, query=None):
 
     header = [None] * num_columns
 
-    if isinstance(query.select, Mapping) and not isinstance(query.select.value, LeavesOp):
+    if isinstance(query.select, Mapping) and not is_op(query.select.value, LeavesOp):
         for s in select:
             header[s.put.index] = s.name
     else:

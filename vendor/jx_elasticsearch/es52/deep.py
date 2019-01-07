@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 from jx_base.expressions import NULL, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
+from jx_base.utils import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import split_expression_by_depth, AndOp, ES52
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull_function, get_pull
@@ -99,7 +100,7 @@ def es_deepop(es, query):
 
     put_index = 0
     for select in selects:
-        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
+        if is_op(select.value, LeavesOp) and is_op(select.value.term, Variable):
             # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
             leaves = schema.leaves(select.value.term.var)
             col_names = set()
@@ -123,7 +124,7 @@ def es_deepop(es, query):
                 if n.name.startswith("..") and n.name.lstrip(".") not in col_names:
                     n.put.name = n.name = n.name.lstrip(".")
                     col_names.add(n.name)
-        elif isinstance(select.value, Variable):
+        elif is_op(select.value, Variable):
             net_columns = schema.leaves(select.value.var)
             if not net_columns:
                 new_select.append({

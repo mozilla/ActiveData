@@ -7,25 +7,24 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 from copy import copy
 
 import jx_base
 from jx_base.dimensions import Dimension
-from jx_base.domains import Domain, SetDomain, DefaultDomain
-from jx_base.expressions import jx_expression, Expression, Variable, LeavesOp, ScriptOp, OffsetOp, TRUE, FALSE
+from jx_base.domains import DefaultDomain, Domain, SetDomain
+from jx_base.expressions import Expression, FALSE, LeavesOp, ScriptOp, TRUE, Variable, jx_expression, QueryOp as QueryOp_
 from jx_base.queries import is_variable_name
-from mo_dots import Data, relative_field, concat_field, coalesce, Null, set_default, unwraplist, literal_field, wrap, unwrap, listwrap
+from jx_base.utils import is_op
+from mo_dots import Data, Null, coalesce, concat_field, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
 from mo_dots.lists import FlatList
 from mo_future import text_type
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
-from mo_math import AND, UNION, Math
+from mo_math import AND, Math, UNION
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
@@ -46,8 +45,7 @@ def _late_import():
     _ = _Column
 
 
-
-class QueryOp(Expression):
+class QueryOp(QueryOp_):
     __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "having", "format", "isLean"]
 
     # def __new__(cls, op=None, frum=None, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
@@ -203,7 +201,7 @@ class QueryOp(Expression):
         """
         NORMALIZE QUERY SO IT CAN STILL BE JSON
         """
-        if isinstance(query, QueryOp) or query == None:
+        if is_op(query, QueryOp) or query == None:
             return query
 
         query = wrap(query)
@@ -346,7 +344,7 @@ def _normalize_select(select, frum, schema=None):
         if select.value.endswith(".*"):
             canonical.name = coalesce(select.name, ".")
             value = jx_expression(select[:-2], schema=schema)
-            if not isinstance(value, Variable):
+            if not is_op(value, Variable):
                 Log.error("`*` over general expression not supported yet")
                 output.append([
                     set_default(

@@ -48,7 +48,7 @@ from jx_base.expressions import (
     WhenOp as WhenOp_,
     extend,
     NullOp)
-from jx_base.utils import Language, define_language
+from jx_base.utils import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
     MATCH_NONE,
@@ -95,7 +95,7 @@ class Variable(Variable_):
 
 class NeOp(NeOp_):
     def to_esfilter(self, schema):
-        if not isinstance(self.lhs, Variable_) or not isinstance(self.rhs, Literal_):
+        if not is_op(self.lhs, Variable_) or not is_op(self.rhs, Literal_):
             return self.to_es_script(schema).to_esfilter(schema)
 
         return es_not({"term": {self.lhs.var: self.rhs.to_esfilter(schema)}})
@@ -118,7 +118,7 @@ class CaseOp(CaseOp_):
 
 class ConcatOp(ConcatOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.value, Variable_) and isinstance(self.find, Literal_):
+        if is_op(self.value, Variable_) and is_op(self.find, Literal_):
             return {
                 "regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}
             }
@@ -152,7 +152,7 @@ def to_esfilter(self, schema):
 
 
 def _inequality_to_esfilter(self, schema):
-    if isinstance(self.lhs, Variable_) and isinstance(self.rhs, Literal_):
+    if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
         cols = schema.leaves(self.lhs.var)
         if not cols:
             lhs = self.lhs.var  # HAPPENS DURING DEBUGGING, AND MAYBE IN REAL LIFE TOO
@@ -194,8 +194,8 @@ class EqOp(EqOp_):
         lhs = ES52[self.lhs].partial_eval()
         rhs = ES52[self.rhs].partial_eval()
 
-        if isinstance(lhs, Literal_):
-            if isinstance(rhs, Literal_):
+        if is_op(lhs, Literal_):
+            if is_op(rhs, Literal_):
                 return FALSE if value_compare(lhs.value, rhs.value) else TRUE
             else:
                 return EqOp([rhs, lhs])  # FLIP SO WE CAN USE TERMS FILTER
@@ -203,7 +203,7 @@ class EqOp(EqOp_):
         return EqOp([lhs, rhs])
 
     def to_esfilter(self, schema):
-        if isinstance(self.lhs, Variable_) and isinstance(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
             rhs = self.rhs.value
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
@@ -257,7 +257,7 @@ class EqOp(EqOp_):
 
 class BasicEqOp(BasicEqOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.lhs, Variable_) and isinstance(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
             if cols:
@@ -276,7 +276,7 @@ class BasicEqOp(BasicEqOp_):
 
 class MissingOp(MissingOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.expr, Variable_):
+        if is_op(self.expr, Variable_):
             cols = schema.leaves(self.expr.var)
             if not cols:
                 return MATCH_ALL
@@ -290,7 +290,7 @@ class MissingOp(MissingOp_):
 
 class NeOp(NeOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.lhs, Variable_) and isinstance(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
             columns = schema.values(self.lhs.var)
             if len(columns) == 0:
                 return MATCH_ALL
@@ -343,7 +343,7 @@ class NeOp(NeOp_):
 
 class NotOp(NotOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.term, MissingOp_) and isinstance(self.term.expr, Variable_):
+        if is_op(self.term, MissingOp_) and is_op(self.term.expr, Variable_):
             # PREVENT RECURSIVE LOOP
             v = self.term.expr.var
             cols = schema.values(v, (OBJECT, NESTED))
@@ -391,7 +391,7 @@ class OrOp(OrOp_):
 
 class BooleanOp(BooleanOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.term, Variable_):
+        if is_op(self.term, Variable_):
             return {"term": {self.term.var: True}}
         else:
             return self.to_es_script(schema).to_esfilter(schema)
@@ -404,7 +404,7 @@ class LengthOp(LengthOp_):
 
 class RegExpOp(RegExpOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.pattern, Literal_) and isinstance(self.var, Variable_):
+        if is_op(self.pattern, Literal_) and isinstance(self.var, Variable_):
             cols = schema.leaves(self.var.var)
             if len(cols) == 0:
                 return MATCH_NONE
@@ -438,7 +438,7 @@ class BasicStartsWithOp(BasicStartsWithOp_):
     def to_esfilter(self, schema):
         if not self.value:
             return MATCH_ALL
-        elif isinstance(self.value, Variable_) and isinstance(self.prefix, Literal_):
+        elif is_op(self.value, Variable_) and is_op(self.prefix, Literal_):
             var = first(schema.leaves(self.value.var)).es_column
             return {"prefix": {var: self.prefix.value}}
         else:
@@ -462,7 +462,7 @@ class PrefixOp(PrefixOp_):
         return PrefixOp([expr, prefix])
 
     def to_esfilter(self, schema):
-        if isinstance(self.prefix, Literal_) and not self.prefix.value:
+        if is_op(self.prefix, Literal_) and not self.prefix.value:
             return MATCH_ALL
 
         expr = self.expr
@@ -472,10 +472,10 @@ class PrefixOp(PrefixOp_):
         elif not expr:
             return MATCH_ALL
 
-        if isinstance(expr, StringOp_):
+        if is_op(expr, StringOp_):
             expr = expr.term
 
-        if isinstance(expr, Variable_) and isinstance(self.prefix, Literal_):
+        if is_op(expr, Variable_) and is_op(self.prefix, Literal_):
             var = first(schema.leaves(expr.var)).es_column
             return {"prefix": {var: self.prefix.value}}
         else:
@@ -486,7 +486,7 @@ class SuffixOp(SuffixOp_):
     def to_esfilter(self, schema):
         if not self.suffix:
             return MATCH_ALL
-        elif isinstance(self.expr, Variable_) and isinstance(self.suffix, Literal_):
+        elif is_op(self.expr, Variable_) and is_op(self.suffix, Literal_):
             var = first(schema.leaves(self.expr.var)).es_column
             return {"regexp": {var: ".*" + string2regexp(self.suffix.value)}}
         else:
@@ -495,7 +495,7 @@ class SuffixOp(SuffixOp_):
 
 class InOp(InOp_):
     def to_esfilter(self, schema):
-        if isinstance(self.value, Variable_):
+        if is_op(self.value, Variable_):
             var = self.value.var
             cols = schema.leaves(var)
             if not cols:
@@ -504,14 +504,14 @@ class InOp(InOp_):
             var = col.es_column
 
             if col.jx_type == BOOLEAN:
-                if isinstance(self.superset, Literal_) and not isinstance(
+                if is_op(self.superset, Literal_) and not isinstance(
                     self.superset.value, (list, tuple)
                 ):
                     return {"term": {var: value2boolean(self.superset.value)}}
                 else:
                     return {"terms": {var: map(value2boolean, self.superset.value)}}
             else:
-                if isinstance(self.superset, Literal_) and not isinstance(
+                if is_op(self.superset, Literal_) and not isinstance(
                     self.superset.value, (list, tuple)
                 ):
                     return {"term": {var: self.superset.value}}
@@ -722,7 +722,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     if len(all_depths) == 1:
         output[first(all_depths)] += [where]
-    elif isinstance(where, AndOp_):
+    elif is_op(where, AndOp_):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
     else:
@@ -763,7 +763,7 @@ def split_expression_by_path(
                 }
             )
         ]
-    elif isinstance(where, AndOp_):
+    elif is_op(where, AndOp_):
         for w in where.terms:
             split_expression_by_path(w, schema, output, var_to_columns, lang=lang)
     else:

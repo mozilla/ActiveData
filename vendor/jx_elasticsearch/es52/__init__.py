@@ -13,6 +13,7 @@ from __future__ import unicode_literals
 
 import itertools
 
+from jx_base.utils import is_op
 from mo_future import sort_using_key
 
 from jx_base import container, Column
@@ -180,7 +181,7 @@ class ES52(Container):
                     )
 
             frum = query["from"]
-            if isinstance(frum, QueryOp):
+            if is_op(frum, QueryOp):
                 result = self.query(frum)
                 q2 = query.copy()
                 q2.frum = result

@@ -76,6 +76,7 @@ from jx_base.expressions import (
     define_language,
     jx_expression,
     FALSE, TRUE, ONE, ZERO, extend, NullOp)
+from jx_base.utils import is_op
 from jx_python.expression_compiler import compile_expression
 from mo_dots import split_field, coalesce
 from mo_dots import unwrap
@@ -92,7 +93,7 @@ def jx_expression_to_function(expr):
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if isinstance(expr, Expression):
-        if isinstance(expr, ScriptOp) and not isinstance(expr.script, text_type):
+        if is_op(expr, ScriptOp) and not isinstance(expr.script, text_type):
             return expr.script
         else:
             return compile_expression(Python[expr].to_python())

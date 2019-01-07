@@ -98,7 +98,7 @@ class Normal(Namespace):
     def _convert_from(self, frum):
         if isinstance(frum, text_type):
             return Data(name=frum)
-        elif isinstance(frum, (Container, QueryOp)):
+        elif is_op(frum, (Container, Variable)):
             return frum
         else:
             Log.error("Expecting from clause to be a name, or a container")

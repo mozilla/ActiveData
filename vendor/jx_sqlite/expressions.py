@@ -122,7 +122,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 
 @extend(LeavesOp)
 def to_sql(self, schema, not_null=False, boolean=False):
-    if not isinstance(self.term, Variable):
+    if not is_op(self.term, Variable):
         Log.error("Can only handle Variable")
     term = self.term.var
     prefix_length = len(split_field(term))
@@ -172,7 +172,7 @@ def partial_eval(self):
     lhs = self.lhs.partial_eval()
     rhs = self.rhs.partial_eval()
 
-    if isinstance(lhs, Literal) and isinstance(rhs, Literal):
+    if is_op(lhs, Literal) and is_op(rhs, Literal):
         return TRUE if builtin_ops["eq"](lhs.value, rhs.value) else FALSE
     else:
         rhs_missing = rhs.missing().partial_eval()
@@ -196,7 +196,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     find = self.find.to_sql(schema)[0].sql.s
     start = self.start
 
-    if isinstance(start, Literal) and start.value == 0:
+    if is_op(start, Literal) and start.value == 0:
         return wrap([{"name": ".", "sql": {"n": "INSTR" + sql_iso(value + "," + find) + "-1"}}])
     else:
         start_index = start.to_sql(schema)[0].sql.n
@@ -330,7 +330,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 @extend(NotOp)
 def to_sql(self, schema, not_null=False, boolean=False):
     not_expr = NotOp(BooleanOp(self.term)).partial_eval()
-    if isinstance(not_expr, NotOp):
+    if is_op(not_expr, Variable):
         return wrap([{"name": ".", "sql": {"b": "NOT " + sql_iso(not_expr.term.to_sql(schema)[0].sql.b)}}])
     else:
         return not_expr.to_sql(schema)
@@ -373,7 +373,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 @extend(LengthOp)
 def to_sql(self, schema, not_null=False, boolean=False):
     term = self.term.partial_eval()
-    if isinstance(term, Literal):
+    if is_op(term, Literal):
         val = term.value
         if isinstance(val, text_type):
             return wrap([{"name": ".", "sql": {"n": convert.value2json(len(val))}}])
@@ -517,7 +517,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
     value = self.expr.partial_eval()
     missing_value = value.missing().partial_eval()
 
-    if not isinstance(missing_value, MissingOp):
+    if not is_op(missing_value, Variable):
         return missing_value.to_sql(schema)
 
     value_sql = value.to_sql(schema)
@@ -594,7 +594,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 def to_sql(self, schema, not_null=False, boolean=False):
     if not self.expr:
         return wrap([{"name": ".", "sql": {"b": SQL_FALSE}}])
-    elif isinstance(self.suffix, Literal) and not self.suffix.value:
+    elif is_op(self.suffix, Literal) and not self.suffix.value:
         return wrap([{"name": ".", "sql": {"b": SQL_TRUE}}])
     else:
         return EqOp(
@@ -625,7 +625,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
         else:
             term_sql = SQL_CASE + SQL_WHEN + term.b + SQL_THEN + quote_value("true") + SQL_ELSE + quote_value("false") + SQL_END
 
-        if isinstance(missing, TrueOp):
+        if is_op(missing, Variable):
             acc.append(SQL_EMPTY_STRING)
         elif missing:
             acc.append(
@@ -775,7 +775,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
 
 @extend(InOp)
 def to_sql(self, schema, not_null=False, boolean=False):
-    if not isinstance(self.superset, Literal):
+    if not is_op(self.superset, Literal):
         Log.error("Not supported")
     j_value = json2value(self.superset.json)
     if j_value:
@@ -872,7 +872,7 @@ def partial_eval(self):
     value = self.value.partial_eval()
     start = self.start.partial_eval()
     length = self.length.partial_eval()
-    if isinstance(start, Literal) and start.value == 1:
+    if is_op(start, Literal) and start.value == 1:
         if length is NULL:
             return value
     return SqlSubstrOp([value, start, length])

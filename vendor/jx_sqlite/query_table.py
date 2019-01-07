@@ -150,7 +150,7 @@ class QueryTable(GroupbyTable):
                         domain = SimpleSetDomain(partitions=e.domain.partitions.name)
                     elif e.domain.type == "range":
                         domain = e.domain
-                    elif isinstance(e.value, TupleOp):
+                    elif is_op(e.value, TupleOp):
                         pulls = jx.sort([c for c in index_to_columns.values() if c.push_name == e.name],
                                         "push_child").pull
                         parts = [tuple(p(d) for p in pulls) for d in result.data]
@@ -202,7 +202,7 @@ class QueryTable(GroupbyTable):
                     domain = wrap(mo_json.scrub(e.domain))
                 elif e.domain.type == "duration":
                     domain = wrap(mo_json.scrub(e.domain))
-                elif isinstance(e.value, TupleOp):
+                elif is_op(e.value, TupleOp):
                     pulls = jx.sort([c for c in index_to_columns.values() if c.push_name == e.name], "push_child").pull
                     parts = [tuple(p(d) for p in pulls) for d in result.data]
                     domain = SimpleSetDomain(partitions=jx.sort(set(parts)))

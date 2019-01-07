@@ -14,6 +14,7 @@ from collections import deque
 from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, TupleOp, Variable as Variable_
 from jx_base.query import DEFAULT_LIMIT
+from jx_base.utils import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ComplexAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
@@ -178,7 +179,7 @@ def es_aggsop(es, frum, query):
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
     for s in select:
-        if isinstance(s.value, Variable_):
+        if is_op(s.value, Variable_):
             s.query_path = query_path
             if s.aggregate == "count":
                 new_select["count_"+literal_field(s.value.var)] += [s]
@@ -325,7 +326,7 @@ def es_aggsop(es, frum, query):
             Log.error("do not know how to handle")
 
         canonical_name = s.name
-        if isinstance(s.value, TupleOp):
+        if is_op(s.value, TupleOp):
             if s.aggregate == "count":
                 # TUPLES ALWAYS EXIST, SO COUNTING THEM IS EASY
                 s.pull = jx_expression_to_function("doc_count")

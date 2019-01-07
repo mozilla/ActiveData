@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.utils import value_compare
+from jx_base.utils import value_compare, is_op
 
 _range = range
 
@@ -78,7 +78,7 @@ def run(query, container=Null):
     elif isinstance(container, Cube):
         if is_aggs(query_op):
             return cube_aggs(container, query_op)
-    elif isinstance(container, QueryOp):
+    elif is_op(container, QueryOp):
         container = run(container)
     elif isinstance(container, Mapping):
         query = container

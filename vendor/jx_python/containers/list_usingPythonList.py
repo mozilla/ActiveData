@@ -169,7 +169,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
     def select(self, select):
         selects = listwrap(select)
 
-        if len(selects) == 1 and isinstance(selects[0].value, Variable) and selects[0].value.var == ".":
+        if len(selects) == 1 and is_op(selects[0].value, Variable) and selects[0].value.var == ".":
             new_schema = self.schema
             if selects[0].name == ".":
                 return self
@@ -178,7 +178,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
         if isinstance(select, list):
             if all(
-                isinstance(s.value, Variable) and s.name == s.value.var
+                is_op(s.value, Variable) and s.name == s.value.var
                 for s in select
             ):
                 names = set(s.value.var for s in select)
@@ -195,7 +195,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         else:
             select_value = jx_expression_to_function(select.value)
             new_data = map(select_value, self.data)
-            if isinstance(select.value, Variable):
+            if is_op(select.value, Variable):
                 column = copy(first(c for c in self.schema.columns if c.name == select.value.var))
                 column.name = '.'
                 new_schema = Schema("from " + self.name, [column])

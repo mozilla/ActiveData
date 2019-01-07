@@ -7,20 +7,21 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from copy import deepcopy
 
-from mo_dots import wrap, unwrap, coalesce
+from mo_future import text_type
+
+from mo_dots import coalesce, unwrap, wrap, CLASS
 from mo_dots.nones import Null
 
+LIST = text_type("list")
+
 _get = object.__getattribute__
-_get_list = lambda self: _get(self, "list")
+_get_list = lambda self: _get(self, LIST)
 _set = object.__setattr__
 _emit_slice_warning = True
-
 _datawrap = None
 Log = None
 
@@ -57,7 +58,7 @@ class FlatList(list):
             self.list = vals
 
     def __getitem__(self, index):
-        if isinstance(index, slice):
+        if _get(index, CLASS) is slice:
             # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
                 if not Log:
@@ -185,17 +186,18 @@ class FlatList(list):
             return wrap(_get_list(self).pop(index))
 
     def __eq__(self, other):
-        if isinstance(other, FlatList):
-            other = _get_list(other)
         lst = _get_list(self)
         if other == None and len(lst) == 0:
             return True
-        if not isinstance(other, list):
+        other_class = _get(other, CLASS)
+        if other_class is FlatList:
+            other = _get_list(other)
+        try:
+            if len(lst) != len(other):
+                return False
+            return all([s == o for s, o in zip(lst, other)])
+        except Exception:
             return False
-        if len(lst) != len(other):
-            return False
-        return all([s == o for s, o in zip(lst, other)])
-
 
     def __add__(self, value):
         if value == None:

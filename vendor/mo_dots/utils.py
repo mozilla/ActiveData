@@ -14,7 +14,9 @@ from __future__ import unicode_literals
 import importlib
 import sys
 
-from mo_future import PY2
+from mo_future import PY2, text_type
+
+CLASS = text_type("__class__")
 
 _Log = None
 

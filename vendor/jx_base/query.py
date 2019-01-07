@@ -794,8 +794,7 @@ sort_direction = {
     1: 1,
     0: 0,
     -1: -1,
-    None: 1,
-    Null: 1
+    None: 1
 }
 
 

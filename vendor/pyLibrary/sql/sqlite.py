@@ -41,7 +41,7 @@ TOO_LONG_TO_HOLD_TRANSACTION = 10
 _sqlite3 = None
 _load_extension_warning_sent = False
 _upgraded = False
-known_databases = {Null: None}
+known_databases = {None: None}
 
 
 def _upgrade():

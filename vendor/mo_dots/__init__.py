@@ -7,15 +7,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import sys
-from collections import Mapping
 
-from mo_dots.utils import get_logger, get_module
-from mo_future import text_type, binary_type, generator_types
+from mo_future import binary_type, generator_types, text_type
+
+from mo_dots.utils import get_logger, get_module, CLASS
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -190,7 +188,7 @@ def relative_field(field, parent):
 def hash_value(v):
     if isinstance(v, (set, tuple, list)):
         return hash(tuple(hash_value(vv) for vv in v))
-    elif not isinstance(v, Mapping):
+    elif _get(v, CLASS) not in MAPPING_TYPES:
         return hash(v)
     else:
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
@@ -215,7 +213,7 @@ def set_default(*params):
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
     """
     p0 = params[0]
-    agg = p0 if p0 or isinstance(p0, Mapping) else {}
+    agg = p0 if p0 or _get(p0, CLASS) in MAPPING_TYPES else {}
     for p in params[1:]:
         p = unwrap(p)
         if p is None:
@@ -231,10 +229,10 @@ def _all_default(d, default, seen=None):
     """
     if default is None:
         return
-    if isinstance(default, Data):
+    if _get(default, CLASS) is Data:
         default = object.__getattribute__(default, SLOT)  # REACH IN AND GET THE dict
         # Log = _late_import()
-        # Log.error("strictly dict (or object) allowed: got {{type}}", type=default.__class__.__name__)
+        # Log.error("strictly dict (or object) allowed: got {{type}}", type=_get(default, CLASS).__name__)
 
     for k, default_value in default.items():
         default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
@@ -242,7 +240,7 @@ def _all_default(d, default, seen=None):
 
         if existing_value == None:
             if default_value != None:
-                if isinstance(default_value, Mapping):
+                if _get(default_value, CLASS) in MAPPING_TYPES:
                     df = seen.get(id(default_value))
                     if df is not None:
                         _set_attr(d, [k], df)
@@ -261,7 +259,7 @@ def _all_default(d, default, seen=None):
         elif isinstance(existing_value, list) or isinstance(default_value, list):
             _set_attr(d, [k], None)
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
-        elif (hasattr(existing_value, "__setattr__") or isinstance(existing_value, Mapping)) and isinstance(default_value, Mapping):
+        elif (hasattr(existing_value, "__setattr__") or _get(existing_value, CLASS) in MAPPING_TYPES) and _get(default_value, CLASS) in MAPPING_TYPES:
             df = seen.get(id(default_value))
             if df is not None:
                 _set_attr(d, [k], df)
@@ -414,7 +412,7 @@ def _set_attr(obj_, path, value):
         elif value == None:
             new_value = None
         else:
-            new_value = old_value.__class__(value)  # TRY TO MAKE INSTANCE OF SAME CLASS
+            new_value = _get(old_value, CLASS)(value)  # TRY TO MAKE INSTANCE OF SAME CLASS
     except Exception as e:
         old_value = None
         new_value = value
@@ -441,7 +439,7 @@ def wrap(v):
     :return:  Data INSTANCE
     """
 
-    type_ = v.__class__
+    type_ = _get(v, CLASS)
 
     if type_ is dict:
         m = object.__new__(Data)
@@ -467,10 +465,12 @@ def wrap_leaves(value):
 def _wrap_leaves(value):
     if value == None:
         return None
-    if isinstance(value, (text_type, binary_type, int, float)):
+
+    class_ = _get(value, CLASS)
+    if class_ in (text_type, binary_type, int, float):
         return value
-    if isinstance(value, Mapping):
-        if isinstance(value, Data):
+    if class_ in MAPPING_TYPES:
+        if class_ is Data:
             value = unwrap(value)
 
         output = {}
@@ -511,7 +511,7 @@ def _wrap_leaves(value):
 
 
 def unwrap(v):
-    _type = _get(v, "__class__")
+    _type = _get(v, CLASS)
     if _type is Data:
         d = _get(v, SLOT)
         return d
@@ -521,7 +521,7 @@ def unwrap(v):
         return None
     elif _type is DataObject:
         d = _get(v, "_obj")
-        if isinstance(d, Mapping):
+        if _get(d, CLASS) in MAPPING_TYPES:
             return d
         else:
             return v
@@ -593,6 +593,6 @@ def tuplewrap(value):
 
 
 from mo_dots.nones import Null, NullType
-from mo_dots.datas import Data, SLOT
+from mo_dots.datas import Data, SLOT, MAPPING_TYPES
 from mo_dots.lists import FlatList
 from mo_dots.objects import DataObject

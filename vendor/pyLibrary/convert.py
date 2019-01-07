@@ -64,8 +64,7 @@ _v2b = {
     "false": False,
     "F": False,
     0: False,
-    None: None,
-    Null: None
+    None: None
 }
 
 

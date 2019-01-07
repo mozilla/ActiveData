@@ -7,18 +7,17 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import MutableMapping, Mapping
-from copy import deepcopy, copy
+from collections import MutableMapping
+from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_future import text_type, PY2, iteritems, none_type, generator_types, long
+from mo_future import PY2, generator_types, iteritems, long, none_type, text_type
 
-from mo_dots import _getdefault, hash_value, literal_field, coalesce, listwrap, get_logger
+from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
 from mo_dots.lists import FlatList
+from mo_dots.utils import CLASS
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -46,9 +45,10 @@ class Data(MutableMapping):
         else:
             if args:
                 args0 = args[0]
-                if isinstance(args0, dict):
+                class_ = _get(args0, CLASS)
+                if class_ is dict:
                     _set(self, SLOT, args0)
-                elif isinstance(args0, Data):
+                elif class_ is Data:
                     _set(self, SLOT, _get(args0, SLOT))
                 else:
                     _set(self, SLOT, dict(args0))
@@ -59,21 +59,21 @@ class Data(MutableMapping):
 
     def __bool__(self):
         d = self._internal_dict
-        if isinstance(d, dict):
+        if _get(d, CLASS) is dict:
             return bool(d)
         else:
             return d != None
 
     def __nonzero__(self):
         d = self._internal_dict
-        if isinstance(d, dict):
+        if _get(d, CLASS) is dict:
             return True if d else False
         else:
             return d != None
 
     def __contains__(self, item):
         value = Data.__getitem__(self, item)
-        if isinstance(value, Mapping) or value:
+        if _get(value, CLASS) in MAPPING_TYPES or value:
             return True
         return False
 
@@ -86,7 +86,7 @@ class Data(MutableMapping):
             return Null
         if key == ".":
             output = self._internal_dict
-            if isinstance(output, Mapping):
+            if _get(output, CLASS) in MAPPING_TYPES:
                 return self
             else:
                 return output
@@ -97,7 +97,7 @@ class Data(MutableMapping):
         if key.find(".") >= 0:
             seq = _split_field(key)
             for n in seq:
-                if isinstance(d, NullType):
+                if _get(d, CLASS) is NullType:
                     d = NullType(d, n)  # OH DEAR, Null TREATS n AS PATH, NOT LITERAL
                 elif isinstance(d, list):
                     d = [_getdefault(dd, n) for dd in d]
@@ -153,7 +153,7 @@ class Data(MutableMapping):
     def __getattr__(self, key):
         d = _get(self, SLOT)
         v = d.get(key)
-        t = v.__class__
+        t = _get(v, CLASS)
 
         # OPTIMIZED wrap()
         if t is dict:
@@ -198,13 +198,13 @@ class Data(MutableMapping):
             return True
 
         d = self._internal_dict
-        if not isinstance(d, dict):
+        if _get(d, CLASS) is not dict:
             return d == other
 
         if not d and other == None:
             return False
 
-        if not isinstance(other, Mapping):
+        if _get(other, CLASS) not in MAPPING_TYPES:
             return False
         e = unwrap(other)
         for k, v in d.items():
@@ -224,7 +224,7 @@ class Data(MutableMapping):
 
     def items(self):
         d = self._internal_dict
-        return [(k, wrap(v)) for k, v in d.items() if v != None or isinstance(v, Mapping)]
+        return [(k, wrap(v)) for k, v in d.items() if v != None or _get(v, CLASS) in MAPPING_TYPES]
 
     def leaves(self, prefix=None):
         """
@@ -254,14 +254,14 @@ class Data(MutableMapping):
 
     def copy(self):
         d = self._internal_dict
-        if isinstance(d, dict):
+        if _get(d, CLASS) is dict:
             return Data(**self)
         else:
             return copy(d)
 
     def __copy__(self):
         d = self._internal_dict
-        if isinstance(d, dict):
+        if _get(d, CLASS) is dict:
             return Data(**self)
         else:
             return copy(d)
@@ -318,7 +318,7 @@ def leaves(value, prefix=None):
     output = []
     for k, v in value.items():
         try:
-            if isinstance(v, Mapping):
+            if _get(v, CLASS) in MAPPING_TYPES:
                 output.extend(leaves(v, prefix=prefix + literal_field(k) + "."))
             else:
                 output.append((prefix + literal_field(k), unwrap(v)))
@@ -428,7 +428,7 @@ class _DictUsingSelf(dict):
         if not d and other == None:
             return True
 
-        if not isinstance(other, Mapping):
+        if not _get(other, CLASS) in MAPPING_TYPES:
             return False
         e = unwrap(other)
         for k, v in dict.items(d):
@@ -446,7 +446,7 @@ class _DictUsingSelf(dict):
         return wrap(dict.get(self, key, default))
 
     def items(self):
-        return [(k, wrap(v)) for k, v in dict.items(self) if v != None or isinstance(v, Mapping)]
+        return [(k, wrap(v)) for k, v in dict.items(self) if v != None or _get(v, CLASS) in MAPPING_TYPES]
 
     def leaves(self, prefix=None):
         """
@@ -455,7 +455,7 @@ class _DictUsingSelf(dict):
         prefix = coalesce(prefix, "")
         output = []
         for k, v in self.items():
-            if isinstance(v, Mapping):
+            if _get(v, CLASS) in MAPPING_TYPES:
                 output.extend(wrap(v).leaves(prefix=prefix + literal_field(k) + "."))
             else:
                 output.append((prefix + literal_field(k), v))
@@ -536,7 +536,7 @@ def _str(value, depth):
     FOR DEBUGGING POSSIBLY RECURSIVE STRUCTURES
     """
     output = []
-    if depth >0 and isinstance(value, Mapping):
+    if depth >0 and _get(value, CLASS) in MAPPING_TYPES:
         for k, v in value.items():
             output.append(str(k) + "=" + _str(v, depth - 1))
         return "{" + ",\n".join(output) + "}"
@@ -549,7 +549,7 @@ def _str(value, depth):
 
 
 def _iadd(self, other):
-    if not isinstance(other, Mapping):
+    if not _get(other, CLASS) in MAPPING_TYPES:
         get_logger().error("Expecting a Mapping")
     d = unwrap(self)
     for ok, ov in other.items():
@@ -557,11 +557,11 @@ def _iadd(self, other):
         if sv == None:
             d[ok] = deepcopy(ov)
         elif isinstance(ov, (Decimal, float, long, int)):
-            if isinstance(sv, Mapping):
+            if _get(sv, CLASS) in MAPPING_TYPES:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
-                    stype=sv.__class__.__name__,
-                    otype=ov.__class__.__name__
+                    stype=_get(sv, CLASS).__name__,
+                    otype=_get(ov, CLASS).__name__
                 )
             elif isinstance(sv, list):
                 d[ok].append(ov)
@@ -569,27 +569,31 @@ def _iadd(self, other):
                 d[ok] = sv + ov
         elif isinstance(ov, list):
             d[ok] = listwrap(sv) + ov
-        elif isinstance(ov, Mapping):
-            if isinstance(sv, Mapping):
+        elif _get(ov, CLASS) in MAPPING_TYPES:
+            if _get(sv, CLASS) in MAPPING_TYPES:
                 _iadd(sv, ov)
             elif isinstance(sv, list):
                 d[ok].append(ov)
             else:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
-                    stype=sv.__class__.__name__,
-                    otype=ov.__class__.__name__
+                    stype=_get(sv, CLASS).__name__,
+                    otype=_get(ov, CLASS).__name__
                 )
         else:
-            if isinstance(sv, Mapping):
+            if _get(sv, CLASS) in MAPPING_TYPES:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
-                    stype=sv.__class__.__name__,
-                    otype=ov.__class__.__name__
+                    stype=_get(sv, CLASS).__name__,
+                    otype=_get(ov, CLASS).__name__
                 )
             else:
                 d[ok].append(ov)
     return self
+
+
+MAPPING_TYPES = (Data, dict)
+
 
 from mo_dots.nones import Null, NullType
 from mo_dots import unwrap, wrap

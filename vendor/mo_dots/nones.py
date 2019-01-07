@@ -7,12 +7,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import _setdefault, wrap, split_field
-from mo_future import text_type, binary_type
+from mo_future import binary_type, text_type
+
+from mo_dots import _setdefault, wrap
+from mo_dots.utils import CLASS
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -109,10 +109,10 @@ class NullType(object):
         return Null
 
     def __eq__(self, other):
-        return other == None or isinstance(other, NullType)
+        return other is None or _get(other, CLASS) is NullType or other == None
 
     def __ne__(self, other):
-        return other is not None and not isinstance(other, NullType)
+        return other is not None and _get(other, CLASS) is not NullType and other != None
 
     def __or__(self, other):
         if other is True:
@@ -173,7 +173,7 @@ class NullType(object):
         k = d["__key__"]
         if o is None:
             return Null
-        elif isinstance(o, NullType):
+        elif _get(o, CLASS) is NullType:
             return NullType(self, key)
         v = o.get(k)
         if v == None:
@@ -241,7 +241,7 @@ def _assign_to_null(obj, path, value, force=True):
     try:
         if obj is Null:
             return
-        if isinstance(obj, NullType):
+        if _get(obj, CLASS) is NullType:
             d = _get(obj, "__dict__")
             o = d["_obj"]
             p = d["__key__"]

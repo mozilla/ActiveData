@@ -185,7 +185,7 @@ def relative_field(field, parent):
 
 
 def hash_value(v):
-    if is_list(v, (set, tuple)):
+    if is_many(v):
         return hash(tuple(hash_value(vv) for vv in v))
     elif _get(v, CLASS) not in MAPPING_TYPES:
         return hash(v)
@@ -593,5 +593,5 @@ def tuplewrap(value):
 
 from mo_dots.datas import Data, SLOT, MAPPING_TYPES, is_data
 from mo_dots.nones import Null, NullType
-from mo_dots.lists import FlatList, is_list, is_sequence, is_container
+from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
 from mo_dots.objects import DataObject

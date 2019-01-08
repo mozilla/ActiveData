@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.utils import is_op, value_compare
-from mo_dots import is_container
+from mo_dots import is_container, is_many
 from mo_future import is_text
 
 _range = range
@@ -74,7 +74,7 @@ def run(query, container=Null):
         return DUAL.query(query_op)
     elif isinstance(container, Container):
         return container.query(query_op)
-    elif isinstance(container, (list, set) + generator_types):
+    elif is_many(container):
         container = wrap(list(container))
     elif isinstance(container, Cube):
         if is_aggs(query_op):

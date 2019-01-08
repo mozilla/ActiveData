@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.expressions import (
     AndOp as AndOp_,
     BaseBinaryOp as BaseBinaryOp_,
@@ -81,7 +80,7 @@ from jx_base.expressions import (
 from jx_base.utils import is_expression, is_op
 from jx_python.expression_compiler import compile_expression
 from mo_dots import coalesce, is_data, is_list, split_field, unwrap
-from mo_future import PY2, text_type
+from mo_future import PY2, is_text, text_type
 from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
 from mo_logs import Log
 from mo_logs.strings import quote

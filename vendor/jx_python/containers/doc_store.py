@@ -216,7 +216,7 @@ class DocStore(Container):
         return filters[where.name](self, where)
 
     def _eq(self, op):
-        if is_op(op.lhs, Variable) and is_op(op.rhs, Literal):
+        if is_op(op.lhs, Variable) and is_literal(op.rhs):
             return copy(self._index[op.lhs][op.rhs])
 
     def _and(self, op):

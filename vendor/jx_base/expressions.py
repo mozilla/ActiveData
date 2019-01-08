@@ -31,7 +31,7 @@ import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
-from mo_math import is_integer
+from mo_math import is_integer, MAX, MIN
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -145,7 +145,7 @@ class Expression(BaseExpression):
             if not all(is_expression(t) for t in args):
                 Log.error("Expecting an expression")
         elif is_data(args):
-            if not all(is_op(k, Variable) and is_op(v, Literal) for k, v in args.items()):
+            if not all(is_op(k, Variable) and is_literal(v) for k, v in args.items()):
                 Log.error("Expecting an {<variable>: <literal>}")
         elif args == None:
             pass
@@ -388,7 +388,7 @@ class RowsOp(Expression):
             Log.error("can not handle")
 
     def __data__(self):
-        if is_op(self.var, Literal) and is_op(self.offset, Literal):
+        if is_literal(self.var) and is_literal(self.offset):
             return {"rows": {self.var.json, self.offset.value}}
         else:
             return {"rows": [self.var.__data__(), self.offset.__data__()]}
@@ -408,7 +408,7 @@ class GetOp(Expression):
         self.var, self.offset = term
 
     def __data__(self):
-        if is_op(self.var, Literal) and is_op(self.offset, Literal):
+        if is_literal(self.var) and is_literal(self.offset):
             return {"get": {self.var.json, self.offset.value}}
         else:
             return {"get": [self.var.__data__(), self.offset.__data__()]}
@@ -579,7 +579,7 @@ class Literal(Expression):
         elif self.term == None:
             return False
 
-        if is_op(other, Literal):
+        if is_literal(other):
             return (self.term == other.term) or (self.json == other.json)
 
     def __data__(self):
@@ -832,6 +832,16 @@ class DateOp(Literal):
         return Date(self.date)
 
 
+literal_op_ids = (Literal.id, NullOp.id, TrueOp.id, FalseOp.id, DateOp.id)
+
+
+def is_literal(l):
+    try:
+        return l.id in literal_op_ids
+    except Exception:
+        return False
+
+
 class TupleOp(Expression):
     date_type = OBJECT
 
@@ -899,7 +909,7 @@ class BaseBinaryOp(Expression):
         return self.op
 
     def __data__(self):
-        if is_op(self.lhs, Variable) and is_op(self.rhs, Literal):
+        if is_op(self.lhs, Variable) and is_literal(self.rhs):
             return {self.op: {self.lhs.var, self.rhs.value}, "default": self.default}
         else:
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
@@ -920,7 +930,7 @@ class BaseBinaryOp(Expression):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
         default = self.default.partial_eval()
-        if is_op(lhs, Literal) and is_op(rhs, Literal):
+        if is_literal(lhs) and is_literal(rhs):
             return Literal(builtin_ops[self.op](lhs.value, rhs.value))
         return self.__class__([lhs, rhs], default=default)
 
@@ -952,7 +962,7 @@ class DivOp(BaseBinaryOp):
         if rhs is ZERO:
             return default
         lhs = self.lhs.partial_eval()
-        if is_op(lhs, Literal) and is_op(rhs, Literal):
+        if is_literal(lhs) and is_literal(rhs):
             return Literal(builtin_ops[self.op](lhs.value, rhs.value))
         return self.__class__([lhs, rhs], default=default)
 
@@ -971,7 +981,7 @@ class BaseInequalityOp(Expression):
         return self.op
 
     def __data__(self):
-        if is_op(self.lhs, Variable) and is_op(self.rhs, Literal):
+        if is_op(self.lhs, Variable) and is_literal(self.rhs):
             return {self.op: {self.lhs.var, self.rhs.value}}
         else:
             return {self.op: [self.lhs.__data__(), self.rhs.__data__()]}
@@ -995,7 +1005,7 @@ class BaseInequalityOp(Expression):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
 
-        if is_op(lhs, Literal) and is_op(rhs, Literal):
+        if is_literal(lhs) and is_literal(rhs):
             return Literal(builtin_ops[self.op](lhs, rhs))
 
         return self.__class__([lhs, rhs])
@@ -1031,7 +1041,7 @@ class FloorOp(Expression):
         self.default = default
 
     def __data__(self):
-        if is_op(self.lhs, Variable) and is_op(self.rhs, Literal):
+        if is_op(self.lhs, Variable) and is_literal(self.rhs):
             return {"floor": {self.lhs.var, self.rhs.value}, "default": self.default}
         else:
             return {"floor": [self.lhs.__data__(), self.rhs.__data__()], "default": self.default}
@@ -1077,7 +1087,7 @@ class EqOp(Expression):
         self.lhs, self.rhs = terms
 
     def __data__(self):
-        if is_op(self.lhs, Variable) and is_op(self.rhs, Literal):
+        if is_op(self.lhs, Variable) and is_literal(self.rhs):
             return {"eq": {self.lhs.var, self.rhs.value}}
         else:
             return {"eq": [self.lhs.__data__(), self.rhs.__data__()]}
@@ -1104,7 +1114,7 @@ class EqOp(Expression):
         lhs = self.lang[self.lhs].partial_eval()
         rhs = self.lang[self.rhs].partial_eval()
 
-        if is_op(lhs, Literal) and is_op(rhs, Literal):
+        if is_literal(lhs) and is_literal(rhs):
             return FALSE if value_compare(lhs.value, rhs.value) else TRUE
         else:
             return self.lang[CaseOp(
@@ -1130,7 +1140,7 @@ class NeOp(Expression):
             Log.error("logic error")
 
     def __data__(self):
-        if is_op(self.lhs, Variable) and is_op(self.rhs, Literal):
+        if is_op(self.lhs, Variable) and is_literal(self.rhs):
             return {"ne": {self.lhs.var, self.rhs.value}}
         else:
             return {"ne": [self.lhs.__data__(), self.rhs.__data__()]}
@@ -1183,7 +1193,7 @@ class NotOp(Expression):
                 return TRUE
             elif term is NULL:
                 return TRUE
-            elif is_op(term, Literal):
+            elif is_literal(term):
                 Log.error("`not` operator expects a Boolean term")
             elif is_op(term, WhenOp):
                 output = self.lang[WhenOp(
@@ -1391,7 +1401,7 @@ class LengthOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.lang[self.term].partial_eval()
-        if is_op(term, Literal):
+        if is_literal(term):
             if is_text(term.value):
                 return self.lang[Literal(len(term.value))]
             else:
@@ -1427,7 +1437,7 @@ class FirstOp(Expression):
             return term
         elif term is NULL:
             return term
-        elif is_op(term, Literal):
+        elif is_literal(term):
             Log.error("not handled yet")
         else:
             return self.lang[FirstOp(term)]
@@ -1460,7 +1470,7 @@ class LastOp(Expression):
             return term
         elif term is NULL:
             return term
-        elif is_op(term, Literal):
+        elif is_literal(term):
             if is_list(term):
                 if len(term) > 0:
                     return term[-1]
@@ -1661,7 +1671,7 @@ class StringOp(Expression):
             return term.term.partial_eval()
         elif is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([self.lang[StringOp(t)].partial_eval() for t in term.terms])]
-        elif is_op(term, Literal):
+        elif is_literal(term):
             if term.type == STRING:
                 return term
             else:
@@ -1752,7 +1762,7 @@ class MaxOp(Expression):
             simple = t.partial_eval()
             if simple is NULL:
                 pass
-            elif is_op(simple, Literal):
+            elif is_literal(simple):
                 maximum = MAX([maximum, simple.value])
             else:
                 terms.append(simple)
@@ -1805,7 +1815,7 @@ class MinOp(Expression):
             simple = t.partial_eval()
             if is_op(simple, NullOp):
                 pass
-            elif is_op(simple, Literal):
+            elif is_literal(simple):
                 minimum = MIN([minimum, simple.value])
             else:
                 terms.append(simple)
@@ -1878,7 +1888,7 @@ class BaseMultiOp(Expression):
             simple = t.partial_eval()
             if simple is NULL:
                 pass
-            elif is_op(simple, Literal):
+            elif is_literal(simple):
                 if acc is None:
                     acc = simple.value
                 else:
@@ -1991,7 +2001,7 @@ class CoalesceOp(Expression):
             simple = self.lang[FirstOp(t)].partial_eval()
             if simple is NULL:
                 pass
-            elif is_op(simple, Literal):
+            elif is_literal(simple):
                 terms.append(simple)
                 break
             else:
@@ -2086,7 +2096,7 @@ class PrefixOp(Expression):
     def __data__(self):
         if not self.expr:
             return {"prefix": {}}
-        elif is_op(self.expr, Variable) and is_op(self.prefix, Literal):
+        elif is_op(self.expr, Variable) and is_literal(self.prefix):
             return {"prefix": {self.expr.var: self.prefix.value}}
         else:
             return {"prefix": [self.expr.__data__(), self.prefix.__data__()]}
@@ -2131,7 +2141,7 @@ class SuffixOp(Expression):
     def __data__(self):
         if self.expr is None:
             return {"suffix": {}}
-        elif is_op(self.expr, Variable) and is_op(self.suffix, Literal):
+        elif is_op(self.expr, Variable) and is_literal(self.suffix):
             return {"suffix": {self.expr.var: self.suffix.value}}
         else:
             return {"suffix": [self.expr.__data__(), self.suffix.__data__()]}
@@ -2158,7 +2168,7 @@ class SuffixOp(Expression):
     def partial_eval(self):
         if self.expr is None:
             return TRUE
-        if not is_op(self.suffix, Literal) and self.suffix.type == STRING:
+        if not is_literal(self.suffix) and self.suffix.type == STRING:
             Log.error("can only hanlde literal suffix ")
 
         return WhenOp(
@@ -2179,7 +2189,7 @@ class ConcatOp(Expression):
             self.terms = term
         self.separator = clauses.get("separator", Literal(""))
         self.default = clauses.get("default", NULL)
-        if not is_op(self.separator, Literal):
+        if not is_literal(self.separator):
             Log.error("Expecting a literal separator")
 
     @classmethod
@@ -2197,7 +2207,7 @@ class ConcatOp(Expression):
         )]
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.length, Literal):
+        if is_op(self.value, Variable) and is_literal(self.length):
             output = {"concat": {self.terms[0].var: self.terms[2].value}}
         else:
             output = {"concat": [t.__data__() for t in self.terms]}
@@ -2270,7 +2280,7 @@ class LeftOp(Expression):
             self.value, self.length = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.length, Literal):
+        if is_op(self.value, Variable) and is_literal(self.length):
             return {"left": {self.value.var: self.length.value}}
         else:
             return {"left": [self.value.__data__(), self.length.__data__()]}
@@ -2314,7 +2324,7 @@ class NotLeftOp(Expression):
             self.value, self.length = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.length, Literal):
+        if is_op(self.value, Variable) and is_literal(self.length):
             return {"not_left": {self.value.var: self.length.value}}
         else:
             return {"not_left": [self.value.__data__(), self.length.__data__()]}
@@ -2358,7 +2368,7 @@ class RightOp(Expression):
             self.value, self.length = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.length, Literal):
+        if is_op(self.value, Variable) and is_literal(self.length):
             return {"right": {self.value.var: self.length.value}}
         else:
             return {"right": [self.value.__data__(), self.length.__data__()]}
@@ -2402,7 +2412,7 @@ class NotRightOp(Expression):
             self.value, self.length = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.length, Literal):
+        if is_op(self.value, Variable) and is_literal(self.length):
             return {"not_right": {self.value.var: self.length.value}}
         else:
             return {"not_right": [self.value.__data__(), self.length.__data__()]}
@@ -2450,7 +2460,7 @@ class FindOp(Expression):
             self.start = ZERO
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.find, Literal):
+        if is_op(self.value, Variable) and is_literal(self.find):
             output = {
                 "find": {self.value.var, self.find.value},
                 "start": self.start.__data__()
@@ -2519,7 +2529,7 @@ class SplitOp(Expression):
         self.value, self.find = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.find, Literal):
+        if is_op(self.value, Variable) and is_literal(self.find):
             return {"split": {self.value.var, self.find.value}}
         else:
             return {"split": [self.value.__data__(), self.find.__data__()]}
@@ -2562,7 +2572,7 @@ class BetweenOp(Expression):
         self.suffix = suffix
         self.default = default
         self.start = start
-        if is_op(self.prefix, Literal) and is_op(self.suffix, Literal):
+        if is_literal(self.prefix) and is_literal(self.suffix):
             pass
         else:
             Log.error("Expecting literal prefix and suffix only")
@@ -2606,7 +2616,7 @@ class BetweenOp(Expression):
         )
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.prefix, Literal) and is_op(self.suffix, Literal):
+        if is_op(self.value, Variable) and is_literal(self.prefix) and is_literal(self.suffix):
             output = wrap({"between": {self.value.var: [self.prefix.value, self.suffix.value]}})
         else:
             output = wrap({"between": [self.value.__data__(), self.prefix.__data__(), self.suffix.__data__()]})
@@ -2673,7 +2683,7 @@ class InOp(Expression):
         self.value, self.superset = term
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_op(self.superset, Literal):
+        if is_op(self.value, Variable) and is_literal(self.superset):
             return {"in": {self.value.var: self.superset.value}}
         else:
             return {"in": [self.value.__data__(), self.superset.__data__()]}
@@ -2695,7 +2705,7 @@ class InOp(Expression):
         superset = self.superset.partial_eval()
         if superset is NULL:
             return FALSE
-        elif is_op(value, Literal) and is_op(superset, Literal):
+        elif is_literal(value) and is_literal(superset):
             return Literal(self())
         else:
             return self

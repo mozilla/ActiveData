@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from mo_future import is_text, is_binary
 from copy import copy
 
-from mo_dots import Data, is_data, join_field, set_default, split_field, wrap
+from mo_dots import Data, is_data, join_field, set_default, split_field, wrap, is_many
 from mo_future import generator_types, text_type
 from mo_logs import Log
 
@@ -64,7 +64,7 @@ class Container(object):
             return frum
         elif isinstance(frum, _Query):
             return _run(frum)
-        elif isinstance(frum, (list, set) + generator_types):
+        elif is_many(frum):
             return _ListContainer(frum)
         elif is_text(frum):
             # USE DEFAULT STORAGE TO FIND Container

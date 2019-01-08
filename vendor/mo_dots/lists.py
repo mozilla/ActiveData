@@ -13,7 +13,7 @@ from copy import deepcopy
 
 from mo_dots import CLASS, coalesce, unwrap, wrap
 from mo_dots.nones import Null
-from mo_future import text_type
+from mo_future import text_type, generator_types
 
 LIST = text_type("list")
 
@@ -284,17 +284,21 @@ class FlatList(list):
 
 FlatList.EMPTY = Null
 
-
-LIST_TYPES = (list, FlatList)
-CONTAINER_TYPES = (list, FlatList, set)
-SEQUENCE_TYPES = (list, FlatList, tuple)
+list_types = (list, FlatList)
+container_types = (list, FlatList, set)
+sequence_types = (list, FlatList, tuple)
+many_types = tuple(set(list_types + container_types + sequence_types + generator_types))
 
 
 def is_list(l):
-    return l.__class__ in LIST_TYPES
+    return l.__class__ in list_types
 
 def is_container(l):
-    return l.__class__ in CONTAINER_TYPES
+    return l.__class__ in container_types
 
 def is_sequence(l):
-    return l.__class__ in SEQUENCE_TYPES
+    return l.__class__ in sequence_types
+
+def is_many(l):
+    return l.__class__ in many_types
+

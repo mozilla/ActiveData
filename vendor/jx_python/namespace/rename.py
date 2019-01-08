@@ -16,7 +16,7 @@ from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
 from jx_base.utils import is_op
 from jx_python.namespace import Namespace, convert_list
-from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap
+from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap, is_many
 from mo_future import is_text
 from mo_logs import Log
 from mo_math import is_number
@@ -64,7 +64,7 @@ class Rename(Namespace):
                 # ASSUME SINGLE-CLAUSE EXPRESSION
                 k, v = expr.items()[0]
                 return converter_map.get(k, self._convert_bop)(self, k, v)
-        elif isinstance(expr, (list, set, tuple)):
+        elif is_many(expr):
             return wrap([self.convert(value) for value in expr])
         else:
             return expr

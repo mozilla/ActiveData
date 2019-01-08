@@ -14,8 +14,7 @@ import re
 
 from mo_dots import get_module, wrap
 from mo_future import is_text, text_type
-import mo_math
-from mo_math import MIN
+from mo_math import MIN, is_nan, is_number, abs, floor, round
 from mo_times.vendor.dateutil.relativedelta import relativedelta
 
 _Date = None
@@ -46,7 +45,7 @@ class Duration(object):
             else:
                 return None
 
-        if mo_math.is_number(value):
+        if is_number(value):
             output._milli = float(value) * 1000
             output.month = 0
             return output
@@ -56,7 +55,7 @@ class Duration(object):
             output.milli = value.milli
             output.month = value.month
             return output
-        elif isinstance(value, float) and mo_math.is_nan(value):
+        elif isinstance(value, float) and is_nan(value):
             return None
         else:
             from mo_logs import Log
@@ -125,7 +124,7 @@ class Duration(object):
             r = r - tod
 
             if m == 0 and r > (MILLI_VALUES.year / 3):
-                m = mo_math.floor(12 * self.milli / MILLI_VALUES.year)
+                m = floor(12 * self.milli / MILLI_VALUES.year)
                 r -= (m / 12) * MILLI_VALUES.year
             else:
                 r = r - (self.month * MILLI_VALUES.month)
@@ -134,9 +133,9 @@ class Duration(object):
                     Log.error("Do not know how to handle")
             r = MIN([29 / 30, (r + tod) / (MILLI_VALUES.day * 30)])
 
-            output = mo_math.floor(m / amount.month) + r
+            output = floor(m / amount.month) + r
             return output
-        elif mo_math.is_number(amount):
+        elif is_number(amount):
             output = Duration(0)
             output.milli = self.milli / amount
             output.month = self.month / amount
@@ -198,15 +197,15 @@ class Duration(object):
         output = Duration(0)
         if interval.month:
             if self.month:
-                output.month = int(mo_math.floor(self.month / interval.month) * interval.month)
+                output.month = int(floor(self.month / interval.month) * interval.month)
                 output.milli = output.month * MILLI_VALUES.month
                 return output
 
             # A MONTH OF DURATION IS BIGGER THAN A CANONICAL MONTH
-            output.month = int(mo_math.floor(self.milli * 12 / MILLI_VALUES["year"] / interval.month) * interval.month)
+            output.month = int(floor(self.milli * 12 / MILLI_VALUES["year"] / interval.month) * interval.month)
             output.milli = output.month * MILLI_VALUES.month
         else:
-            output.milli = mo_math.floor(self.milli / (interval.milli)) * (interval.milli)
+            output.milli = floor(self.milli / (interval.milli)) * (interval.milli)
         return output
 
     @property
@@ -237,31 +236,31 @@ class Duration(object):
         output = ""
         rest = (self.milli - (MILLI_VALUES.month * self.month)) # DO NOT INCLUDE THE MONTH'S MILLIS
         isNegative = (rest < 0)
-        rest = mo_math.abs(rest)
+        rest = abs(rest)
 
         # MILLI
         rem = rest % 1000
         if rem != 0:
             output = "+" + text_type(rem) + "milli" + output
-        rest = mo_math.floor(rest / 1000)
+        rest = floor(rest / 1000)
 
         # SECOND
         rem = rest % 60
         if rem != 0:
             output = "+" + text_type(rem) + "second" + output
-        rest = mo_math.floor(rest / 60)
+        rest = floor(rest / 60)
 
         # MINUTE
         rem = rest % 60
         if rem != 0:
             output = "+" + text_type(rem) + "minute" + output
-        rest = mo_math.floor(rest / 60)
+        rest = floor(rest / 60)
 
         # HOUR
         rem = rest % 24
         if rem != 0:
             output = "+" + text_type(rem) + "hour" + output
-        rest = mo_math.floor(rest / 24)
+        rest = floor(rest / 24)
 
         # DAY
         if (rest < 11 and rest != 7) or rest % 10 == 0:
@@ -269,7 +268,7 @@ class Duration(object):
             rest = 0
         else:
             rem = rest % 7
-            rest = mo_math.floor(rest / 7)
+            rest = floor(rest / 7)
 
         if rem != 0:
             output = "+" + text_type(rem) + "day" + output
@@ -284,7 +283,7 @@ class Duration(object):
         # MONTH AND YEAR
         if self.month:
             sign = "-" if self.month < 0 else "+"
-            month = mo_math.abs(self.month)
+            month = abs(self.month)
 
             if month <= 18 and month != 12:
                 output = sign + text_type(month) + "month" + output
@@ -292,12 +291,12 @@ class Duration(object):
                 m = month % 12
                 if m != 0:
                     output = sign + text_type(m) + "month" + output
-                y = mo_math.floor(month / 12)
+                y = floor(month / 12)
                 output = sign + text_type(y) + "year" + output
 
         if output[0] == "+":
             output = output[1::]
-        if output[0] == '1' and not mo_math.is_number(output[1]):
+        if output[0] == '1' and not is_number(output[1]):
             output = output[1::]
         return output
 
@@ -307,7 +306,7 @@ class Duration(object):
 
     def round(self, interval, decimal=0):
         output = self / interval
-        output = mo_math.round(output, decimal)
+        output = round(output, decimal)
         return output
 
 

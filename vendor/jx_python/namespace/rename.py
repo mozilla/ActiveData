@@ -9,16 +9,17 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from copy import copy
 
 from jx_base.dimensions import Dimension
 from jx_base.queries import is_variable_name
 from jx_base.query import QueryOp
+from jx_base.utils import is_op
 from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap
+from mo_future import is_text
 from mo_logs import Log
-import mo_math
+from mo_math import is_number
 from mo_times.dates import Date
 
 
@@ -41,7 +42,7 @@ class Rename(Namespace):
         """
         if expr is True or expr == None or expr is False:
             return expr
-        elif mo_math.is_number(expr):
+        elif is_number(expr):
             return expr
         elif expr == ".":
             return "."

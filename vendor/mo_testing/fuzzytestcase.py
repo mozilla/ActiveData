@@ -21,6 +21,7 @@ from mo_json import is_data
 from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template
 import mo_math
+from mo_math import is_number, log10
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -157,7 +158,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         # shortcut
         return
 
-    if not mo_math.is_number(expected):
+    if not is_number(expected):
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
         if is_list(expected) and len(expected) == 0 and test == None:
             return
@@ -179,7 +180,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
 
     if digits is not None:
         with suppress_exception:
-            diff = mo_math.log10(abs(test-expected))
+            diff = log10(abs(test-expected))
             if diff < digits:
                 return
 

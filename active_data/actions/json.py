@@ -18,7 +18,7 @@ from mo_dots import listwrap, unwraplist, wrap
 from mo_json import value2json
 from mo_logs import Except, Log
 from mo_logs.strings import unicode2utf8
-import mo_math
+from mo_math import is_number, is_integer
 from mo_threads.threads import RegisterThread
 from mo_times.timer import Timer
 from pyLibrary import convert
@@ -66,9 +66,9 @@ def scrub_args(args):
     for k, v in list(args.items()):
         vs = []
         for v in listwrap(v):
-            if mo_math.is_integer(v):
+            if is_integer(v):
                 vs.append(int(v))
-            elif mo_math.is_number(v):
+            elif is_number(v):
                 vs.append(float(v))
             else:
                 vs.append(v)

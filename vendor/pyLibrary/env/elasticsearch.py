@@ -23,7 +23,7 @@ from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8, utf82unicode
-import mo_math
+from mo_math import is_integer, is_number
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till
 from mo_times import Date, MINUTE, Timer
@@ -535,7 +535,7 @@ class Cluster(object):
 
     @override
     def __new__(cls, host, port=9200, kwargs=None):
-        if not mo_math.is_integer(port):
+        if not is_integer(port):
             Log.error("port must be integer")
         cluster = known_clusters.get((host, int(port)))
         if cluster:
@@ -1066,7 +1066,7 @@ def _scrub(r):
             if r == "":
                 return None
             return r
-        elif mo_math.is_number(r):
+        elif is_number(r):
             return value2number(r)
         elif is_data(r):
             if r.__class__ is Data:

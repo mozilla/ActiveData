@@ -7,7 +7,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from mo_dots import Data, Null, coalesce, is_list, wrap
+from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
 from mo_future import PY2, is_text, text_type, unichr, urlparse
 from mo_json import json2value, value2json
 from mo_logs import Log

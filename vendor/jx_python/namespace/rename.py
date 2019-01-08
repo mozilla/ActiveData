@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
 from jx_base.dimensions import Dimension
@@ -46,7 +47,7 @@ class Rename(Namespace):
             return "."
         elif is_variable_name(expr):
             return coalesce(self.dimensions[expr], expr)
-        elif isinstance(expr, text_type):
+        elif is_text(expr):
             Log.error("{{name|quote}} is not a valid variable name", name=expr)
         elif isinstance(expr, Date):
             return expr

@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import datetime
 import re
 
@@ -49,7 +50,7 @@ class Duration(object):
             output._milli = float(value) * 1000
             output.month = 0
             return output
-        elif isinstance(value, text_type):
+        elif is_text(value):
             return parse(value)
         elif isinstance(value, Duration):
             output.milli = value.milli

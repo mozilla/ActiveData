@@ -8,6 +8,7 @@
 #
 from __future__ import unicode_literals
 
+from mo_future import is_text, is_binary
 from activedata_etl import etl2path, key2etl
 
 from jx_python import jx

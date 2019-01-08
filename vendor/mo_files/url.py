@@ -62,7 +62,7 @@ class URL(object):
         return False
 
     def __truediv__(self, other):
-        if not isinstance(other, text_type):
+        if not is_text(other):
             Log.error(u"Expecting text path")
         output = self.__copy__()
         output.path = output.path.rstrip('/') + "/" + other.lstrip('/')
@@ -208,7 +208,7 @@ def value2url_param(value):
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
             for k, v in value_.leaves()
             ])
-    elif isinstance(value, text_type):
+    elif is_text(value):
         output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif isinstance(value, str):
         output = "".join(_map2url[c] for c in value)

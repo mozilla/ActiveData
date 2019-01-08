@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from datetime import datetime
 import subprocess
 
@@ -501,7 +502,7 @@ def execute_sql(
             stderr=subprocess.STDOUT,
             bufsize=-1
         )
-        if isinstance(sql, text_type):
+        if is_text(sql):
             sql = sql.encode("utf8")
         (output, _) = proc.communicate(sql)
     except Exception as e:
@@ -565,7 +566,7 @@ def quote_value(value):
             return SQL_NULL
         elif isinstance(value, SQL):
             return quote_sql(value.template, value.param)
-        elif isinstance(value, text_type):
+        elif is_text(value):
             return SQL("'" + "".join(ESCAPE_DCT.get(c, c) for c in value) + "'")
         elif is_data(value):
             return quote_value(json_encode(value))
@@ -586,12 +587,12 @@ def quote_value(value):
 def quote_column(column_name, table=None):
     if column_name == None:
         Log.error("missing column_name")
-    elif isinstance(column_name, text_type):
+    elif is_text(column_name):
         if table:
             return join_column(table, column_name)
         else:
             return SQL("`" + '`.`'.join(split_field(column_name)) + "`")  # MYSQL QUOTE OF COLUMN NAMES
-    elif isinstance(column_name, binary_type):
+    elif is_binary(column_name):
         return quote_column(column_name.decode('utf8'), table)
     elif is_list(column_name):
         if table:
@@ -612,7 +613,7 @@ def quote_sql(value, param=None):
                 return value
             param = {k: quote_sql(v) for k, v in param.items()}
             return SQL(expand_template(value, param))
-        elif isinstance(value, text_type):
+        elif is_text(value):
             return SQL(value)
         elif is_data(value):
             return quote_value(json_encode(value))
@@ -635,7 +636,7 @@ def quote_list(values):
 
 def utf8_to_unicode(v):
     try:
-        if isinstance(v, binary_type):
+        if is_binary(v):
             return v.decode("utf8")
         else:
             return v

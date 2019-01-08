@@ -7,6 +7,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import re
 
 from mo_future import text_type
@@ -20,7 +21,7 @@ def is_variable_name(value):
         Log.warning("not expected")
         return True
 
-    if not value or not isinstance(value, text_type):
+    if not value or not is_text(value):
         return False  # _a._b
     value = value.lstrip(".")
     if not value:

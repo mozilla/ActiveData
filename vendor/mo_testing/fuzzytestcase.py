@@ -9,6 +9,7 @@
 #
 from __future__ import unicode_literals
 
+from mo_future import is_text, is_binary
 import types
 import unittest
 
@@ -61,7 +62,7 @@ class FuzzyTestCase(unittest.TestCase):
             function(*args, **kwargs)
         except Exception as e:
             f = Except.wrap(e)
-            if isinstance(problem, text_type):
+            if is_text(problem):
                 if problem in f:
                     return
                 Log.error(
@@ -86,7 +87,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
             return
         elif test is expected:
             return
-        elif isinstance(expected, text_type):
+        elif is_text(expected):
             assertAlmostEqualValue(test, expected, msg=msg, digits=digits, places=places, delta=delta)
         elif isinstance(test, UniqueIndex):
             if test ^ expected:
@@ -97,7 +98,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
         elif is_data(expected):
             for k, v2 in expected.items():
-                if isinstance(k, text_type):
+                if is_text(k):
                     v1 = mo_dots.get_attr(test, literal_field(k))
                 else:
                     v1 = test[k]

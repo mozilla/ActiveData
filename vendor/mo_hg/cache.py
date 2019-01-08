@@ -9,6 +9,7 @@
 
 from __future__ import division, unicode_literals
 
+from mo_future import is_text, is_binary
 import json
 
 from flask import Response

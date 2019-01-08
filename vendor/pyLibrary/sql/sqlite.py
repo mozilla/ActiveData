@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from collections import Mapping, namedtuple
 import os
 import re
@@ -495,7 +496,7 @@ def quote_column(column_name, table=None):
     if isinstance(column_name, SQL):
         return column_name
 
-    if not isinstance(column_name, text_type):
+    if not is_text(column_name):
         Log.error("expecting a name")
     if table != None:
         return SQL(" d" + quote(table) + "." + quote(column_name) + " ")
@@ -512,7 +513,7 @@ def quote_value(value):
         return SQL(text_type(value.unix))
     elif isinstance(value, Duration):
         return SQL(text_type(value.seconds))
-    elif isinstance(value, text_type):
+    elif is_text(value):
         return SQL("'" + value.replace("'", "''") + "'")
     elif value == None:
         return SQL_NULL

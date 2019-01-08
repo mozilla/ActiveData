@@ -18,6 +18,7 @@
 
 from __future__ import absolute_import, division
 
+from mo_future import is_text, is_binary
 from contextlib import closing
 from copy import copy
 from mmap import mmap
@@ -111,7 +112,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
         sess = session = sessions.Session()
 
     with closing(sess):
-        if PY2 and isinstance(url, text_type):
+        if PY2 and is_text(url):
             # httplib.py WILL **FREAK OUT** IF IT SEES ANY UNICODE
             url = url.encode('ascii')
 
@@ -175,13 +176,13 @@ if PY2:
         if headers is None:
             return
         for k, v in copy(headers).items():
-            if isinstance(k, text_type):
+            if is_text(k):
                 del headers[k]
-                if isinstance(v, text_type):
+                if is_text(v):
                     headers[k.encode('ascii')] = v.encode('ascii')
                 else:
                     headers[k.encode('ascii')] = v
-            elif isinstance(v, text_type):
+            elif is_text(v):
                 headers[k] = v.encode('ascii')
 else:
     def _to_ascii_dict(headers):

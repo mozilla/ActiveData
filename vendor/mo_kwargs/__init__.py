@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from mo_dots import get_logger, is_data, wrap, zip as dict_zip
 from mo_future import get_function_arguments, get_function_defaults, get_function_name, text_type
 from mo_logs import Except

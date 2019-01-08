@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT

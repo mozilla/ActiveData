@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
 from mo_dots import Data, is_data, join_field, set_default, split_field, wrap
@@ -65,7 +66,7 @@ class Container(object):
             return _run(frum)
         elif isinstance(frum, (list, set) + generator_types):
             return _ListContainer(frum)
-        elif isinstance(frum, text_type):
+        elif is_text(frum):
             # USE DEFAULT STORAGE TO FIND Container
             if not config.default.settings:
                 Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")

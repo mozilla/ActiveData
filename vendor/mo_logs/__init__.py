@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from datetime import datetime
 import os
 import platform
@@ -172,7 +173,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.note was expecting a unicode template")
 
         Log._annotate(
@@ -206,7 +207,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.warning was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
@@ -279,7 +280,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.warning was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
@@ -320,7 +321,7 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
-        if not isinstance(template, text_type):
+        if not is_text(template):
             sys.stderr.write(str("Log.error was expecting a unicode template"))
             Log.error("Log.error was expecting a unicode template")
 

@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from collections import Iterable, Mapping, Set
 
 from mo_dots import is_data, tuplewrap, unwrap, wrap

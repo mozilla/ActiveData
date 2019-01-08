@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from collections import namedtuple
 from types import FunctionType
 
@@ -198,7 +199,7 @@ class _FakeLock():
 
 def value2quote(value):
     # RETURN PRETTY PYTHON CODE FOR THE SAME
-    if isinstance(value, text_type):
+    if is_text(value):
         return mo_json.quote(value)
     else:
         return text_type(repr(value))

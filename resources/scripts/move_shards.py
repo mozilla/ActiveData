@@ -7,9 +7,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import
+from mo_future import is_text, is_binary
 from __future__ import division
+from mo_future import is_text, is_binary
 from __future__ import unicode_literals
 
+from mo_future import is_text, is_binary
 from mo_logs import Log
 from mo_dots import is_data
 from mo_dots import is_list

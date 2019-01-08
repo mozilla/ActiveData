@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from mo_dots import _setdefault, wrap
 from mo_dots.utils import CLASS, OBJ
 from mo_future import binary_type, text_type
@@ -153,7 +154,7 @@ class NullType(object):
     def __getitem__(self, key):
         if isinstance(key, slice):
             return Null
-        elif isinstance(key, binary_type):
+        elif is_binary(key):
             key = key.decode("utf8")
         elif isinstance(key, int):
             return NullType(self, key)

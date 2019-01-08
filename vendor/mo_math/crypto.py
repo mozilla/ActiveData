@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import base64
 
 from mo_dots import Data, get_module
@@ -26,10 +27,10 @@ def encrypt(text, _key, salt=None):
     RETURN {"salt":s, "length":l, "data":d} -> JSON -> UTF8
     """
 
-    if isinstance(text, text_type):
+    if is_text(text):
         encoding = 'utf8'
         data = bytearray(text.encode("utf8"))
-    elif isinstance(text, binary_type):
+    elif is_binary(text):
         encoding = None
         if PY2:
             data = bytearray(text)
@@ -38,7 +39,7 @@ def encrypt(text, _key, salt=None):
 
     if _key is None:
         Log.error("Expecting a key")
-    if isinstance(_key, binary_type):
+    if is_binary(_key):
         _key = bytearray(_key)
     if salt is None:
         salt = Random.bytes(16)

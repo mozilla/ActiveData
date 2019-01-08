@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 # FOR WINDOWS INSTALL OF psycopg2
 # http://stickpeople.com/projects/python/win-psycopg/2.6.0/psycopg2-2.6.0.win32-py2.7-pg9.4.1-release.exe
 import psycopg2
@@ -135,7 +136,7 @@ class Redshift(object):
         return output
 
     def quote_column(self, name):
-        if isinstance(name, text_type):
+        if is_text(name):
             return SQL('"' + name.replace('"', '""') + '"')
         return SQL(sql_iso((", ".join(self.quote_value(v) for v in name))))
 
@@ -146,7 +147,7 @@ class Redshift(object):
             json = value2json(value)
             return self.quote_value(json)
 
-        if isinstance(value, text_type) and len(value) > 256:
+        if is_text(value) and len(value) > 256:
             value = value[:256]
         return SQL(adapt(value))
 

@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from mo_future import PY3, text_type
 from mo_logs import Log
 import pyLibrary.sql
@@ -31,7 +32,7 @@ class SQL(text_type):
 
     def __add__(self, other):
         if not isinstance(other, SQL):
-            if isinstance(other, text_type) and all(c not in other for c in ('"', '\'', '`')):
+            if is_text(other) and all(c not in other for c in ('"', '\'', '`')):
                return SQL(self.sql + other)
             Log.error("Can only concat other SQL")
         else:
@@ -39,7 +40,7 @@ class SQL(text_type):
 
     def __radd__(self, other):
         if not isinstance(other, SQL):
-            if isinstance(other, text_type) and all(c not in other for c in ('"', '\'', '`')):
+            if is_text(other) and all(c not in other for c in ('"', '\'', '`')):
                 return SQL(other + self.sql)
             Log.error("Can only concat other SQL")
         else:

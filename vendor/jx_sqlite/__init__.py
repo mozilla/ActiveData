@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
 from jx_base import DataClass
@@ -42,7 +43,7 @@ def column_key(k, v):
         return None
     elif isinstance(v, bool):
         return k, "boolean"
-    elif isinstance(v, text_type):
+    elif is_text(v):
         return k, "string"
     elif is_list(v):
         return k, None
@@ -59,7 +60,7 @@ def get_type(v):
         return None
     elif isinstance(v, bool):
         return BOOLEAN
-    elif isinstance(v, text_type):
+    elif is_text(v):
         return STRING
     elif is_data(v):
         return OBJECT
@@ -95,7 +96,7 @@ def get_if_type(value, type):
 def is_type(value, type):
     if value == None:
         return False
-    elif isinstance(value, text_type) and type == "string":
+    elif is_text(value) and type == "string":
         return value
     elif is_list(value):
         return False

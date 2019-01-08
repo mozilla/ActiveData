@@ -8,6 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import sys
 
 from mo_dots import join_field, set_attr as mo_dots_set_attr, split_field, wrap

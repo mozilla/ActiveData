@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import json
 
 from pyparsing import ParseException, ParseResults
@@ -35,9 +36,9 @@ def parse(sql):
 
 
 def _scrub(result):
-    if isinstance(result, text_type):
+    if is_text(result):
         return result
-    elif isinstance(result, binary_type):
+    elif is_binary(result):
         return result.decode('utf8')
     elif isinstance(result, number_types):
         return result

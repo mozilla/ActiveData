@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import ast
 import base64
 import cgi
@@ -231,7 +232,7 @@ def value2string(value):
 
 def value2quote(value):
     # RETURN PRETTY PYTHON CODE FOR THE SAME
-    if isinstance(value, text_type):
+    if is_text(value):
         return string2quote(value)
     else:
         return text_type(repr(value))
@@ -247,7 +248,7 @@ string2regexp = re.escape
 
 
 def string2url(value):
-    if isinstance(value, text_type):
+    if is_text(value):
         return "".join([_map2url[c] for c in unicode2latin1(value)])
     elif isinstance(value, str):
         return "".join([_map2url[c] for c in value])
@@ -259,7 +260,7 @@ def string2url(value):
 #     """
 #     CONVERT URL QUERY PARAMETERS INTO DICT
 #     """
-#     if isinstance(param, text_type):
+#     if is_text(param):
 #         param = param.encode("ascii")
 #
 #     def _decode(v):
@@ -389,7 +390,7 @@ def bytes2base64(value):
 
 
 def bytes2sha1(value):
-    if isinstance(value, text_type):
+    if is_text(value):
         Log.error("can not convert unicode to sha1")
     sha = hashlib.sha1(value)
     return sha.hexdigest()
@@ -429,7 +430,7 @@ def value2number(v):
 
 
 def latin12unicode(value):
-    if isinstance(value, text_type):
+    if is_text(value):
         Log.error("can not convert unicode from latin1")
     try:
         return text_type(value.decode('latin1'))

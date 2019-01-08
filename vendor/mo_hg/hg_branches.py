@@ -8,6 +8,7 @@
 #
 from __future__ import unicode_literals
 
+from mo_future import is_text, is_binary
 from bs4 import BeautifulSoup
 
 import jx_elasticsearch

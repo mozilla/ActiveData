@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_base.container import Container
 from jx_base.query import _normalize_edge
 from jx_python.cubes.aggs import cube_aggs
@@ -228,7 +229,7 @@ class Cube(Container):
                     data={k: Matrix(values=c.__getitem__(coordinates)) for k, c in self.data.items()}
                 )
                 return output
-        elif isinstance(item, text_type):
+        elif is_text(item):
             # RETURN A VALUE CUBE
             if self.is_value:
                 if item != self.select.name:

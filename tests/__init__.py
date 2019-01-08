@@ -22,7 +22,7 @@ import jx_elasticsearch
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
-from mo_future import text_type
+from mo_future import is_text, text_type
 from mo_json import json2value, value2json
 import mo_json_config
 from mo_kwargs import override
@@ -198,7 +198,7 @@ class ESUtils(object):
             frum = subtest.query["from"]
             if frum == None:
                 subtest.query["from"] = _settings.index
-            elif isinstance(frum, text_type):
+            elif is_text(frum):
                 subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")

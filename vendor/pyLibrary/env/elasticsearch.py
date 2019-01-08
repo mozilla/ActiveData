@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import deepcopy
 import re
 
@@ -127,7 +128,7 @@ class Index(Features):
                 typed = kwargs.typed = False
 
         if not read_only:
-            if isinstance(id, text_type):
+            if is_text(id):
                 id_info = set_default({"id": id}, ID)
             else:
                 id_info = set_default(id, ID)
@@ -752,7 +753,7 @@ class Cluster(object):
 
         if schema == None:
             Log.error("Expecting a schema")
-        elif isinstance(schema, text_type):
+        elif is_text(schema):
             Log.error("Expecting a JSON schema")
 
         for k, m in items(schema.mappings):
@@ -812,7 +813,7 @@ class Cluster(object):
         return es
 
     def delete_index(self, index_name):
-        if not isinstance(index_name, text_type):
+        if not is_text(index_name):
             Log.error("expecting an index name")
 
         self.debug and Log.note("Deleting index {{index}}", index=index_name)
@@ -901,7 +902,7 @@ class Cluster(object):
                 pass
             elif is_data(data):
                 data = kwargs[DATA_KEY] = unicode2utf8(value2json(data))
-            elif isinstance(data, text_type):
+            elif is_text(data):
                 data = kwargs[DATA_KEY] = unicode2utf8(data)
             elif hasattr(data, str("__iter__")):
                 pass  # ASSUME THIS IS AN ITERATOR OVER BYTES
@@ -909,7 +910,7 @@ class Cluster(object):
                 Log.error("data must be utf8 encoded string")
 
             if self.debug:
-                if isinstance(data, binary_type):
+                if is_binary(data):
                     sample = kwargs.get(DATA_KEY, b"")[:300]
                     Log.note("{{url}}:\n{{data|indent}}", url=url, data=sample)
                 else:
@@ -1004,7 +1005,7 @@ class Cluster(object):
             pass
         elif is_data(data):
             kwargs[DATA_KEY] = unicode2utf8(value2json(data))
-        elif isinstance(kwargs[DATA_KEY], text_type):
+        elif is_text(kwargs[DATA_KEY]):
             pass
         else:
             Log.error("data must be utf8 encoded string")
@@ -1062,7 +1063,7 @@ def _scrub(r):
     try:
         if r == None:
             return None
-        elif isinstance(r, (text_type, binary_type)):
+        elif is_binary(r, (text_type)):
             if r == "":
                 return None
             return r

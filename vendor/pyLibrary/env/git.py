@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from mo_logs.exceptions import suppress_exception
 from mo_threads import Process
 from pyLibrary.meta import cache

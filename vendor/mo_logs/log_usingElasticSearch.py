@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from datetime import date, datetime
 import sys
 
@@ -138,7 +139,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
 def flatten_causal_chain(log_item, output=None):
     output = output or []
 
-    if isinstance(log_item, text_type):
+    if is_text(log_item):
         output.append({"template": log_item})
         return
 
@@ -164,9 +165,9 @@ def _deep_json_to_string(value, depth):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, number_types):
         return value
-    elif isinstance(value, text_type):
+    elif is_text(value):
         return strings.limit(value, LOG_STRING_LENGTH)
-    elif isinstance(value, binary_type):
+    elif is_binary(value):
         return strings.limit(bytes2base64(value), LOG_STRING_LENGTH)
     elif isinstance(value, (date, datetime)):
         return datetime2unix(value)

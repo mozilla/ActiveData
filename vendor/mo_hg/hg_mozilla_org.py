@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from collections import Mapping
 from copy import copy
 import re
@@ -304,7 +305,7 @@ class HgMozillaOrg(object):
         raw_revs = self._get_and_retry(url, branch)
         if "(not in 'served' subset)" in raw_revs:
             Log.error("Tried {{url}}. Hg denies it exists.", url=url)
-        if isinstance(raw_revs, text_type) and raw_revs.startswith("unknown revision '"):
+        if is_text(raw_revs) and raw_revs.startswith("unknown revision '"):
             Log.error("Tried {{url}}. Hg denies it exists.", url=url)
         if len(raw_revs) != 1:
             Log.error("do not know what to do")
@@ -655,7 +656,7 @@ def _get_url(url, branch, **kwargs):
 
 
 def parse_hg_date(date):
-    if isinstance(date, text_type):
+    if is_text(date):
         return Date(date)
     elif is_list(date):
         # FIRST IN TUPLE (timestamp, time_zone) TUPLE, WHERE timestamp IS GMT

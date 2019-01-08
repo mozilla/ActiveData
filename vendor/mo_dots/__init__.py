@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import sys
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
@@ -106,7 +107,7 @@ def split_field(field):
     """
     if field == "." or field==None:
         return []
-    elif isinstance(field, text_type) and "." in field:
+    elif is_text(field) and "." in field:
         if field.startswith(".."):
             remainder = field.lstrip(".")
             back = len(field) - len(remainder) - 1
@@ -478,7 +479,7 @@ def _wrap_leaves(value):
 
             if key == "":
                 get_logger().error("key is empty string.  Probably a bad idea")
-            if isinstance(key, binary_type):
+            if is_binary(key):
                 key = key.decode("utf8")
 
             d = output

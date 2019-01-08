@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_base.utils import is_op, value_compare
 
 _range = range
@@ -217,7 +218,7 @@ def tuple(data, field_name):
         field_name = field_name["value"]
 
     # SIMPLE PYTHON ITERABLE ASSUMED
-    if isinstance(field_name, text_type):
+    if is_text(field_name):
         if len(split_field(field_name)) == 1:
             return [(d[field_name], ) for d in data]
         else:
@@ -300,7 +301,7 @@ def select(data, field_name):
             field_name = field_name.value
 
     # SIMPLE PYTHON ITERABLE ASSUMED
-    if isinstance(field_name, text_type):
+    if is_text(field_name):
         path = split_field(field_name)
         if len(path) == 1:
             return FlatList([d[field_name] for d in data])
@@ -317,9 +318,9 @@ def select(data, field_name):
 
 
 def _select_a_field(field):
-    if isinstance(field, text_type):
+    if is_text(field):
         return wrap({"name": field, "value": split_field(field)})
-    elif isinstance(wrap(field).value, text_type):
+    elif is_text(wrap(field).value):
         field = wrap(field)
         return wrap({"name": field.name, "value": split_field(field.value)})
     else:
@@ -331,7 +332,7 @@ def _select(template, data, fields, depth):
     deep_path = []
     deep_fields = UniqueIndex(["name"])
     for d in data:
-        if isinstance(d, Data):
+        if is_data(d):
             Log.error("programmer error, _select can not handle Data")
 
         record = template.copy()
@@ -761,7 +762,7 @@ def drill_filter(esfilter, data):
             else:
                 return result
         elif filter.missing:
-            if isinstance(filter.missing, text_type):
+            if is_text(filter.missing):
                 field = filter["missing"]
             else:
                 field = filter["missing"]["field"]
@@ -791,7 +792,7 @@ def drill_filter(esfilter, data):
                 return result
 
         elif filter.exists:
-            if isinstance(filter["exists"], text_type):
+            if is_text(filter["exists"]):
                 field = filter["exists"]
             else:
                 field = filter["exists"]["field"]
@@ -875,7 +876,7 @@ def wrap_function(func):
     """
     RETURN A THREE-PARAMETER WINDOW FUNCTION TO MATCH
     """
-    if isinstance(func, text_type):
+    if is_text(func):
         return compile_expression(func)
 
     numarg = func.__code__.co_argcount

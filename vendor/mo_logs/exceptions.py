@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import sys
 
 from mo_dots import Data, Null, is_data, listwrap, unwraplist
@@ -107,7 +108,7 @@ class Except(Exception, LogItem):
         return expand_template(self.template, self.params)
 
     def __contains__(self, value):
-        if isinstance(value, text_type):
+        if is_text(value):
             if self.template.find(value) >= 0 or self.message.find(value) >= 0:
                 return True
 

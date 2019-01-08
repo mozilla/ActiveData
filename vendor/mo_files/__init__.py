@@ -284,7 +284,7 @@ class File(object):
                 pass
 
             for d in data:
-                if not isinstance(d, text_type):
+                if not is_text(d):
                     Log.error(u"Expecting unicode data only")
                 if self.key:
                     from mo_math.crypto import encrypt
@@ -318,7 +318,7 @@ class File(object):
         if not self.parent.exists:
             self.parent.create()
         with open(self._filename, "ab") as output_file:
-            if not isinstance(content, text_type):
+            if not is_text(content):
                 Log.error(u"expecting to write unicode only")
             output_file.write(content.encode(encoding))
             output_file.write(b"\n")

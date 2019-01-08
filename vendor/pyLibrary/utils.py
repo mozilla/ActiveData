@@ -8,6 +8,7 @@
 #
 from __future__ import division, unicode_literals
 
+from mo_future import is_text, is_binary
 import datetime
 
 from mo_dots import Null

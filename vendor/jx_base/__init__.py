@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from uuid import uuid4
 
 from jx_base.expressions import jx_expression
@@ -75,7 +76,7 @@ def DataClass(name, columns, constraint=None):
     columns = wrap(
         [
             {"name": c, "required": True, "nulls": False, "type": object}
-            if isinstance(c, text_type)
+            if is_text(c)
             else c
             for c in columns
         ]
@@ -91,6 +92,7 @@ def DataClass(name, columns, constraint=None):
     code = expand_template(
         """
 from __future__ import unicode_literals
+from mo_future import is_text, is_binary
 from collections import Mapping
 
 meta = None

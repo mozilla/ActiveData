@@ -17,7 +17,7 @@ from jx_base import container
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
-from mo_future import text_type
+from mo_future import is_text, text_type
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
@@ -133,7 +133,7 @@ def find_container(frum):
             Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
         namespace = ElasticsearchMetadata(container.config.default.settings)
 
-    if isinstance(frum, text_type):
+    if is_text(frum):
         if frum in container_cache:
             return container_cache[frum]
 

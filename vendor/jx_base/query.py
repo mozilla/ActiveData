@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from collections import Mapping
 from copy import copy
 
@@ -106,7 +107,7 @@ class QueryOp(QueryOp_):
         """
         def edges_get_all_vars(e):
             output = set()
-            if isinstance(e.value, text_type):
+            if is_text(e.value):
                 output.add(e.value)
             if is_expression(e.value):
                 output |= e.value.vars()
@@ -316,7 +317,7 @@ def _normalize_select(select, frum, schema=None):
     if not _Column:
         _late_import()
 
-    if isinstance(select, text_type):
+    if is_text(select):
         canonical = select = Data(value=select)
     else:
         select = wrap(select)
@@ -340,7 +341,7 @@ def _normalize_select(select, frum, schema=None):
             )
             for c in frum.get_leaves()
         ])
-    elif isinstance(select.value, text_type):
+    elif is_text(select.value):
         if select.value.endswith(".*"):
             canonical.name = coalesce(select.name, ".")
             value = jx_expression(select[:-2], schema=schema)
@@ -377,7 +378,7 @@ def _normalize_select_no_context(select, schema=None):
     if not _Column:
         _late_import()
 
-    if isinstance(select, text_type):
+    if is_text(select):
         select = Data(value=select)
     else:
         select = wrap(select)
@@ -389,7 +390,7 @@ def _normalize_select_no_context(select, schema=None):
             output.value = jx_expression(".", schema=schema)
         else:
             return Null
-    elif isinstance(select.value, text_type):
+    elif is_text(select.value):
         if select.value.endswith(".*"):
             name = select.value[:-2].lstrip(".")
             output.name = coalesce(select.name,  name)
@@ -437,7 +438,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 
     if not edge:
         Log.error("Edge has no value, or expression is empty")
-    elif isinstance(edge, text_type):
+    elif is_text(edge):
         if schema:
             leaves = unwraplist(list(schema.leaves(edge)))
             if not leaves or isinstance(leaves, (list, set)):
@@ -485,7 +486,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
             ]
     else:
         edge = wrap(edge)
-        if not edge.name and not isinstance(edge.value, text_type):
+        if not edge.name and not is_text(edge.value):
             Log.error("You must name compound and complex edges: {{edge}}", edge=edge)
 
         if isinstance(edge.value, (list, set)) and not edge.domain:
@@ -531,7 +532,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
     :param schema: for context
     :return: a normalized groupby
     """
-    if isinstance(edge, text_type):
+    if is_text(edge):
         if edge.endswith(".*"):
             prefix = edge[:-2]
             if schema:
@@ -568,7 +569,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
         if (edge.domain and edge.domain.type != "default") or edge.allowNulls != None:
             Log.error("groupby does not accept complicated domains")
 
-        if not edge.name and not isinstance(edge.value, text_type):
+        if not edge.name and not is_text(edge.value):
             Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
         return wrap([{
@@ -590,7 +591,7 @@ def _normalize_domain(domain=None, limit=None, schema=None):
             return DefaultDomain(type="default", limit=limit)
     elif isinstance(domain, Dimension):
         return domain.getDomain()
-    elif schema and isinstance(domain, text_type) and schema[domain]:
+    elif schema and is_text(domain) and schema[domain]:
         return schema[domain].getDomain()
     elif isinstance(domain, Domain):
         return domain
@@ -725,7 +726,7 @@ def _where_terms(master, where, schema):
                 if not edge:
                     output.append({"terms": {k: v}})
                 else:
-                    if isinstance(edge, text_type):
+                    if is_text(edge):
                         # DIRECT FIELD REFERENCE
                         return {"terms": {edge: v}}
                     try:
@@ -767,7 +768,7 @@ def _normalize_sort(sort=None):
 
     output = FlatList()
     for s in listwrap(sort):
-        if isinstance(s, text_type):
+        if is_text(s):
             output.append({"value": jx_expression(s), "sort": 1})
         elif is_expression(s):
             output.append({"value": s, "sort": 1})

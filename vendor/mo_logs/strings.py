@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import cgi
 from collections import Mapping
 from datetime import date, datetime as builtin_datetime, timedelta
@@ -463,7 +464,7 @@ def quote(value):
     """
     if value == None:
         output = ""
-    elif isinstance(value, text_type):
+    elif is_text(value):
         output = encode_basestring(value)
     else:
         output = _json.dumps(value)
@@ -528,7 +529,7 @@ def expand_template(template, value):
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
     value = wrap(value)
-    if isinstance(template, text_type):
+    if is_text(template):
         return _simple_expand(template, (value,))
 
     return _expand(template, (value,))
@@ -587,7 +588,7 @@ def _expand(template, seq):
     """
     seq IS TUPLE OF OBJECTS IN PATH ORDER INTO THE DATA TREE
     """
-    if isinstance(template, text_type):
+    if is_text(template):
         return _simple_expand(template, seq)
     elif is_data(template):
         # EXPAND LISTS OF ITEMS USING THIS FORM
@@ -676,7 +677,7 @@ def toString(val):
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
         return text_type(round(duration, 3)) + " seconds"
-    elif isinstance(val, text_type):
+    elif is_text(val):
         return val
     elif isinstance(val, str):
         try:
@@ -865,7 +866,7 @@ def utf82unicode(value):
         if not _Log:
             _late_import()
 
-        if not isinstance(value, binary_type):
+        if not is_binary(value):
             _Log.error("Can not convert {{type}} to unicode because it's not bytes",  type= type(value).__name__)
 
         e = _Except.wrap(e)

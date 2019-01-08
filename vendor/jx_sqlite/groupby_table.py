@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_python import jx
 from jx_sqlite import ColumnMapping, _make_column_name, get_column, quoted_PARENT, quoted_UID, sql_aggs
 from jx_sqlite.edges_table import EdgesTable

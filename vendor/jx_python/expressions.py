@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_base.expressions import (
     AndOp as AndOp_,
     BaseBinaryOp as BaseBinaryOp_,
@@ -93,7 +94,7 @@ def jx_expression_to_function(expr):
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
     if is_expression(expr):
-        if is_op(expr, ScriptOp) and not isinstance(expr.script, text_type):
+        if is_op(expr, ScriptOp) and not is_text(expr.script):
             return expr.script
         else:
             return compile_expression(Python[expr].to_python())

@@ -8,6 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
 context = copy(globals())
@@ -43,7 +44,7 @@ def command_loop(local):
 
             if "import" in command:
                 dummy={}
-                if isinstance(command['import'], text_type):
+                if is_text(command['import']):
                     exec ("from " + command['import'] + " import *", dummy, context)
                 else:
                     exec ("from " + command['import']['from'] + " import " + ",".join(listwrap(command['import']['vars'])), dummy, context)
@@ -59,7 +60,7 @@ def command_loop(local):
                 STDOUT.write(DONE)
                 please_stop.go()
             elif "exec" in command:
-                if not isinstance(command['exec'], text_type):
+                if not is_text(command['exec']):
                     Log.error("exec expects only text")
                 exec (command['exec'], context, local)
                 STDOUT.write(DONE)

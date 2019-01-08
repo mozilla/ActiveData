@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_python import jx
 from mo_dots import Data, ROOT_PATH, is_data, unwrap
 from mo_json import NESTED, OBJECT, json2value

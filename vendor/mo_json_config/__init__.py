@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import os
 
 import mo_dots
@@ -120,7 +121,7 @@ def _replace_ref(node, url):
 
         if not output:
             output = new_value
-        elif isinstance(output, text_type):
+        elif is_text(output):
             Log.error("Can not handle set_default({{output}},{{new_value}})", output=output, new_value=new_value)
         else:
             output = unwrap(set_default(output, new_value))

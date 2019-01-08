@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_python import jx
 from mo_dots import Data, Null, is_list, unwrap, wrap
 from mo_files import File

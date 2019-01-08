@@ -11,6 +11,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import sys
 from time import time
 
@@ -30,7 +31,7 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
     def __init__(self, stream):
         assert stream
 
-        if isinstance(stream, text_type):
+        if is_text(stream):
             name = stream
             stream = self.stream = eval(stream)
             if name.startswith("sys.") and PY3:
@@ -43,7 +44,7 @@ class StructuredLogger_usingThreadedStream(StructuredLogger):
         from mo_threads import Queue
 
         def utf8_appender(value):
-            if isinstance(value, text_type):
+            if is_text(value):
                 value = value.encode('utf8')
             self.stream.write(value)
 

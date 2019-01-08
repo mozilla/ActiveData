@@ -19,6 +19,7 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from decimal import Decimal
 import operator
 import re
@@ -105,7 +106,7 @@ def _jx_expression(expr, lang):
         return TRUE
     elif expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
         return Literal(expr)
-    elif isinstance(expr, text_type):
+    elif is_text(expr):
         return Variable(expr)
     elif isinstance(expr, (list, tuple)):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
@@ -317,7 +318,7 @@ class Variable(Expression):
     def __eq__(self, other):
         if is_op(other, Variable):
             return self.var == other.var
-        elif isinstance(other, text_type):
+        elif is_text(other):
             return self.var == other
         return False
 
@@ -437,14 +438,14 @@ class SelectOp(Expression):
         if not is_list(term):
             raise Log.error("Expecting a list")
         for t in term:
-            if isinstance(t, text_type):
+            if is_text(t):
                 if not is_variable_name(t):
                     Log.error("expecting {{value}} a simple dot-delimited path name", value=t)
                 terms.append({"name": t, "value": _jx_expression(t, cls.lang)})
             elif t.name == None:
                 if t.value == None:
                     Log.error("expecting select parameters to have name and value properties")
-                elif isinstance(t.value, text_type):
+                elif is_text(t.value):
                     if not is_variable_name(t):
                         Log.error("expecting {{value}} a simple dot-delimited path name", value=t.value)
                     else:
@@ -481,7 +482,7 @@ class ScriptOp(Expression):
 
     def __init__(self, script, data_type=OBJECT):
         Expression.__init__(self, None)
-        if not isinstance(script, text_type):
+        if not is_text(script):
             Log.error("expecting text of a script")
         self.simplified = True
         self.script = script
@@ -811,7 +812,7 @@ class DateOp(Literal):
     def __init__(self, term):
         if hasattr(self, "date"):
             return
-        if isinstance(term, text_type):
+        if is_text(term):
             self.date = term
         else:
             self.date = coalesce(term.get('literal'), term)
@@ -1392,7 +1393,7 @@ class LengthOp(Expression):
     def partial_eval(self):
         term = self.lang[self.term].partial_eval()
         if is_op(term, Literal):
-            if isinstance(term.value, text_type):
+            if is_text(term.value):
                 return self.lang[Literal(len(term.value))]
             else:
                 return NULL

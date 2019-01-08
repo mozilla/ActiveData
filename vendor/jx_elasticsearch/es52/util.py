@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from jx_base.expressions import Variable
 from jx_base.utils import is_op
 from mo_dots import wrap
@@ -25,7 +26,7 @@ def es_query_template(path):
     :return: (es_query, es_filters) TUPLE
     """
 
-    if not isinstance(path, text_type):
+    if not is_text(path):
         Log.error("expecting path to be a string")
 
     if path != ".":

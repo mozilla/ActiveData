@@ -31,7 +31,7 @@ from mo_json import EXISTS, NESTED, OBJECT
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-from mo_math import Math
+import mo_math
 from mo_times.timer import Timer
 
 DEBUG = False
@@ -240,7 +240,7 @@ def es_aggsop(es, frum, query):
                 key = canonical_name + " percentile"
                 if is_text(s.percentile) or s.percetile < 0 or 1 < s.percentile:
                     Log.error("Expecting percentile to be a float from 0.0 to 1.0")
-                percent = Math.round(s.percentile * 100, decimal=6)
+                percent = mo_math.round(s.percentile * 100, decimal=6)
 
                 acc.add(ExprAggs(key, {"percentiles": {
                     "field": first(columns).es_column,
@@ -368,7 +368,7 @@ def es_aggsop(es, frum, query):
         elif s.aggregate == "percentile":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
             key = literal_field(canonical_name + " percentile")
-            percent = Math.round(s.percentile * 100, decimal=6)
+            percent = mo_math.round(s.percentile * 100, decimal=6)
             nest.add(ExprAggs(key, {"percentiles": {
                 "script": text_type(Painless[s.value].to_es_script(schema)),
                 "percents": [percent]

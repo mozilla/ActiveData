@@ -8,7 +8,7 @@
 #
 
 from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
-from mo_future import PY2, is_text, text_type, unichr, urlparse
+from mo_future import PY2, is_text, text_type, unichr, urlparse, is_binary
 from mo_json import json2value, value2json
 from mo_logs import Log
 
@@ -208,7 +208,7 @@ def value2url_param(value):
             ])
     elif is_text(value):
         output = "".join(_map2url[c] for c in value.encode('utf8'))
-    elif isinstance(value, str):
+    elif is_binary(value):
         output = "".join(_map2url[c] for c in value)
     elif hasattr(value, "__iter__"):
         output = ",".join(value2url_param(v) for v in value)

@@ -21,7 +21,7 @@ from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, listwrap, wrap
 from mo_future import text_type
 from mo_logs import Log
-from mo_math import Math
+import mo_math
 
 DEFAULT_LIMIT = 10
 
@@ -72,7 +72,7 @@ class Normal(Namespace):
         output.sort = self._convert_sort(query.sort)
 
         output.limit = coalesce(query.limit, DEFAULT_LIMIT)
-        if not Math.is_integer(output.limit) or output.limit < 0:
+        if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")
 
         output.isLean = query.isLean
@@ -232,7 +232,7 @@ def normalize_sort(sort=None):
 
     output = FlatList()
     for s in listwrap(sort):
-        if is_text(s) or Math.is_integer(s):
+        if is_text(s) or mo_math.is_integer(s):
             output.append({"value": s, "sort": 1})
         elif not s.field and not s.value and s.sort==None:
             #ASSUME {name: sort} FORM

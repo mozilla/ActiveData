@@ -15,7 +15,7 @@ from unittest import skip, skipIf
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from mo_dots import wrap
-from mo_math import Math
+import mo_math
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -302,12 +302,12 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [
-                {"_id": Math.is_hex}
+                {"_id": mo_math.is_hex}
             ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["_id"],
-                "data": [[Math.is_hex]]
+                "data": [[mo_math.is_hex]]
             },
             "expecting_cube": {
                 "meta": {"format": "cube"},
@@ -318,7 +318,7 @@ class TestSetOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "_id": [Math.is_hex]
+                    "_id": [mo_math.is_hex]
                 }
             }
         }
@@ -339,7 +339,7 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    Math.is_hex
+                    mo_math.is_hex
                 ]
             }
         }
@@ -361,7 +361,7 @@ class TestSetOps(BaseTestCase):
                 "meta": {"format": "table"},
                 "header":["_id", "a"],
                 "data": [
-                    [Math.is_hex, "b"]
+                    [mo_math.is_hex, "b"]
                 ]
             }
         }

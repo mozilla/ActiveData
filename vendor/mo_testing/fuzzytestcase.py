@@ -20,7 +20,7 @@ from mo_future import is_text, zip_longest
 from mo_json import is_data
 from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template
-from mo_math import Math
+import mo_math
 
 
 class FuzzyTestCase(unittest.TestCase):
@@ -157,7 +157,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
         # shortcut
         return
 
-    if not Math.is_number(expected):
+    if not mo_math.is_number(expected):
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
         if is_list(expected) and len(expected) == 0 and test == None:
             return
@@ -179,7 +179,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
 
     if digits is not None:
         with suppress_exception:
-            diff = Math.log10(abs(test-expected))
+            diff = mo_math.log10(abs(test-expected))
             if diff < digits:
                 return
 
@@ -194,8 +194,8 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
             places = 15
 
         with suppress_exception:
-            diff = Math.log10(abs(test-expected))
-            if diff < Math.ceiling(Math.log10(abs(test)))-places:
+            diff = mo_math.log10(abs(test-expected))
+            if diff < mo_math.ceiling(mo_math.log10(abs(test)))-places:
                 return
 
         standardMsg = expand_template("{{test|json}} != {{expected|json}} within {{places}} places", locals())

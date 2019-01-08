@@ -21,7 +21,7 @@ from mo_dots import Null, NullType
 from mo_future import long, none_type, text_type, unichr
 from mo_logs import Except
 from mo_logs.strings import deformat
-from mo_math import Math
+import mo_math
 from mo_times.durations import Duration, MILLI_VALUES
 from mo_times.vendor.dateutil.parser import parse as parse_date
 
@@ -277,7 +277,7 @@ def parse(*args):
                     output = _unix2Date(a0 / 1000)
                 else:
                     output = _unix2Date(a0)
-            elif is_text(a0) and len(a0) in [9, 10, 12, 13] and Math.is_integer(a0):
+            elif is_text(a0) and len(a0) in [9, 10, 12, 13] and mo_math.is_integer(a0):
                 a0 = float(a0)
                 if a0 > 9999999999:    # WAY TOO BIG IF IT WAS A UNIX TIMESTAMP
                     output = _unix2Date(a0 / 1000)

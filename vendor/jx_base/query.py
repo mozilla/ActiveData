@@ -23,7 +23,8 @@ from mo_future import is_text, text_type
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
-from mo_math import AND, Math, UNION
+import mo_math
+from mo_math import AND, UNION, is_number
 
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
@@ -209,7 +210,7 @@ class QueryOp(QueryOp_):
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=Math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
+            limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
         )
 
         if query.select or isinstance(query.select, (Mapping, list)):
@@ -236,7 +237,7 @@ class QueryOp(QueryOp_):
         output.window = [_normalize_window(w) for w in listwrap(query.window)]
         output.having = None
         output.sort = _normalize_sort(query.sort)
-        if not Math.is_integer(output.limit) or output.limit < 0:
+        if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")
 
         output.isLean = query.isLean
@@ -403,6 +404,10 @@ def _normalize_select_no_context(select, schema=None):
             else:
                 output.name = coalesce(select.name, select.value.lstrip("."), select.aggregate)
                 output.value = jx_expression(select.value, schema=schema)
+    elif is_number(output.value):
+        if not output.name:
+            output.name = text_type(output.value)
+        output.value = jx_expression(select.value, schema=schema)
     else:
         output.value = jx_expression(select.value, schema=schema)
 
@@ -766,7 +771,7 @@ def _normalize_sort(sort=None):
             output.append({"value": jx_expression(s), "sort": 1})
         elif is_expression(s):
             output.append({"value": s, "sort": 1})
-        elif Math.is_integer(s):
+        elif mo_math.is_integer(s):
             output.append({"value": jx_expression({"offset": s}), "sort": 1})
         elif not s.sort and not s.value and all(d in sort_direction for d in s.values()):
             for v, d in s.items():

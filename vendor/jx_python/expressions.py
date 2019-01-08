@@ -382,7 +382,7 @@ class DivOp(DivOp_):
 class FloorOp(FloorOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
-            "Math.floor("
+            "mo_math.floor("
             + Python[self.lhs].to_python()
             + ", "
             + Python[self.rhs].to_python()

@@ -21,7 +21,7 @@ from mo_json import json2value, utf82unicode, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8
-from mo_math import Math
+import mo_math
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads.threads import RegisterThread
 from mo_times.timer import Timer
@@ -76,9 +76,9 @@ def sql_query(path):
                         except Exception as e:
                             Log.warning("Unexpected save problem", cause=e)
 
-                result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
-                result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
-                result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
+                result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
+                result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
+                result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
                 with Timer("jsonification", silent=True) as json_timer:
@@ -87,8 +87,8 @@ def sql_query(path):
             with Timer("post timer", silent=True):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\
-                                     b', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
+                timing_replacement = b'"total": ' + str(mo_math.round(query_timer.duration.seconds, digits=4)) +\
+                                     b', "jsonification": ' + str(mo_math.round(json_timer.duration.seconds, digits=4))
                 response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 

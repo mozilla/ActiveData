@@ -31,7 +31,7 @@ import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
-from mo_math import MAX, MIN, Math, UNION
+from mo_math import is_integer
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -344,7 +344,7 @@ class OffsetOp(Expression):
 
     def __init__(self, var):
         Expression.__init__(self, None)
-        if not Math.is_integer(var):
+        if not is_integer(var):
             Log.error("Expecting an integer")
         self.var = var
 

@@ -23,7 +23,7 @@ from mo_dots import listwrap, wrap, unwrap, FlatList
 from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
 from mo_future import generator_types, sort_using_cmp
 from mo_logs import Log
-from mo_math import Math
+import mo_math
 from mo_math import UNION, MIN
 from pyLibrary import convert
 from jx_base.container import Container
@@ -986,8 +986,8 @@ def intervals(_min, _max=None, size=1):
     if _max == None:
         _max = _min
         _min = 0
-    _max = int(Math.ceiling(_max))
-    _min = int(Math.floor(_min))
+    _max = int(mo_math.ceiling(_max))
+    _min = int(mo_math.floor(_min))
 
     output = ((x, min(x + size, _max)) for x in _range(_min, _max, size))
     return output

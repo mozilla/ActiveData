@@ -18,7 +18,7 @@ from jx_base.query import QueryOp
 from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap
 from mo_logs import Log
-from mo_math import Math
+import mo_math
 from mo_times.dates import Date
 
 
@@ -41,7 +41,7 @@ class Rename(Namespace):
         """
         if expr is True or expr == None or expr is False:
             return expr
-        elif Math.is_number(expr):
+        elif mo_math.is_number(expr):
             return expr
         elif expr == ".":
             return "."

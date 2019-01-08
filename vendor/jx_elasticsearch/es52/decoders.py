@@ -26,7 +26,8 @@ from mo_json import EXISTS, OBJECT, STRING
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-from mo_math import MAX, MIN, Math
+import mo_math
+from mo_math import MAX, MIN
 
 DEBUG = False
 
@@ -504,7 +505,7 @@ class ObjectDecoder(AggsDecoder):
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
-        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -574,7 +575,7 @@ class DefaultDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
-        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -665,7 +666,7 @@ class DimFieldListDecoder(SetDecoder):
         edge.allowNulls = False
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
-        self.domain.limit = Math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
         self.parts = list()
 
     def append_query(self, query_path, es_query):

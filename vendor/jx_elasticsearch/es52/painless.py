@@ -473,11 +473,11 @@ class FloorOp(FloorOp_):
         rhs = FirstOp(self.rhs).partial_eval()
 
         if rhs == ONE:
-            script = "(int)Math.floor(" + lhs.to_es_script(schema).expr + ")"
+            script = "(int)mo_math.floor(" + lhs.to_es_script(schema).expr + ")"
         else:
             rhs = rhs.to_es_script(schema)
             script = (
-                "Math.floor((" + lhs.to_es_script(schema).expr + ") / (" + rhs.expr + "))*(" + rhs.expr + ")"
+                "mo_math.floor((" + lhs.to_es_script(schema).expr + ") / (" + rhs.expr + "))*(" + rhs.expr + ")"
             )
 
         output = WhenOp(
@@ -663,7 +663,7 @@ class NotLeftOp(NotLeftOp_):
         expr = (
             "("
             + v
-            + ").substring((int)Math.max(0, (int)Math.min("
+            + ").substring((int)mo_math.max(0, (int)mo_math.min("
             + v
             + ".length(), "
             + l
@@ -954,7 +954,7 @@ class MaxOp(MaxOp_):
         acc = NumberOp(self.terms[-1]).partial_eval().to_es_script(schema).expr
         for t in reversed(self.terms[0:-1]):
             acc = (
-                "Math.max("
+                "mo_math.max("
                 + NumberOp(t).partial_eval().to_es_script(schema).expr
                 + " , "
                 + acc
@@ -974,7 +974,7 @@ class MinOp(MinOp_):
         acc = NumberOp(self.terms[-1]).partial_eval().to_es_script(schema).expr
         for t in reversed(self.terms[0:-1]):
             acc = (
-                "Math.min("
+                "mo_math.min("
                 + NumberOp(t).partial_eval().to_es_script(schema).expr
                 + " , "
                 + acc

@@ -17,7 +17,7 @@ from mo_collections.multiset import Multiset
 from mo_dots import FlatList
 from mo_logs import Log
 import mo_math
-from mo_math import MIN, Math, stats
+from mo_math import MIN, stats
 from mo_math.stats import ZeroMoment, ZeroMoment2Stats
 
 
@@ -143,7 +143,7 @@ class _Stats(WindowFunction):
         Log.error("Do not know how to handle")
 
     def end(self):
-        ignore = Math.ceiling(len(self.samples) * (1 - self.middle) / 2)
+        ignore = mo_math.ceiling(len(self.samples) * (1 - self.middle) / 2)
         if ignore * 2 >= len(self.samples):
             return stats.Stats()
         output = stats.Stats(samples=sorted(self.samples)[ignore:len(self.samples) - ignore:])

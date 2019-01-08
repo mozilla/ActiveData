@@ -18,7 +18,7 @@ from tempfile import NamedTemporaryFile, mkdtemp
 
 from mo_dots import Null, coalesce, get_module, is_list
 from mo_files.url import URL
-from mo_future import PY3, binary_type, text_type
+from mo_future import PY3, binary_type, text_type, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till

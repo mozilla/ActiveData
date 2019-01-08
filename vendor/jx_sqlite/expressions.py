@@ -18,7 +18,7 @@ from mo_dots import Null, ROOT_PATH, coalesce, join_field, listwrap, relative_fi
 from mo_future import text_type, is_text
 from mo_json import json2value, BOOLEAN, EXISTS, NESTED, OBJECT
 from mo_logs import Log
-from mo_math import Math
+import mo_math
 from pyLibrary import convert
 from pyLibrary.sql import SQL, SQL_AND, SQL_CASE, SQL_ELSE, SQL_EMPTY_STRING, SQL_END, SQL_FALSE, SQL_IS_NOT_NULL, SQL_IS_NULL, SQL_NULL, SQL_ONE, SQL_OR, SQL_THEN, SQL_TRUE, SQL_WHEN, SQL_ZERO, sql_coalesce, sql_concat, sql_iso, sql_list
 from pyLibrary.sql.sqlite import quote_column, quote_value
@@ -82,7 +82,7 @@ def to_sql(self, schema, not_null=False, boolean=False):
         return wrap([{"name": "."}])
     elif is_text(value):
         return wrap([{"name": ".", "sql": {"s": quote_value(value)}}])
-    elif Math.is_number(v):
+    elif mo_math.is_number(v):
         return wrap([{"name": ".", "sql": {"n": quote_value(value)}}])
     elif v in [True, False]:
         return wrap([{"name": ".", "sql": {"b": quote_value(value)}}])

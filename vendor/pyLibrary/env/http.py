@@ -35,7 +35,7 @@ from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8, utf82unicode
-from mo_math import Math
+import mo_math
 from mo_threads import Lock, Till
 from mo_times.durations import Duration
 from pyLibrary import convert
@@ -95,7 +95,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
         for remaining, u in jx.countdown(url):
             try:
                 response = request(method, u, retry=retry, **kwargs)
-                if Math.round(response.status_code, decimal=-2) not in [400, 500]:
+                if mo_math.round(response.status_code, decimal=-2) not in [400, 500]:
                     return response
                 if not remaining:
                     return response
@@ -202,7 +202,7 @@ def get_json(url, **kwargs):
         c = response.all_content
         return json2value(utf82unicode(c))
     except Exception as e:
-        if Math.round(response.status_code, decimal=-2) in [400, 500]:
+        if mo_math.round(response.status_code, decimal=-2) in [400, 500]:
             Log.error(u"Bad GET response: {{code}}", code=response.status_code)
         else:
             Log.error(u"Good GET requests, but bad JSON", cause=e)

@@ -25,7 +25,7 @@ from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import expand_template, indent, outdent
-from mo_math import Math
+import mo_math
 from mo_times import Date
 from pyLibrary.sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_alias, sql_iso, sql_list
 from pyLibrary.sql.sqlite import join_column
@@ -570,7 +570,7 @@ def quote_value(value):
             return SQL("'" + "".join(ESCAPE_DCT.get(c, c) for c in value) + "'")
         elif is_data(value):
             return quote_value(json_encode(value))
-        elif Math.is_number(value):
+        elif mo_math.is_number(value):
             return SQL(text_type(value))
         elif isinstance(value, datetime):
             return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S.%f") + "', '%Y%m%d%H%i%s.%f')")

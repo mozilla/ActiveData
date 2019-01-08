@@ -25,7 +25,7 @@ from jx_elasticsearch.es52.util import (
     pull_functions,
 )
 from jx_python.jx import value_compare
-from mo_dots import Data, Null, is_container, is_list, literal_field, set_default, wrap
+from mo_dots import Data, Null, is_container, is_list, literal_field, set_default, wrap, is_sequence
 from mo_future import first
 from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
@@ -468,16 +468,12 @@ class InOp(InOp_):
             var = col.es_column
 
             if col.jx_type == BOOLEAN:
-                if is_op(self.superset, Literal_) and not isinstance(
-                    self.superset.value, (list, tuple)
-                ):
+                if is_op(self.superset, Literal_) and not is_sequence(self.superset.value):
                     return {"term": {var: value2boolean(self.superset.value)}}
                 else:
                     return {"terms": {var: map(value2boolean, self.superset.value)}}
             else:
-                if is_op(self.superset, Literal_) and not isinstance(
-                    self.superset.value, (list, tuple)
-                ):
+                if is_op(self.superset, Literal_) and not is_sequence(self.superset.value):
                     return {"term": {var: self.superset.value}}
                 else:
                     return {"terms": {var: self.superset.value}}

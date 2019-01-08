@@ -7,10 +7,8 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from collections import Mapping
-
 from mo_dots import Data, Null, coalesce, is_list, wrap
-from mo_future import PY2, unichr, is_text, text_type, urlparse
+from mo_future import PY2, is_text, text_type, unichr, urlparse
 from mo_json import json2value, value2json
 from mo_logs import Log
 
@@ -202,7 +200,7 @@ def value2url_param(value):
     if value == None:
         Log.error("Can not encode None into a URL")
 
-    if isinstance(value, Mapping):
+    if is_data(value):
         value_ = wrap(value)
         output = "&".join([
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))

@@ -9,15 +9,14 @@
 #
 from __future__ import unicode_literals
 
-from mo_future import is_text, is_binary
 import types
 import unittest
 
 from jx_base.expressions import NULL
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import coalesce, is_list, literal_field, unwrap, wrap
-from mo_future import text_type, zip_longest
+from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, wrap
+from mo_future import is_text, zip_longest
 from mo_json import is_data
 from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template
@@ -103,7 +102,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                 else:
                     v1 = test[k]
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
-        elif isinstance(test, (set, list)) and isinstance(expected, set):
+        elif is_container(test) and isinstance(expected, set):
             test = set(wrap(t) for t in test)
             if len(test) != len(expected):
                 Log.error(

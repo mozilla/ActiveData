@@ -9,11 +9,9 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.domains import ALGEBRAIC, Domain, KNOWN
-from mo_dots import Data, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, wrap
 import mo_dots as dot
-from mo_dots.lists import FlatList
 from mo_logs import Log
 from mo_math import SUM
 from mo_times.timer import Timer

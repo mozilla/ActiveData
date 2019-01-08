@@ -10,10 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from copy import copy
 
-from mo_dots import get_attr, is_data, tuplewrap, unwrap, wrap
+from mo_dots import get_attr, is_data, is_sequence, tuplewrap, unwrap, wrap
 from mo_logs import Log
 
 
@@ -34,7 +33,7 @@ class Index(object):
 
     def __getitem__(self, key):
         try:
-            if isinstance(key, (list, tuple)) and len(key) < len(self._keys):
+            if is_sequence(key) and len(key) < len(self._keys):
                 # RETURN ANOTHER Index
                 raise NotImplementedError()
 
@@ -65,7 +64,7 @@ class Index(object):
 
     def _test_contains(self, key):
         try:
-            if isinstance(key, (list, tuple)) and len(key) < len(self._keys):
+            if is_sequence(key) and len(key) < len(self._keys):
                 # RETURN ANOTHER Index
                 length = len(key)
                 key = value2key(self._keys[0:length:], key)
@@ -158,13 +157,13 @@ def value2key(keys, val):
     if len(keys) == 1:
         if is_data(val):
             return get_attr(val, keys[0]),
-        elif isinstance(val, (list, tuple)):
+        elif is_sequence(val):
             return val[0],
         return val,
     else:
         if is_data(val):
             return tuple(val[k] for k in keys)
-        elif isinstance(val, (list, tuple)):
+        elif is_sequence(val):
             return tuple(val)
         else:
             Log.error("do not know what to do here")

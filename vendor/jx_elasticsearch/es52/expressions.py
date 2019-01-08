@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import itertools
 
 from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend)
@@ -26,7 +25,7 @@ from jx_elasticsearch.es52.util import (
     pull_functions,
 )
 from jx_python.jx import value_compare
-from mo_dots import Data, Null, is_list, literal_field, set_default, wrap
+from mo_dots import Data, Null, is_container, is_list, literal_field, set_default, wrap
 from mo_future import first
 from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
@@ -562,7 +561,7 @@ def _normalize(esfilter):
 
             output = []
             for a in terms:
-                if isinstance(a, (list, set)):
+                if is_container(a):
                     from mo_logs import Log
 
                     Log.error("and clause is not allowed a list inside a list")

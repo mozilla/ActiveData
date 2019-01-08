@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import gzip
 from tempfile import TemporaryFile
 import zipfile
@@ -20,7 +19,7 @@ from bs4 import BeautifulSoup
 
 from mo_dots import Data, Null, coalesce, unwrap, wrap
 from mo_files.url import value2url_param
-from mo_future import StringIO, text_type
+from mo_future import StringIO, is_binary, text_type
 from mo_kwargs import override
 from mo_logs import Except, Log
 from mo_logs.strings import unicode2utf8, utf82unicode
@@ -309,7 +308,7 @@ class Bucket(object):
             if len(value) > 20 * 1000 and not disable_zip:
                 self.bucket.delete_key(key + ".json")
                 self.bucket.delete_key(key + ".json.gz")
-                if isinstance(value, str):
+                if is_binary(value):
                     value = convert.bytes2zip(value)
                     key += ".json.gz"
                 else:
@@ -318,7 +317,7 @@ class Bucket(object):
 
             else:
                 self.bucket.delete_key(key + ".json.gz")
-                if isinstance(value, str):
+                if is_binary(value):
                     key += ".json"
                 else:
                     key += ".json"

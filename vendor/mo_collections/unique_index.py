@@ -10,10 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import Iterable, Mapping, Set
 
-from mo_dots import is_data, tuplewrap, unwrap, wrap
+from mo_dots import is_data, is_sequence, tuplewrap, unwrap, wrap
 from mo_dots.objects import datawrap
 from mo_future import PY2, iteritems
 from mo_logs import Log
@@ -176,14 +175,14 @@ def value2key(keys, val):
     if len(keys) == 1:
         if is_data(val):
             return val[keys[0]]
-        elif isinstance(val, (list, tuple)):
+        elif is_sequence(val):
             return val[0]
         else:
             return val
     else:
         if is_data(val):
             return datawrap({k: val[k] for k in keys})
-        elif isinstance(val, (list, tuple)):
+        elif is_sequence(val):
             return datawrap(dict(zip(keys, val)))
         else:
             Log.error("do not know what to do here")

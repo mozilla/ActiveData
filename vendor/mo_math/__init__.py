@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import math
 
 from mo_dots import Null, coalesce
@@ -386,7 +385,7 @@ def UNION(values, *others):
     for v in values:
         if values == None:
             continue
-        if isinstance(v, (list, set)):
+        if is_container(v):
             output.update(v)
             continue
         else:

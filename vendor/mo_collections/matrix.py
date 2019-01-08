@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from mo_dots import Data, Null, coalesce, get_module
 from mo_future import text_type, transpose, xrange
 from mo_logs import Log
@@ -58,7 +57,7 @@ class Matrix(object):
         return output
 
     def __getitem__(self, index):
-        if not isinstance(index, (list, tuple)):
+        if not is_sequence(index):
             if isinstance(index, slice):
                 sub = self.cube[index]
                 output = Matrix()

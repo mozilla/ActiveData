@@ -9,7 +9,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
@@ -105,10 +104,10 @@ def datawrap(v):
         m = Data()
         _set(m, SLOT, v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
-    elif type_ in (Data, DataObject, none_type):
-        return v
     elif type_ is list:
         return FlatList(v)
+    elif type_ in (Data, DataObject, none_type, FlatList, text_type, binary_type, int, float, Decimal, datetime, date, NullType, none_type):
+        return v
     elif type_ in generator_types:
         return (wrap(vv) for vv in v)
     elif isinstance(v, (text_type, binary_type, int, float, Decimal, datetime, date, FlatList, NullType, Mapping, none_type)):

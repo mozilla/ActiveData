@@ -9,13 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from datetime import date, datetime
 import sys
 
 from jx_python import jx
-from mo_dots import FlatList, coalesce, is_data, listwrap, wrap
-from mo_future import binary_type, number_types, text_type
+from mo_dots import coalesce, is_data, is_sequence, listwrap, wrap
+from mo_future import is_binary, is_text, number_types, text_type
 from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, strings
@@ -161,7 +160,7 @@ def _deep_json_to_string(value, depth):
             return strings.limit(value2json(value), LOG_STRING_LENGTH)
 
         return {k: _deep_json_to_string(v, depth - 1) for k, v in value.items()}
-    elif isinstance(value, (list, FlatList, tuple)):
+    elif is_sequence(value):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, number_types):
         return value

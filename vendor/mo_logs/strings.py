@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import cgi
 from collections import Mapping
 from datetime import date, datetime as builtin_datetime, timedelta
@@ -20,8 +19,8 @@ import math
 import re
 import string
 
-from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap
-from mo_future import PY3, binary_type, get_function_name, round as _round, text_type, transpose, xrange, zip_longest
+from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence
+from mo_future import PY3, get_function_name, is_binary, is_text, round as _round, text_type, transpose, xrange, zip_longest
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
 
 FORMATTERS = {}
@@ -627,7 +626,7 @@ def _simple_expand(template, seq):
         try:
             val = seq[-depth]
             if var:
-                if isinstance(val, (list, tuple)) and float(var) == _round(float(var), 0):
+                if is_sequence(val) and float(var) == _round(float(var), 0):
                     val = val[int(var)]
                 else:
                     val = val[var]

@@ -10,12 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from copy import copy
 import functools
 
 from mo_collections.multiset import Multiset
-from mo_dots.lists import FlatList
+from mo_dots import FlatList
 from mo_logs import Log
 import mo_math
 from mo_math import MIN, Math, stats

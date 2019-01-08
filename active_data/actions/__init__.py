@@ -17,6 +17,7 @@ from jx_base import container
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
+from mo_dots import is_container
 from mo_future import is_text, text_type
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
@@ -169,7 +170,7 @@ def find_container(frum):
     elif is_data(frum) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from jx_base.query import QueryOp
         return QueryOp.wrap(frum)
-    elif isinstance(frum, (list, set)):
+    elif is_container(frum):
         return ListContainer("test_list", frum)
     else:
         return frum

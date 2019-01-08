@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import math
 import sys
 
@@ -18,8 +17,7 @@ from jx_base.container import Container
 from jx_base.expressions import jx_expression
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.multiset import Multiset
-from mo_dots import Data, Null, listwrap
-from mo_dots.lists import FlatList
+from mo_dots import Data, FlatList, Null, listwrap
 from mo_future import binary_type, text_type
 from mo_logs import Log
 from mo_logs.exceptions import Except

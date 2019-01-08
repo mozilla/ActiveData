@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
@@ -21,8 +20,7 @@ from jx_elasticsearch.es52.util import MATCH_ALL, es_and, es_or, jx_sort_to_es_s
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import Data, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
-from mo_dots.lists import FlatList
+from mo_dots import Data, FlatList, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
 from mo_future import first, text_type, transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped

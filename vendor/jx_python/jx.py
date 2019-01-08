@@ -10,8 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.utils import is_op, value_compare
+from mo_dots import is_container
+from mo_future import is_text
 
 _range = range
 
@@ -20,7 +21,7 @@ from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by
 from mo_dots import listwrap, wrap, unwrap, FlatList
 from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
-from mo_future import text_type, generator_types, sort_using_cmp
+from mo_future import generator_types, sort_using_cmp
 from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MIN
@@ -586,7 +587,7 @@ def filter(data, where):
     if isinstance(data, Container):
         return data.filter(where)
 
-    if isinstance(data, (list, set)):
+    if is_container(data):
         temp = jx_expression_to_function(where)
         dd = wrap(data)
         return wrap([unwrap(d) for i, d in enumerate(data) if temp(wrap(d), i, dd)])

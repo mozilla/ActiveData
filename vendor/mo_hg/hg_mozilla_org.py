@@ -9,13 +9,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
-from collections import Mapping
 from copy import copy
 import re
 
 from mo_dots import Data, Null, coalesce, is_list, listwrap, set_default, unwraplist, wrap
-from mo_future import binary_type, text_type
+from mo_future import binary_type, is_text, text_type
 from mo_hg.parse import diff_to_json, diff_to_moves
 from mo_hg.repos.changesets import Changeset
 from mo_hg.repos.pushs import Push
@@ -701,7 +699,7 @@ def _copy_but(value, exclude):
     for k, v in value.items():
         e = exclude.get(k, {})
         if e!=True:
-            if isinstance(v, Mapping):
+            if is_data(v):
                 v2 = _copy_but(v, e)
                 if v2 != None:
                     output[k] = v2

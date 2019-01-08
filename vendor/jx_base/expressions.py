@@ -19,15 +19,14 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from decimal import Decimal
 import operator
 import re
 
 from jx_base.queries import get_property_name, is_variable_name
 from jx_base.utils import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
-from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap
-from mo_future import first, get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest
+from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap, is_sequence
+from mo_future import first, get_function_name, is_text, items as items_, text_type, utf8_json_encoder, zip_longest
 import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
@@ -108,7 +107,7 @@ def _jx_expression(expr, lang):
         return Literal(expr)
     elif is_text(expr):
         return Variable(expr)
-    elif isinstance(expr, (list, tuple)):
+    elif is_sequence(expr):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
 
     # expr = wrap(expr)
@@ -142,7 +141,7 @@ class Expression(BaseExpression):
 
     def __init__(self, args):
         self.simplified = False
-        if isinstance(args, (list, tuple)):
+        if is_sequence(args):
             if not all(is_expression(t) for t in args):
                 Log.error("Expecting an expression")
         elif is_data(args):
@@ -1123,7 +1122,7 @@ class NeOp(Expression):
 
     def __init__(self, terms):
         Expression.__init__(self, terms)
-        if isinstance(terms, (list, tuple)):
+        if is_sequence(terms):
             self.lhs, self.rhs = terms
         elif is_data(terms):
             self.rhs, self.lhs = terms.items()[0]
@@ -2665,7 +2664,7 @@ class InOp(Expression):
     def __new__(cls, terms):
         if is_op(terms[0], Variable) and is_op(terms[1], Literal):
             name, value = terms
-            if not isinstance(value.value, (list, tuple)):
+            if not is_sequence(value.value):
                 return cls.lang[EqOp([name, Literal([value.value])])]
         return object.__new__(cls)
 
@@ -2785,7 +2784,7 @@ class WhenOp(Expression):
 
 class CaseOp(Expression):
     def __init__(self, terms, **clauses):
-        if not isinstance(terms, (list, tuple)):
+        if not is_sequence(terms):
             Log.error("case expression requires a list of `when` sub-clauses")
         Expression.__init__(self, terms)
         if len(terms) == 0:

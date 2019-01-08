@@ -9,7 +9,6 @@
 
 from __future__ import absolute_import, absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import ast
 import base64
 import cgi
@@ -23,7 +22,7 @@ import re
 from tempfile import TemporaryFile
 
 from mo_dots import concat_field, unwrap, unwraplist, wrap
-from mo_future import HTMLParser, PY3, StringIO, long, text_type
+from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text_type
 import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -250,7 +249,7 @@ string2regexp = re.escape
 def string2url(value):
     if is_text(value):
         return "".join([_map2url[c] for c in unicode2latin1(value)])
-    elif isinstance(value, str):
+    elif is_binary(value):
         return "".join([_map2url[c] for c in value])
     else:
         Log.error("Expecting a string")

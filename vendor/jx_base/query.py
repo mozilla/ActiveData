@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import Mapping
 from copy import copy
 
@@ -19,9 +18,8 @@ from jx_base.domains import DefaultDomain, Domain, SetDomain
 from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, TRUE, Variable, jx_expression
 from jx_base.queries import is_variable_name
 from jx_base.utils import is_expression, is_op
-from mo_dots import Data, Null, coalesce, concat_field, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
-from mo_dots.lists import FlatList
-from mo_future import text_type
+from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
+from mo_future import is_text, text_type
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
@@ -72,7 +70,7 @@ class QueryOp(QueryOp_):
 
     def __data__(self):
         def select___data__():
-            if isinstance(self.select, list):
+            if is_list(self.select):
                 return [s.__data__() for s in self.select]
             else:
                 return self.select.__data__()
@@ -177,7 +175,7 @@ class QueryOp(QueryOp_):
                 edge.range.max = e.range.max.map(map_)
             return edge
 
-        if isinstance(self.select, list):
+        if is_list(self.select):
             select = wrap([map_select(s, map_) for s in self.select])
         else:
             select = map_select(self.select, map_)
@@ -405,10 +403,6 @@ def _normalize_select_no_context(select, schema=None):
             else:
                 output.name = coalesce(select.name, select.value.lstrip("."), select.aggregate)
                 output.value = jx_expression(select.value, schema=schema)
-    elif isinstance(select.value, (int, float)):
-        if not output.name:
-            output.name = text_type(select.value)
-        output.value = jx_expression(select.value, schema=schema)
     else:
         output.value = jx_expression(select.value, schema=schema)
 
@@ -441,7 +435,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
     elif is_text(edge):
         if schema:
             leaves = unwraplist(list(schema.leaves(edge)))
-            if not leaves or isinstance(leaves, (list, set)):
+            if not leaves or is_container(leaves):
                 return [
                     Data(
                         name=edge,
@@ -489,7 +483,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
         if not edge.name and not is_text(edge.value):
             Log.error("You must name compound and complex edges: {{edge}}", edge=edge)
 
-        if isinstance(edge.value, (list, set)) and not edge.domain:
+        if is_container(edge.value) and not edge.domain:
             # COMPLEX EDGE IS SHORT HAND
             domain = _normalize_domain(schema=schema)
             domain.dimension = Data(fields=edge.value)
@@ -694,7 +688,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
                 continue
             else:
                 Log.error("not expected")
-        elif isinstance(v, Mapping):
+        elif is_data(v):
             sub = _map_term_using_schema(master, path + [k], v, schema_edges[k])
             output.append(sub)
             continue
@@ -708,7 +702,7 @@ def _where_terms(master, where, schema):
     USE THE SCHEMA TO CONVERT DIMENSION NAMES TO ES FILTERS
     master - TOP LEVEL WHERE (FOR PLACING NESTED FILTERS)
     """
-    if isinstance(where, Mapping):
+    if is_data(where):
         if where.term:
             # MAP TERM
             try:
@@ -720,7 +714,7 @@ def _where_terms(master, where, schema):
             # MAP TERM
             output = FlatList()
             for k, v in where.terms.items():
-                if not isinstance(v, (list, set)):
+                if not is_container(v):
                     Log.error("terms filter expects list of values")
                 edge = schema.edges[k]
                 if not edge:
@@ -734,7 +728,7 @@ def _where_terms(master, where, schema):
                     except Exception as e:
                         Log.error("programmer error", e)
                     fields = domain.dimension.fields
-                    if isinstance(fields, Mapping):
+                    if is_data(fields):
                         or_agg = []
                         for vv in v:
                             and_agg = []

@@ -9,11 +9,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import sys
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
-from mo_future import binary_type, generator_types, text_type
+from mo_future import binary_type, generator_types, is_binary, is_text, text_type
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -588,11 +587,11 @@ def tuplewrap(value):
     INTENDED TO TURN lists INTO tuples FOR USE AS KEYS
     """
     if isinstance(value, (list, set, tuple) + generator_types):
-        return tuple(tuplewrap(v) if isinstance(v, (list, tuple)) else v for v in value)
+        return tuple(tuplewrap(v) if is_sequence(v) else v for v in value)
     return unwrap(value),
 
 
 from mo_dots.datas import Data, SLOT, MAPPING_TYPES, is_data
 from mo_dots.nones import Null, NullType
-from mo_dots.lists import FlatList, is_list
+from mo_dots.lists import FlatList, is_list, is_sequence, is_container
 from mo_dots.objects import DataObject

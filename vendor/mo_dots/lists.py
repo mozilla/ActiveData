@@ -9,7 +9,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from copy import deepcopy
 
 from mo_dots import CLASS, coalesce, unwrap, wrap
@@ -53,7 +52,7 @@ class FlatList(list):
         # list.__init__(self)
         if vals == None:
             self.list = []
-        elif isinstance(vals, FlatList):
+        elif vals.__class__ is FlatList:
             self.list = vals.list
         else:
             self.list = vals
@@ -287,9 +286,15 @@ FlatList.EMPTY = Null
 
 
 LIST_TYPES = (list, FlatList)
+CONTAINER_TYPES = (list, FlatList, set)
+SEQUENCE_TYPES = (list, FlatList, tuple)
 
 
 def is_list(l):
     return l.__class__ in LIST_TYPES
 
+def is_container(l):
+    return l.__class__ in CONTAINER_TYPES
 
+def is_sequence(l):
+    return l.__class__ in SEQUENCE_TYPES

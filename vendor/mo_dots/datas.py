@@ -9,15 +9,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import MutableMapping
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
-from mo_dots.lists import FlatList
+from mo_dots import  _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
 from mo_dots.utils import CLASS
-from mo_future import PY2, generator_types, iteritems, long, none_type, text_type
+from mo_future import PY2, generator_types, is_binary, iteritems, long, none_type, text_type
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -349,7 +347,7 @@ class _DictUsingSelf(dict):
     def __getitem__(self, key):
         if key == None:
             return Null
-        if isinstance(key, str):
+        if is_binary(key):
             key = key.decode("utf8")
 
         d=self
@@ -392,7 +390,7 @@ class _DictUsingSelf(dict):
             raise e
 
     def __getattr__(self, key):
-        if isinstance(key, str):
+        if is_binary(key):
             ukey = key.decode("utf8")
         else:
             ukey = key
@@ -404,7 +402,7 @@ class _DictUsingSelf(dict):
         return wrap(o)
 
     def __setattr__(self, key, value):
-        if isinstance(key, str):
+        if is_binary(key):
             ukey = key.decode("utf8")
         else:
             ukey = key
@@ -494,7 +492,7 @@ class _DictUsingSelf(dict):
         return wrap(dict.__deepcopy__(self, memo))
 
     def __delitem__(self, key):
-        if isinstance(key, str):
+        if is_binary(key):
             key = key.decode("utf8")
 
         if key.find(".") == -1:
@@ -600,5 +598,5 @@ def is_data(d):
 
 
 from mo_dots.nones import Null, NullType
-from mo_dots.lists import is_list
+from mo_dots.lists import is_list, FlatList
 from mo_dots import unwrap, wrap

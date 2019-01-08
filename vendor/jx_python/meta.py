@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import Mapping
 from contextlib import contextmanager
 import sqlite3
@@ -19,7 +18,7 @@ from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, concat_field, is_data, is_list, join_field, listwrap, split_field, unwraplist, wrap
+from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, concat_field, is_container, is_data, is_list, join_field, listwrap, split_field, unwraplist, wrap
 from mo_files import File
 from mo_future import items, none_type, reduce, text_type
 from mo_json import (INTEGER, NUMBER, STRING, STRUCT, json2value, python_type_to_json_type, value2json)
@@ -589,7 +588,7 @@ def _get_schema_from_list(frum, table_name, parent, nested_path, columns):
                         nested_path=nested_path,
                     )
                     columns.add(column)
-                if isinstance(value, (list, set)):  # GET TYPE OF MULTIVALUE
+                if is_container(value):  # GET TYPE OF MULTIVALUE
                     v = list(value)
                     if len(v) == 0:
                         this_type = none_type.__name__

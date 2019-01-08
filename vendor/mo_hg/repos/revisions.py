@@ -7,13 +7,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from mo_files import File
-
+from mo_future import is_text, is_binary
 from mo_dots import Data
+from mo_files import File
 
 
 class Revision(Data):

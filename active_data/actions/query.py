@@ -6,23 +6,21 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import flask
 from flask import Response
 
 from active_data import record_request
-from active_data.actions import save_query, send_error, test_mode_wait, QUERY_TOO_LARGE, find_container
+from active_data.actions import QUERY_TOO_LARGE, find_container, save_query, send_error, test_mode_wait
 from jx_base.container import Container
 from jx_python import jx
 from mo_files import File
 from mo_future import binary_type
-from mo_json import value2json, json2value
-from mo_logs import Log, Except
+from mo_json import json2value, value2json
+from mo_logs import Except, Log
 from mo_logs.strings import unicode2utf8, utf82unicode
-from mo_math import Math
+import mo_math
 from mo_threads.threads import RegisterThread
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
@@ -73,9 +71,9 @@ def jx_query(path):
                         except Exception as e:
                             Log.warning("Unexpected save problem", cause=e)
 
-                result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
-                result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
-                result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
+                result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
+                result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
+                result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
                 with Timer("jsonification", silent=True) as json_timer:
@@ -85,8 +83,8 @@ def jx_query(path):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
                 timing_replacement = (
-                    b'"total":' + binary_type(Math.round(query_timer.duration.seconds, digits=4)) +
-                    b', "jsonification":' + binary_type(Math.round(json_timer.duration.seconds, digits=4))
+                    b'"total":' + binary_type(mo_math.round(query_timer.duration.seconds, digits=4)) +
+                    b', "jsonification":' + binary_type(mo_math.round(json_timer.duration.seconds, digits=4))
                 )
                 response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)

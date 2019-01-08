@@ -7,14 +7,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import importlib
 import sys
 
-from mo_future import PY2
+from mo_future import PY2, text_type
+
+OBJ = text_type("_obj")
+CLASS = text_type("__class__")
 
 _Log = None
 

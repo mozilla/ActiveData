@@ -6,31 +6,26 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 import flask
-from mo_threads.threads import RegisterThread
+from flask import Response
 
 from active_data import record_request
-from flask import Response
-from jx_python import jx
-from mo_dots import wrap, listwrap, unwraplist
-from mo_json import utf82unicode, json2value, value2json
-from mo_logs import Log
-from mo_logs.strings import unicode2utf8
-from mo_math import Math
-
-import moz_sql_parser
-from active_data.actions import save_query, send_error, test_mode_wait, find_container
+from active_data.actions import find_container, save_query, send_error, test_mode_wait
 from active_data.actions.query import BLANK, QUERY_SIZE_LIMIT
 from jx_base.container import Container
+from jx_python import jx
+from mo_dots import is_data, is_list, listwrap, unwraplist, wrap
+from mo_json import json2value, utf82unicode, value2json
+from mo_logs import Log
 from mo_logs.exceptions import Except
+from mo_logs.strings import unicode2utf8
+import mo_math
 from mo_testing.fuzzytestcase import assertAlmostEqual
+from mo_threads.threads import RegisterThread
 from mo_times.timer import Timer
+import moz_sql_parser
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
 
@@ -81,9 +76,9 @@ def sql_query(path):
                         except Exception as e:
                             Log.warning("Unexpected save problem", cause=e)
 
-                result.meta.timing.preamble = Math.round(preamble_timer.duration.seconds, digits=4)
-                result.meta.timing.translate = Math.round(translate_timer.duration.seconds, digits=4)
-                result.meta.timing.save = Math.round(save_timer.duration.seconds, digits=4)
+                result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
+                result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
+                result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
                 result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
                 with Timer("jsonification", silent=True) as json_timer:
@@ -92,8 +87,8 @@ def sql_query(path):
             with Timer("post timer", silent=True):
                 # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
                 # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-                timing_replacement = b'"total": ' + str(Math.round(query_timer.duration.seconds, digits=4)) +\
-                                     b', "jsonification": ' + str(Math.round(json_timer.duration.seconds, digits=4))
+                timing_replacement = b'"total": ' + str(mo_math.round(query_timer.duration.seconds, digits=4)) +\
+                                     b', "jsonification": ' + str(mo_math.round(json_timer.duration.seconds, digits=4))
                 response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
                 Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 
@@ -120,11 +115,11 @@ def parse_sql(sql):
         val = s if s == '*' else s.value
 
         # EXTRACT KNOWN AGGREGATE FUNCTIONS
-        if isinstance(val, Mapping):
+        if is_data(val):
             for a in KNOWN_SQL_AGGREGATES:
                 value = val[a]
                 if value != None:
-                    if isinstance(value, list):
+                    if is_list(value):
                         # AGGREGATE WITH PARAMETERS  EG percentile(value, 0.90)
                         s.aggregate = a
                         s[a] = unwraplist(value[1::])
@@ -146,7 +141,7 @@ def parse_sql(sql):
                 pass
 
     # REMOVE THE REDUNDANT select
-    if isinstance(query.select, list):
+    if is_list(query.select):
         for r in redundant_select:
             query.select.remove(r)
     elif query.select and redundant_select:

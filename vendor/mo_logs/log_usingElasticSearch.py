@@ -7,26 +7,22 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import sys
-from collections import Mapping
 from datetime import date, datetime
-
-from mo_math.randoms import Random
+import sys
 
 from jx_python import jx
-from mo_dots import wrap, coalesce, FlatList, listwrap
-from mo_future import text_type, binary_type, number_types
-from mo_json import value2json, json2value, datetime2unix
+from mo_dots import coalesce, is_data, is_sequence, listwrap, wrap
+from mo_future import is_binary, is_text, number_types, text_type
+from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, strings
-from mo_logs.exceptions import suppress_exception, Except
+from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_threads import Thread, Queue, Till, THREAD_STOP
-from mo_times import MINUTE, Duration
+from mo_math.randoms import Random
+from mo_threads import Queue, THREAD_STOP, Thread, Till
+from mo_times import Duration, MINUTE
 from mo_times.dates import datetime2unix
 from pyLibrary.convert import bytes2base64
 from pyLibrary.env.elasticsearch import Cluster
@@ -55,11 +51,12 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         kwargs.timeout = Duration(coalesce(kwargs.timeout, "30second")).seconds
         kwargs.retry.times = coalesce(kwargs.retry.times, 3)
         kwargs.retry.sleep = Duration(coalesce(kwargs.retry.sleep, MINUTE)).seconds
-
         kwargs.host = Random.sample(listwrap(host), 1)[0]
 
+        schema = json2value(value2json(SCHEMA), leaves=True)
+        schema.mappings[type].properties["~N~"].type = "nested"
         self.es = Cluster(kwargs).get_or_create_index(
-            schema=json2value(value2json(SCHEMA), leaves=True),
+            schema=schema,
             limit_replicas=True,
             typed=True,
             kwargs=kwargs,
@@ -97,7 +94,12 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
                         try:
                             messages = flatten_causal_chain(message.value)
                             scrubbed.append(
-                                {"value": [_deep_json_to_string(m, depth=3) for m in messages]}
+                                {
+                                    "value": [
+                                        _deep_json_to_string(m, depth=3)
+                                        for m in messages
+                                    ]
+                                }
                             )
                         except Exception as e:
                             Log.warning("Problem adding to scrubbed list", cause=e)
@@ -136,7 +138,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
 def flatten_causal_chain(log_item, output=None):
     output = output or []
 
-    if isinstance(log_item, text_type):
+    if is_text(log_item):
         output.append({"template": log_item})
         return
 
@@ -153,18 +155,18 @@ def _deep_json_to_string(value, depth):
     :param depth: THE MAX DEPTH OF PROPERTIES, DEEPER WILL BE STRING-IFIED
     :return: FLATTER STRUCTURE
     """
-    if isinstance(value, Mapping):
+    if is_data(value):
         if depth == 0:
             return strings.limit(value2json(value), LOG_STRING_LENGTH)
 
         return {k: _deep_json_to_string(v, depth - 1) for k, v in value.items()}
-    elif isinstance(value, (list, FlatList, tuple)):
+    elif is_sequence(value):
         return strings.limit(value2json(value), LOG_STRING_LENGTH)
     elif isinstance(value, number_types):
         return value
-    elif isinstance(value, text_type):
+    elif is_text(value):
         return strings.limit(value, LOG_STRING_LENGTH)
-    elif isinstance(value, binary_type):
+    elif is_binary(value):
         return strings.limit(bytes2base64(value), LOG_STRING_LENGTH)
     elif isinstance(value, (date, datetime)):
         return datetime2unix(value)
@@ -179,6 +181,6 @@ SCHEMA = {
             "dynamic_templates": [
                 {"everything_else": {"match": "*", "mapping": {"index": False}}}
             ]
-        }
+        },
     },
 }

@@ -8,27 +8,25 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 import os
 import signal
-import subprocess
 from string import ascii_lowercase
+import subprocess
 
-import jx_elasticsearch
-import mo_json_config
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
+import jx_elasticsearch
 from jx_python import jx
-from mo_dots import wrap, coalesce, unwrap, listwrap, Data, literal_field
+from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
-from mo_future import text_type
-from mo_json import value2json, json2value
+from mo_future import is_text, text_type
+from mo_json import json2value, value2json
+import mo_json_config
 from mo_kwargs import override
-from mo_logs import Log, Except, constants
+from mo_logs import Except, Log, constants
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
@@ -200,7 +198,7 @@ class ESUtils(object):
             frum = subtest.query["from"]
             if frum == None:
                 subtest.query["from"] = _settings.index
-            elif isinstance(frum, text_type):
+            elif is_text(frum):
                 subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
@@ -320,13 +318,13 @@ def compare_to_expected(query, result, expect, places):
 
             sort_order = listwrap(coalesce(query.edges, query.groupby)) + data_columns
 
-            if isinstance(expect.data, list):
+            if is_list(expect.data):
                 try:
                     expect.data = jx.sort(expect.data, sort_order.name)
                 except Exception as _:
                     pass
 
-            if isinstance(result.data, list):
+            if is_list(result.data):
                 try:
                     result.data = jx.sort(result.data, sort_order.name)
                 except Exception as _:

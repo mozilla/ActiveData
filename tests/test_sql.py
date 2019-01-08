@@ -8,13 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
-from mo_dots import wrap, Data
+from mo_dots import Data, wrap
 from mo_files.url import URL
 from mo_json import json2value, utf82unicode
 from mo_logs import Log

@@ -8,14 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf, skip
+from unittest import skip
 
 from jx_base.expressions import NULL
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestSchemaMerging(BaseTestCase):

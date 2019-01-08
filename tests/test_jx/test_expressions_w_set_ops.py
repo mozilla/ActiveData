@@ -8,11 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from unittest import skip
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from mo_dots import wrap
@@ -635,6 +631,52 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_or_find(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": NULL},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"or": [{"find": {"v": "test"}}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "not test"}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_and_find(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": NULL},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"and": [{"find": {"v": "test"}}]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test"},
+                    {"v": "not test"}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
     def test_left_in_edge(self):
         test = {
             "data": [
@@ -695,19 +737,19 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_list": {
                 "data": [
-                    {"i": 0},
+                    {"i": 0, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 1, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 2, "a": NULL, "b": "a", "c": NULL, "d": "a"},
                     {"i": 3, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
-                    {"i": 4},
+                    {"i": 4, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 5, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 6, "a": NULL, "b": "a", "c": NULL, "d": "a"},
                     {"i": 7, "a": NULL, "b": "abcdefg", "c": NULL, "d": "abcdefg"},
-                    {"i": 8},
+                    {"i": 8, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 9, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 10, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 11, "a": "abc", "b": "defg", "c": "efg", "d": "abcd"},
-                    {"i": 12},
+                    {"i": 12, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 13, "a": NULL, "b": NULL, "c": NULL, "d": NULL},
                     {"i": 14, "a": "a", "b": NULL, "c": "a", "d": NULL},
                     {"i": 15, "a": "abcdefg", "b": NULL, "c": "abcdefg", "d": NULL}
@@ -806,8 +848,8 @@ class TestSetOps(BaseTestCase):
                     {"name": "a", "value": {"between": {"v": ["/this/", "/"]}}},
                     {"name": "c", "value": {"between": ["v", {"literal": "/this/"}, {"literal": "/"}]}},
                     {"name": "d", "value": {"between": {"v": [-1, 5]}}},
-                    {"name": "e", "value": {"between": {"v": [NULL, "/is"]}}},
-                    {"name": "f", "value": {"between": {"v": ["/is", NULL]}}}
+                    {"name": "e", "value": {"between": {"v": [None, "/is"]}}},
+                    {"name": "f", "value": {"between": {"v": ["/is", None]}}}
                 ],
                 "from": TEST_TABLE
             },
@@ -1160,7 +1202,6 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-
     def test_in_with_singlton(self):
         test = {
             "data": [
@@ -1189,6 +1230,33 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_floor_on_float(self):
+        test = {
+            "data": [
+                {"a": -0.1},
+                {"a": -0.0},
+                {"a": 0.1},
+                {"a": 10.9},
+                {"a": 11.0},
+                {"a": 11.1},
+                {"a": 11.9},
+                {"a": 0.1},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {"name": "a", "value": {"floor": {"a": 2}}}
+            },
+            "expecting_list":{
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": -2, "count": 1},
+                    {"a": 0, "count": 3},
+                    {"a": 10, "count": 4}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
 
 
 # TODO: {"left": {variable: sentinel}}

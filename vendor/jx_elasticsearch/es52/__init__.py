@@ -7,30 +7,27 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import itertools
-
-from mo_future import sort_using_key
-
-from jx_base import container, Column
+from mo_future import is_text, is_binary
+from jx_base import Column, container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
 from jx_base.query import QueryOp
+from jx_base.utils import is_op
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
-from jx_elasticsearch.es52.deep import is_deepop, es_deepop
-from jx_elasticsearch.es52.setop import is_setop, es_setop
+from jx_elasticsearch.es52.deep import es_deepop, is_deepop
+from jx_elasticsearch.es52.setop import es_setop, is_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, unwrap, coalesce, split_field, join_field, wrap, listwrap, startswith_field
-from mo_json import value2json, OBJECT, EXISTS
+from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
+from mo_future import sort_using_key
+from mo_json import EXISTS, OBJECT, value2json
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
-from mo_logs import Log, Except
+from mo_logs import Except, Log
 from mo_times import Date
 from pyLibrary.env import elasticsearch, http
 
@@ -180,7 +177,7 @@ class ES52(Container):
                     )
 
             frum = query["from"]
-            if isinstance(frum, QueryOp):
+            if is_op(frum, QueryOp):
                 result = self.query(frum)
                 q2 = query.copy()
                 q2.frum = result
@@ -201,7 +198,7 @@ class ES52(Container):
             Log.error("problem", e)
 
     def addDimension(self, dim):
-        if isinstance(dim, list):
+        if is_list(dim):
             Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)
         self._addDimension(dim, [])
 
@@ -238,7 +235,6 @@ class ES52(Container):
         es_index = self.es.cluster.get_index(read_only=False, alias=None, kwargs=self.es.settings)
 
         schema = table.schema
-        es_filter = jx_expression(command.where).to_esfilter(schema)
 
         # GET IDS OF DOCUMENTS
         query = {
@@ -275,6 +271,7 @@ class ES52(Container):
 
         # DELETE BY QUERY, IF NEEDED
         if "." in listwrap(command.clear):
+            es_filter = self.es.cluster.lang[jx_expression(command.where)].to_esfilter(schema)
             self.es.delete_record(es_filter)
             return
 

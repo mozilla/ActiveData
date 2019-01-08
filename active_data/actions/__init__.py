@@ -6,29 +6,25 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 import flask
 from flask import Response
-from future.utils import text_type
 
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
-from jx_elasticsearch.meta import ElasticsearchMetadata, TOO_OLD
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, split_field, set_default
-from mo_json import STRUCT
-from mo_json import value2json
+from mo_dots import coalesce, is_data, set_default, split_field
+from mo_dots import is_container
+from mo_future import is_text, text_type
+from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
 from mo_times.dates import Date
-from mo_times.durations import MINUTE, SECOND
+from mo_times.durations import MINUTE
 
 DEBUG = True
 QUERY_TOO_LARGE = "Query is too large"
@@ -138,7 +134,7 @@ def find_container(frum):
             Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
         namespace = ElasticsearchMetadata(container.config.default.settings)
 
-    if isinstance(frum, text_type):
+    if is_text(frum):
         if frum in container_cache:
             return container_cache[frum]
 
@@ -166,15 +162,15 @@ def find_container(frum):
         output = container.type2container[type_](settings)
         container_cache[frum] = output
         return output
-    elif isinstance(frum, Mapping) and frum.type and container.type2container[frum.type]:
+    elif is_data(frum) and frum.type and container.type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
             Log.error("Expecting from clause to have a 'type' property")
         return container.type2container[frum.type](frum.settings)
-    elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
+    elif is_data(frum) and (frum["from"] or is_container(frum["from"])):
         from jx_base.query import QueryOp
         return QueryOp.wrap(frum)
-    elif isinstance(frum, (list, set)):
+    elif is_container(frum):
         return ListContainer("test_list", frum)
     else:
         return frum

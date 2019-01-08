@@ -7,21 +7,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
+from datetime import datetime
 import os
 import platform
 import sys
-from collections import Mapping
-from datetime import datetime
 
-from mo_dots import coalesce, listwrap, wrap, unwraplist, FlatList, Data
-from mo_future import text_type, PY3
+from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, wrap
+from mo_future import PY3, text_type
 from mo_logs import constants
-from mo_logs.exceptions import Except, suppress_exception, LogItem
-from mo_logs.strings import indent
+from mo_logs.exceptions import Except, LogItem, suppress_exception
+from mo_logs.strings import CR, indent
 
 _Thread = None
 if PY3:
@@ -77,7 +75,7 @@ class Log(object):
             from mo_threads import profiles
             profiles.enable_profilers(settings.cprofile.filename)
 
-        if settings.profile is True or (isinstance(settings.profile, Mapping) and settings.profile.enabled):
+        if settings.profile is True or (is_data(settings.profile) and settings.profile.enabled):
             Log.error("REMOVED 2018-09-02, Activedata revision 3f30ff46f5971776f8ba18")
             # from mo_logs import profiles
             #
@@ -175,7 +173,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.note was expecting a unicode template")
 
         Log._annotate(
@@ -209,7 +207,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.warning was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
@@ -248,7 +246,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        format = ("*" * 80) + "\n" + indent(template, prefix="** ").strip() + "\n" + ("*" * 80)
+        format = ("*" * 80) + CR + indent(template, prefix="** ").strip() + CR + ("*" * 80)
         Log._annotate(
             LogItem(
                 context=exceptions.ALARM,
@@ -282,7 +280,7 @@ class Log(object):
         :return:
         """
         timestamp = datetime.utcnow()
-        if not isinstance(template, text_type):
+        if not is_text(template):
             Log.error("Log.warning was expecting a unicode template")
 
         if isinstance(default_params, BaseException):
@@ -323,7 +321,7 @@ class Log(object):
         :param more_params: *any more parameters (which will overwrite default_params)
         :return:
         """
-        if not isinstance(template, text_type):
+        if not is_text(template):
             sys.stderr.write(str("Log.error was expecting a unicode template"))
             Log.error("Log.error was expecting a unicode template")
 
@@ -336,7 +334,7 @@ class Log(object):
         add_to_trace = False
         if cause == None:
             causes = None
-        elif isinstance(cause, list):
+        elif is_list(cause):
             causes = []
             for c in listwrap(cause):  # CAN NOT USE LIST-COMPREHENSION IN PYTHON3 (EXTRA STACK DEPTH FROM THE IN-LINED GENERATOR)
                 causes.append(Except.wrap(c, stack_depth=1))
@@ -376,8 +374,8 @@ class Log(object):
             format = text_type(item)
         else:
             format = item.format.replace("{{", "{{params.")
-        if not format.startswith("\n") and format.find("\n") > -1:
-            format = "\n" + format
+        if not format.startswith(CR) and format.find(CR) > -1:
+            format = CR + format
 
         if cls.trace:
             log_format = item.format = "{{machine.name}} (pid {{machine.pid}}) - {{timestamp|datetime}} - {{thread.name}} - \"{{location.file}}:{{location.line}}\" - ({{location.method}}) - " + format

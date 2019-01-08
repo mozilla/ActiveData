@@ -7,17 +7,16 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.query import canonical_aggregates
-
+from mo_future import is_text, is_binary
 from jx_base.expressions import TupleOp
-from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch
+from jx_base.query import canonical_aggregates
+from jx_base.utils import is_op
+from jx_elasticsearch.es52.aggs import aggs_iterator, count_dim, format_dispatch
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
 from mo_future import sort_using_key
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -29,7 +28,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
 
     dims = []
     for e in new_edges:
-        if isinstance(e.value, TupleOp):
+        if is_op(e.value, TupleOp):
             e.allowNulls = False
 
         extra = 0 if e.allowNulls is False else 1
@@ -246,7 +245,7 @@ def format_list(aggs, es_query, query, decoders, select):
                 d[h] = r
             data.append(d)
         format = "list"
-    elif isinstance(query.select, list):
+    elif is_list(query.select):
         data = Data()
         for h, r in zip(header, table.data[0]):
             data[h] = r

@@ -9,9 +9,12 @@
 #
 
 from __future__ import absolute_import
+from mo_future import is_text, is_binary
 from __future__ import division
+from mo_future import is_text, is_binary
 from __future__ import unicode_literals
 
+from mo_future import is_text, is_binary
 import requests
 
 result = requests.post("http://activedata.allizom.org/query", json={

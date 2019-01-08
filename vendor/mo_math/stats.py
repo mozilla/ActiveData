@@ -8,19 +8,17 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import math
-import sys
 from math import sqrt
+import sys
 
+from mo_dots import Data, Null, coalesce
 from mo_future import text_type
-from mo_dots import coalesce, Data, Null
 from mo_logs import Log
-from mo_math import OR
-from mo_math import almost_equal
+from mo_math import OR, almost_equal
 from mo_math.vendor import strangman
 
 DEBUG = True

@@ -6,10 +6,9 @@
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
 import jx_base
@@ -17,13 +16,13 @@ from jx_base import Column, Facts
 from jx_base.queries import get_property_name
 # from jx_python.meta import ColumnList
 from jx_python.jx import first
-from jx_sqlite import GUID, untyped_column, UID, typed_column, quoted_GUID, quoted_UID, quoted_PARENT, quoted_ORDER
-from mo_dots import startswith_field, Null, relative_field, concat_field, set_default, wrap, tail_field, coalesce, listwrap
+from jx_sqlite import GUID, UID, quoted_GUID, quoted_ORDER, quoted_PARENT, quoted_UID, typed_column, untyped_column
+from mo_dots import Null, coalesce, concat_field, listwrap, relative_field, set_default, startswith_field, tail_field, wrap
 from mo_future import text_type
-from mo_json import STRING, OBJECT, EXISTS, STRUCT
+from mo_json import EXISTS, INTEGER, NUMBER, OBJECT, STRING, STRUCT
 from mo_logs import Log
-from pyLibrary.sql import SQL_FROM, sql_iso, sql_list, SQL_LIMIT, SQL_SELECT, SQL_ZERO, SQL_STAR
-from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type
+from pyLibrary.sql import SQL_FROM, SQL_LIMIT, SQL_SELECT, SQL_STAR, SQL_ZERO, sql_iso, sql_list
+from pyLibrary.sql.sqlite import json_type_to_sqlite_type, quote_column
 
 
 class Namespace(jx_base.Namespace):
@@ -66,7 +65,7 @@ class Namespace(jx_base.Namespace):
                 cname, ctype = untyped_column(name)
                 self._columns.add(Column(
                     name=cname,  # I THINK COLUMNS HAVE THIER FULL PATH
-                    jx_type=coalesce(ctype, {"TEXT": "string", "REAL": "number", "INTEGER": "integer"}.get(dtype)),
+                    jx_type=coalesce(ctype, {"TEXT": STRING, "REAL": NUMBER, "INTEGER": INTEGER}.get(dtype)),
                     nested_path=full_nested_path,
                     es_type=dtype,
                     es_column=name,
@@ -91,7 +90,7 @@ class Namespace(jx_base.Namespace):
             else:
                 c = Column(
                     name=u,
-                    jx_type="string",
+                    jx_type=STRING,
                     es_column=typed_column(u, "string"),
                     es_index=fact_name
                 )

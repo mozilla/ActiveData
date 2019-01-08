@@ -7,18 +7,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 
-from mo_dots import wrap, unwrap, Data, FlatList, NullType, get_attr, set_attr, SLOT, MAPPING_TYPES
-from mo_future import text_type, binary_type, get_function_defaults, get_function_arguments, none_type, generator_types
-
+from mo_dots import Data, FlatList, NullType, SLOT, get_attr, set_attr, unwrap, wrap
 from mo_dots.utils import CLASS, OBJ
+from mo_future import binary_type, generator_types, get_function_arguments, get_function_defaults, none_type, text_type
 
 _get = object.__getattribute__
 _set = object.__setattr__

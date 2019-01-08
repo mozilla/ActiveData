@@ -7,28 +7,24 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.dimensions import Dimension
-from jx_base.domains import SimpleSetDomain, DefaultDomain, PARTITION
-from jx_base.expressions import TupleOp, FirstOp, MissingOp, ExistsOp, LtOp, GteOp, GtOp, LteOp, LeavesOp, Variable
-from jx_base.query import MAX_LIMIT, DEFAULT_LIMIT
+from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
+from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
+from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from jx_base.utils import is_op
-from jx_elasticsearch.es52.es_query import NestedAggs, FilterAggs, Aggs, TermsAggs, RangeAggs, FiltersAggs
-from jx_elasticsearch.es52.expressions import NotOp, InOp, Literal, AndOp
+from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
+from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python import jx
-from mo_dots import wrap, set_default, coalesce, literal_field, Data, relative_field, concat_field
-from mo_future import text_type, transpose, first
-from mo_json import STRING, EXISTS, OBJECT
-from mo_json.typed_encoder import untype_path, NESTED_TYPE, EXISTS_TYPE
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap
+from mo_future import first, text_type, transpose
+from mo_json import EXISTS, OBJECT, STRING
+from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path
 from mo_logs import Log
-from mo_logs.strings import quote, expand_template
+from mo_logs.strings import expand_template, quote
 from mo_math import MAX, MIN, Math
 
 DEBUG = False
@@ -111,7 +107,7 @@ class AggsDecoder(object):
             # THIS domain IS FROM A dimension THAT IS A SIMPLE LIST OF fields
             # JUST PULL THE FIELDS
             fields = e.domain.dimension.fields
-            if isinstance(fields, Mapping):
+            if is_data(fields):
                 Log.error("No longer allowed: All objects are expressions")
             else:
                 return object.__new__(DimFieldListDecoder)

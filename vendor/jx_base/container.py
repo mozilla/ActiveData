@@ -7,15 +7,11 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
 
-from mo_dots import Data
-from mo_dots import set_default, split_field, wrap, join_field
+from mo_dots import Data, is_data, join_field, set_default, split_field, wrap
 from mo_future import generator_types, text_type
 from mo_logs import Log
 
@@ -83,7 +79,7 @@ class Container(object):
             )
             settings.type = None  # WE DO NOT WANT TO INFLUENCE THE TYPE BECAUSE NONE IS IN THE frum STRING ANYWAY
             return type2container["elasticsearch"](settings)
-        elif isinstance(frum, Mapping):
+        elif is_data(frum):
             frum = wrap(frum)
             if frum.type and type2container[frum.type]:
                 return type2container[frum.type](frum.settings)

@@ -8,23 +8,20 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 # FOR WINDOWS INSTALL OF psycopg2
 # http://stickpeople.com/projects/python/win-psycopg/2.6.0/psycopg2-2.6.0.win32-py2.7-pg9.4.1-release.exe
 import psycopg2
 from psycopg2.extensions import adapt
 
-from pyLibrary import convert
-from mo_logs.exceptions import suppress_exception
-from mo_logs import Log
-from mo_kwargs import override
 from jx_python import jx
-from pyLibrary.sql import SQL
+from mo_kwargs import override
+from mo_logs import Log
+from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template
 from mo_threads import Lock
+from pyLibrary.sql import SQL
 
 
 class Redshift(object):
@@ -145,7 +142,7 @@ class Redshift(object):
     def quote_value(self, value):
         if value ==None:
             return SQL_NULL
-        if isinstance(value, list):
+        if is_list(value):
             json = value2json(value)
             return self.quote_value(json)
 

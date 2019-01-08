@@ -5,14 +5,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.es52.expressions import ES52
-from mo_dots import startswith_field
+from mo_dots import is_data, is_list, startswith_field
 from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
@@ -101,7 +97,7 @@ class FilterAggs(Aggs):
     def __init__(self, name, filter, decoder):
         Aggs.__init__(self, name)
         self.filter = filter
-        if isinstance(filter, Mapping):
+        if is_data(filter):
             Log.error("programming error")
         self.decoders = [decoder] if decoder else []
 
@@ -153,7 +149,7 @@ class FiltersAggs(Aggs):
         Aggs.__init__(self, name)
         self.filters = filters
         self.decoders = [decoder] if decoder else []
-        if not isinstance(filters, list):
+        if not is_list(filters):
             Log.error("expecting a list")
 
     def __eq__(self, other):

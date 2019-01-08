@@ -9,16 +9,13 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import sys
-from collections import Mapping
 
-from mo_dots import Data, listwrap, unwraplist, Null
-from mo_future import text_type, PY3
-from mo_logs.strings import indent, expand_template, CR
+from mo_dots import Data, Null, is_data, listwrap, unwraplist
+from mo_future import PY3, text_type
+from mo_logs.strings import CR, expand_template, indent
 
 FATAL = "FATAL"
 ERROR = "ERROR"
@@ -85,7 +82,7 @@ class Except(Exception, LogItem):
             return Null
         elif isinstance(e, (list, Except)):
             return e
-        elif isinstance(e, Mapping):
+        elif is_data(e):
             e.cause = unwraplist([Except.wrap(c) for c in listwrap(e.cause)])
             return Except(**e)
         else:

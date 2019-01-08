@@ -15,10 +15,10 @@ from copy import copy
 import jx_base
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, Domain, SetDomain
-from jx_base.expressions import Expression, FALSE, LeavesOp, ScriptOp, TRUE, Variable, jx_expression, QueryOp as QueryOp_
+from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, TRUE, Variable, jx_expression
 from jx_base.queries import is_variable_name
-from jx_base.utils import is_op
-from mo_dots import Data, Null, coalesce, concat_field, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
+from jx_base.utils import is_expression, is_op
+from mo_dots import Data, Null, coalesce, concat_field, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
 from mo_dots.lists import FlatList
 from mo_future import text_type
 from mo_json import STRUCT
@@ -108,7 +108,7 @@ class QueryOp(QueryOp_):
             output = set()
             if isinstance(e.value, text_type):
                 output.add(e.value)
-            if isinstance(e.value, Expression):
+            if is_expression(e.value):
                 output |= e.value.vars()
             if e.domain.key:
                 output.add(e.domain.key)
@@ -286,14 +286,14 @@ canonical_aggregates = wrap({
 
 def _normalize_selects(selects, frum, schema=None, ):
     if frum == None or isinstance(frum, (list, set, text_type)):
-        if isinstance(selects, list):
+        if is_list(selects):
             if len(selects) == 0:
                 return Null
             else:
                 output = [_normalize_select_no_context(s, schema=schema) for s in selects]
         else:
             return _normalize_select_no_context(selects, schema=schema)
-    elif isinstance(selects, list):
+    elif is_list(selects):
         output = [ss for s in selects for ss in _normalize_select(s, frum=frum, schema=schema)]
     else:
         output = _normalize_select(selects, frum, schema=schema)
@@ -458,7 +458,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                     dim=dim_index,
                     domain=_normalize_domain(domain=leaves, limit=limit, schema=schema)
                 )]
-            elif isinstance(leaves.fields, list) and len(leaves.fields) == 1:
+            elif is_list(leaves.fields) and len(leaves.fields) == 1:
                 return [Data(
                     name=leaves.name,
                     value=jx_expression(leaves.fields[0], schema=schema),
@@ -650,7 +650,7 @@ def _map_term_using_schema(master, path, term, schema_edges):
         if isinstance(dimension, Dimension):
             domain = dimension.getDomain()
             if dimension.fields:
-                if isinstance(dimension.fields, Mapping):
+                if is_data(dimension.fields):
                     # EXPECTING A TUPLE
                     for local_field, es_field in dimension.fields.items():
                         local_value = v[local_field]
@@ -743,7 +743,7 @@ def _where_terms(master, where, schema):
                                     and_agg.append({"term": {es_field: vvv}})
                             or_agg.append({"and": and_agg})
                         output.append({"or": or_agg})
-                    elif isinstance(fields, list) and len(fields) == 1 and is_variable_name(fields[0]):
+                    elif is_list(fields) and len(fields) == 1 and is_variable_name(fields[0]):
                         output.append({"terms": {fields[0]: v}})
                     elif domain.partitions:
                         output.append({"or": [domain.getPartByKey(vv).esfilter for vv in v]})
@@ -769,7 +769,7 @@ def _normalize_sort(sort=None):
     for s in listwrap(sort):
         if isinstance(s, text_type):
             output.append({"value": jx_expression(s), "sort": 1})
-        elif isinstance(s, Expression):
+        elif is_expression(s):
             output.append({"value": s, "sort": 1})
         elif Math.is_integer(s):
             output.append({"value": jx_expression({"offset": s}), "sort": 1})

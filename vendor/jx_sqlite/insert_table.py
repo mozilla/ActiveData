@@ -9,23 +9,20 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
 
 from jx_base.expressions import jx_expression
 from jx_python.meta import Column
-from jx_sqlite import typed_column, get_type, ORDER, UID, GUID, PARENT, get_if_type
+from jx_sqlite import GUID, ORDER, PARENT, UID, get_if_type, get_type, typed_column
 from jx_sqlite.base_table import BaseTable, generateGuid
-from mo_dots import listwrap, Data, wrap, Null, unwraplist, startswith_field, unwrap, concat_field, literal_field
+from mo_dots import Data, Null, concat_field, is_data, listwrap, literal_field, startswith_field, unwrap, unwraplist, wrap
 from mo_future import text_type
 from mo_json.typed_encoder import STRUCT
 from mo_logs import Log
-from pyLibrary.sql import SQL_AND, SQL_UNION_ALL, SQL_INNER_JOIN, SQL_WHERE, SQL_FROM, SQL_SELECT, SQL_NULL, sql_list, sql_iso, SQL_TRUE
-from pyLibrary.sql.sqlite import quote_value, quote_column, join_column
+from pyLibrary.sql import SQL_AND, SQL_FROM, SQL_INNER_JOIN, SQL_NULL, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, sql_iso, sql_list
+from pyLibrary.sql.sqlite import join_column, quote_column, quote_value
 
 
 class InsertTable(BaseTable):
@@ -244,7 +241,7 @@ class InsertTable(BaseTable):
                 row = {GUID: guid, UID: uid, PARENT: parent_id, ORDER: order}
                 insertion.rows.append(row)
 
-            if not isinstance(data, Mapping):
+            if not is_data(data):
                 data = {".": data}
             for k, v in data.items():
                 insertion = doc_collection[nested_path[0]]

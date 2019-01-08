@@ -7,16 +7,14 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from collections import namedtuple
 from types import FunctionType
 
+from mo_dots import Null, _get_attr, set_default
+from mo_future import get_function_arguments, get_function_name, text_type
 import mo_json
-from mo_dots import set_default, _get_attr, Null
-from mo_future import text_type, get_function_arguments, get_function_name
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_math.randoms import Random

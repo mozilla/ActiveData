@@ -6,14 +6,11 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import hashlib
 
 from flask import Response
-from mo_threads.threads import RegisterThread
 
 import jx_elasticsearch
 from jx_python.containers.cube import Cube
@@ -24,6 +21,7 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
+from mo_threads.threads import RegisterThread
 from mo_times.dates import Date
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster

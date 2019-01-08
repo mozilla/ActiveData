@@ -8,17 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from mo_logs import Log
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from mo_dots import wrap
+from mo_logs import Log
 from mo_times.dates import Date
-from mo_times.durations import WEEK, DAY
+from mo_times.durations import DAY, WEEK
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 TODAY = Date.today()

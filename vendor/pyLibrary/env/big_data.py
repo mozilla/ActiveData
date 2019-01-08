@@ -6,23 +6,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import absolute_import, division, unicode_literals
 
 import gzip
-import struct
 from io import BytesIO
+import struct
 from tempfile import TemporaryFile
+import time
 import zipfile
 import zlib
 
-import time
-
-from mo_future import text_type, PY3, long
-
-from mo_logs.exceptions import suppress_exception
+from mo_future import PY3, long, text_type
 from mo_logs import Log
+from mo_logs.exceptions import suppress_exception
 from mo_math import Math
 
 # LIBRARY TO DEAL WITH BIG DATA ARRAYS AS ITERATORS OVER (IR)REGULAR SIZED

@@ -7,19 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from uuid import uuid4
 
-from mo_dots import wrap, coalesce, listwrap
+from jx_base.expressions import jx_expression
+from jx_python.expressions import Literal, Python
+from mo_dots import coalesce, listwrap, wrap
 from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-from jx_base.expressions import jx_expression
-from jx_python.expressions import Python, Literal
 
 
 def generateGuid():

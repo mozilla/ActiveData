@@ -7,28 +7,24 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
 from jx_base.utils import is_op
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import split_expression_by_path, AndOp, ES52
+from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import Painless
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_and, es_or, MATCH_ALL
+from jx_elasticsearch.es52.util import MATCH_ALL, es_and, es_or, jx_sort_to_es_sort
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
+from mo_dots import Data, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
 from mo_dots.lists import FlatList
-from mo_future import transpose, text_type, first
+from mo_future import first, text_type, transpose
 from mo_json import NESTED
-from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
+from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
 from mo_math import AND, MAX
 from mo_times.timer import Timer
@@ -251,7 +247,7 @@ def accumulate_nested_doc(nested_path, expr=IDENTITY):
 
 def format_list(T, select, query=None):
     data = []
-    if isinstance(query.select, list):
+    if is_list(query.select):
         for row in T:
             r = Data()
             for s in select:
@@ -313,7 +309,7 @@ def format_table(T, select, query=None):
 
     header = [None] * num_columns
 
-    if isinstance(query.select, Mapping) and not is_op(query.select.value, LeavesOp):
+    if is_data(query.select) and not is_op(query.select.value, LeavesOp):
         for s in select:
             header[s.put.index] = s.name
     else:

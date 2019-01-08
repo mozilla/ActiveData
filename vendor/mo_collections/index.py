@@ -8,14 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
 
-from mo_dots import wrap, unwrap, tuplewrap, get_attr
+from mo_dots import get_attr, is_data, tuplewrap, unwrap, wrap
 from mo_logs import Log
 
 
@@ -158,13 +155,13 @@ class Index(object):
 
 def value2key(keys, val):
     if len(keys) == 1:
-        if isinstance(val, Mapping):
+        if is_data(val):
             return get_attr(val, keys[0]),
         elif isinstance(val, (list, tuple)):
             return val[0],
         return val,
     else:
-        if isinstance(val, Mapping):
+        if is_data(val):
             return tuple(val[k] for k in keys)
         elif isinstance(val, (list, tuple)):
             return tuple(val)

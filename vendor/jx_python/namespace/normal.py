@@ -7,28 +7,20 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
-
-from mo_future import text_type
-
-from mo_dots import Data
-from mo_dots import FlatList
-from mo_dots import coalesce, Null
-from mo_dots import wrap, listwrap
-from mo_logs import Log
-from mo_math import Math
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import Domain
+from jx_base.query import QueryOp, get_all_vars
 from jx_python.containers import Container
 from jx_python.expressions import TRUE
 from jx_python.namespace import Namespace, convert_list
-from jx_base.query import QueryOp, get_all_vars
+from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, listwrap, wrap
+from mo_future import text_type
+from mo_logs import Log
+from mo_math import Math
 
 DEFAULT_LIMIT = 10
 
@@ -39,7 +31,7 @@ class Normal(Namespace):
     """
 
     def convert(self, expr):
-        if isinstance(expr, Mapping) and expr["from"]:
+        if is_data(expr) and expr["from"]:
             return self._convert_query(expr)
         return expr
 
@@ -139,7 +131,7 @@ class Normal(Namespace):
             if not edge.name and not isinstance(edge.value, text_type):
                 Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
-            if isinstance(edge.value, (Mapping, list)) and not edge.domain:
+            if edge.value.__class__ in (Data, dict, list, FlatList) and not edge.domain:
                 # COMPLEX EDGE IS SHORT HAND
                 domain =self._convert_domain()
                 domain.dimension = Data(fields=edge.value)
@@ -193,7 +185,7 @@ class Normal(Namespace):
             domain = domain.copy()
             domain.name = domain.type
 
-        if not isinstance(domain.partitions, list):
+        if not is_list(domain.partitions):
             domain.partitions = list(domain.partitions)
 
         return Domain(**domain)

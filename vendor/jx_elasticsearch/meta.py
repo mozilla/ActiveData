@@ -7,13 +7,11 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import itertools
-from datetime import datetime, date
+from datetime import date, datetime
 from decimal import Decimal
+import itertools
 
 import jx_base
 from jx_base import TableDesc
@@ -21,20 +19,20 @@ from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
-from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field, NullType, FlatList
+from jx_python.meta import Column, ColumnList
+from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
 from mo_files import URL
-from mo_future import text_type, none_type, PY2
-from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, STRING_TYPE, BOOLEAN_TYPE, NUMBER_TYPE
+from mo_future import PY2, none_type, text_type
+from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
+from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
-from mo_times import HOUR, MINUTE, Timer, Date, WEEK
+from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import es_type_to_json_type, _get_best_type_from_mapping
+from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = True
@@ -659,7 +657,7 @@ class Schema(jx_base.Schema):
     """
 
     def __init__(self, query_path, snowflake):
-        if not isinstance(snowflake.query_paths[0], list):
+        if not is_list(snowflake.query_paths[0]):
             Log.error("Snowflake query paths should be a list of string tuples (well, technically, a list of lists of strings)")
         self.snowflake = snowflake
         try:
@@ -688,7 +686,7 @@ class Schema(jx_base.Schema):
 
                     Log.warning("Problem getting query path {{path|quote}} in snowflake {{sf|quote}}", path=query_path, sf=snowflake.name, cause=e)
 
-            if not isinstance(self.query_path, list) or self.query_path[len(self.query_path) - 1] != ".":
+            if not is_list(self.query_path) or self.query_path[len(self.query_path) - 1] != ".":
                 Log.error("error")
 
         except Exception as e:

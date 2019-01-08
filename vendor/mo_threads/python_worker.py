@@ -6,9 +6,7 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
 
@@ -18,6 +16,7 @@ del context['copy']
 
 import sys
 
+from mo_dots import is_list
 from mo_dots import set_default, listwrap, coalesce
 from mo_future import text_type, PY3
 from mo_json import json2value, value2json
@@ -66,7 +65,7 @@ def command_loop(local):
                 STDOUT.write(DONE)
             else:
                 for k, v in command.items():
-                    if isinstance(v, list):
+                    if is_list(v):
                         exec ("_return = " + k + "(" + ",".join(map(value2json, v)) + ")", context, local)
                     else:
                         exec ("_return = " + k + "(" + ",".join(kk + "=" + value2json(vv) for kk, vv in v.items()) + ")", context, local)

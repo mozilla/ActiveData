@@ -6,19 +6,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import mimetypes
 
 import flask
-from mo_threads.threads import RegisterThread
 from werkzeug.wrappers import Response
 
 from active_data import record_request
 from mo_files import File
 from mo_logs import Log
+from mo_threads.threads import RegisterThread
 from mo_times.durations import DAY
 from pyLibrary.env.flask_wrappers import cors_wrapper
 from pyLibrary.meta import cache

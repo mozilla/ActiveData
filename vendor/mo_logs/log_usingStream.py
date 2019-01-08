@@ -9,15 +9,13 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
 from mo_future import PY3, allocate_lock
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_logs.strings import expand_template, CR
+from mo_logs.strings import CR, expand_template
 
 
 class StructuredLogger_usingStream(StructuredLogger):

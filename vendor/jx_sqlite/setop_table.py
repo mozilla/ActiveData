@@ -9,25 +9,22 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BooleanOp
 from jx_base.queries import get_property_name
 from jx_base.utils import is_op
 from jx_python.meta import Column
-from jx_sqlite import quoted_UID, get_column, _make_column_name, ORDER, COLUMN, set_column, quoted_PARENT, ColumnMapping, quoted_ORDER
-from jx_sqlite.expressions import sql_type_to_json_type, LeavesOp
+from jx_sqlite import COLUMN, ColumnMapping, ORDER, _make_column_name, get_column, quoted_ORDER, quoted_PARENT, quoted_UID, set_column
+from jx_sqlite.expressions import LeavesOp, sql_type_to_json_type
 from jx_sqlite.insert_table import InsertTable
-from mo_dots import listwrap, Data, unwraplist, startswith_field, unwrap, relative_field, concat_field, literal_field, Null, tail_field
-from mo_future import text_type
-from mo_future import unichr
+from mo_dots import Data, Null, concat_field, is_list, listwrap, literal_field, startswith_field, tail_field, unwrap, unwraplist
+from mo_future import text_type, unichr
 from mo_json import IS_NULL
 from mo_json.typed_encoder import STRUCT
-from mo_math import UNION, MAX
-from pyLibrary.sql import SQL_UNION_ALL, SQL_LEFT_JOIN, SQL_FROM, SQL_WHERE, SQL_SELECT, SQL_ON, SQL_AND, SQL_LIMIT, SQL_ORDERBY, SQL_NULL, SQL_IS_NULL, SQL_IS_NOT_NULL, sql_iso, sql_list, sql_alias, SQL_TRUE
-from pyLibrary.sql.sqlite import quote_value, quote_column, join_column
+from mo_math import MAX, UNION
+from pyLibrary.sql import SQL_AND, SQL_FROM, SQL_IS_NOT_NULL, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ON, SQL_ORDERBY, SQL_SELECT, SQL_TRUE, SQL_UNION_ALL, SQL_WHERE, sql_alias, sql_iso, sql_list
+from pyLibrary.sql.sqlite import join_column, quote_column, quote_value
 
 
 class SetOpTable(InsertTable):
@@ -145,7 +142,7 @@ class SetOpTable(InsertTable):
                     db_columns = select.value.partial_eval().to_sql(schema)
 
                     for column in db_columns:
-                        if isinstance(column.nested_path, list):
+                        if is_list(column.nested_path):
                             column.nested_path = column.nested_path[0]  # IN THE EVENT THIS "column" IS MULTIVALUED
                         for t, unsorted_sql in column.sql.items():
                             json_type = sql_type_to_json_type[t]
@@ -237,7 +234,7 @@ class SetOpTable(InsertTable):
                     if index_to_column:
                         for i, c in index_to_column:
                             value = row[i]
-                            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
+                            if is_list(query.select) or is_op(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
                                 relative_field = concat_field(c.push_name, c.push_child)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
@@ -258,7 +255,7 @@ class SetOpTable(InsertTable):
                         nested_value = _accumulate_nested(rows, row, child_details, doc_id, id_coord)
                         if nested_value:
                             push_name = child_details['nested_path'][0]
-                            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
+                            if is_list(query.select) or is_op(query.select.value, LeavesOp):
                                 # ASSIGN INNER PROPERTIES
                                 relative_field = relative_field(push_name, curr_nested_path)
                             else:  # FACT IS EXPECTED TO BE A SINGLE VALUE, NOT AN OBJECT
@@ -288,7 +285,7 @@ class SetOpTable(InsertTable):
 
         if query.format == "cube":
             for f, _ in self.sf.tables.items():
-                if frum.endswith(f) or (test_dots(cols) and isinstance(query.select, list)):
+                if frum.endswith(f) or (test_dots(cols) and is_list(query.select)):
                     num_rows = len(result.data)
                     num_cols = MAX([c.push_column for c in cols]) + 1 if len(cols) else 0
                     map_index_to_name = {c.push_column: c.push_column_name for c in cols}
@@ -317,7 +314,7 @@ class SetOpTable(InsertTable):
                     )
                     return output
 
-            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
+            if is_list(query.select) or is_op(query.select.value, LeavesOp):
                 num_rows = len(data)
                 temp_data = {c.push_column_name: [None] * num_rows for c in cols}
                 for rownum, d in enumerate(data):
@@ -375,7 +372,7 @@ class SetOpTable(InsertTable):
                         header=header,
                         data=output_data
                     )
-            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
+            if is_list(query.select) or is_op(query.select.value, LeavesOp):
                 column_names = [None] * (max(c.push_column for c in cols) + 1)
                 for c in cols:
                     column_names[c.push_column] = c.push_column_name
@@ -402,7 +399,7 @@ class SetOpTable(InsertTable):
 
         else:
             for f, _ in self.sf.tables.items():
-                if frum.endswith(f) or (test_dots(cols) and isinstance(query.select, list)):
+                if frum.endswith(f) or (test_dots(cols) and is_list(query.select)):
                     data = []
                     for d in result.data:
                         row = Data()
@@ -424,7 +421,7 @@ class SetOpTable(InsertTable):
                         data=data
                     )
 
-            if isinstance(query.select, list) or is_op(query.select.value, LeavesOp):
+            if is_list(query.select) or is_op(query.select.value, LeavesOp):
                 temp_data = []
                 for rownum, d in enumerate(data):
                     row = {}

@@ -19,16 +19,15 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
+from decimal import Decimal
 import operator
 import re
-from collections import Mapping
-from decimal import Decimal
 
-import mo_json
 from jx_base.queries import get_property_name, is_variable_name
-from jx_base.utils import BaseExpression, define_language, TYPE_ORDER, value_compare, is_op
-from mo_dots import Null, coalesce, split_field, wrap
-from mo_future import get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest, first
+from jx_base.utils import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
+from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap
+from mo_future import first, get_function_name, items as items_, text_type, utf8_json_encoder, zip_longest
+import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
@@ -93,7 +92,7 @@ def _jx_expression(expr, lang):
     """
     WRAP A JSON EXPRESSION WITH OBJECT REPRESENTATION
     """
-    if isinstance(expr, Expression):
+    if is_expression(expr):
         # CONVERT TO lang
         new_op = lang[expr.id]
         if not new_op:
@@ -143,15 +142,15 @@ class Expression(BaseExpression):
     def __init__(self, args):
         self.simplified = False
         if isinstance(args, (list, tuple)):
-            if not all(isinstance(t, Expression) for t in args):
+            if not all(is_expression(t) for t in args):
                 Log.error("Expecting an expression")
-        elif isinstance(args, Mapping):
+        elif is_data(args):
             if not all(is_op(k, Variable) and is_op(v, Literal) for k, v in args.items()):
                 Log.error("Expecting an {<variable>: <literal>}")
         elif args == None:
             pass
         else:
-            if not isinstance(args, Expression):
+            if not is_expression(args):
                 Log.error("Expecting an expression")
 
     @classmethod
@@ -180,10 +179,10 @@ class Expression(BaseExpression):
 
             if term == None:
                 return class_([], **clauses)
-            elif isinstance(term, list):
+            elif is_list(term):
                 terms = [jx_expression(t) for t in term]
                 return class_(terms, **clauses)
-            elif isinstance(term, Mapping):
+            elif is_data(term):
                 items = items_(term)
                 if class_.has_simple_form:
                     if len(items) == 1:
@@ -295,7 +294,7 @@ class Variable(Expression):
             row = row.get(p)
             if row is None:
                 return None
-        if isinstance(row, list) and len(row) == 1:
+        if is_list(row) and len(row) == 1:
             return row[0]
         return row
 
@@ -435,7 +434,7 @@ class SelectOp(Expression):
         expr = wrap(expr)
         term = expr.select
         terms = []
-        if not isinstance(term, list):
+        if not is_list(term):
             raise Log.error("Expecting a list")
         for t in term:
             if isinstance(t, text_type):
@@ -554,7 +553,7 @@ class Literal(Expression):
             return TRUE
         if term is False:
             return FALSE
-        if isinstance(term, Mapping) and term.get('date'):
+        if is_data(term) and term.get('date'):
             # SPECIAL CASE
             return cls.lang[DateOp(term.get('date'))]
         return object.__new__(cls)
@@ -840,7 +839,7 @@ class TupleOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif isinstance(terms, list):
+        elif is_list(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1055,12 +1054,12 @@ class EqOp(Expression):
     data_type = BOOLEAN
 
     def __new__(cls, terms):
-        if isinstance(terms, list):
+        if is_list(terms):
             return object.__new__(cls)
 
         items = terms.items()
         if len(items) == 1:
-            if isinstance(items[0][1], list):
+            if is_list(items[0][1]):
                 return cls.lang[InOp(items[0])]
             else:
                 return cls.lang[EqOp(items[0])]
@@ -1125,7 +1124,7 @@ class NeOp(Expression):
         Expression.__init__(self, terms)
         if isinstance(terms, (list, tuple)):
             self.lhs, self.rhs = terms
-        elif isinstance(terms, Mapping):
+        elif is_data(terms):
             self.rhs, self.lhs = terms.items()[0]
         else:
             Log.error("logic error")
@@ -1228,7 +1227,7 @@ class AndOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif isinstance(terms, list):
+        elif is_list(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1462,7 +1461,7 @@ class LastOp(Expression):
         elif term is NULL:
             return term
         elif is_op(term, Literal):
-            if isinstance(term, list):
+            if is_list(term):
                 if len(term) > 0:
                     return term[-1]
                 return NULL
@@ -1696,7 +1695,7 @@ class CountOp(Expression):
 
     def __init__(self, terms, **clauses):
         Expression.__init__(self, terms)
-        if isinstance(terms, list):
+        if is_list(terms):
             # SHORTCUT: ASSUME AN ARRAY OF IS A TUPLE
             self.terms = self.lang[TupleOp(terms)]
         else:
@@ -1725,7 +1724,7 @@ class MaxOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif isinstance(terms, list):
+        elif is_list(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1778,7 +1777,7 @@ class MinOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif isinstance(terms, list):
+        elif is_list(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -2079,7 +2078,7 @@ class PrefixOp(Expression):
         if not term:
             self.expr = None
             self.prefix = None
-        elif isinstance(term, Mapping):
+        elif is_data(term):
             self.expr, self.prefix = term.items()[0]
         else:
             self.expr, self.prefix = term
@@ -2124,7 +2123,7 @@ class SuffixOp(Expression):
         Expression.__init__(self, term)
         if not term:
             self.expr = self.suffix = None
-        elif isinstance(term, Mapping):
+        elif is_data(term):
             self.expr, self.suffix = term.items()[0]
         else:
             self.expr, self.suffix = term
@@ -2174,7 +2173,7 @@ class ConcatOp(Expression):
 
     def __init__(self, term, **clauses):
         Expression.__init__(self, term)
-        if isinstance(term, Mapping):
+        if is_data(term):
             self.terms = term.items()[0]
         else:
             self.terms = term
@@ -2186,7 +2185,7 @@ class ConcatOp(Expression):
     @classmethod
     def define(cls, expr):
         term = expr.concat
-        if isinstance(term, Mapping):
+        if is_data(term):
             k, v = term.items()[0]
             terms = [Variable(k), Literal(v)]
         else:
@@ -2265,7 +2264,7 @@ class LeftOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, term)
-        if isinstance(term, Mapping):
+        if is_data(term):
             self.value, self.length = term.items()[0]
         else:
             self.value, self.length = term
@@ -2309,7 +2308,7 @@ class NotLeftOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, term)
-        if isinstance(term, Mapping):
+        if is_data(term):
             self.value, self.length = term.items()[0]
         else:
             self.value, self.length = term
@@ -2353,7 +2352,7 @@ class RightOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, term)
-        if isinstance(term, Mapping):
+        if is_data(term):
             self.value, self.length = term.items()[0]
         else:
             self.value, self.length = term
@@ -2397,7 +2396,7 @@ class NotRightOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, term)
-        if isinstance(term, Mapping):
+        if is_data(term):
             self.value, self.length = term.items()[0]
         else:
             self.value, self.length = term
@@ -2571,7 +2570,7 @@ class BetweenOp(Expression):
     @classmethod
     def define(cls, expr):
         term = expr.between
-        if isinstance(term, list):
+        if is_list(term):
             return cls.lang[BetweenOp(
                 value=jx_expression(term[0]),
                 prefix=jx_expression(term[1]),
@@ -2579,9 +2578,9 @@ class BetweenOp(Expression):
                 default=jx_expression(expr.default),
                 start=jx_expression(expr.start)
             )]
-        elif isinstance(term, Mapping):
+        elif is_data(term):
             var, vals = term.items()[0]
-            if isinstance(vals, list) and len(vals) == 2:
+            if is_list(vals) and len(vals) == 2:
                 return cls.lang[BetweenOp(
                     value=Variable(var),
                     prefix=Literal(vals[0]),
@@ -2859,7 +2858,7 @@ class UnionOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif isinstance(terms, list):
+        elif is_list(terms):
             self.terms = terms
         else:
             self.terms = [terms]

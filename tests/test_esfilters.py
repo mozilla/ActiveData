@@ -8,16 +8,14 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import jx_expression, NULL
-from jx_elasticsearch.es52.expressions import simplify_esfilter, ES52
+from jx_base.expressions import NULL, jx_expression
+from jx_elasticsearch.es52.expressions import ES52, simplify_esfilter
 from jx_elasticsearch.es52.painless import EsScript
 from jx_elasticsearch.es52.util import es_and
-from mo_dots import wrap, Null
-from mo_json import OBJECT, NUMBER, STRING
+from mo_dots import Null, wrap
+from mo_json import NUMBER, OBJECT
 from mo_json.typed_encoder import STRING_TYPE
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times.dates import Date

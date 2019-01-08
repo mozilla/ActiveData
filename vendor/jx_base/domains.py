@@ -7,21 +7,16 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import itertools
-from collections import Mapping
 from numbers import Number
-
-from mo_future import text_type, sort_using_cmp
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import coalesce, Data, set_default, Null, listwrap, unwrap
-from mo_dots import wrap
+from mo_dots import Data, Null, coalesce, is_data, listwrap, set_default, unwrap, wrap
 from mo_dots.lists import FlatList
+from mo_future import text_type
 from mo_logs import Log
 from mo_math import MAX, MIN
 from mo_times.dates import Date
@@ -255,7 +250,7 @@ class SimpleSetDomain(Domain):
             # TODO: desc.key CAN BE MUCH LIKE A SELECT, WHICH UniqueIndex CAN NOT HANDLE
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-        elif desc.partitions and isinstance(desc.partitions[0][desc.key], Mapping):
+        elif desc.partitions and is_data(desc.partitions[0][desc.key]):
             # LOOKS LIKE OBJECTS
             # sorted = desc.partitions[desc.key]
 
@@ -400,7 +395,7 @@ class SetDomain(Domain):
             # TODO: desc.key CAN BE MUCH LIKE A SELECT, WHICH UniqueIndex CAN NOT HANDLE
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-        elif desc.partitions and isinstance(desc.partitions[0][desc.key], Mapping):
+        elif desc.partitions and is_data(desc.partitions[0][desc.key]):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
             # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)

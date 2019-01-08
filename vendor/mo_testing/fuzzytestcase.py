@@ -11,15 +11,14 @@ from __future__ import unicode_literals
 
 import types
 import unittest
-from collections import Mapping
 
 from jx_base.expressions import NULL
-import mo_dots
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import coalesce, literal_field, unwrap, wrap
-from mo_future import text_type
-from mo_future import zip_longest
-from mo_logs import Log, Except, suppress_exception
+import mo_dots
+from mo_dots import coalesce, is_list, literal_field, unwrap, wrap
+from mo_future import text_type, zip_longest
+from mo_json import is_data
+from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template
 from mo_math import Math
 
@@ -92,11 +91,11 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif isinstance(test, UniqueIndex):
             if test ^ expected:
                 Log.error("Sets do not match")
-        elif isinstance(expected, Mapping) and isinstance(test, Mapping):
+        elif is_data(expected) and is_data(test):
             for k, v2 in unwrap(expected).items():
                 v1 = test.get(k)
                 assertAlmostEqual(v1, v2, msg=msg, digits=digits, places=places, delta=delta)
-        elif isinstance(expected, Mapping):
+        elif is_data(expected):
             for k, v2 in expected.items():
                 if isinstance(k, text_type):
                     v1 = mo_dots.get_attr(test, literal_field(k))
@@ -160,9 +159,9 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
 
     if not Math.is_number(expected):
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL
-        if isinstance(expected, list) and len(expected) == 0 and test == None:
+        if is_list(expected) and len(expected) == 0 and test == None:
             return
-        if isinstance(expected, Mapping) and not expected.keys() and test == None:
+        if is_data(expected) and not expected.keys() and test == None:
             return
         if test != expected:
             raise AssertionError(expand_template("{{test}} != {{expected}}", locals()))

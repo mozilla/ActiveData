@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
 
-from mo_dots import Data, NullType, listwrap
-from mo_future import boolean_type, long, none_type, text_type, PY2
+from mo_dots import Data, NullType, is_list, listwrap
+from mo_future import boolean_type, long, none_type, text_type
 from mo_logs import Log
 from mo_times import Date
 
@@ -127,6 +127,15 @@ def is_op(call, op):
         return False
 
 
+def is_expression(call):
+    try:
+        output = getattr(call, 'id', None) != None
+    except Exception:
+        output = False
+    if output != isinstance(call, Expression):
+        Log.error("programmer error")
+    return output
+
 
 def value_compare(left, right, ordering=1):
     """
@@ -138,7 +147,7 @@ def value_compare(left, right, ordering=1):
     """
 
     try:
-        if isinstance(left, list) or isinstance(right, list):
+        if is_list(left) or is_list(right):
             if left == None:
                 return ordering
             elif right == None:

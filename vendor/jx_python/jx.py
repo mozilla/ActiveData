@@ -10,11 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.utils import value_compare, is_op
+from jx_base.utils import is_op, value_compare
 
 _range = range
 
-from collections import Mapping
 from jx_base import query
 from jx_python import expressions as _expressions
 from jx_python import flat_list, group_by
@@ -25,8 +24,6 @@ from mo_logs import Log
 from mo_math import Math
 from mo_math import UNION, MIN
 from pyLibrary import convert
-
-import mo_dots
 from jx_base.container import Container
 from jx_base.expressions import TRUE, FALSE
 from jx_base.query import QueryOp, _normalize_selects
@@ -37,6 +34,8 @@ from jx_python.expressions import jx_expression_to_function
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
+from mo_dots import is_data
+from mo_dots import is_list
 from mo_dots.objects import DataObject
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -80,7 +79,7 @@ def run(query, container=Null):
             return cube_aggs(container, query_op)
     elif is_op(container, QueryOp):
         container = run(container)
-    elif isinstance(container, Mapping):
+    elif is_data(container):
         query = container
         container = query['from']
         container = run(QueryOp.wrap(query, container, container.namespace), container)
@@ -167,7 +166,7 @@ def unique_index(data, keys=None, fail_on_dup=True):
 
 def map2set(data, relation):
     """
-    EXPECTING A isinstance(relation, Mapping) THAT MAPS VALUES TO lists
+    EXPECTING A is_data(relation) THAT MAPS VALUES TO lists
     THE LISTS ARE EXPECTED TO POINT TO MEMBERS OF A SET
     A set() IS RETURNED
     """
@@ -176,7 +175,7 @@ def map2set(data, relation):
     if isinstance(relation, Data):
         Log.error("Does not accept a Data")
 
-    if isinstance(relation, Mapping):
+    if is_data(relation):
         try:
             # relation[d] is expected to be a list
             # return set(cod for d in data for cod in relation[d])
@@ -213,7 +212,7 @@ def tuple(data, field_name):
     if isinstance(data, FlatList):
         Log.error("not supported yet")
 
-    if isinstance(field_name, Mapping) and "value" in field_name:
+    if is_data(field_name) and "value" in field_name:
         # SIMPLIFY {"value":value} AS STRING
         field_name = field_name["value"]
 
@@ -226,7 +225,7 @@ def tuple(data, field_name):
             output = []
             flat_list._tuple1(data, path, 0, output)
             return output
-    elif isinstance(field_name, list):
+    elif is_list(field_name):
         paths = [_select_a_field(f) for f in field_name]
         output = FlatList()
         _tuple((), unwrap(data), paths, 0, output)
@@ -268,7 +267,7 @@ def _tuple_deep(v, field, depth, record):
 
     for i, f in enumerate(field.value[depth:len(field.value) - 1:]):
         v = v.get(f)
-        if isinstance(v, list):
+        if is_list(v):
             return depth + i + 1, v, record
 
     f = field.value.last()
@@ -288,10 +287,10 @@ def select(data, field_name):
     if isinstance(data, UniqueIndex):
         data = data._data.values()  # THE SELECT ROUTINE REQUIRES dicts, NOT Data WHILE ITERATING
 
-    if isinstance(data, Mapping):
+    if is_data(data):
         return select_one(data, field_name)
 
-    if isinstance(field_name, Mapping):
+    if is_data(field_name):
         field_name = wrap(field_name)
         if field_name.value in ["*", "."]:
             return data
@@ -309,7 +308,7 @@ def select(data, field_name):
             output = FlatList()
             flat_list._select1(data, path, 0, output)
             return output
-    elif isinstance(field_name, list):
+    elif is_list(field_name):
         keys = [_select_a_field(wrap(f)) for f in field_name]
         return _select(Data(), unwrap(data), keys, 0)
     else:
@@ -373,7 +372,7 @@ def _select_deep(v, field, depth, record):
         v = v.get(f)
         if v is None:
             return 0, None
-        if isinstance(v, list):
+        if is_list(v):
             return depth + i + 1, v
 
     f = field.value.last()
@@ -413,7 +412,7 @@ def _select_deep_meta(field, depth):
                 source = source.get(f)
                 if source is None:
                     return 0, None
-                if isinstance(source, list):
+                if is_list(source):
                     return depth + i + 1, source
 
             f = field.value.last()
@@ -495,12 +494,12 @@ def _deeper_iterator(columns, nested_path, path, data):
                 else:
                     Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=nested_path[0])
 
-            if isinstance(v, list) and v:
+            if is_list(v) and v:
                 if deep_leaf:
                     Log.error("nested path conflict: {{leaf}} vs {{nested}}", leaf=leaf, nested=deep_leaf)
                 deep_leaf = leaf
                 deep_v = v
-            elif isinstance(v, Mapping):
+            elif is_data(v):
                 for o in _deeper_iterator(columns, nested_path, leaf, [v]):
                     set_default(output, o)
             else:
@@ -543,7 +542,7 @@ def sort(data, fieldnames=None, already_normalized=False):
                     Log.error("problem with compare", e)
             return 0
 
-        if isinstance(data, list):
+        if is_list(data):
             output = FlatList([unwrap(d) for d in sort_using_cmp(data, cmp=comparer)])
         elif hasattr(data, "__iter__"):
             output = FlatList([unwrap(d) for d in sort_using_cmp(list(data), cmp=comparer)])
@@ -622,7 +621,7 @@ def drill_filter(esfilter, data):
                 d = d[c]
             except Exception as e:
                 Log.error("{{name}} does not exist", name=fieldname)
-            if isinstance(d, list) and len(col) > 1:
+            if is_list(d) and len(col) > 1:
                 if len(primary_column) <= depth+i:
                     primary_nested.append(True)
                     primary_column.append(c)
@@ -831,7 +830,7 @@ def drill_filter(esfilter, data):
 
     # OUTPUT
     for i, d in enumerate(data):
-        if isinstance(d, Mapping):
+        if is_data(d):
             main([], esfilter, wrap(d), 0)
         else:
             Log.error("filter is expecting a dict, not {{type}}", type=d.__class__)

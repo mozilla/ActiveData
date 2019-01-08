@@ -9,9 +9,7 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import jx_base
 from jx_base import generateGuid
@@ -19,7 +17,7 @@ from jx_python import jx
 from jx_sqlite import UID
 from jx_sqlite.snowflake import Snowflake
 from mo_kwargs import override
-from pyLibrary.sql import SQL, SQL_UNION_ALL, SQL_SELECT
+from pyLibrary.sql import SQL, SQL_SELECT, SQL_UNION_ALL
 from pyLibrary.sql.sqlite import Sqlite, quote_value
 
 _config=None

@@ -7,21 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
-
-import mo_dots as dot
-from mo_dots import Null, Data, FlatList, wrap, wrap_leaves, listwrap
-from mo_logs import Log
-from mo_math import MAX, OR
-from mo_collections.matrix import Matrix
 from jx_base.container import Container
+from jx_base.query import _normalize_edge
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.lists.aggs import is_aggs
-from jx_base.query import _normalize_edge
+from mo_collections.matrix import Matrix
+from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, wrap, wrap_leaves
+import mo_dots as dot
+from mo_logs import Log
+from mo_math import MAX, OR
 
 
 class Cube(Container):
@@ -36,7 +32,7 @@ class Cube(Container):
         ALLOWED, USING THE select AND edges TO DESCRIBE THE data
         """
 
-        self.is_value = False if isinstance(select, list) else True
+        self.is_value = False if is_list(select) else True
         self.select = select
         self.meta = Data(format="cube")       # PUT EXTRA MARKUP HERE
         self.is_none = False
@@ -45,37 +41,37 @@ class Cube(Container):
             is_none = True
 
         # ENSURE frum IS PROPER FORM
-        if isinstance(select, list):
+        if is_list(select):
             if edges and OR(not isinstance(v, Matrix) for v in data.values()):
                 Log.error("Expecting data to be a dict with Matrix values")
 
         if not edges:
             if not data:
-                if isinstance(select, list):
+                if is_list(select):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix.ZERO}
                 self.edges = FlatList.EMPTY
-            elif isinstance(data, Mapping):
+            elif is_data(data):
                 # EXPECTING NO MORE THAN ONE rownum EDGE IN THE DATA
                 length = MAX([len(v) for v in data.values()])
                 if length >= 1:
                     self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum"}}])
                 else:
                     self.edges = FlatList.EMPTY
-            elif isinstance(data, list):
-                if isinstance(select, list):
+            elif is_list(data):
+                if is_list(select):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix.wrap(data)}
                 self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(data), "interval": 1}}])
             elif isinstance(data, Matrix):
-                if isinstance(select, list):
+                if is_list(select):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: data}
             else:
-                if isinstance(select, list):
+                if is_list(select):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix(value=data)}
@@ -148,7 +144,7 @@ class Cube(Container):
             return Null
         if self.edges:
             Log.error("can not get value of with dimension")
-        if isinstance(self.select, list):
+        if is_list(self.select):
             Log.error("can not get value of multi-valued cubes")
         return self.data[self.select.name].cube
 
@@ -205,7 +201,7 @@ class Cube(Container):
         # EDGE REMOVES THAT EDGE FROM THIS RESULT, OR ADDS THE PART
         # AS A select {"name":edge.name, "value":edge.domain.partitions[coord]}
         # PROBABLY NOT, THE value IS IDENTICAL OVER THE REMAINING
-        if isinstance(item, Mapping):
+        if is_data(item):
             coordinates = [None] * len(self.edges)
 
             # MAP DICT TO NUMERIC INDICES
@@ -320,7 +316,7 @@ class Cube(Container):
         getKey = [e.domain.getKey for e in self.edges]
         lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 
-        if isinstance(self.select, list):
+        if is_list(self.select):
             selects = listwrap(self.select)
             index, v = transpose(*self.data[selects[0].name].groupby(selector))
 
@@ -375,7 +371,7 @@ class Cube(Container):
             output = wrap_leaves({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
             return output
 
-        if isinstance(self.select, list):
+        if is_list(self.select):
             selects = listwrap(self.select)
             index, v = transpose(*self.data[selects[0].name].groupby(selector))
 

@@ -11,20 +11,17 @@
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
 # FOR FAST AND PREDICTABLE SHUTDOWN AND CLEANUP OF THREADS
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import signal as _signal
-import sys
 from copy import copy
 from datetime import datetime, timedelta
-from time import sleep, time
+import signal as _signal
+import sys
+from time import sleep
 
-
-from mo_dots import Data, unwraplist, coalesce
-from mo_future import get_ident, start_new_thread, get_function_name, text_type, allocate_lock, PY3
-from mo_logs import Log, Except
+from mo_dots import Data, coalesce, unwraplist
+from mo_future import allocate_lock, get_function_name, get_ident, start_new_thread, text_type
+from mo_logs import Except, Log
 from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler, write_profiles
 from mo_threads.signal import AndSignals, Signal

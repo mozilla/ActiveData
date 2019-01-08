@@ -11,9 +11,7 @@
 # REPLACE NUMPY ARRAY FUNCTIONS
 # THIS CODE IS FASTER THAN NUMPY WHEN USING PYPY *AND* THE ARRAYS ARE SMALL
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from mo_logs import Log
 

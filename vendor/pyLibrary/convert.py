@@ -7,30 +7,27 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, absolute_import, division, unicode_literals
 
 import ast
 import base64
 import cgi
 import datetime
+from decimal import Decimal
 import gzip
 import hashlib
+from io import BytesIO
 import json
 import re
-from decimal import Decimal
-from io import BytesIO
 from tempfile import TemporaryFile
 
+from mo_dots import concat_field, unwrap, unwraplist, wrap
+from mo_future import HTMLParser, PY3, StringIO, long, text_type
 import mo_json
-import mo_math
-from mo_dots import wrap, unwrap, unwraplist, concat_field, Null
-from mo_future import text_type, HTMLParser, StringIO, PY3, long
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template, quote
+import mo_math
 from mo_times.dates import Date
 
 """
@@ -300,7 +297,7 @@ def string2url(value):
 #         u = query.get(k)
 #         if u is None:
 #             query[k] = v
-#         elif isinstance(u, list):
+#         elif is_list(u):
 #             u += [v]
 #         else:
 #             query[k] = [u, v]

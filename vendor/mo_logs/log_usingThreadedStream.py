@@ -9,19 +9,17 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import sys
 from time import time
 
 from mo_dots import Data
-from mo_future import text_type, PY3
+from mo_future import PY3, text_type
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_logs.strings import expand_template, CR
-from mo_threads import Thread, THREAD_STOP, Till
+from mo_logs.strings import CR, expand_template
+from mo_threads import THREAD_STOP, Thread, Till
 
 DEBUG_LOGGING = False
 

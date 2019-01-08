@@ -7,20 +7,17 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 import math
 import re
-from collections import Mapping
-from datetime import date, timedelta, datetime
-from decimal import Decimal
 
-from mo_dots import FlatList, NullType, Data, wrap_leaves, wrap, Null, SLOT
+from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
 from mo_dots.objects import DataObject
-from mo_future import text_type, none_type, long, binary_type, PY2, items
-from mo_logs import Except, strings, Log
+from mo_future import PY2, is_binary, is_text, items, long, none_type, text_type
+from mo_logs import Except, Log, strings
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
 
@@ -174,7 +171,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
         return scrub_number(value)
     elif type_ is Data:
         return _scrub(_get(value, SLOT), is_done, stack, scrub_text, scrub_number)
-    elif isinstance(value, Mapping):
+    elif is_data(value):
         _id = id(value)
         if _id in is_done:
             Log.warning("possible loop in structure detected")
@@ -183,16 +180,16 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
 
         output = {}
         for k, v in value.items():
-            if isinstance(k, text_type):
+            if is_text(k):
                 pass
-            elif isinstance(k, binary_type):
+            elif is_binary(k):
                 k = k.decode('utf8')
             # elif hasattr(k, "__unicode__"):
             #     k = text_type(k)
             else:
                 Log.error("keys must be strings")
             v = _scrub(v, is_done, stack, scrub_text, scrub_number)
-            if v != None or isinstance(v, Mapping):
+            if v != None or is_data(v):
                 output[k] = v
 
         is_done.discard(_id)
@@ -291,7 +288,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
     :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
-    if not isinstance(json_string, text_type):
+    if not is_text(json_string):
         Log.error("only unicode json accepted")
 
     try:
@@ -392,7 +389,6 @@ python_type_to_json_type = {
     Data: OBJECT,
     dict: OBJECT,
     object: OBJECT,
-    Mapping: OBJECT,
     list: NESTED,
     set: NESTED,
     # tuple: NESTED,  # DO NOT INCLUDE, WILL HIDE LOGIC ERRORS
@@ -407,8 +403,7 @@ if PY2:
 for k, v in items(python_type_to_json_type):
     python_type_to_json_type[k.__name__] = v
 
-
-_merge_order= {
+_merge_order = {
     BOOLEAN: 1,
     INTEGER: 2,
     NUMBER: 3,

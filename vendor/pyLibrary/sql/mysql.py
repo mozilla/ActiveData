@@ -8,28 +8,25 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import subprocess
-from collections import Mapping
 from datetime import datetime
+import subprocess
 
-from pymysql import connect, InterfaceError, cursors
+from pymysql import InterfaceError, connect, cursors
 
-import mo_json
 from jx_python import jx
-from mo_dots import coalesce, wrap, listwrap, unwrap, split_field
+from mo_dots import coalesce, is_data, is_list, listwrap, split_field, unwrap, wrap
 from mo_files import File
-from mo_future import text_type, utf8_json_encoder, binary_type, transpose
+from mo_future import binary_type, text_type, transpose, utf8_json_encoder
+import mo_json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import expand_template, indent, outdent
 from mo_math import Math
 from mo_times import Date
-from pyLibrary.sql import SQL, SQL_NULL, SQL_SELECT, SQL_LIMIT, SQL_WHERE, SQL_LEFT_JOIN, SQL_FROM, SQL_AND, sql_list, sql_iso, SQL_ASC, SQL_TRUE, SQL_ONE, SQL_DESC, SQL_IS_NULL, sql_alias
+from pyLibrary.sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_alias, sql_iso, sql_list
 from pyLibrary.sql.sqlite import join_column
 
 DEBUG = False
@@ -570,7 +567,7 @@ def quote_value(value):
             return quote_sql(value.template, value.param)
         elif isinstance(value, text_type):
             return SQL("'" + "".join(ESCAPE_DCT.get(c, c) for c in value) + "'")
-        elif isinstance(value, Mapping):
+        elif is_data(value):
             return quote_value(json_encode(value))
         elif Math.is_number(value):
             return SQL(text_type(value))
@@ -596,7 +593,7 @@ def quote_column(column_name, table=None):
             return SQL("`" + '`.`'.join(split_field(column_name)) + "`")  # MYSQL QUOTE OF COLUMN NAMES
     elif isinstance(column_name, binary_type):
         return quote_column(column_name.decode('utf8'), table)
-    elif isinstance(column_name, list):
+    elif is_list(column_name):
         if table:
             return sql_list(join_column(table, c) for c in column_name)
         return sql_list(quote_column(c) for c in column_name)
@@ -617,7 +614,7 @@ def quote_sql(value, param=None):
             return SQL(expand_template(value, param))
         elif isinstance(value, text_type):
             return SQL(value)
-        elif isinstance(value, Mapping):
+        elif is_data(value):
             return quote_value(json_encode(value))
         elif hasattr(value, '__iter__'):
             return quote_list(value)

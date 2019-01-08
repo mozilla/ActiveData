@@ -11,43 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 
-from jx_base.expressions import (
-    AndOp as AndOp_,
-    BasicEqOp as BasicEqOp_,
-    BasicStartsWithOp as BasicStartsWithOp_,
-    BooleanOp as BooleanOp_,
-    CaseOp as CaseOp_,
-    CoalesceOp as CoalesceOp_,
-    ConcatOp as ConcatOp_,
-    DivOp as DivOp_,
-    EqOp as EqOp_,
-    EsNestedOp as EsNestedOp_,
-    ExistsOp as ExistsOp_,
-    FALSE,
-    FalseOp as FalseOp_,
-    GtOp as GtOp_,
-    GteOp as GteOp_,
-    InOp as InOp_,
-    LengthOp as LengthOp_,
-    Literal as Literal_,
-    LtOp as LtOp_,
-    LteOp as LteOp_,
-    MissingOp as MissingOp_,
-    NULL,
-    NeOp as NeOp_,
-    NotOp as NotOp_,
-    OrOp as OrOp_,
-    PrefixOp as PrefixOp_,
-    RegExpOp as RegExpOp_,
-    ScriptOp as ScriptOp_,
-    StringOp as StringOp_,
-    SuffixOp as SuffixOp_,
-    TRUE,
-    TrueOp as TrueOp_,
-    Variable as Variable_,
-    WhenOp as WhenOp_,
-    extend,
-    NullOp)
+from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend)
 from jx_base.utils import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -61,7 +25,7 @@ from jx_elasticsearch.es52.util import (
     pull_functions,
 )
 from jx_python.jx import value_compare
-from mo_dots import Data, Null, literal_field, set_default, wrap
+from mo_dots import Data, Null, is_list, literal_field, set_default, wrap
 from mo_future import first
 from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
@@ -208,7 +172,7 @@ class EqOp(EqOp_):
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
 
-            if isinstance(rhs, list):
+            if is_list(rhs):
                 if len(rhs) == 1:
                     rhs = rhs[0]
                 else:
@@ -263,7 +227,7 @@ class BasicEqOp(BasicEqOp_):
             if cols:
                 lhs = first(cols).es_column
             rhs = self.rhs.value
-            if isinstance(rhs, list):
+            if is_list(rhs):
                 if len(rhs) == 1:
                     return {"term": {lhs: rhs[0]}}
                 else:

@@ -13,11 +13,10 @@ from collections import MutableMapping
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_future import PY2, generator_types, iteritems, long, none_type, text_type
-
 from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
 from mo_dots.lists import FlatList
 from mo_dots.utils import CLASS
+from mo_future import PY2, generator_types, iteritems, long, none_type, text_type
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -99,7 +98,7 @@ class Data(MutableMapping):
             for n in seq:
                 if _get(d, CLASS) is NullType:
                     d = NullType(d, n)  # OH DEAR, Null TREATS n AS PATH, NOT LITERAL
-                elif isinstance(d, list):
+                elif is_list(d):
                     d = [_getdefault(dd, n) for dd in d]
                 else:
                     d = _getdefault(d, n)  # EVERYTHING ELSE TREATS n AS LITERAL
@@ -540,7 +539,7 @@ def _str(value, depth):
         for k, v in value.items():
             output.append(str(k) + "=" + _str(v, depth - 1))
         return "{" + ",\n".join(output) + "}"
-    elif depth >0 and isinstance(value, list):
+    elif depth >0 and is_list(value):
         for v in value:
             output.append(_str(v, depth-1))
         return "[" + ",\n".join(output) + "]"
@@ -563,16 +562,16 @@ def _iadd(self, other):
                     stype=_get(sv, CLASS).__name__,
                     otype=_get(ov, CLASS).__name__
                 )
-            elif isinstance(sv, list):
+            elif is_list(sv):
                 d[ok].append(ov)
             else:
                 d[ok] = sv + ov
-        elif isinstance(ov, list):
+        elif is_list(ov):
             d[ok] = listwrap(sv) + ov
         elif _get(ov, CLASS) in MAPPING_TYPES:
             if _get(sv, CLASS) in MAPPING_TYPES:
                 _iadd(sv, ov)
-            elif isinstance(sv, list):
+            elif is_list(sv):
                 d[ok].append(ov)
             else:
                 get_logger().error(
@@ -595,5 +594,10 @@ def _iadd(self, other):
 MAPPING_TYPES = (Data, dict)
 
 
+def is_data(d):
+    return d.__class__ in MAPPING_TYPES
+
+
 from mo_dots.nones import Null, NullType
+from mo_dots.lists import is_list
 from mo_dots import unwrap, wrap

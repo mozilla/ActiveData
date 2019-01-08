@@ -8,8 +8,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
-
 import flask
 from flask import Response
 
@@ -18,7 +16,7 @@ from active_data.actions import save_query
 from jx_base import container
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import coalesce, set_default, split_field
+from mo_dots import coalesce, is_data, set_default, split_field
 from mo_future import text_type
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
@@ -163,12 +161,12 @@ def find_container(frum):
         output = container.type2container[type_](settings)
         container_cache[frum] = output
         return output
-    elif isinstance(frum, Mapping) and frum.type and container.type2container[frum.type]:
+    elif is_data(frum) and frum.type and container.type2container[frum.type]:
         # TODO: Ensure the frum.name is set, so we capture the deep queries
         if not frum.type:
             Log.error("Expecting from clause to have a 'type' property")
         return container.type2container[frum.type](frum.settings)
-    elif isinstance(frum, Mapping) and (frum["from"] or isinstance(frum["from"], (list, set))):
+    elif is_data(frum) and (frum["from"] or isinstance(frum["from"], (list, set))):
         from jx_base.query import QueryOp
         return QueryOp.wrap(frum)
     elif isinstance(frum, (list, set)):

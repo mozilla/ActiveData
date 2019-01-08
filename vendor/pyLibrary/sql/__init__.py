@@ -8,13 +8,11 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import pyLibrary.sql
-from mo_future import text_type, PY3
+from mo_future import PY3, text_type
 from mo_logs import Log
+import pyLibrary.sql
 
 
 class SQL(text_type):

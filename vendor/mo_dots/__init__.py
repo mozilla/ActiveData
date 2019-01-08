@@ -11,9 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
+from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 from mo_future import binary_type, generator_types, text_type
-
-from mo_dots.utils import get_logger, get_module, CLASS, OBJ
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -186,7 +185,7 @@ def relative_field(field, parent):
 
 
 def hash_value(v):
-    if isinstance(v, (set, tuple, list)):
+    if is_list(v, (set, tuple)):
         return hash(tuple(hash_value(vv) for vv in v))
     elif _get(v, CLASS) not in MAPPING_TYPES:
         return hash(v)
@@ -256,7 +255,7 @@ def _all_default(d, default, seen=None):
                     except Exception as e:
                         if PATH_NOT_FOUND not in e:
                             get_logger().error("Can not set attribute {{name}}", name=k, cause=e)
-        elif isinstance(existing_value, list) or isinstance(default_value, list):
+        elif is_list(existing_value) or is_list(default_value):
             _set_attr(d, [k], None)
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
         elif (hasattr(existing_value, "__setattr__") or _get(existing_value, CLASS) in MAPPING_TYPES) and _get(default_value, CLASS) in MAPPING_TYPES:
@@ -561,7 +560,7 @@ def listwrap(value):
     """
     if value == None:
         return FlatList()
-    elif isinstance(value, list):
+    elif is_list(value):
         return wrap(value)
     elif isinstance(value, set):
         return wrap(list(value))
@@ -572,7 +571,7 @@ def unwraplist(v):
     """
     LISTS WITH ZERO AND ONE element MAP TO None AND element RESPECTIVELY
     """
-    if isinstance(v, list):
+    if is_list(v):
         if len(v) == 0:
             return None
         elif len(v) == 1:
@@ -592,7 +591,7 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-from mo_dots.datas import Data, SLOT, MAPPING_TYPES
+from mo_dots.datas import Data, SLOT, MAPPING_TYPES, is_data
 from mo_dots.nones import Null, NullType
-from mo_dots.lists import FlatList
+from mo_dots.lists import FlatList, is_list
 from mo_dots.objects import DataObject

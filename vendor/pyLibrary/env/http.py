@@ -16,8 +16,7 @@
 # }}
 
 
-from __future__ import absolute_import
-from __future__ import division
+from __future__ import absolute_import, division
 
 from contextlib import closing
 from copy import copy
@@ -25,22 +24,21 @@ from mmap import mmap
 from numbers import Number
 from tempfile import TemporaryFile
 
-from requests import sessions, Response
+from requests import Response, sessions
 
 from jx_python import jx
-from mo_dots import Data, coalesce, wrap, set_default, unwrap, Null
+from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap
 from mo_files.url import URL
-from mo_future import text_type, PY2
-from mo_json import value2json, json2value
+from mo_future import PY2, text_type
+from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import utf82unicode, unicode2utf8
+from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import Math
-from mo_threads import Lock
-from mo_threads import Till
+from mo_threads import Lock, Till
 from mo_times.durations import Duration
 from pyLibrary import convert
-from pyLibrary.env.big_data import safe_size, ibytes2ilines, icompressed2ibytes
+from pyLibrary.env.big_data import ibytes2ilines, icompressed2ibytes, safe_size
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -90,7 +88,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
         ))
     _warning_sent = True
 
-    if isinstance(url, list):
+    if is_list(url):
         # TRY MANY URLS
         failures = []
         for remaining, u in jx.countdown(url):

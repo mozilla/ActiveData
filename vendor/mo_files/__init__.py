@@ -8,20 +8,20 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 import base64
+from datetime import datetime
 import io
+from mimetypes import MimeTypes
 import os
 import re
 import shutil
-from datetime import datetime
-from mimetypes import MimeTypes
-from tempfile import mkdtemp, NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
 
-from mo_dots import get_module, coalesce, Null
-from mo_future import text_type, binary_type, PY3
-from mo_logs import Log, Except
+from mo_dots import Null, coalesce, get_module, is_list
+from mo_files.url import URL
+from mo_future import PY3, binary_type, text_type
+from mo_logs import Except, Log
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till
-from mo_files.url import URL
 
 mime = MimeTypes()
 
@@ -273,10 +273,10 @@ class File(object):
         if not self.parent.exists:
             self.parent.create()
         with open(self._filename, "wb") as f:
-            if isinstance(data, list) and self.key:
+            if is_list(data) and self.key:
                 Log.error(u"list of data and keys are not supported, encrypt before sending to file")
 
-            if isinstance(data, list):
+            if is_list(data):
                 pass
             elif isinstance(data, (binary_type, text_type)):
                 data=[data]

@@ -9,13 +9,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import deepcopy
 import re
 
 from jx_python import jx
 from jx_python.meta import Column
-from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, listwrap, literal_field, set_default, split_field, wrap
+from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
 from mo_files.url import URL
 from mo_future import binary_type, items, text_type
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
@@ -404,7 +403,7 @@ class Index(Features):
     def add(self, record):
         if self.settings.read_only:
             Log.error("Index opened in read only mode, no changes allowed")
-        if isinstance(record, list):
+        if is_list(record):
             Log.error("add() has changed to only accept one record, no lists")
         self.extend([record])
 
@@ -900,7 +899,7 @@ class Cluster(object):
             data = kwargs.get(DATA_KEY)
             if data == None:
                 pass
-            elif isinstance(data, Mapping):
+            elif is_data(data):
                 data = kwargs[DATA_KEY] = unicode2utf8(value2json(data))
             elif isinstance(data, text_type):
                 data = kwargs[DATA_KEY] = unicode2utf8(data)
@@ -1003,7 +1002,7 @@ class Cluster(object):
         data = kwargs.get(DATA_KEY)
         if data == None:
             pass
-        elif isinstance(data, Mapping):
+        elif is_data(data):
             kwargs[DATA_KEY] = unicode2utf8(value2json(data))
         elif isinstance(kwargs[DATA_KEY], text_type):
             pass
@@ -1069,7 +1068,7 @@ def _scrub(r):
             return r
         elif Math.is_number(r):
             return value2number(r)
-        elif isinstance(r, Mapping):
+        elif is_data(r):
             if isinstance(r, Data):
                 r = object.__getattribute__(r, SLOT)
             output = {}
@@ -1370,7 +1369,7 @@ def get_encoder(id_info):
     def _encoder(r):
         id = r.get("id")
         r_value = r.get('value')
-        if isinstance(r_value, Mapping):
+        if is_data(r_value):
             r_id = get_id(r_value)
             r_value.pop('_id', None)
             if id == None:

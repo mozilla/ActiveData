@@ -9,17 +9,14 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
 
 from jx_base import DataClass
-from mo_dots import Data, split_field, join_field, concat_field
+from mo_dots import Data, concat_field, is_data, is_list, join_field, split_field
 from mo_future import text_type
-from mo_json import json2value, BOOLEAN, NUMBER, NESTED, OBJECT, STRING
+from mo_json import BOOLEAN, NESTED, NUMBER, OBJECT, STRING, json2value
 from mo_kwargs import override
 from mo_math.randoms import Random
 from mo_times import Date
@@ -47,9 +44,9 @@ def column_key(k, v):
         return k, "boolean"
     elif isinstance(v, text_type):
         return k, "string"
-    elif isinstance(v, list):
+    elif is_list(v):
         return k, None
-    elif isinstance(v, Mapping):
+    elif is_data(v):
         return k, "object"
     elif isinstance(v, Date):
         return k, "number"
@@ -64,11 +61,11 @@ def get_type(v):
         return BOOLEAN
     elif isinstance(v, text_type):
         return STRING
-    elif isinstance(v, Mapping):
+    elif is_data(v):
         return OBJECT
     elif isinstance(v, (int, float, Date)):
         return NUMBER
-    elif isinstance(v, list):
+    elif is_list(v):
         return NESTED
     return None
 
@@ -100,9 +97,9 @@ def is_type(value, type):
         return False
     elif isinstance(value, text_type) and type == "string":
         return value
-    elif isinstance(value, list):
+    elif is_list(value):
         return False
-    elif isinstance(value, Mapping) and type == "object":
+    elif is_data(value) and type == "object":
         return True
     elif isinstance(value, (int, float, Date)) and type == "number":
         return True

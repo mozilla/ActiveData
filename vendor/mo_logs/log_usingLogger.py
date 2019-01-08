@@ -9,18 +9,15 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import logging
 
+from mo_dots import unwrap
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream, time_delta_pusher
-from mo_dots import unwrap
-
 
 _THREAD_STOP = None
 _Queue = None

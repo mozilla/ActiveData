@@ -7,57 +7,27 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import sqlite3
 from collections import Mapping
 from contextlib import contextmanager
+import sqlite3
 
 import jx_base
 from jx_base import Column, Table
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_collections import UniqueIndex
-from mo_dots import (
-    Data,
-    concat_field,
-    listwrap,
-    unwraplist,
-    NullType,
-    FlatList,
-    split_field,
-    join_field,
-    ROOT_PATH,
-    wrap,
-    Null,
-)
+from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, concat_field, is_data, is_list, join_field, listwrap, split_field, unwraplist, wrap
 from mo_files import File
-from mo_future import none_type, text_type, items, reduce
-from mo_json import (
-    python_type_to_json_type,
-    STRUCT,
-    NUMBER,
-    INTEGER,
-    STRING,
-    json2value,
-    value2json,
-)
-from mo_json.typed_encoder import untype_path, unnest_path
-from mo_logs import Log, Except
-from mo_threads import Lock, Till, Queue, Thread
+from mo_future import items, none_type, reduce, text_type
+from mo_json import (INTEGER, NUMBER, STRING, STRUCT, json2value, python_type_to_json_type, value2json)
+from mo_json.typed_encoder import unnest_path, untype_path
+from mo_logs import Except, Log
+from mo_threads import Lock, Queue, Thread, Till
 from mo_times.dates import Date
-from pyLibrary.sql import (
-    sql_iso,
-    sql_list,
-    SQL_SELECT,
-    SQL_ORDERBY,
-    SQL_FROM,
-    SQL_WHERE,
-    SQL_AND,
-)
-from pyLibrary.sql.sqlite import quote_column, json_type_to_sqlite_type, quote_value
+from pyLibrary.sql import (SQL_AND, SQL_FROM, SQL_ORDERBY, SQL_SELECT, SQL_WHERE, sql_iso, sql_list)
+from pyLibrary.sql.sqlite import json_type_to_sqlite_type, quote_column, quote_value
 
 DEBUG = False
 singlton = None
@@ -369,13 +339,13 @@ class ColumnList(Table, jx_base.Container):
                         pass
                     else:
                         count += 1
-                        if isinstance(value, list):
+                        if is_list(value):
                             multi = max(multi, len(value))
                             try:
                                 values |= set(value)
                             except Exception:
                                 objects += len(value)
-                        elif isinstance(value, Mapping):
+                        elif is_data(value):
                             objects += 1
                         else:
                             values.add(value)

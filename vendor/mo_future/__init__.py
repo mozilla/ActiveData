@@ -7,13 +7,10 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import json
 import sys
-
 
 PY3 = sys.version_info[0] == 3
 PY2 = sys.version_info[0] == 2
@@ -97,6 +94,12 @@ if PY3:
     def first(values):
         return iter(values).__next__()
 
+    def is_text(t):
+        return t.__class__ is str
+
+    def is_binary(b):
+        return b.__class__ is bytes
+
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,
         ensure_ascii=False,  # DIFF FROM DEFAULTS
@@ -169,6 +172,12 @@ else:
 
     def first(values):
         return iter(values).next()
+
+    def is_text(t):
+        return t.__class__ is unicode
+
+    def is_binary(b):
+        return b.__class__ is str
 
     utf8_json_encoder = json.JSONEncoder(
         skipkeys=False,

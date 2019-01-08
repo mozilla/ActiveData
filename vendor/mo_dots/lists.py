@@ -11,10 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from copy import deepcopy
 
-from mo_future import text_type
-
-from mo_dots import coalesce, unwrap, wrap, CLASS
+from mo_dots import CLASS, coalesce, unwrap, wrap
 from mo_dots.nones import Null
+from mo_future import text_type
 
 LIST = text_type("list")
 
@@ -29,6 +28,7 @@ Log = None
 def _late_import():
     global _datawrap
     global Log
+
 
     from mo_dots.objects import datawrap as _datawrap
     try:
@@ -110,7 +110,6 @@ class FlatList(list):
         """
         if not Log:
             _late_import()
-
         return FlatList(vals=[unwrap(coalesce(_datawrap(v), Null)[key]) for v in _get_list(self)])
 
     def select(self, key):
@@ -217,7 +216,7 @@ class FlatList(list):
         return FlatList(vals=output)
 
     def __iadd__(self, other):
-        if isinstance(other, list):
+        if is_list(other):
             self.extend(other)
         else:
             self.append(other)
@@ -284,3 +283,12 @@ class FlatList(list):
 
 
 FlatList.EMPTY = Null
+
+
+LIST_TYPES = (list, FlatList)
+
+
+def is_list(l):
+    return l.__class__ in LIST_TYPES
+
+

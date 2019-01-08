@@ -7,26 +7,22 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import sys
-from collections import Mapping
 from datetime import date, datetime
-
-from mo_math.randoms import Random
+import sys
 
 from jx_python import jx
-from mo_dots import wrap, coalesce, FlatList, listwrap, Null
-from mo_future import text_type, binary_type, number_types
-from mo_json import value2json, json2value, datetime2unix
+from mo_dots import FlatList, coalesce, is_data, listwrap, wrap
+from mo_future import binary_type, number_types, text_type
+from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, strings
-from mo_logs.exceptions import suppress_exception, Except
+from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_threads import Thread, Queue, Till, THREAD_STOP
-from mo_times import MINUTE, Duration
+from mo_math.randoms import Random
+from mo_threads import Queue, THREAD_STOP, Thread, Till
+from mo_times import Duration, MINUTE
 from mo_times.dates import datetime2unix
 from pyLibrary.convert import bytes2base64
 from pyLibrary.env.elasticsearch import Cluster
@@ -159,7 +155,7 @@ def _deep_json_to_string(value, depth):
     :param depth: THE MAX DEPTH OF PROPERTIES, DEEPER WILL BE STRING-IFIED
     :return: FLATTER STRUCTURE
     """
-    if isinstance(value, Mapping):
+    if is_data(value):
         if depth == 0:
             return strings.limit(value2json(value), LOG_STRING_LENGTH)
 

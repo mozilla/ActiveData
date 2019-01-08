@@ -6,24 +6,20 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import os
 from _ssl import PROTOCOL_SSLv23
-from collections import Mapping
+import os
 from ssl import SSLContext
 from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
-from mo_threads.threads import RegisterThread
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-from active_data import record_request, OVERVIEW
+from active_data import OVERVIEW, record_request
 from active_data.actions import save_query
 from active_data.actions.contribute import send_contribute
 from active_data.actions.json import get_raw_json
@@ -32,11 +28,13 @@ from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
+from mo_dots import is_data
 from mo_files import File
 from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
+from mo_threads.threads import RegisterThread
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -167,7 +165,7 @@ def setup_flask_ssl():
     ssl_flask.debug = False
     ssl_flask.port = 443
 
-    if isinstance(config.flask.ssl_context, Mapping):
+    if is_data(config.flask.ssl_context):
         # EXPECTED PEM ENCODED FILE NAMES
         # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
         tempfile = NamedTemporaryFile(delete=False, suffix=".pem")

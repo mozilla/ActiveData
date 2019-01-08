@@ -8,20 +8,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import functools
 from copy import copy
+import functools
 
-import mo_math
 from mo_collections.multiset import Multiset
 from mo_dots.lists import FlatList
 from mo_logs import Log
-from mo_math import MIN
-from mo_math import Math
-from mo_math import stats
+import mo_math
+from mo_math import MIN, Math, stats
 from mo_math.stats import ZeroMoment, ZeroMoment2Stats
 
 

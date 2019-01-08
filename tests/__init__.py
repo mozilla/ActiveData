@@ -20,7 +20,7 @@ from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 import jx_elasticsearch
 from jx_python import jx
-from mo_dots import Data, coalesce, listwrap, literal_field, unwrap, wrap
+from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
 from mo_future import text_type
 from mo_json import json2value, value2json
@@ -318,13 +318,13 @@ def compare_to_expected(query, result, expect, places):
 
             sort_order = listwrap(coalesce(query.edges, query.groupby)) + data_columns
 
-            if isinstance(expect.data, list):
+            if is_list(expect.data):
                 try:
                     expect.data = jx.sort(expect.data, sort_order.name)
                 except Exception as _:
                     pass
 
-            if isinstance(result.data, list):
+            if is_list(result.data):
                 try:
                     result.data = jx.sort(result.data, sort_order.name)
                 except Exception as _:

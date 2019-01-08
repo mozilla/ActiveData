@@ -8,22 +8,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 import math
 import re
-from datetime import datetime, date, timedelta
-from decimal import Decimal
 from time import time as _time
 
 from mo_dots import Null, NullType
-from mo_future import unichr, text_type, long, none_type
+from mo_future import long, none_type, text_type, unichr
 from mo_logs import Except
 from mo_logs.strings import deformat
 from mo_math import Math
-
 from mo_times.durations import Duration, MILLI_VALUES
 from mo_times.vendor.dateutil.parser import parse as parse_date
 

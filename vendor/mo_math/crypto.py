@@ -8,17 +8,15 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import base64
 
 from mo_dots import Data, get_module
-from mo_future import text_type, binary_type, PY2
+from mo_future import PY2, binary_type, text_type
 from mo_logs import Log
 from mo_math.randoms import Random
-from mo_math.vendor.aespython import key_expander, aes_cipher, cbc_mode
+from mo_math.vendor.aespython import aes_cipher, cbc_mode, key_expander
 
 DEBUG = False
 

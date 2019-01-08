@@ -8,20 +8,16 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import unicode_literals
-from __future__ import division
-from __future__ import absolute_import
-
-import smtplib
-import sys
+from __future__ import absolute_import, division, unicode_literals
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
+import sys
 
-from mo_logs import Log
-from mo_dots import listwrap
-from mo_dots import coalesce
+from mo_dots import coalesce, listwrap
 from mo_kwargs import override
+from mo_logs import Log
 
 
 class Emailer:

@@ -7,25 +7,19 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import Variable, DateOp, TupleOp, LeavesOp, BaseBinaryOp, OrOp, extend, Literal, NullOp, TrueOp, FalseOp, DivOp, FloorOp, \
-    NeOp, NotOp, LengthOp, NumberOp, StringOp, CountOp, RegExpOp, CoalesceOp, MissingOp, ExistsOp, \
-    PrefixOp, UnixOp, FromUnixOp, NotLeftOp, RightOp, NotRightOp, FindOp, InOp, RangeOp, CaseOp, AndOp, \
-    ConcatOp, LeftOp, EqOp, WhenOp, BasicIndexOfOp, IntegerOp, MaxOp, BasicSubstringOp, FALSE, MinOp, BooleanOp, SuffixOp, BetweenOp, simplified, ZERO, SqlInstrOp, SqlSubstrOp, NULL, ONE, builtin_ops, TRUE, SqlEqOp, BasicMultiOp, AddOp, SubOp, BaseInequalityOp
+from jx_base.expressions import AddOp, AndOp, BaseBinaryOp, BaseInequalityOp, BasicIndexOfOp, BasicMultiOp, BasicSubstringOp, BetweenOp, BooleanOp, CaseOp, CoalesceOp, ConcatOp, CountOp, DateOp, DivOp, EqOp, ExistsOp, FALSE, FalseOp, FindOp, FloorOp, FromUnixOp, InOp, IntegerOp, LeavesOp, LeftOp, LengthOp, Literal, MaxOp, MinOp, MissingOp, NULL, NeOp, NotLeftOp, NotOp, NotRightOp, NullOp, NumberOp, ONE, OrOp, PrefixOp, RangeOp, RegExpOp, RightOp, SqlEqOp, SqlInstrOp, SqlSubstrOp, StringOp, SubOp, SuffixOp, TRUE, TrueOp, TupleOp, UnixOp, Variable, WhenOp, ZERO, builtin_ops, extend, simplified
 from jx_base.queries import get_property_name
-from jx_sqlite import quoted_GUID, GUID
-from mo_dots import coalesce, wrap, Null, split_field, listwrap, startswith_field
-from mo_dots import join_field, ROOT_PATH, relative_field
+from jx_sqlite import GUID, quoted_GUID
+from mo_dots import Null, ROOT_PATH, coalesce, join_field, listwrap, relative_field, split_field, startswith_field, wrap
 from mo_future import text_type
 from mo_json import json2value
-from mo_json.typed_encoder import OBJECT, BOOLEAN, EXISTS, NESTED
+from mo_json.typed_encoder import BOOLEAN, EXISTS, NESTED, OBJECT
 from mo_logs import Log
 from mo_math import Math
 from pyLibrary import convert
-from pyLibrary.sql import SQL, SQL_AND, SQL_EMPTY_STRING, SQL_OR, SQL_TRUE, SQL_ZERO, SQL_FALSE, SQL_NULL, SQL_ONE, SQL_IS_NOT_NULL, sql_list, sql_iso, SQL_IS_NULL, SQL_END, SQL_ELSE, SQL_THEN, SQL_WHEN, SQL_CASE, sql_concat, sql_coalesce
+from pyLibrary.sql import SQL, SQL_AND, SQL_CASE, SQL_ELSE, SQL_EMPTY_STRING, SQL_END, SQL_FALSE, SQL_IS_NOT_NULL, SQL_IS_NULL, SQL_NULL, SQL_ONE, SQL_OR, SQL_THEN, SQL_TRUE, SQL_WHEN, SQL_ZERO, sql_coalesce, sql_concat, sql_iso, sql_list
 from pyLibrary.sql.sqlite import quote_column, quote_value
 
 

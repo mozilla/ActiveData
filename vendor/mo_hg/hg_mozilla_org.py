@@ -7,31 +7,29 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import re
 from collections import Mapping
 from copy import copy
+import re
 
-import mo_threads
-from mo_dots import set_default, Null, coalesce, unwraplist, listwrap, wrap, Data
-from mo_future import text_type, binary_type
+from mo_dots import Data, Null, coalesce, is_list, listwrap, set_default, unwraplist, wrap
+from mo_future import binary_type, text_type
 from mo_hg.parse import diff_to_json, diff_to_moves
 from mo_hg.repos.changesets import Changeset
 from mo_hg.repos.pushs import Push
 from mo_hg.repos.revisions import Revision, revision_schema
 from mo_json import json2value
 from mo_kwargs import override
-from mo_logs import Log, strings, machine_metadata
-from mo_logs.exceptions import Explanation, assert_no_exception, Except, suppress_exception
+from mo_logs import Log, machine_metadata, strings
+from mo_logs.exceptions import Except, Explanation, assert_no_exception, suppress_exception
 from mo_logs.strings import expand_template
 from mo_math.randoms import Random
-from mo_threads import Thread, Lock, Queue, THREAD_STOP, Till
+import mo_threads
+from mo_threads import Lock, Queue, THREAD_STOP, Thread, Till
 from mo_times.dates import Date
-from mo_times.durations import SECOND, Duration, HOUR, MINUTE, DAY
-from pyLibrary.env import http, elasticsearch
+from mo_times.durations import DAY, Duration, HOUR, MINUTE, SECOND
+from pyLibrary.env import elasticsearch, http
 from pyLibrary.meta import cache
 
 _hg_branches = None
@@ -659,7 +657,7 @@ def _get_url(url, branch, **kwargs):
 def parse_hg_date(date):
     if isinstance(date, text_type):
         return Date(date)
-    elif isinstance(date, list):
+    elif is_list(date):
         # FIRST IN TUPLE (timestamp, time_zone) TUPLE, WHERE timestamp IS GMT
         return Date(date[0])
     else:

@@ -7,81 +7,81 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
-    Variable as Variable_,
-    DateOp as DateOp_,
-    TupleOp as TupleOp_,
-    LeavesOp as LeavesOp_,
-    SubOp as SubOp_,
-    ExpOp as ExpOp_,
-    ModOp as ModOp_,
-    BaseBinaryOp as BaseBinaryOp_,
-    OrOp as OrOp_,
-    GtOp as GtOp_,
-    GteOp as GteOp_,
-    LteOp as LteOp_,
-    LtOp as LtOp_,
-    ScriptOp as ScriptOp_,
-    RowsOp as RowsOp_,
-    OffsetOp as OffsetOp_,
-    GetOp as GetOp_,
-    Literal as Literal_,
-    TrueOp as TrueOp_,
-    FalseOp as FalseOp_,
-    DivOp as DivOp_,
-    FloorOp as FloorOp_,
-    EqOp as EqOp_,
-    NeOp as NeOp_,
-    NotOp as NotOp_,
-    LengthOp as LengthOp_,
-    FirstOp as FirstOp_,
-    NumberOp as NumberOp_,
-    StringOp as StringOp_,
-    CountOp as CountOp_,
-    RegExpOp as RegExpOp_,
-    CoalesceOp as CoalesceOp_,
-    MissingOp as MissingOp_,
-    ExistsOp as ExistsOp_,
-    PrefixOp as PrefixOp_,
-    NotLeftOp as NotLeftOp_,
-    RightOp as RightOp_,
-    NotRightOp as NotRightOp_,
-    BasicIndexOfOp as BasicIndexOfOp_,
-    FindOp as FindOp_,
-    BetweenOp as BetweenOp_,
-    RangeOp as RangeOp_,
-    CaseOp as CaseOp_,
     AndOp as AndOp_,
-    ConcatOp as ConcatOp_,
-    InOp as InOp_,
-    WhenOp as WhenOp_,
-    MaxOp as MaxOp_,
-    SplitOp as SplitOp_,
-    NULL,
-    SelectOp as SelectOp_,
-    SuffixOp as SuffixOp_,
-    LastOp as LastOp_,
-    IntegerOp as IntegerOp_,
-    BasicEqOp as BasicEqOp_,
+    BaseBinaryOp as BaseBinaryOp_,
     BaseInequalityOp as BaseInequalityOp_,
     BaseMultiOp as BaseMultiOp_,
+    BasicEqOp as BasicEqOp_,
+    BasicIndexOfOp as BasicIndexOfOp_,
+    BetweenOp as BetweenOp_,
+    CaseOp as CaseOp_,
+    CoalesceOp as CoalesceOp_,
+    ConcatOp as ConcatOp_,
+    CountOp as CountOp_,
+    DateOp as DateOp_,
+    DivOp as DivOp_,
+    EqOp as EqOp_,
+    ExistsOp as ExistsOp_,
+    ExpOp as ExpOp_,
+    FALSE,
+    FalseOp as FalseOp_,
+    FindOp as FindOp_,
+    FirstOp as FirstOp_,
+    FloorOp as FloorOp_,
+    GetOp as GetOp_,
+    GtOp as GtOp_,
+    GteOp as GteOp_,
+    InOp as InOp_,
+    IntegerOp as IntegerOp_,
+    LastOp as LastOp_,
+    LeavesOp as LeavesOp_,
+    LengthOp as LengthOp_,
+    Literal as Literal_,
+    LtOp as LtOp_,
+    LteOp as LteOp_,
+    MaxOp as MaxOp_,
+    MissingOp as MissingOp_,
+    ModOp as ModOp_,
+    NULL,
+    NeOp as NeOp_,
+    NotLeftOp as NotLeftOp_,
+    NotOp as NotOp_,
+    NotRightOp as NotRightOp_,
+    NullOp,
+    NumberOp as NumberOp_,
+    ONE,
+    OffsetOp as OffsetOp_,
+    OrOp as OrOp_,
+    PrefixOp as PrefixOp_,
     PythonScript as PythonScript_,
-    Expression,
+    RangeOp as RangeOp_,
+    RegExpOp as RegExpOp_,
+    RightOp as RightOp_,
+    RowsOp as RowsOp_,
+    ScriptOp as ScriptOp_,
+    SelectOp as SelectOp_,
+    SplitOp as SplitOp_,
+    StringOp as StringOp_,
+    SubOp as SubOp_,
+    SuffixOp as SuffixOp_,
+    TRUE,
+    TrueOp as TrueOp_,
+    TupleOp as TupleOp_,
+    Variable as Variable_,
+    WhenOp as WhenOp_,
+    ZERO,
     define_language,
+    extend,
     jx_expression,
-    FALSE, TRUE, ONE, ZERO, extend, NullOp)
-from jx_base.utils import is_op
+)
+from jx_base.utils import is_expression, is_op
 from jx_python.expression_compiler import compile_expression
-from mo_dots import split_field, coalesce
-from mo_dots import unwrap
-from mo_future import text_type, PY2
-from mo_json import json2value, NUMBER, INTEGER, BOOLEAN
+from mo_dots import coalesce, is_data, is_list, split_field, unwrap
+from mo_future import PY2, text_type
+from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
 from mo_logs import Log
 from mo_logs.strings import quote
 from mo_times.dates import Date
@@ -92,14 +92,15 @@ def jx_expression_to_function(expr):
     """
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
-    if isinstance(expr, Expression):
+    if is_expression(expr):
         if is_op(expr, ScriptOp) and not isinstance(expr.script, text_type):
             return expr.script
         else:
             return compile_expression(Python[expr].to_python())
     if (
         expr != None
-        and not isinstance(expr, (Mapping, list))
+        and not is_data(expr)
+        and not is_list(expr)
         and hasattr(expr, "__call__")
     ):
         return expr
@@ -139,9 +140,7 @@ class PythonScript(PythonScript_):
         elif missing is TRUE:
             return "None"
 
-        return (
-            "None if (" + missing.to_python().expr + ") else (" + self.expr + ")"
-        )
+        return "None if (" + missing.to_python().expr + ") else (" + self.expr + ")"
 
     def __add__(self, other):
         return text_type(self) + text_type(other)
@@ -336,7 +335,6 @@ class LteOp(LteOp_):
     to_python = _inequality_to_python
 
 
-
 class BaseBinaryOp(BaseBinaryOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
@@ -475,7 +473,13 @@ class NumberOp(NumberOp_):
             if exists is TRUE:
                 return "float(" + value + ")"
             else:
-                return "float(" + value + ") if (" + Python[exists].to_python() + ") else None"
+                return (
+                    "float("
+                    + value
+                    + ") if ("
+                    + Python[exists].to_python()
+                    + ") else None"
+                )
 
 
 class StringOp(StringOp_):

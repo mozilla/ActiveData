@@ -7,13 +7,10 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.query import QueryOp
+from mo_dots import is_data
 
 
 class Namespace(object):
@@ -60,7 +57,7 @@ class Namespace(object):
 def convert_list(operator, operand):
     if operand==None:
         return None
-    elif isinstance(operand, Mapping):
+    elif is_data(operand):
         return operator(operand)
     else:
         return map(operator, operand)

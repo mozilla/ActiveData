@@ -6,9 +6,7 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
 from datetime import datetime
@@ -16,8 +14,8 @@ from datetime import datetime
 from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers import Container
-from jx_python.expressions import Variable, Literal
-from mo_dots import wrap, Data, FlatList, literal_field
+from jx_python.expressions import Literal, Variable
+from mo_dots import Data, FlatList, is_list, literal_field, wrap
 from mo_future import text_type
 from mo_json.typed_encoder import TYPE_PREFIX
 from mo_logs import Log
@@ -107,7 +105,7 @@ class DocStore(Container):
         if query.sort:
             short_list = self._sort(query.sort)
 
-        if isinstance(query.select, list):
+        if is_list(query.select):
             accessors = map(jx.get, query.select.value)
 
         if query.window:

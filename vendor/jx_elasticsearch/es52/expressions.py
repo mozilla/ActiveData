@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 
-from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend)
+from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
 from jx_base.utils import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -59,7 +59,7 @@ class Variable(Variable_):
 
 class NeOp(NeOp_):
     def to_esfilter(self, schema):
-        if not is_op(self.lhs, Variable_) or not is_op(self.rhs, Literal_):
+        if not is_op(self.lhs, Variable_) or not is_literal(self.rhs):
             return self.to_es_script(schema).to_esfilter(schema)
 
         return es_not({"term": {self.lhs.var: self.rhs.to_esfilter(schema)}})
@@ -82,7 +82,7 @@ class CaseOp(CaseOp_):
 
 class ConcatOp(ConcatOp_):
     def to_esfilter(self, schema):
-        if is_op(self.value, Variable_) and is_op(self.find, Literal_):
+        if is_op(self.value, Variable_) and is_literal(self.find):
             return {
                 "regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}
             }
@@ -116,7 +116,7 @@ def to_esfilter(self, schema):
 
 
 def _inequality_to_esfilter(self, schema):
-    if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
+    if is_op(self.lhs, Variable_) and is_literal(self.rhs):
         cols = schema.leaves(self.lhs.var)
         if not cols:
             lhs = self.lhs.var  # HAPPENS DURING DEBUGGING, AND MAYBE IN REAL LIFE TOO
@@ -158,8 +158,8 @@ class EqOp(EqOp_):
         lhs = ES52[self.lhs].partial_eval()
         rhs = ES52[self.rhs].partial_eval()
 
-        if is_op(lhs, Literal_):
-            if is_op(rhs, Literal_):
+        if is_literal(lhs):
+            if is_literal(rhs):
                 return FALSE if value_compare(lhs.value, rhs.value) else TRUE
             else:
                 return EqOp([rhs, lhs])  # FLIP SO WE CAN USE TERMS FILTER
@@ -167,7 +167,7 @@ class EqOp(EqOp_):
         return EqOp([lhs, rhs])
 
     def to_esfilter(self, schema):
-        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             rhs = self.rhs.value
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
@@ -221,7 +221,7 @@ class EqOp(EqOp_):
 
 class BasicEqOp(BasicEqOp_):
     def to_esfilter(self, schema):
-        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
             if cols:
@@ -254,7 +254,7 @@ class MissingOp(MissingOp_):
 
 class NeOp(NeOp_):
     def to_esfilter(self, schema):
-        if is_op(self.lhs, Variable_) and is_op(self.rhs, Literal_):
+        if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             columns = schema.values(self.lhs.var)
             if len(columns) == 0:
                 return MATCH_ALL
@@ -368,7 +368,7 @@ class LengthOp(LengthOp_):
 
 class RegExpOp(RegExpOp_):
     def to_esfilter(self, schema):
-        if is_op(self.pattern, Literal_) and is_op(self.var, Variable_):
+        if is_literal(self.pattern) and is_op(self.var, Variable_):
             cols = schema.leaves(self.var.var)
             if len(cols) == 0:
                 return MATCH_NONE
@@ -402,7 +402,7 @@ class BasicStartsWithOp(BasicStartsWithOp_):
     def to_esfilter(self, schema):
         if not self.value:
             return MATCH_ALL
-        elif is_op(self.value, Variable_) and is_op(self.prefix, Literal_):
+        elif is_op(self.value, Variable_) and is_literal(self.prefix):
             var = first(schema.leaves(self.value.var)).es_column
             return {"prefix": {var: self.prefix.value}}
         else:
@@ -426,7 +426,7 @@ class PrefixOp(PrefixOp_):
         return PrefixOp([expr, prefix])
 
     def to_esfilter(self, schema):
-        if is_op(self.prefix, Literal_) and not self.prefix.value:
+        if is_literal(self.prefix) and not self.prefix.value:
             return MATCH_ALL
 
         expr = self.expr
@@ -439,7 +439,7 @@ class PrefixOp(PrefixOp_):
         if is_op(expr, StringOp_):
             expr = expr.term
 
-        if is_op(expr, Variable_) and is_op(self.prefix, Literal_):
+        if is_op(expr, Variable_) and is_literal(self.prefix):
             var = first(schema.leaves(expr.var)).es_column
             return {"prefix": {var: self.prefix.value}}
         else:
@@ -450,7 +450,7 @@ class SuffixOp(SuffixOp_):
     def to_esfilter(self, schema):
         if not self.suffix:
             return MATCH_ALL
-        elif is_op(self.expr, Variable_) and is_op(self.suffix, Literal_):
+        elif is_op(self.expr, Variable_) and is_literal(self.suffix):
             var = first(schema.leaves(self.expr.var)).es_column
             return {"regexp": {var: ".*" + string2regexp(self.suffix.value)}}
         else:
@@ -468,12 +468,12 @@ class InOp(InOp_):
             var = col.es_column
 
             if col.jx_type == BOOLEAN:
-                if is_op(self.superset, Literal_) and not is_sequence(self.superset.value):
+                if is_literal(self.superset) and not is_sequence(self.superset.value):
                     return {"term": {var: value2boolean(self.superset.value)}}
                 else:
                     return {"terms": {var: map(value2boolean, self.superset.value)}}
             else:
-                if is_op(self.superset, Literal_) and not is_sequence(self.superset.value):
+                if is_literal(self.superset) and not is_sequence(self.superset.value):
                     return {"term": {var: self.superset.value}}
                 else:
                     return {"terms": {var: self.superset.value}}

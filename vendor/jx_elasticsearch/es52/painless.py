@@ -14,7 +14,7 @@ from jx_base.expressions import (AddOp as AddOp_, AndOp as AndOp_, BasicAddOp as
 from jx_base.language import is_op
 from jx_elasticsearch.es52.util import es_script
 from mo_dots import FlatList, Null, coalesce, data_types
-from mo_future import PY2, text_type
+from mo_future import PY2, integer_types, text_type
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
@@ -299,15 +299,21 @@ class Literal(Literal_):
             class_ = v.__class__
             if class_ is text_type:
                 return EsScript(type=STRING, expr=quote(v), frum=self, schema=schema)
-            if class_ is int:
-                return EsScript(
-                    type=INTEGER, expr=text_type(v), frum=self, schema=schema
-                )
+            if class_ in integer_types:
+                if MIN_INT32 <= v <= MAX_INT32:
+                    return EsScript(
+                        type=INTEGER, expr=text_type(v), frum=self, schema=schema
+                    )
+                else:
+                    return EsScript(
+                        type=INTEGER, expr=text_type(v) + "L", frum=self, schema=schema
+                    )
+
             if class_ is float:
                 return EsScript(
-                    type=NUMBER, expr=text_type(v), frum=self, schema=schema
+                    type=NUMBER, expr=text_type(v) + "D", frum=self, schema=schema
                 )
-            if class_ is data_types:
+            if class_ in data_types:
                 return EsScript(
                     type=OBJECT,
                     expr="["

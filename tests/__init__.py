@@ -197,9 +197,9 @@ class ESUtils(object):
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
             if frum == None:
-                subtest.query["from"] = _settings.alias
+                subtest.query["from"] = _settings.index
             elif is_text(frum):
-                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.alias)
+                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
             else:
                 Log.error("Do not know how to handle")
         except Exception as e:

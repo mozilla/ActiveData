@@ -13,7 +13,7 @@ from jx_base.expressions import (AddOp as AddOp_, AndOp as AndOp_, BasicAddOp as
                                  StringOp as StringOp_, SubOp as SubOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, TupleOp as TupleOp_, UnionOp as UnionOp_, Variable as Variable_, WhenOp as WhenOp_, ZERO, define_language, extend, merge_types, is_literal)
 from jx_base.utils import is_op
 from jx_elasticsearch.es52.util import es_script
-from mo_dots import FlatList, MAPPING_TYPES, Null, coalesce
+from mo_dots import FlatList, data_types, Null, coalesce
 from mo_future import PY2, text_type
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
@@ -303,7 +303,7 @@ class Literal(Literal_):
                 return EsScript(
                     type=NUMBER, expr=text_type(v), frum=self, schema=schema
                 )
-            if class_ is MAPPING_TYPES:
+            if class_ is data_types:
                 return EsScript(
                     type=OBJECT,
                     expr="["

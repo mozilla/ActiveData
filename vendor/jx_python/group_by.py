@@ -15,6 +15,7 @@ import sys
 
 from jx_base.container import Container
 from jx_base.expressions import jx_expression
+from jx_base.language import is_expression
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.multiset import Multiset
 from mo_dots import Data, FlatList, Null, listwrap

@@ -9,14 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from copy import copy
 import itertools
 
 import jx_base
 from jx_base import Container
 from jx_base.expressions import TRUE, Variable
-from jx_base.utils import is_expression, is_op
+from jx_base.language import is_expression, is_op
 from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from jx_python.meta import get_schema_from_list
@@ -26,8 +25,6 @@ from mo_future import first, sort_using_key
 from mo_logs import Log
 from mo_threads import Lock
 from pyLibrary import convert
-
-_get = object.__getattribute__
 
 
 class ListContainer(Container, jx_base.Namespace, jx_base.Table):
@@ -273,8 +270,6 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
     def __len__(self):
         return len(self.data)
 
-    # class Namespace(jx_base.Namespace):
-
     def get_snowflake(self, name):
         if self.name != name:
             Log.error("This container only has table by name of {{name}}", name=name)
@@ -298,8 +293,6 @@ def _exec(code):
         return temp
     except Exception as e:
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)
-
-
 
 
 from jx_base.schema import Schema

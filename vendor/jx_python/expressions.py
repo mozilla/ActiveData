@@ -11,9 +11,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
     AndOp as AndOp_,
-    BaseBinaryOp as BaseBinaryOp_,
+    AddOp as AddOp_,
+    MulOp as MulOp_,
+    SubOp as SubOp_,
+    ExpOp as ExpOp_,
+    ModOp as ModOp_,
+    DivOp as DivOp_,
     BaseInequalityOp as BaseInequalityOp_,
-    BaseMultiOp as BaseMultiOp_,
     BasicEqOp as BasicEqOp_,
     BasicIndexOfOp as BasicIndexOfOp_,
     BetweenOp as BetweenOp_,
@@ -77,7 +81,7 @@ from jx_base.expressions import (
     extend,
     jx_expression,
 )
-from jx_base.utils import is_expression, is_op
+from jx_base.language import is_expression, is_op
 from jx_python.expression_compiler import compile_expression
 from mo_dots import coalesce, is_data, is_list, split_field, unwrap
 from mo_future import PY2, is_text, text_type
@@ -335,17 +339,32 @@ class LteOp(LteOp_):
     to_python = _inequality_to_python
 
 
-class BaseBinaryOp(BaseBinaryOp_):
-    def to_python(self, not_null=False, boolean=False, many=False):
-        return (
-            "("
-            + Python[self.lhs].to_python()
-            + ") "
-            + _python_operators[self.op][0]
-            + " ("
-            + Python[self.rhs].to_python()
-            + ")"
-        )
+def binaryop_to_python(self, not_null=False, boolean=False, many=False):
+    return (
+        "("
+        + Python[self.lhs].to_python()
+        + ") "
+        + _python_operators[self.op][0]
+        + " ("
+        + Python[self.rhs].to_python()
+        + ")"
+    )
+
+
+class SubOp(SubOp_):
+    to_python = binaryop_to_python
+
+
+class ExpOp(ExpOp_):
+    to_python = binaryop_to_python
+
+
+class ModOp(ModOp_):
+    to_python = binaryop_to_python
+
+
+class DivOp(DivOp_):
+    to_python = binaryop_to_python
 
 
 class BaseInequalityOp(BaseInequalityOp_):
@@ -502,24 +521,31 @@ class MaxOp(MaxOp_):
         return "max([" + (",".join(Python[t].to_python() for t in self.terms)) + "])"
 
 
-class BaseMultiOp(BaseMultiOp_):
-    def to_python(self, not_null=False, boolean=False, many=False):
-        sign, zero = _python_operators[self.op]
-        if len(self.terms) == 0:
-            return Python[self.default].to_python()
-        elif self.default is NULL:
-            return sign.join(
-                "coalesce(" + Python[t].to_python() + ", " + zero + ")"
-                for t in self.terms
-            )
-        else:
-            return (
-                "coalesce("
-                + sign.join("(" + Python[t].to_python() + ")" for t in self.terms)
-                + ", "
-                + Python[self.default].to_python()
-                + ")"
-            )
+def multiop_to_python(self, not_null=False, boolean=False, many=False):
+    sign, zero = _python_operators[self.op]
+    if len(self.terms) == 0:
+        return Python[self.default].to_python()
+    elif self.default is NULL:
+        return sign.join(
+            "coalesce(" + Python[t].to_python() + ", " + zero + ")"
+            for t in self.terms
+        )
+    else:
+        return (
+            "coalesce("
+            + sign.join("(" + Python[t].to_python() + ")" for t in self.terms)
+            + ", "
+            + Python[self.default].to_python()
+            + ")"
+        )
+
+
+class AddOp(AddOp_):
+    to_python = multiop_to_python
+
+
+class MulOp(MulOp_):
+    to_python = multiop_to_python
 
 
 class RegExpOp(RegExpOp_):

@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy
 
 from jx_base.dimensions import Dimension
-from jx_base.queries import is_variable_name
+from jx_base.utils import is_variable_name
 from jx_base.query import QueryOp
-from jx_base.utils import is_op
+from jx_base.language import is_op
 from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap, is_many
 from mo_future import is_text

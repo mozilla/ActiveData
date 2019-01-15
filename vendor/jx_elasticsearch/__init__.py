@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.container import type2container
 from mo_files.url import URL
 from mo_kwargs import override

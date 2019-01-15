@@ -9,13 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base import Column, container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
+from jx_base.language import is_op
 from jx_base.query import QueryOp
-from jx_base.utils import is_op
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
 from jx_elasticsearch.es52.setop import es_setop, is_setop

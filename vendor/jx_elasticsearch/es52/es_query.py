@@ -7,8 +7,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_elasticsearch.es52.expressions import ES52
+from jx_elasticsearch.es52.util import MATCH_ALL
 from mo_dots import is_data, is_list, startswith_field
 from mo_future import text_type
 from mo_json import value2json

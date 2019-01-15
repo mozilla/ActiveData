@@ -10,25 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.utils import is_op, value_compare
-from mo_dots import is_container, is_many
-from mo_future import is_text
-
-_range = range
-
 from jx_base import query
-from jx_python import expressions as _expressions
-from jx_python import flat_list, group_by
-from mo_dots import listwrap, wrap, unwrap, FlatList
-from mo_dots import set_default, Null, Data, split_field, coalesce, join_field
-from mo_future import generator_types, sort_using_cmp
-from mo_logs import Log
-import mo_math
-from mo_math import UNION, MIN
-from pyLibrary import convert
 from jx_base.container import Container
-from jx_base.expressions import TRUE, FALSE
+from jx_base.expressions import FALSE, TRUE
 from jx_base.query import QueryOp, _normalize_selects
+from jx_base.language import is_op, value_compare
+from jx_python import expressions as _expressions, flat_list, group_by
 from jx_python.containers.cube import Cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
@@ -36,9 +23,14 @@ from jx_python.expressions import jx_expression_to_function
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import is_data
-from mo_dots import is_list
+import mo_dots
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, wrap
 from mo_dots.objects import DataObject
+from mo_future import is_text, sort_using_cmp
+from mo_logs import Log
+import mo_math
+from mo_math import MIN, UNION
+from pyLibrary import convert
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
@@ -46,6 +38,7 @@ from mo_dots.objects import DataObject
 # TODO: USE http://docs.sqlalchemy.org/en/latest/core/tutorial.html AS DOCUMENTATION FRAMEWORK
 
 builtin_tuple = tuple
+_range = range
 _Column = None
 _merge_type = None
 _ = _expressions

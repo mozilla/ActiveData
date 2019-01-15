@@ -23,15 +23,15 @@ from decimal import Decimal
 import operator
 import re
 
-from jx_base.queries import get_property_name, is_variable_name
-from jx_base.utils import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
+from jx_base.utils import get_property_name, is_variable_name
+from jx_base.language import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
 from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap, is_sequence
 from mo_future import first, get_function_name, is_text, items as items_, text_type, utf8_json_encoder, zip_longest
 import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
-from mo_math import is_integer, MAX, MIN
+from mo_math import is_integer, MAX, MIN, is_number
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -103,7 +103,7 @@ def _jx_expression(expr, lang):
 
     if expr is None:
         return TRUE
-    elif expr in (True, False, None) or expr == None or isinstance(expr, (float, int, Decimal, Date)):
+    elif expr in (True, False, None) or expr == None or is_number(expr):
         return Literal(expr)
     elif is_text(expr):
         return Variable(expr)

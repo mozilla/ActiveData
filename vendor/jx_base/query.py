@@ -16,8 +16,8 @@ import jx_base
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, Domain, SetDomain
 from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, TRUE, Variable, jx_expression
-from jx_base.queries import is_variable_name
-from jx_base.utils import is_expression, is_op
+from jx_base.utils import is_variable_name
+from jx_base.language import is_expression, is_op
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap
 from mo_future import is_text, text_type
 from mo_json import STRUCT

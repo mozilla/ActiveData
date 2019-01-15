@@ -103,10 +103,10 @@ def _jx_expression(expr, lang):
 
     if expr is None:
         return TRUE
-    elif expr in (True, False, None) or expr == None or is_number(expr):
-        return Literal(expr)
     elif is_text(expr):
         return Variable(expr)
+    elif expr in (True, False, None) or expr == None or is_number(expr):
+        return Literal(expr)
     elif is_sequence(expr):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
 

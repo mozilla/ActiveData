@@ -2085,6 +2085,35 @@ class TestEdge1(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_default_for_average(self):
+        test = {
+            "data": [
+                {"k": "a", "e": 4},
+                {"k": "a", "e": 5},
+                {"k": "a", "e": 6},
+                {"k": "a", "e": 7},
+                {"k": "b", "e": 8},
+                {"k": "b", "e": 9},
+                {"k": "c"},
+                {"k": "c"}
+            ],
+            "query": {
+                "select": [{"name": "avg", "value": "e", "aggregate": "average", "default": 0}],
+                "from": TEST_TABLE,
+                "edges": ["k"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "avg": 22 / 4},
+                    {"k": "b", "avg": 17 / 2},
+                    {"k": "c", "avg": 0}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+
 
 
 # TODO: ALLOW USE OF EDGE VARIABLES IN QUERY

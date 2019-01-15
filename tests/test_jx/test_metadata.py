@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_dots import wrap
 from mo_future import text_type
+from mo_logs import Log
 from mo_logs.exceptions import extract_stack
 from pyLibrary.meta import extenstion_method
 from tests.test_jx import BaseTestCase, TEST_TABLE
@@ -181,14 +182,15 @@ class TestMetadata(BaseTestCase):
         self.assertEqual(a.my_func("testing"), ("testing", "test_value"), "Expecting method to be run")
 
     def test_cardinality(self):
-        pre_test = {
+        pre_test = wrap({
             "data": [{"a": "b"}, {"a": "c"}],
             "query": {"from": TEST_TABLE},  # DUMMY QUERY
             "expecting_list": {
                 "meta": {"format": "list"}, "data": [{"a": "b"}, {"a": "c"}]
             }
-        }
+        })
         settings = self.utils.fill_container(pre_test)
+        self.utils.send_queries(pre_test)
 
         test = {
             "query": {
@@ -216,6 +218,6 @@ class TestMetadata(BaseTestCase):
                 ]
             }
         }
+        Log.note("table = {{table}}", table=pre_test.query['from'])
         subtest = wrap(test)
-        subtest.name = text_type(extract_stack()[1]['method'])
         self.utils.send_queries(subtest)

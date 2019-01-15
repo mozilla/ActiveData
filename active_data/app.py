@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 from _ssl import PROTOCOL_SSLv23
 import os
 from ssl import SSLContext
-from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
@@ -29,7 +28,7 @@ from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
 from mo_dots import is_data
-from mo_files import File
+from mo_files import File, TempFile
 from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
@@ -168,25 +167,20 @@ def setup_flask_ssl():
     if is_data(config.flask.ssl_context):
         # EXPECTED PEM ENCODED FILE NAMES
         # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
-        tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
-        try:
-            tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
-            if ssl_flask.ssl_context.certificate_chain_file:
-                tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
-            tempfile.flush()
-            tempfile.close()
-
-            context = SSLContext(PROTOCOL_SSLv23)
-            context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
-
-            ssl_flask.ssl_context = context
-        except Exception as e:
-            Log.error("Could not handle ssl context construction", cause=e)
-        finally:
+        with TempFile() as tempfile:
             try:
-                tempfile.delete()
-            except Exception:
-                pass
+                tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
+                if ssl_flask.ssl_context.certificate_chain_file:
+                    tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
+                tempfile.flush()
+                tempfile.close()
+
+                context = SSLContext(PROTOCOL_SSLv23)
+                context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+
+                ssl_flask.ssl_context = context
+            except Exception as e:
+                Log.error("Could not handle ssl context construction", cause=e)
 
     def runner(please_stop):
         Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)

@@ -24,7 +24,7 @@ from mo_times.timer import Timer
 from pyLibrary import convert
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
-_ = value2json
+_keep_import = value2json
 
 @cors_wrapper
 def get_raw_json(path):

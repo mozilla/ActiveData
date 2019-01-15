@@ -9,10 +9,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
+from mo_future import is_binary, text_type
+
 from mo_dots import _setdefault, wrap
 from mo_dots.utils import CLASS, OBJ
-from mo_future import binary_type, text_type
 
 _get = object.__getattribute__
 _set = object.__setattr__

@@ -11,9 +11,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 from copy import deepcopy
 
+from mo_future import generator_types, text_type
+
 from mo_dots import CLASS, coalesce, unwrap, wrap
 from mo_dots.nones import Null
-from mo_future import text_type, generator_types
 
 LIST = text_type("list")
 

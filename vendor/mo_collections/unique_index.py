@@ -81,7 +81,11 @@ class UniqueIndex(Set, Mapping):
         if key == None:
             Log.error("Expecting key to be not None")
 
-        d = self._data.get(key)
+        try:
+            d = self._data.get(key)
+        except Exception as e:
+            key = value2key(self._keys, val)
+
         if d is None:
             self._data[key] = unwrap(val)
             self.count += 1

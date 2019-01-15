@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
+from mo_future import is_text, is_binary, integer_types
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 import math
@@ -156,7 +156,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
         return scrub_number(value)
     elif type_ is bool:
         return value
-    elif type_ in (int, long):
+    elif type_ in integer_types:
         return scrub_number(value)
     elif type_ in (date, datetime):
         return scrub_number(datetime2unix(value))

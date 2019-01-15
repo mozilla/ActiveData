@@ -11,8 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
-from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 from mo_future import binary_type, generator_types, is_binary, is_text, text_type
+
+from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -187,7 +188,7 @@ def relative_field(field, parent):
 def hash_value(v):
     if is_many(v):
         return hash(tuple(hash_value(vv) for vv in v))
-    elif _get(v, CLASS) not in MAPPING_TYPES:
+    elif _get(v, CLASS) not in data_types:
         return hash(v)
     else:
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
@@ -212,7 +213,7 @@ def set_default(*params):
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
     """
     p0 = params[0]
-    agg = p0 if p0 or _get(p0, CLASS) in MAPPING_TYPES else {}
+    agg = p0 if p0 or _get(p0, CLASS) in data_types else {}
     for p in params[1:]:
         p = unwrap(p)
         if p is None:
@@ -239,7 +240,7 @@ def _all_default(d, default, seen=None):
 
         if existing_value == None:
             if default_value != None:
-                if _get(default_value, CLASS) in MAPPING_TYPES:
+                if _get(default_value, CLASS) in data_types:
                     df = seen.get(id(default_value))
                     if df is not None:
                         _set_attr(d, [k], df)
@@ -258,7 +259,7 @@ def _all_default(d, default, seen=None):
         elif is_list(existing_value) or is_list(default_value):
             _set_attr(d, [k], None)
             _set_attr(d, [k], listwrap(existing_value) + listwrap(default_value))
-        elif (hasattr(existing_value, "__setattr__") or _get(existing_value, CLASS) in MAPPING_TYPES) and _get(default_value, CLASS) in MAPPING_TYPES:
+        elif (hasattr(existing_value, "__setattr__") or _get(existing_value, CLASS) in data_types) and _get(default_value, CLASS) in data_types:
             df = seen.get(id(default_value))
             if df is not None:
                 _set_attr(d, [k], df)
@@ -468,7 +469,7 @@ def _wrap_leaves(value):
     class_ = _get(value, CLASS)
     if class_ in (text_type, binary_type, int, float):
         return value
-    if class_ in MAPPING_TYPES:
+    if class_ in data_types:
         if class_ is Data:
             value = unwrap(value)
 
@@ -520,7 +521,7 @@ def unwrap(v):
         return None
     elif _type is DataObject:
         d = _get(v, OBJ)
-        if _get(d, CLASS) in MAPPING_TYPES:
+        if _get(d, CLASS) in data_types:
             return d
         else:
             return v
@@ -591,7 +592,7 @@ def tuplewrap(value):
     return unwrap(value),
 
 
-from mo_dots.datas import Data, SLOT, MAPPING_TYPES, is_data
+from mo_dots.datas import Data, SLOT, data_types, is_data
 from mo_dots.nones import Null, NullType
 from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
 from mo_dots.objects import DataObject

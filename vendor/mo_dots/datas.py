@@ -13,9 +13,10 @@ from collections import MutableMapping
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_dots import  _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
-from mo_dots.utils import CLASS
 from mo_future import PY2, generator_types, is_binary, iteritems, long, none_type, text_type
+
+from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
+from mo_dots.utils import CLASS
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -71,7 +72,7 @@ class Data(MutableMapping):
 
     def __contains__(self, item):
         value = Data.__getitem__(self, item)
-        if _get(value, CLASS) in MAPPING_TYPES or value:
+        if _get(value, CLASS) in data_types or value:
             return True
         return False
 
@@ -84,7 +85,7 @@ class Data(MutableMapping):
             return Null
         if key == ".":
             output = self._internal_dict
-            if _get(output, CLASS) in MAPPING_TYPES:
+            if _get(output, CLASS) in data_types:
                 return self
             else:
                 return output
@@ -202,7 +203,7 @@ class Data(MutableMapping):
         if not d and other == None:
             return False
 
-        if _get(other, CLASS) not in MAPPING_TYPES:
+        if _get(other, CLASS) not in data_types:
             return False
         e = unwrap(other)
         for k, v in d.items():
@@ -222,7 +223,7 @@ class Data(MutableMapping):
 
     def items(self):
         d = self._internal_dict
-        return [(k, wrap(v)) for k, v in d.items() if v != None or _get(v, CLASS) in MAPPING_TYPES]
+        return [(k, wrap(v)) for k, v in d.items() if v != None or _get(v, CLASS) in data_types]
 
     def leaves(self, prefix=None):
         """
@@ -316,7 +317,7 @@ def leaves(value, prefix=None):
     output = []
     for k, v in value.items():
         try:
-            if _get(v, CLASS) in MAPPING_TYPES:
+            if _get(v, CLASS) in data_types:
                 output.extend(leaves(v, prefix=prefix + literal_field(k) + "."))
             else:
                 output.append((prefix + literal_field(k), unwrap(v)))
@@ -426,7 +427,7 @@ class _DictUsingSelf(dict):
         if not d and other == None:
             return True
 
-        if not _get(other, CLASS) in MAPPING_TYPES:
+        if not _get(other, CLASS) in data_types:
             return False
         e = unwrap(other)
         for k, v in dict.items(d):
@@ -444,7 +445,7 @@ class _DictUsingSelf(dict):
         return wrap(dict.get(self, key, default))
 
     def items(self):
-        return [(k, wrap(v)) for k, v in dict.items(self) if v != None or _get(v, CLASS) in MAPPING_TYPES]
+        return [(k, wrap(v)) for k, v in dict.items(self) if v != None or _get(v, CLASS) in data_types]
 
     def leaves(self, prefix=None):
         """
@@ -453,7 +454,7 @@ class _DictUsingSelf(dict):
         prefix = coalesce(prefix, "")
         output = []
         for k, v in self.items():
-            if _get(v, CLASS) in MAPPING_TYPES:
+            if _get(v, CLASS) in data_types:
                 output.extend(wrap(v).leaves(prefix=prefix + literal_field(k) + "."))
             else:
                 output.append((prefix + literal_field(k), v))
@@ -534,7 +535,7 @@ def _str(value, depth):
     FOR DEBUGGING POSSIBLY RECURSIVE STRUCTURES
     """
     output = []
-    if depth >0 and _get(value, CLASS) in MAPPING_TYPES:
+    if depth >0 and _get(value, CLASS) in data_types:
         for k, v in value.items():
             output.append(str(k) + "=" + _str(v, depth - 1))
         return "{" + ",\n".join(output) + "}"
@@ -547,7 +548,7 @@ def _str(value, depth):
 
 
 def _iadd(self, other):
-    if not _get(other, CLASS) in MAPPING_TYPES:
+    if not _get(other, CLASS) in data_types:
         get_logger().error("Expecting a Mapping")
     d = unwrap(self)
     for ok, ov in other.items():
@@ -555,7 +556,7 @@ def _iadd(self, other):
         if sv == None:
             d[ok] = deepcopy(ov)
         elif isinstance(ov, (Decimal, float, long, int)):
-            if _get(sv, CLASS) in MAPPING_TYPES:
+            if _get(sv, CLASS) in data_types:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
                     stype=_get(sv, CLASS).__name__,
@@ -567,8 +568,8 @@ def _iadd(self, other):
                 d[ok] = sv + ov
         elif is_list(ov):
             d[ok] = listwrap(sv) + ov
-        elif _get(ov, CLASS) in MAPPING_TYPES:
-            if _get(sv, CLASS) in MAPPING_TYPES:
+        elif _get(ov, CLASS) in data_types:
+            if _get(sv, CLASS) in data_types:
                 _iadd(sv, ov)
             elif is_list(sv):
                 d[ok].append(ov)
@@ -579,7 +580,7 @@ def _iadd(self, other):
                     otype=_get(ov, CLASS).__name__
                 )
         else:
-            if _get(sv, CLASS) in MAPPING_TYPES:
+            if _get(sv, CLASS) in data_types:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
                     stype=_get(sv, CLASS).__name__,
@@ -590,11 +591,24 @@ def _iadd(self, other):
     return self
 
 
-MAPPING_TYPES = (Data, dict)
+data_types = (Data, dict)  # TYPES TO HOLD DATA
+
+
+def register_data(type_):
+    """
+    :param type_:  ADD OTHER TYPE THAT HOLDS DATA
+    :return:
+    """
+    global data_types
+    data_types = tuple(set(data_types + (type_,)))
 
 
 def is_data(d):
-    return d.__class__ in MAPPING_TYPES
+    """
+    :param d:
+    :return: True IF d IS A TYPE THAT HOLDS DATA
+    """
+    return d.__class__ in data_types
 
 
 from mo_dots.nones import Null, NullType

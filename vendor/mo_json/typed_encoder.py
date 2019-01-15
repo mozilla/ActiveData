@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
+from mo_future import is_text, is_binary, integer_types
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
@@ -238,7 +238,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
             for c in value:
                 append(buffer, ESCAPE_DCT.get(c, c))
             append(buffer, '"}')
-        elif _type in (int, long):
+        elif _type in integer_types:
             if NUMBER_TYPE not in sub_schema:
                 sub_schema[NUMBER_TYPE] = True
                 net_new_properties.append(path + [NUMBER_TYPE])

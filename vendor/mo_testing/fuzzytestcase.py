@@ -125,7 +125,14 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
         elif isinstance(expected, types.FunctionType):
             return expected(test)
         elif hasattr(test, "__iter__") and hasattr(expected, "__iter__"):
-            if test == None and not expected:
+            if test.__class__.__name__ == "ndarray":  # numpy
+                test = test.tolist()
+            elif test.__class__.__name__ == "DataFrame":  # pandas
+                test = test[test.columns[0]].values.tolist()
+            elif test.__class__.__name__ == "Series":  # pandas
+                test = test.values.tolist()
+
+            if not expected and test == None:
                 return
             if expected == None:
                 expected = []  # REPRESENT NOTHING
@@ -147,7 +154,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     Snagged from unittest/case.py, then modified (Aug2014)
     """
     if expected is NULL:
-        if test == None:
+        if test == None:  # pandas dataframes reject any comparision with an exception!
             return
         else:
             raise AssertionError(expand_template("{{test}} != {{expected}}", locals()))

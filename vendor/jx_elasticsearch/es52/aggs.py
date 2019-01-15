@@ -9,13 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import deque
 
 from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, TupleOp, Variable as Variable_
 from jx_base.query import DEFAULT_LIMIT
-from jx_base.utils import is_op
+from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ComplexAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
@@ -26,7 +25,7 @@ from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap
-from mo_future import first, text_type
+from mo_future import first, is_text, text_type
 from mo_json import EXISTS, NESTED, OBJECT
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log

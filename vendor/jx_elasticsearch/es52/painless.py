@@ -10,15 +10,19 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (AddOp as AddOp_, AndOp as AndOp_, BasicAddOp as BasicAddOp_, BasicEqOp as BasicEqOp_, BasicIndexOfOp as BasicIndexOfOp_, BasicMulOp as BasicMulOp_, BasicStartsWithOp as BasicStartsWithOp_, BasicSubstringOp as BasicSubstringOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, CountOp as CountOp_, DateOp as DateOp_, DivOp as DivOp_, EqOp as EqOp_, EsScript as EsScript_, ExistsOp as ExistsOp_, ExpOp as ExpOp_, FALSE, FalseOp as FalseOp_, FirstOp as FirstOp_, FloorOp as FloorOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, IntegerOp as IntegerOp_, IsNumberOp as IsNumberOp_, LeavesOp as LeavesOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MaxOp as MaxOp_, MinOp as MinOp_, MissingOp as MissingOp_, ModOp as ModOp_, MulOp as MulOp_, NULL, NeOp as NeOp_, NotLeftOp as NotLeftOp_, NotOp as NotOp_, NullOp, NumberOp as NumberOp_, ONE, OrOp as OrOp_, PrefixOp as PrefixOp_,
-                                 StringOp as StringOp_, SubOp as SubOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, TupleOp as TupleOp_, UnionOp as UnionOp_, Variable as Variable_, WhenOp as WhenOp_, ZERO, define_language, extend, merge_types, is_literal)
-from jx_base.utils import is_op
+                                 StringOp as StringOp_, SubOp as SubOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, TupleOp as TupleOp_, UnionOp as UnionOp_, Variable as Variable_, WhenOp as WhenOp_, ZERO, define_language, extend, is_literal, merge_types)
+from jx_base.language import is_op
 from jx_elasticsearch.es52.util import es_script
-from mo_dots import FlatList, MAPPING_TYPES, Null, coalesce
-from mo_future import PY2, text_type
+from mo_dots import FlatList, Null, coalesce, data_types
+from mo_future import PY2, integer_types, text_type
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_times import Date
+
+MAX_INT32 = 2147483647
+MIN_INT32 = -2147483648
+
 
 NUMBER_TO_STRING = """
 Optional.of({{expr}}).map(

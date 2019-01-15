@@ -20,7 +20,7 @@ from jx_python import jx
 from mo_collections import UniqueIndex
 from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, concat_field, is_container, is_data, is_list, join_field, listwrap, split_field, unwraplist, wrap
 from mo_files import File
-from mo_future import items, none_type, reduce, text_type
+from mo_future import items, none_type, reduce, text_type, binary_type
 from mo_json import (INTEGER, NUMBER, STRING, STRUCT, json2value, python_type_to_json_type, value2json)
 from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Except, Log
@@ -723,6 +723,7 @@ _merge_order = {
     Date: 4,
     float: 5,
     text_type: 6,
+    binary_type: 6,
     object: 7,
     dict: 8,
     Mapping: 9,

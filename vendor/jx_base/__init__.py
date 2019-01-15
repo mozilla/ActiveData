@@ -9,13 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from uuid import uuid4
 
 from jx_base.expressions import jx_expression
 from jx_python.expressions import Literal, Python
 from mo_dots import coalesce, listwrap, wrap
-from mo_future import text_type
+from mo_dots.datas import register_data
+from mo_future import is_text, text_type
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
@@ -193,7 +193,9 @@ class {{class_name}}(Mapping):
         },
     )
 
-    return _exec(code, name)
+    output = _exec(code, name)
+    register_data(output)
+    return output
 
 
 class TableDesc(
@@ -227,6 +229,7 @@ Column = DataClass(
     ],
     constraint={
         "and": [
+            # {"not": {"eq": {"es_column": "."}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},
         ]

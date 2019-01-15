@@ -14,7 +14,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
 from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from jx_base.utils import is_op
+from jx_base.language import is_op
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
 from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless

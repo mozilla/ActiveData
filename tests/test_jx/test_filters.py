@@ -370,7 +370,7 @@ class TestFilters(BaseTestCase):
                     "format": "list"
                 },
                 "data": [
-                    {"v": bigger_than_int32}
+                    {"v": 42}
                 ]
             }
         }

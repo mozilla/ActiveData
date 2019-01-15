@@ -188,7 +188,7 @@ class TestMetadata(BaseTestCase):
                 "meta": {"format": "list"}, "data": [{"a": "b"}, {"a": "c"}]
             }
         }
-        self.utils.execute_tests(pre_test)
+        settings = self.utils.fill_container(pre_test)
 
         test = {
             "query": {
@@ -198,7 +198,7 @@ class TestMetadata(BaseTestCase):
                     "and": [
                         {
                             "eq": {
-                                "table": TEST_TABLE
+                                "table": settings.alias
                             }
                         },
                         {
@@ -210,12 +210,12 @@ class TestMetadata(BaseTestCase):
                 }
             },
             "expecting_list": {
-                "meta": {"format": "value"},
+                "meta": {"format": "list"},
                 "data": [
                     2
                 ]
             }
         }
-        subtest = wrap(pre_test)
+        subtest = wrap(test)
         subtest.name = text_type(extract_stack()[1]['method'])
         self.utils.send_queries(subtest)

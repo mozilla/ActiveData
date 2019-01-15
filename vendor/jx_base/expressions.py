@@ -107,6 +107,8 @@ def _jx_expression(expr, lang):
         return Variable(expr)
     elif expr in (True, False, None) or expr == None or is_number(expr):
         return Literal(expr)
+    elif expr.__class__ is Date:
+        return Literal(expr.unix)
     elif is_sequence(expr):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
 

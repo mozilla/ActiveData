@@ -7,17 +7,15 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from jx_base.query import canonical_aggregates
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import TupleOp
-from jx_elasticsearch.es52.aggs import count_dim, aggs_iterator, format_dispatch
+from jx_base.query import canonical_aggregates
+from jx_base.language import is_op
+from jx_elasticsearch.es52.aggs import aggs_iterator, count_dim, format_dispatch
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, set_default, wrap, split_field, coalesce
+from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
 from mo_future import sort_using_key
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -29,7 +27,7 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
 
     dims = []
     for e in new_edges:
-        if isinstance(e.value, TupleOp):
+        if is_op(e.value, TupleOp):
             e.allowNulls = False
 
         extra = 0 if e.allowNulls is False else 1
@@ -194,19 +192,35 @@ def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
         groupby = query.groupby
         dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
         is_sent = Matrix(dims=dims)
+        give_me_zeros = query.sort and not query.groupby
 
-        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=(query.sort and not query.groupby)):
+        finishes = []
+        # IRREGULAR DEFAULTS MESS WITH union(), SET THEM AT END, IF ANY
+        for s in all_selects:
+            if s.default != canonical_aggregates[s.aggregate].default:
+                s.finish = s.default
+                s.default = None
+                finishes.append(s)
+
+        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders, give_me_zeros=give_me_zeros):
             output = is_sent[coord]
             if output == None:
                 output = is_sent[coord] = Data()
                 for g, d, c in zip(groupby, decoders, coord):
                     output[g.put.name] = d.get_value(c)
                 for s in all_selects:
-                    output[s.name] = None
+                    output[s.name] = s.default
                 yield output
             # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
             for s in _selects:
                 union(output, s.name, s.pull(agg), s.aggregate)
+
+        if finishes:
+            # SET ANY DEFAULTS
+            for c, o in is_sent:
+                for s in finishes:
+                    if o[s.name] == None:
+                        o[s.name] = s.finish
 
     for g in query.groupby:
         g.put.name = coalesce(g.put.name, g.name)
@@ -230,7 +244,7 @@ def format_list(aggs, es_query, query, decoders, select):
                 d[h] = r
             data.append(d)
         format = "list"
-    elif isinstance(query.select, list):
+    elif is_list(query.select):
         data = Data()
         for h, r in zip(header, table.data[0]):
             data[h] = r

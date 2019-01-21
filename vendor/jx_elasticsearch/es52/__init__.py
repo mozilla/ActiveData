@@ -7,26 +7,27 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base import container
+from jx_base import Column, container
 from jx_base.container import Container
 from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
+from jx_base.language import is_op
 from jx_base.query import QueryOp
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
-from jx_elasticsearch.es52.deep import is_deepop, es_deepop
-from jx_elasticsearch.es52.setop import is_setop, es_setop
+from jx_elasticsearch.es52.deep import es_deepop, is_deepop
+from jx_elasticsearch.es52.setop import es_setop, is_setop
 from jx_elasticsearch.es52.util import aggregates
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, unwrap, coalesce, split_field, join_field, wrap, listwrap
-from mo_json import value2json
+from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
+from mo_future import sort_using_key
+from mo_json import EXISTS, OBJECT, value2json
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
-from mo_logs import Log, Except
+from mo_logs import Except, Log
+from mo_times import Date
 from pyLibrary.env import elasticsearch, http
 
 
@@ -86,6 +87,41 @@ class ES52(Container):
                 Log.error("Expecting given typed {{typed}} to match {{is_typed}}", typed=typed, is_typed=is_typed)
             self.typed = typed
 
+        if not typed:
+            # ADD EXISTENCE COLUMNS
+            all_paths = {".": None}  # MAP FROM path TO parent TO MAKE A TREE
+
+            def nested_path_of(v):
+                if not v:
+                    return []
+                else:
+                    return [v] + nested_path_of(all_paths[v])
+
+            all = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
+            for step in sorted(all):
+                if step in all_paths:
+                    continue
+                else:
+                    best = '.'
+                    for candidate in all_paths.keys():
+                        if startswith_field(step, candidate):
+                            if startswith_field(candidate, best):
+                                best = candidate
+                    all_paths[step] = best
+            for p in all_paths.keys():
+                nested_path = nested_path_of(all_paths[p])
+                if not nested_path:
+                    nested_path = ['.']
+                self.namespace.meta.columns.add(Column(
+                    name=p,
+                    es_column=p,
+                    es_index=self.name,
+                    es_type=OBJECT,
+                    jx_type=EXISTS,
+                    nested_path=nested_path,
+                    last_updated=Date.now()
+                ))
+
     @property
     def snowflake(self):
         return self._namespace.get_snowflake(self.es.settings.alias)
@@ -140,7 +176,7 @@ class ES52(Container):
                     )
 
             frum = query["from"]
-            if isinstance(frum, QueryOp):
+            if is_op(frum, QueryOp):
                 result = self.query(frum)
                 q2 = query.copy()
                 q2.frum = result
@@ -161,7 +197,7 @@ class ES52(Container):
             Log.error("problem", e)
 
     def addDimension(self, dim):
-        if isinstance(dim, list):
+        if is_list(dim):
             Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)
         self._addDimension(dim, [])
 
@@ -198,7 +234,6 @@ class ES52(Container):
         es_index = self.es.cluster.get_index(read_only=False, alias=None, kwargs=self.es.settings)
 
         schema = table.schema
-        es_filter = jx_expression(command.where).to_esfilter(schema)
 
         # GET IDS OF DOCUMENTS
         query = {
@@ -235,6 +270,7 @@ class ES52(Container):
 
         # DELETE BY QUERY, IF NEEDED
         if "." in listwrap(command.clear):
+            es_filter = self.es.cluster.lang[jx_expression(command.where)].to_esfilter(schema)
             self.es.delete_record(es_filter)
             return
 

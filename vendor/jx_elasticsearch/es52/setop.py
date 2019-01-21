@@ -7,26 +7,23 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from collections import Mapping
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY, AndOp
+from jx_base.expressions import IDENTITY, LeavesOp, Variable
 from jx_base.query import DEFAULT_LIMIT
+from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import Variable, LeavesOp, split_expression_by_path, MATCH_ALL
-from jx_elasticsearch.es52.util import jx_sort_to_es_sort, es_and, es_or
+from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
+from jx_elasticsearch.es52.painless import Painless
+from jx_elasticsearch.es52.util import MATCH_ALL, es_and, es_or, jx_sort_to_es_sort
 from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
-from mo_dots import coalesce, split_field, set_default, Data, unwraplist, literal_field, unwrap, wrap, concat_field, relative_field, join_field, listwrap
-from mo_dots.lists import FlatList
-from mo_future import transpose
+from mo_dots import Data, FlatList, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
+from mo_future import first, text_type, transpose
 from mo_json import NESTED
-from mo_json.typed_encoder import untype_path, unnest_path, untyped, decode_property
+from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
 from mo_math import AND, MAX
 from mo_times.timer import Timer
@@ -71,7 +68,7 @@ def es_setop(es, query):
     put_index = 0
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
-        if isinstance(select.value, LeavesOp) and isinstance(select.value.term, Variable):
+        if is_op(select.value, LeavesOp) and is_op(select.value.term, Variable):
             term = select.value.term
             leaves = schema.leaves(term.var)
             for c in leaves:
@@ -93,7 +90,7 @@ def es_setop(es, query):
                         "put": {"name": literal_field(full_name), "index": put_index, "child": "."}
                     })
                     put_index += 1
-        elif isinstance(select.value, Variable):
+        elif is_op(select.value, Variable):
             s_column = select.value.var
 
             if s_column == ".":
@@ -175,10 +172,10 @@ def es_setop(es, query):
                 })
             put_index += 1
         else:
-            split_scripts = split_expression_by_path(select.value, schema)
+            split_scripts = split_expression_by_path(select.value, schema, lang=Painless)
             for p, script in split_scripts.items():
                 es_select = get_select(p)
-                es_select.scripts[select.name] = {"script": script[0].partial_eval().to_es_script(schema).script(schema)}
+                es_select.scripts[select.name] = {"script": text_type(Painless[first(script)].partial_eval().to_es_script(schema))}
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function("fields." + literal_field(select.name)),
@@ -189,7 +186,7 @@ def es_setop(es, query):
     for n in new_select:
         if n.pull:
             continue
-        elif isinstance(n.value, Variable):
+        elif is_op(n.value, Variable):
             if get_select('.').use_source:
                 n.pull = get_pull_source(n.value.var)
             elif n.value == "_id":
@@ -199,12 +196,12 @@ def es_setop(es, query):
         else:
             Log.error("Do not know what to do")
 
-    split_wheres = split_expression_by_path(query.where, schema)
+    split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
     es_query = es_query_proto(query_path, split_select, split_wheres, schema)
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
-    with Timer("call to ES") as call_timer:
+    with Timer("call to ES", silent=True) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
@@ -213,7 +210,9 @@ def es_setop(es, query):
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]
-        output = formatter(T, new_select, query)
+
+        with Timer("formatter", silent=True):
+            output = formatter(T, new_select, query)
         output.meta.timing.es = call_timer.duration
         output.meta.content_type = mime_type
         output.meta.es_query = es_query
@@ -247,7 +246,7 @@ def accumulate_nested_doc(nested_path, expr=IDENTITY):
 
 def format_list(T, select, query=None):
     data = []
-    if isinstance(query.select, list):
+    if is_list(query.select):
         for row in T:
             r = Data()
             for s in select:
@@ -258,7 +257,7 @@ def format_list(T, select, query=None):
                     except Exception as e:
                         Log.error("what's happening here?")
             data.append(r if r else None)
-    elif isinstance(query.select.value, LeavesOp):
+    elif is_op(query.select.value, LeavesOp):
         for row in T:
             r = Data()
             for s in select:
@@ -309,7 +308,7 @@ def format_table(T, select, query=None):
 
     header = [None] * num_columns
 
-    if isinstance(query.select, Mapping) and not isinstance(query.select.value, LeavesOp):
+    if is_data(query.select) and not is_op(query.select.value, LeavesOp):
         for s in select:
             header[s.put.index] = s.name
     else:
@@ -421,7 +420,7 @@ def es_query_proto(path, selects, wheres, schema):
         select = selects.get(p)
 
         if where:
-            where = AndOp("and", where).partial_eval().to_esfilter(schema)
+            where = AndOp(where).partial_eval().to_esfilter(schema)
             if output:
                 where = es_or([es_and([output, where]), where])
         else:

@@ -8,14 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf, skip
+from unittest import skip, skipIf
 
 from jx_base.expressions import NULL
-from mo_dots import wrap, set_default
+from mo_dots import set_default, wrap
 from mo_future import text_type
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
@@ -279,6 +277,52 @@ class TestgroupBy1(BaseTestCase):
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": []
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_default(self):
+        test = {
+            "name": "sum column",
+            "metadata": {},
+            "data": [
+                {"a": "c"},
+                {"a": "b", "v": 2},
+                {"v": 3},
+                {"a": "b"},
+                {"a": "c"},
+                {"a": "c"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {"value": "v", "aggregate": "sum", "default": 0},
+                "groupby": ["a"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "b", "v": 2},
+                    {"a": "c", "v": 0},
+                    {"a": NULL, "v": 3}
+                ]},
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a", "v"],
+                "data": [
+                    ["b", 2],
+                    ["c", 0],
+                    [None, 3]
+                ]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [{"name": "a", "domain": {"partitions": [
+                    {"value": "b"},
+                    {"value": "c"}
+                ]}}],
+                "data": {
+                    "v": [2, 0, 3]
+                }
             }
         }
         self.utils.execute_tests(test)

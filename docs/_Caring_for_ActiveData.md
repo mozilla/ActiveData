@@ -1,5 +1,4 @@
-Caring for your ActiveData Instance
-==================================
+# Caring for your ActiveData Instance
 
 ## ETL
 
@@ -42,12 +41,7 @@ Nginx is not required, but used in production for three reasons.
 
 Configuration is `~/ActiveData/resources/config/nginx.conf`
 
-Flask
------
-
-There are 5 Flask instances that serve ActiveData.  Nginx does the load balancing.
-
-### Gunicorn (not used)
+### Gunicorn
 
 Gunicorn is used to pre-fork the ActiveData service, so it can serve multiple requests at once, and quicker than Flask. Since ActiveData has no concept of session, so coordinating instances is not required. 
 
@@ -55,7 +49,7 @@ Configuration is `~/ActiveData/resources/config/gunicorn.conf`
 
 ### ActiveData Python Program
 
-The ActiveData program is a stateless query translation service. It was designed to be agnostic about schema changes and migrations. Upgrading is simple.     
+The ActiveData program is a stateless query translation service. It was designed to be agnostic about schema changes and migrations. Upgrading is simple.
 
 ### Production Deployment Steps
 

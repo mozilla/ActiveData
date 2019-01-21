@@ -9,16 +9,14 @@
 #
 
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import sys
-from collections import Mapping
 
-from mo_dots import Data, listwrap, unwraplist, Null
-from mo_future import text_type, PY3
-from mo_logs.strings import indent, expand_template
+from mo_dots import Data, Null, is_data, listwrap, unwraplist
+from mo_future import PY3, text_type
+from mo_logs.strings import CR, expand_template, indent
 
 FATAL = "FATAL"
 ERROR = "ERROR"
@@ -52,7 +50,7 @@ class Except(Exception, LogItem):
             trace=desc.trace
         )
 
-    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null):
+    def __init__(self, context=ERROR, template=Null, params=Null, cause=Null, trace=Null, **_):
         if context == None:
             raise ValueError("expecting context to not be None")
 
@@ -85,7 +83,7 @@ class Except(Exception, LogItem):
             return Null
         elif isinstance(e, (list, Except)):
             return e
-        elif isinstance(e, Mapping):
+        elif is_data(e):
             e.cause = unwraplist([Except.wrap(c) for c in listwrap(e.cause)])
             return Except(**e)
         else:
@@ -110,7 +108,7 @@ class Except(Exception, LogItem):
         return expand_template(self.template, self.params)
 
     def __contains__(self, value):
-        if isinstance(value, text_type):
+        if is_text(value):
             if self.template.find(value) >= 0 or self.message.find(value) >= 0:
                 return True
 
@@ -122,7 +120,7 @@ class Except(Exception, LogItem):
         return False
 
     def __unicode__(self):
-        output = self.context + ": " + self.template + "\n"
+        output = self.context + ": " + self.template + CR
         if self.params:
             output = expand_template(output, self.params)
 

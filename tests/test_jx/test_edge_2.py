@@ -8,9 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from tests.test_jx import BaseTestCase, TEST_TABLE
@@ -329,13 +327,14 @@ class TestEdge2(BaseTestCase):
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
                     {"a": "y", "b": NULL, "v": 13},
-                    {"a": "z", "b": "m"},
-                    {"a": "z", "b": "n"},
-                    {"a": "z"},
+                    {"a": "z", "b": "m", "v": NULL},
+                    {"a": "z", "b": "n", "v": NULL},
+                    {"a": "z", "b": NULL, "v": NULL},
                     {"a": NULL, "b": "m", "v": 17},
                     {"a": NULL, "b": "n", "v": 19},
-                    {}
-                ]},
+                    {"a": NULL, "b": NULL, "v": NULL}
+                ]
+            },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "b", "v"],

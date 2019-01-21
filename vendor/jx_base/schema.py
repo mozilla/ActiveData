@@ -7,16 +7,13 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 from copy import copy
 
-
-
-from mo_dots import Null, startswith_field, set_default, wrap, relative_field
-from mo_json import STRUCT, EXISTS, OBJECT, NESTED
+from mo_dots import Null, relative_field, set_default, startswith_field, wrap
+from mo_json import EXISTS, NESTED, OBJECT, STRUCT
 from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Log
 

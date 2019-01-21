@@ -8,9 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from mo_dots import wrap
@@ -357,5 +355,23 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-# TODO:  ADD TEST TO ENSURE BOOLEAN COLUMNS (WITH 'T' and 'F' VALUES) CAN BE USED WITH true AND false FILTERS
+    def test_big_integers_in_script(self):
+        bigger_than_int32 = 1547 * 1000 * 1000 * 1000
+        test = {
+            "data": [
+                {"v": 42}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"lt": [0, {"mul": ["v", bigger_than_int32]}]}  # SOMETHING COMPLICATED ENOUGH TO FORCE SCRIPTING
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list"
+                },
+                "data": [
+                    {"v": 42}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)

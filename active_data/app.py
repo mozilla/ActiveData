@@ -6,37 +6,34 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import os
 from _ssl import PROTOCOL_SSLv23
-from collections import Mapping
+import os
 from ssl import SSLContext
-from tempfile import NamedTemporaryFile
 
 import flask
 from flask import Flask
-from mo_threads.threads import RegisterThread
 from werkzeug.contrib.fixers import HeaderRewriterFix
 from werkzeug.wrappers import Response
 
 import active_data
-from active_data import record_request, OVERVIEW
+from active_data import OVERVIEW, record_request
 from active_data.actions import save_query
 from active_data.actions.contribute import send_contribute
 from active_data.actions.json import get_raw_json
 from active_data.actions.query import jx_query
 from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
-from active_data.actions.static import download
+from active_data.actions.static import download, send_favicon
 from jx_base import container
-from mo_files import File
+from mo_dots import is_data
+from mo_files import File, TempFile
 from mo_future import text_type
 from mo_logs import Log, constants, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
+from mo_threads.threads import RegisterThread
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -69,6 +66,7 @@ def _head(path):
     return Response(b'', status=200)
 
 flask_app.add_url_rule('/tools/<path:filename>', None, download)
+flask_app.add_url_rule('/favicon.ico', None, send_favicon)
 flask_app.add_url_rule('/contribute.json', None, send_contribute)
 flask_app.add_url_rule('/find/<path:hash>', None, find_query)
 flask_app.add_url_rule('/query', None, jx_query, defaults={'path': ''}, methods=['GET', 'POST'])
@@ -77,6 +75,7 @@ flask_app.add_url_rule('/query/<path:path>', None, jx_query, defaults={'path': '
 flask_app.add_url_rule('/sql', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
 flask_app.add_url_rule('/sql/', None, sql_query, defaults={'path': ''}, methods=['GET', 'POST'])
 flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
+
 
 @flask_app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @cors_wrapper
@@ -165,28 +164,23 @@ def setup_flask_ssl():
     ssl_flask.debug = False
     ssl_flask.port = 443
 
-    if isinstance(config.flask.ssl_context, Mapping):
+    if is_data(config.flask.ssl_context):
         # EXPECTED PEM ENCODED FILE NAMES
         # `load_cert_chain` REQUIRES CONCATENATED LIST OF CERTS
-        tempfile = NamedTemporaryFile(delete=False, suffix=".pem")
-        try:
-            tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
-            if ssl_flask.ssl_context.certificate_chain_file:
-                tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
-            tempfile.flush()
-            tempfile.close()
-
-            context = SSLContext(PROTOCOL_SSLv23)
-            context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
-
-            ssl_flask.ssl_context = context
-        except Exception as e:
-            Log.error("Could not handle ssl context construction", cause=e)
-        finally:
+        with TempFile() as tempfile:
             try:
-                tempfile.delete()
-            except Exception:
-                pass
+                tempfile.write(File(ssl_flask.ssl_context.certificate_file).read_bytes())
+                if ssl_flask.ssl_context.certificate_chain_file:
+                    tempfile.write(File(ssl_flask.ssl_context.certificate_chain_file).read_bytes())
+                tempfile.flush()
+                tempfile.close()
+
+                context = SSLContext(PROTOCOL_SSLv23)
+                context.load_cert_chain(tempfile.name, keyfile=File(ssl_flask.ssl_context.privatekey_file).abspath)
+
+                ssl_flask.ssl_context = context
+            except Exception as e:
+                Log.error("Could not handle ssl context construction", cause=e)
 
     def runner(please_stop):
         Log.warning("ActiveData listening on encrypted port {{port}}", port=ssl_flask.port)

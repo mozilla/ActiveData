@@ -8,9 +8,7 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from active_data import OVERVIEW
 from mo_json_config import URL
@@ -36,6 +34,13 @@ class TestBasicRequests(BaseTestCase):
         response = self.utils.try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, OVERVIEW)
+
+    def test_favicon(self):
+        url = URL(self.utils.testing.query)
+        url.path = "/favicon.ico"
+
+        response = self.utils.try_till_response(str(url), data=b"")
+        self.assertEqual(response.status_code, 200)
 
     def test_bad_file_request(self):
         url = URL(self.utils.testing.query)

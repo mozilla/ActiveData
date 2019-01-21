@@ -34,14 +34,21 @@
 		"jx_elasticsearch.meta.DEBUG": false,
 		"jx_python.meta.DEBUG": false
 	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "testdata",
+		"type": "test_result",
+		"debug": false
+	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
-		"index": "activedata_requests",
+		"index": "activedata-requests",
 		"type": "request_log",
 		"typed": false,
 		"schema": {
-			"$ref": "//.../resources/schema/request_log.schema.json"
+			"$ref": "//../../resources/schema/request_log.schema.json"
 		}
 	},
 	"saved_queries": {
@@ -51,14 +58,12 @@
 		"type": "query",
 		"debug": false
 	},
-	"elasticsearch": {
-		"host": "http://localhost",
-		"port": 9200,
-		"index": "testdata",
-		"type": "test_result",
-		"debug": false
-	},
 	"debug": {
-		"trace": true
+		"trace": true,
+		"log": [
+			{
+				"log_type": "console"
+			}
+		]
 	}
 }

@@ -6,27 +6,25 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import flask
 from flask import Response
-from mo_threads.threads import RegisterThread
 
-from active_data.actions import send_error, find_container
+from active_data.actions import find_container, send_error
 from jx_base.container import Container
 from jx_python import jx
-from mo_dots import wrap, unwraplist, listwrap
+from mo_dots import listwrap, unwraplist, wrap
 from mo_json import value2json
-from mo_logs import Log, Except
+from mo_logs import Except, Log
 from mo_logs.strings import unicode2utf8
-from mo_math import Math
+from mo_math import is_number, is_integer
+from mo_threads.threads import RegisterThread
 from mo_times.timer import Timer
 from pyLibrary import convert
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
-_ = value2json
+_keep_import = value2json
 
 @cors_wrapper
 def get_raw_json(path):
@@ -68,9 +66,9 @@ def scrub_args(args):
     for k, v in list(args.items()):
         vs = []
         for v in listwrap(v):
-            if Math.is_integer(v):
+            if is_integer(v):
                 vs.append(int(v))
-            elif Math.is_number(v):
+            elif is_number(v):
                 vs.append(float(v))
             else:
                 vs.append(v)

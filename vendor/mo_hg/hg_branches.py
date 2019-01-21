@@ -8,18 +8,17 @@
 #
 from __future__ import unicode_literals
 
-import jx_elasticsearch
 from bs4 import BeautifulSoup
 
+import jx_elasticsearch
 from mo_collections import UniqueIndex
-from mo_dots import Data, set_default, FlatList
+from mo_dots import Data, set_default
 from mo_hg.hg_mozilla_org import DEFAULT_LOCALE
 from mo_kwargs import override
-from mo_logs import Log, Except
-from mo_logs import startup, constants
+from mo_logs import Except, Log, constants, startup
 from mo_math import MAX
 from mo_times.dates import Date
-from mo_times.durations import SECOND, DAY
+from mo_times.durations import DAY, SECOND
 from pyLibrary.env import elasticsearch, http
 
 EXTRA_WAIT_TIME = 20 * SECOND  # WAIT TIME TO SEND TO AWS, IF WE wait_forever

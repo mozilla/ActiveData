@@ -8,11 +8,9 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf, skip
+from unittest import skip, skipIf
 
 from jx_base.expressions import NULL
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
@@ -2086,6 +2084,35 @@ class TestEdge1(BaseTestCase):
         }
 
         self.utils.execute_tests(test)
+
+    def test_default_for_average(self):
+        test = {
+            "data": [
+                {"k": "a", "e": 4},
+                {"k": "a", "e": 5},
+                {"k": "a", "e": 6},
+                {"k": "a", "e": 7},
+                {"k": "b", "e": 8},
+                {"k": "b", "e": 9},
+                {"k": "c"},
+                {"k": "c"}
+            ],
+            "query": {
+                "select": [{"name": "avg", "value": "e", "aggregate": "average", "default": 0}],
+                "from": TEST_TABLE,
+                "edges": ["k"]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": "a", "avg": 22 / 4},
+                    {"k": "b", "avg": 17 / 2},
+                    {"k": "c", "avg": 0}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
 
 
 

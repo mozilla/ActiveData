@@ -7,14 +7,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
 import ast
 import sys
 
-from pyparsing import CaselessLiteral, Word, delimitedList, Optional, Combine, Group, alphas, nums, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore, _ustr
+from pyparsing import Combine, Forward, Group, Keyword, Literal, MatchFirst, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
 
 ParserElement.enablePackrat()
 

@@ -8,28 +8,27 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text, is_binary
+from collections import Mapping, namedtuple
 import os
 import re
 import sys
-from collections import Mapping, namedtuple
 
-from mo_dots import Data, coalesce, unwraplist, Null
+from mo_dots import Data, coalesce, unwraplist
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type
-from mo_json import INTEGER, NUMBER, BOOLEAN, STRING, OBJECT, NESTED
+from mo_json import BOOLEAN, INTEGER, NESTED, NUMBER, OBJECT, STRING
 from mo_kwargs import override
 from mo_logs import Log
-from mo_logs.exceptions import Except, extract_stack, ERROR, format_trace
+from mo_logs.exceptions import ERROR, Except, extract_stack, format_trace
 from mo_logs.strings import quote
 from mo_math.stats import percentile
-from mo_threads import Queue, Thread, Lock, Till
+from mo_threads import Lock, Queue, Thread, Till
 from mo_times import Date, Duration, Timer
 from pyLibrary import convert
-from pyLibrary.sql import DB, SQL, SQL_TRUE, SQL_FALSE, SQL_NULL, SQL_SELECT, sql_iso, sql_list
+from pyLibrary.sql import DB, SQL, SQL_FALSE, SQL_NULL, SQL_SELECT, SQL_TRUE, sql_iso, sql_list
 
 DEBUG = False
 TRACE = True
@@ -41,7 +40,7 @@ TOO_LONG_TO_HOLD_TRANSACTION = 10
 _sqlite3 = None
 _load_extension_warning_sent = False
 _upgraded = False
-known_databases = {Null: None}
+known_databases = {None: None}
 
 
 def _upgrade():
@@ -497,7 +496,7 @@ def quote_column(column_name, table=None):
     if isinstance(column_name, SQL):
         return column_name
 
-    if not isinstance(column_name, text_type):
+    if not is_text(column_name):
         Log.error("expecting a name")
     if table != None:
         return SQL(" d" + quote(table) + "." + quote(column_name) + " ")
@@ -514,7 +513,7 @@ def quote_value(value):
         return SQL(text_type(value.unix))
     elif isinstance(value, Duration):
         return SQL(text_type(value.seconds))
-    elif isinstance(value, text_type):
+    elif is_text(value):
         return SQL("'" + value.replace("'", "''") + "'")
     elif value == None:
         return SQL_NULL

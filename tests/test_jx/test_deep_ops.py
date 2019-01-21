@@ -8,15 +8,13 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skip
 
 from jx_base.expressions import NULL
 from mo_dots import wrap
-from mo_math import Math
+import mo_math
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -644,22 +642,22 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"_id": Math.is_hex},
-                    {"_id": Math.is_hex},
-                    {"_id": Math.is_hex},
-                    {"_id": Math.is_hex},
-                    {"_id": Math.is_hex}
+                    {"_id": mo_math.is_hex},
+                    {"_id": mo_math.is_hex},
+                    {"_id": mo_math.is_hex},
+                    {"_id": mo_math.is_hex},
+                    {"_id": mo_math.is_hex}
                 ]
             },
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["_id"],
                 "data": [
-                    [Math.is_hex],
-                    [Math.is_hex],
-                    [Math.is_hex],
-                    [Math.is_hex],
-                    [Math.is_hex]
+                    [mo_math.is_hex],
+                    [mo_math.is_hex],
+                    [mo_math.is_hex],
+                    [mo_math.is_hex],
+                    [mo_math.is_hex]
                 ]
             },
             "expecting_cube": {
@@ -671,7 +669,7 @@ class TestDeepOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "_id": [Math.is_hex, Math.is_hex, Math.is_hex, Math.is_hex, Math.is_hex]
+                    "_id": [mo_math.is_hex, mo_math.is_hex, mo_math.is_hex, mo_math.is_hex, mo_math.is_hex]
                 }
             }
         }
@@ -704,11 +702,11 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    Math.is_hex,  # DUE TO NATURE OF THE _id AUTO-ASSIGN LOGIC IN pyLibrary.env.elasticsearch.Index, WE KNOW _id WILL BE HEX
-                    Math.is_hex,
-                    Math.is_hex,
-                    Math.is_hex,
-                    Math.is_hex
+                    mo_math.is_hex,  # DUE TO NATURE OF THE _id AUTO-ASSIGN LOGIC IN pyLibrary.env.elasticsearch.Index, WE KNOW _id WILL BE HEX
+                    mo_math.is_hex,
+                    mo_math.is_hex,
+                    mo_math.is_hex,
+                    mo_math.is_hex
                 ]
             }
         }
@@ -1765,15 +1763,6 @@ class TestDeepOps(BaseTestCase):
         self.utils.execute_tests(test)
 
 
-
-# TODO: using "find" as a filter should be legitimate:
-todo = {
-    "from": "task.task.artifacts",
-    "where": {"and": [
-        {"gt": {"action.start_time": {"date": "today-3day"}}},
-        {"find": {"name": "gcda"}}
-    ]}
-}
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL

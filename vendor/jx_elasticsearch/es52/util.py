@@ -7,15 +7,13 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import TRUE, AndOp, EsNestedOp
-from jx_elasticsearch.es52.expressions import Variable
-from mo_dots import wrap, literal_field
-from mo_future import text_type, sort_using_key
-from mo_json import STRING, BOOLEAN, NUMBER, OBJECT, IS_NULL
+from jx_base.expressions import Variable
+from jx_base.language import is_op
+from mo_dots import wrap
+from mo_future import is_text
+from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from pyLibrary.convert import value2boolean
 
@@ -27,7 +25,7 @@ def es_query_template(path):
     :return: (es_query, es_filters) TUPLE
     """
 
-    if not isinstance(path, text_type):
+    if not is_text(path):
         Log.error("expecting path to be a string")
 
     if path != ".":
@@ -65,7 +63,7 @@ def jx_sort_to_es_sort(sort, schema):
 
     output = []
     for s in sort:
-        if isinstance(s.value, Variable):
+        if is_op(s.value, Variable):
             cols = schema.leaves(s.value.var)
             if s.sort == -1:
                 types = OBJECT, STRING, NUMBER, BOOLEAN
@@ -74,7 +72,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.jx_type == type:
+                    if c.jx_type is type:
                         if s.sort == -1:
                             output.append({c.es_column: "desc"})
                         else:
@@ -118,7 +116,6 @@ aggregates = {
 
 NON_STATISTICAL_AGGS = {"none", "one"}
 
-
 def es_and(terms):
     return wrap({"bool": {"filter": terms}})
 
@@ -132,11 +129,19 @@ def es_not(term):
 
 
 def es_script(term):
-    return wrap({"script": {"lang": "painless", "inline": term}})
+    return wrap({"script": {"lang": "painless", "source": term}})
 
 
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}
+
+
+def es_exists(term):
+    return {"exists": {"field": term}}
+
+
+MATCH_ALL = wrap({"match_all": {}})
+MATCH_NONE = es_not({"match_all": {}})
 
 
 pull_functions = {

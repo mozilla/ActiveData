@@ -7,10 +7,10 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
+from datetime import date, datetime
+from decimal import Decimal
 import itertools
 
 import jx_base
@@ -19,20 +19,20 @@ from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
-from jx_python.meta import ColumnList, Column
-from mo_dots import Data, relative_field, ROOT_PATH, coalesce, set_default, Null, split_field, wrap, concat_field, startswith_field, literal_field, tail_field, join_field
+from jx_python.meta import Column, ColumnList
+from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
 from mo_files import URL
-from mo_future import text_type
-from mo_json import OBJECT, EXISTS, STRUCT, BOOLEAN, STRING, INTEGER
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path, STRING_TYPE, BOOLEAN_TYPE, NUMBER_TYPE
+from mo_future import PY2, none_type, text_type
+from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
+from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
-from mo_times import HOUR, MINUTE, Timer, Date, WEEK
+from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import es_type_to_json_type, _get_best_type_from_mapping
+from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 ENABLE_META_SCAN = True
@@ -155,7 +155,9 @@ class ElasticsearchMetadata(Namespace):
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
         if DEBUG and any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
-                "Some columns are not stored {{names}}",
+                "Some columns are not stored in {{url}} {{index|quote}} table:\n{{names}}",
+                url=self.es_cluster.url,
+                index=alias,
                 names=[
                     ".".join((c.es_index, c.name))
                     for c in abs_columns
@@ -484,6 +486,7 @@ class ElasticsearchMetadata(Namespace):
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
             if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
+                Log.warning("Missing index {{col.es_index}}", col=column, cause=e)
                 self.meta.columns.update({
                     "clear": ".",
                     "where": {"eq": {"es_index": column.es_index}}
@@ -654,7 +657,7 @@ class Schema(jx_base.Schema):
     """
 
     def __init__(self, query_path, snowflake):
-        if not isinstance(snowflake.query_paths[0], list):
+        if not is_list(snowflake.query_paths[0]):
             Log.error("Snowflake query paths should be a list of string tuples (well, technically, a list of lists of strings)")
         self.snowflake = snowflake
         try:
@@ -683,7 +686,7 @@ class Schema(jx_base.Schema):
 
                     Log.warning("Problem getting query path {{path|quote}} in snowflake {{sf|quote}}", path=query_path, sf=snowflake.name, cause=e)
 
-            if not isinstance(self.query_path, list) or self.query_path[len(self.query_path) - 1] != ".":
+            if not is_list(self.query_path) or self.query_path[len(self.query_path) - 1] != ".":
                 Log.error("error")
 
         except Exception as e:
@@ -890,6 +893,154 @@ def jx_type(column):
     if column.es_column.endswith(EXISTS_TYPE):
         return EXISTS
     return es_type_to_json_type[column.es_type]
+
+
+python_type_to_es_type = {
+    none_type: "undefined",
+    NullType: "undefined",
+    bool: "boolean",
+    str: "string",
+    text_type: "string",
+    int: "integer",
+    float: "double",
+    Data: "object",
+    dict: "object",
+    set: "nested",
+    list: "nested",
+    FlatList: "nested",
+    Date: "double",
+    Decimal: "double",
+    datetime: "double",
+    date: "double"
+}
+
+if PY2:
+    python_type_to_es_type[long] = "integer"
+
+_merge_es_type = {
+    "undefined": {
+        "undefined": "undefined",
+        "boolean": "boolean",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": "object",
+        "nested": "nested"
+    },
+    "boolean": {
+        "undefined": "boolean",
+        "boolean": "boolean",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "integer": {
+        "undefined": "integer",
+        "boolean": "integer",
+        "integer": "integer",
+        "long": "long",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "long": {
+        "undefined": "long",
+        "boolean": "long",
+        "integer": "long",
+        "long": "long",
+        "float": "double",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "float": {
+        "undefined": "float",
+        "boolean": "float",
+        "integer": "float",
+        "long": "double",
+        "float": "float",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "double": {
+        "undefined": "double",
+        "boolean": "double",
+        "integer": "double",
+        "long": "double",
+        "float": "double",
+        "double": "double",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "number": {
+        "undefined": "number",
+        "boolean": "number",
+        "integer": "number",
+        "long": "number",
+        "float": "number",
+        "double": "number",
+        "number": "number",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "string": {
+        "undefined": "string",
+        "boolean": "string",
+        "integer": "string",
+        "long": "string",
+        "float": "string",
+        "double": "string",
+        "number": "string",
+        "string": "string",
+        "object": None,
+        "nested": None
+    },
+    "object": {
+        "undefined": "object",
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "number": None,
+        "string": None,
+        "object": "object",
+        "nested": "nested"
+    },
+    "nested": {
+        "undefined": "nested",
+        "boolean": None,
+        "integer": None,
+        "long": None,
+        "float": None,
+        "double": None,
+        "number": None,
+        "string": None,
+        "object": "nested",
+        "nested": "nested"
+    }
+}
+
+
 
 
 OBJECTS = (OBJECT, EXISTS)

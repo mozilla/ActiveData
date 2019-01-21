@@ -12,18 +12,17 @@
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
 # FOR FAST AND PREDICTABLE SHUTDOWN AND CLEANUP OF THREADS
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
-import types
+from mo_future import is_text, is_binary
 from collections import deque
 from datetime import datetime
 from time import time
+import types
 
-from mo_dots import coalesce, Null
+from mo_dots import Null, coalesce
 from mo_future import long
-from mo_logs import Log, Except
+from mo_logs import Except, Log
 from mo_threads.lock import Lock
 from mo_threads.signal import Signal
 from mo_threads.threads import THREAD_STOP, THREAD_TIMEOUT, Thread

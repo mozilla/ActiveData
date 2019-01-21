@@ -1,8 +1,8 @@
-import sys
-from datetime import datetime, date, timedelta
+import argparse
+from datetime import date, datetime, timedelta
 import json
 from random import random
-import argparse
+import sys
 
 parser = argparse.ArgumentParser(description="Fake data maker.")
 parser.add_argument('-s', '--start', help="start date", nargs=1)

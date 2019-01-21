@@ -8,16 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
+from __future__ import absolute_import, division, unicode_literals
 
 import sqlite3
 
-from mo_logs import Log
-
 from mo_files import File
-
+from mo_logs import Log
 from mo_threads import Till
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -140,8 +136,6 @@ class TestESSpecial(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
-
     def test_db_is_busy(self):
         FILENAME = "metadata.localhost.sqlite"
         db_file = File(FILENAME)
@@ -173,3 +167,31 @@ class TestESSpecial(BaseTestCase):
         finally:
             self.db.execute("COMMIT")
 
+    def test_prefix_uses_prefix(self):
+        test = {
+            "data": [
+                {"a": "test"},
+                {"a": "testkyle"},
+                {"a": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"prefix": {"a": "test"}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list",
+                    "es_query": {
+                        "from": 0,
+                        "query": {"prefix": {"a.~s~": "test"}},
+                        "size": 10
+                    }
+                },
+                "data": [
+                    {"a": "test"},
+                    {"a": "testkyle"}
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)

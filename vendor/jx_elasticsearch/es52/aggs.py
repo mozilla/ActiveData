@@ -17,7 +17,7 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
-from jx_elasticsearch.es52.es_query import Aggs, ComplexAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
+from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify, CountAggs
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.setop import get_pull_stats
@@ -211,7 +211,7 @@ def es_aggsop(es, frum, query):
                         if column.nested_path[0] == query_path:
                             canonical_names.append("doc_count")
                             acc.add(NestedAggs(column.nested_path[0]).add(
-                                ComplexAggs(s)
+                                CountAggs(s)
                             ))
                     else:
                         canonical_names.append("value")
@@ -257,15 +257,13 @@ def es_aggsop(es, frum, query):
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
                 stats_name = literal_field(canonical_name)
-                complex = ComplexAggs(s).add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, None))
+                acc.add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, s))
                 # GET MEDIAN TOO!
                 median_name = literal_field(canonical_name + "_percentile")
-                complex.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
+                acc.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
                     "field": first(columns).es_column,
                     "percents": [50]
                 }}, None))
-
-                acc.add(complex)
                 s.pull = get_pull_stats(stats_name, median_name)
             elif s.aggregate == "union":
                 for column in columns:
@@ -381,7 +379,7 @@ def es_aggsop(es, frum, query):
         elif s.aggregate == "stats":
             # REGULAR STATS
             stats_name = canonical_name
-            nest.add(ComplexAggs(s).add(ExprAggs(stats_name, {"extended_stats": {"script": text_type(Painless[s.value].to_es_script(schema))}}, None)))
+            nest.add(ExprAggs(stats_name, {"extended_stats": {"script": text_type(Painless[s.value].to_es_script(schema))}}, s))
 
             # GET MEDIAN TOO!
             median_name = canonical_name + " percentile"
@@ -470,6 +468,10 @@ def drill(agg):
 def _children(agg, children):
     for child in children:
         name = child.name
+        if name is None:
+            yield None, agg, child, None
+            continue
+
         v = agg[name]
         if name == "_match":
             for i, b in enumerate(v.get("buckets", EMPTY_LIST)):

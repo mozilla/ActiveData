@@ -31,3 +31,4 @@ version.json
 /tuid.db
 
 /*.sqlite-journal
+/metadata*

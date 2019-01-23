@@ -68,6 +68,9 @@ class ExprAggs(Aggs):
     def __init__(self, name, expr, select):
         Aggs.__init__(self, name)
         self.expr = expr
+        if not select:
+            Log.error("Expecting a select")
+
         self.selects = [select]
 
     def __eq__(self, other):
@@ -92,6 +95,24 @@ class ExprAggs(Aggs):
         output = Aggs.copy(self)
         output.expr = self.expr
         return output
+
+
+class CountAggs(Aggs):
+    # DO A DOC COUNT
+
+    def __init__(self, select):
+        Aggs.__init__(self, None)
+        if not select:
+            Log.error("Expecting a select")
+        self.selects = [select]
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return all(s is t for s, t in zip(self.selects, other.selects))
+
+    def to_es(self, schema, query_path="."):
+        return None  # NO NEED TO WRITE ANYTHING
 
 
 class FilterAggs(Aggs):
@@ -122,26 +143,6 @@ class FilterAggs(Aggs):
     def copy(self):
         output = Aggs.copy(self)
         output.filter = self.filter
-        return output
-
-
-class ComplexAggs(FilterAggs):
-    """
-    FOR COMPLICATED AGGREGATIONS
-    """
-
-    def __init__(self, select):
-        Aggs.__init__(self, "_filter")
-        self.expr = {"filter": {"match_all": {}}}
-        self.selects = [select]
-
-    def to_es(self, schema, query_path="."):
-        self.expr['aggs'] = Aggs.to_es(self, schema, query_path).get('aggs')
-        return self.expr
-
-    def copy(self):
-        output = Aggs.copy(self)
-        output.expr = self.expr
         return output
 
 

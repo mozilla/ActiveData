@@ -68,6 +68,9 @@ class ExprAggs(Aggs):
     def __init__(self, name, expr, select):
         Aggs.__init__(self, name)
         self.expr = expr
+        if not select:
+            Log.error("Expecting a select")
+
         self.selects = [select]
 
     def __eq__(self, other):
@@ -99,6 +102,8 @@ class CountAggs(Aggs):
 
     def __init__(self, select):
         Aggs.__init__(self, None)
+        if not select:
+            Log.error("Expecting a select")
         self.selects = [select]
 
     def __eq__(self, other):

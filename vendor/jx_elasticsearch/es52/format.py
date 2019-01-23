@@ -303,7 +303,7 @@ def union(matrix, coord, value, agg):
         if agg == "cardinality" and (existing == 0 or value == 0):
             matrix[coord] = existing + value
             return
-        elif agg == "stats" and (not existing or not value):
+        elif agg == "stats":
             matrix[coord] = existing + value
             return
         elif agg == "union":

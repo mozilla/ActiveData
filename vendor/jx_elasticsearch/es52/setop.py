@@ -372,17 +372,16 @@ def get_pull_source(es_column):
     return output
 
 
-def get_pull_stats(stats_name, median_name):
+def get_pull_stats():
     return jx_expression_to_function({"select": [
-        {"name": "count", "value": join_field([stats_name, "count"])},
-        {"name": "sum", "value": join_field([stats_name, "sum"])},
-        {"name": "min", "value": join_field([stats_name, "min"])},
-        {"name": "max", "value": join_field([stats_name, "max"])},
-        {"name": "avg", "value": join_field([stats_name, "avg"])},
-        {"name": "sos", "value": join_field([stats_name, "sum_of_squares"])},
-        {"name": "std", "value": join_field([stats_name, "std_deviation"])},
-        {"name": "var", "value": join_field([stats_name, "variance"])},
-        {"name": "median", "value": join_field([median_name, "values", "50.0"])}
+        {"name": "count", "value": "count"},
+        {"name": "sum", "value": "sum"},
+        {"name": "min", "value": "min"},
+        {"name": "max", "value": "max"},
+        {"name": "avg", "value": "avg"},
+        {"name": "sos", "value": "sum_of_squares"},
+        {"name": "std", "value": "std_deviation"},
+        {"name": "var", "value": "variance"}
     ]})
 
 

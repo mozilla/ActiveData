@@ -24,7 +24,7 @@ from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap
+from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap, concat_field
 from mo_future import first, is_text, text_type
 from mo_json import EXISTS, NESTED, OBJECT
 from mo_json.typed_encoder import encode_property
@@ -256,15 +256,18 @@ def es_aggsop(es, frum, query):
                 if len(columns) > 1:
                     Log.error("Do not know how to count columns with more than one type (script probably)")
                 # REGULAR STATS
-                stats_name = literal_field(canonical_name)
                 acc.add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, s))
+                s.pull = get_pull_stats()
+
                 # GET MEDIAN TOO!
-                median_name = literal_field(canonical_name + "_percentile")
+                select_median = s.copy()
+                select_median.pull = jx_expression_to_function({"select": [{"name": "median", "value": "values.50\\.0"}]})
+
                 acc.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
                     "field": first(columns).es_column,
                     "percents": [50]
-                }}, None))
-                s.pull = get_pull_stats(stats_name, median_name)
+                }}, select_median))
+
             elif s.aggregate == "union":
                 for column in columns:
                     script = {"scripted_metric": {
@@ -378,16 +381,18 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function("value")
         elif s.aggregate == "stats":
             # REGULAR STATS
-            stats_name = canonical_name
-            nest.add(ExprAggs(stats_name, {"extended_stats": {"script": text_type(Painless[s.value].to_es_script(schema))}}, s))
+            nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": text_type(Painless[s.value].to_es_script(schema))}}, s))
+            s.pull = get_pull_stats()
 
             # GET MEDIAN TOO!
-            median_name = canonical_name + " percentile"
-            nest.add(ExprAggs(median_name, {"percentiles": {
+            select_median = s.copy()
+            select_median.pull = jx_expression_to_function({"select": [{"name": "median", "value": "values.50\\.0"}]})
+
+            nest.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
                 "script": text_type(Painless[s.value].to_es_script(schema)),
                 "percents": [50]
-            }}, s))
-            s.pull = get_pull_stats(None, stats_name, median_name)
+            }}, select_median))
+            s.pull = get_pull_stats()
         elif s.aggregate == "union":
             # USE TERMS AGGREGATE TO SIMULATE union
             nest.add(TermsAggs(canonical_name, {"script_field": text_type(Painless[s.value].to_es_script(schema))}, s))
@@ -547,8 +552,13 @@ def count_dim(aggs, es_query, decoders):
 
         for child in children:
             name = child.name
+            if not name:
+                if aggs.get('doc_count') != 0:
+                    _count_dim(parts, aggs, child)
+                continue
+
             agg = aggs[name]
-            if agg.get('doc_count')==0:
+            if agg.get('doc_count') == 0:
                 continue
             elif name == "_match":
                 for i, b in enumerate(agg.get("buckets", EMPTY_LIST)):

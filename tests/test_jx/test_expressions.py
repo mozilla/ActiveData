@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import jx_expression
+from jx_base.expressions import jx_expression, value2json, ConcatOp
 from jx_base.queries import is_variable_name
 from jx_elasticsearch.es52 import expressions
 from jx_elasticsearch.es52.expressions import ES52
@@ -71,6 +71,17 @@ class TestExpressions(FuzzyTestCase):
         expected = {"match_all": {}}
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)
+
+    def test_concat_serialization(self):
+        expecting = {"concat": ["a", "b", "c"], "separator": {"literal": ", "}}
+        op1 = jx_expression(expecting)
+        output = op1.__data__()
+        self.assertAlmostEqual(output, expecting)
+
+        expecting = {"concat": {"a": "b"}}
+        op1 = jx_expression(expecting)
+        output = op1.__data__()
+        self.assertAlmostEqual(output, expecting)
 
 
 class S(object):

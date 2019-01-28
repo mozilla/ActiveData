@@ -79,7 +79,7 @@ class AggsDecoder(object):
                     return object.__new__(DefaultDecoder)
                 else:
                     DEBUG and Log.note("id={{id}} has parts!!!", id=id(col))
-                    if col.multi > 1 and len(col.partitions) < 10:
+                    if col.multi > 1:
                         return object.__new__(MultivalueDecoder)
 
                     partitions = col.partitions[:limit:]

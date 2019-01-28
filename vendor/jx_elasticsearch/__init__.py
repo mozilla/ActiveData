@@ -42,13 +42,7 @@ def new_instance(
         url.port = port
         status = http.get_json(url, stream=False)
         version = status.version.number
-        if version.startswith("1."):
-            from jx_elasticsearch.es14 import ES14
-            type2container.setdefault("elasticsearch", ES14)
-            known_hosts[(host, port)] = ES14
-            output = ES14(kwargs=kwargs)
-            return output
-        elif version.startswith(("5.", "6.")):
+        if version.startswith(("5.", "6.")):
             from jx_elasticsearch.es52 import ES52
             type2container.setdefault("elasticsearch", ES52)
             known_hosts[(host, port)] = ES52

@@ -9,14 +9,17 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_dots import coalesce, is_data, is_list, split_field, unwrap
+from mo_future import PY2, is_text, text_type
+from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
+from mo_logs import Log, strings
+from mo_logs.strings import quote
+from mo_times.dates import Date
+
+
 from jx_base.expressions import (
-    AndOp as AndOp_,
     AddOp as AddOp_,
-    MulOp as MulOp_,
-    SubOp as SubOp_,
-    ExpOp as ExpOp_,
-    ModOp as ModOp_,
-    DivOp as DivOp_,
+    AndOp as AndOp_,
     BaseInequalityOp as BaseInequalityOp_,
     BasicEqOp as BasicEqOp_,
     BasicIndexOfOp as BasicIndexOfOp_,
@@ -49,6 +52,7 @@ from jx_base.expressions import (
     MaxOp as MaxOp_,
     MissingOp as MissingOp_,
     ModOp as ModOp_,
+    MulOp as MulOp_,
     NULL,
     NeOp as NeOp_,
     NotLeftOp as NotLeftOp_,
@@ -83,13 +87,6 @@ from jx_base.expressions import (
 )
 from jx_base.language import is_expression, is_op
 from jx_python.expression_compiler import compile_expression
-from mo_dots import coalesce, is_data, is_list, split_field, unwrap
-from mo_future import PY2, is_text, text_type
-from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
-from mo_logs import Log
-from mo_logs.strings import quote
-from mo_times.dates import Date
-from pyLibrary import convert
 
 
 def jx_expression_to_function(expr):
@@ -133,11 +130,6 @@ class PythonScript(PythonScript_):
         return self.data_type
 
     def __str__(self):
-        """
-        RETURN A SCRIPT SUITABLE FOR CODE OUTSIDE THIS MODULE (NO KNOWLEDGE OF Painless)
-        :param schema:
-        :return:
-        """
         missing = self.miss.partial_eval()
         if missing is FALSE:
             return self.partial_eval().to_python().expr
@@ -196,10 +188,10 @@ class Variable(Variable_):
 
         for p in path[:-1]:
             if not_null:
-                agg = agg + ".get(" + convert.value2quote(p) + ")"
+                agg = agg + ".get(" + strings.quote(p) + ")"
             else:
-                agg = agg + ".get(" + convert.value2quote(p) + ", EMPTY_DICT)"
-        output = agg + ".get(" + convert.value2quote(path[-1]) + ")"
+                agg = agg + ".get(" + strings.quote(p) + ", EMPTY_DICT)"
+        output = agg + ".get(" + strings.quote(path[-1]) + ")"
         if many:
             output = "listwrap(" + output + ")"
         return output
@@ -224,8 +216,8 @@ class RowsOp(RowsOp_):
             return agg
 
         for p in path[:-1]:
-            agg = agg + ".get(" + convert.value2quote(p) + ", EMPTY_DICT)"
-        return agg + ".get(" + convert.value2quote(path[-1]) + ")"
+            agg = agg + ".get(" + strings.quote(p) + ", EMPTY_DICT)"
+        return agg + ".get(" + strings.quote(path[-1]) + ")"
 
 
 class IntegerOp(IntegerOp_):
@@ -339,32 +331,33 @@ class LteOp(LteOp_):
     to_python = _inequality_to_python
 
 
-def binaryop_to_python(self, not_null=False, boolean=False, many=False):
-    return (
-        "("
-        + Python[self.lhs].to_python()
-        + ") "
-        + _python_operators[self.op][0]
-        + " ("
-        + Python[self.rhs].to_python()
-        + ")"
-    )
+def _binaryop_to_python(self, not_null=False, boolean=False, many=True):
+    op, identity = _python_operators[self.op]
+
+    lhs = NumberOp(self.lhs).partial_eval().to_python(not_null=True)
+    rhs = NumberOp(self.rhs).partial_eval().to_python(not_null=True)
+    script = "(" + lhs + ") " + op + " (" + rhs + ")"
+    missing = OrOp([self.lhs.missing(), self.rhs.missing()]).partial_eval()
+    if missing is FALSE:
+        return script
+    else:
+        return "(None) if (" + missing.to_python() + ") else (" + script + ")"
 
 
 class SubOp(SubOp_):
-    to_python = binaryop_to_python
+    to_python = _binaryop_to_python
 
 
 class ExpOp(ExpOp_):
-    to_python = binaryop_to_python
+    to_python = _binaryop_to_python
 
 
 class ModOp(ModOp_):
-    to_python = binaryop_to_python
+    to_python = _binaryop_to_python
 
 
 class DivOp(DivOp_):
-    to_python = binaryop_to_python
+    to_python = _binaryop_to_python
 
 
 class BaseInequalityOp(BaseInequalityOp_):
@@ -387,14 +380,6 @@ class InOp(InOp_):
             + " in "
             + Python[self.superset].to_python(many=True)
         )
-
-
-class DivOp(DivOp_):
-    def to_python(self, not_null=False, boolean=False, many=False):
-        miss = Python[self.missing()].to_python()
-        lhs = Python[self.lhs].to_python(not_null=True)
-        rhs = Python[self.rhs].to_python(not_null=True)
-        return "None if (" + miss + ") else (" + lhs + ") / (" + rhs + ")"
 
 
 class FloorOp(FloorOp_):
@@ -527,8 +512,7 @@ def multiop_to_python(self, not_null=False, boolean=False, many=False):
         return Python[self.default].to_python()
     elif self.default is NULL:
         return sign.join(
-            "coalesce(" + Python[t].to_python() + ", " + zero + ")"
-            for t in self.terms
+            "coalesce(" + Python[t].to_python() + ", " + zero + ")" for t in self.terms
         )
     else:
         return (
@@ -728,31 +712,6 @@ class RangeOp(RangeOp_):
             + Python[self.els_].to_python(not_null=not_null)
             + ")"
         )
-
-
-def _binary_to_python(self, not_null=False, boolean=False, many=True):
-    op, identity = _python_operators[self.op]
-
-    lhs = NumberOp(self.lhs).partial_eval().to_python(not_null=True)
-    rhs = NumberOp(self.rhs).partial_eval().to_python(not_null=True)
-    script = "(" + lhs + ") " + op + " (" + rhs + ")"
-    missing = OrOp([self.lhs.missing(), self.rhs.missing()]).partial_eval()
-    if missing is FALSE:
-        return script
-    else:
-        return "(None) if (" + missing.to_python() + ") else (" + script + ")"
-
-
-class SubOp(SubOp_):
-    to_python = _binary_to_python
-
-
-class ExpOp(ExpOp_):
-    to_python = _binary_to_python
-
-
-class ModOp(ModOp_):
-    to_python = _binary_to_python
 
 
 class CaseOp(CaseOp_):

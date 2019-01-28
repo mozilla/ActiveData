@@ -9,14 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from jx_base.expressions import LeavesOp, NULL, Variable
-from jx_base.query import DEFAULT_LIMIT
 from jx_base.language import is_op
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_depth
 from jx_elasticsearch.es52.setop import format_dispatch, get_pull, get_pull_function
-from jx_elasticsearch.es52.util import es_query_template, jx_sort_to_es_sort, MATCH_ALL
+from jx_elasticsearch.es52.util import MATCH_ALL, es_query_template, jx_sort_to_es_sort
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, FlatList, coalesce, concat_field, is_list as is_list_, listwrap, literal_field, relative_field, set_default, split_field, startswith_field, unwrap, wrap
 from mo_future import zip_longest
@@ -25,11 +24,8 @@ from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
-from pyLibrary import convert
 
 EXPRESSION_PREFIX = "_expr."
-
-_ = convert
 
 
 def is_deepop(es, query):

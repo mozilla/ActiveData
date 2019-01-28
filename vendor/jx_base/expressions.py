@@ -23,6 +23,8 @@ from decimal import Decimal
 import operator
 import re
 
+from mock.mock import self
+
 from jx_base.utils import get_property_name, is_variable_name
 from jx_base.language import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
 from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap, is_sequence
@@ -2183,38 +2185,43 @@ class ConcatOp(Expression):
     has_simple_form = True
     data_type = STRING
 
-    def __init__(self, term, **clauses):
-        Expression.__init__(self, term)
-        if is_data(term):
-            self.terms = term.items()[0]
+    def __init__(self, terms, **clauses):
+        Expression.__init__(self, terms)
+        if is_data(terms):
+            self.terms = first(terms.items())
         else:
-            self.terms = term
-        self.separator = clauses.get("separator", Literal(""))
-        self.default = clauses.get("default", NULL)
+            self.terms = terms
+        self.separator = clauses.get(str("separator"), Literal(""))
+        self.default = clauses.get(str("default"), NULL)
         if not is_literal(self.separator):
             Log.error("Expecting a literal separator")
 
     @classmethod
     def define(cls, expr):
-        term = expr.concat
-        if is_data(term):
-            k, v = term.items()[0]
+        terms = expr['concat']
+        if is_data(terms):
+            k, v = first(terms.items())
             terms = [Variable(k), Literal(v)]
         else:
-            terms = map(jx_expression, term)
+            terms = map(jx_expression, terms)
 
         return cls.lang[ConcatOp(
             terms,
-            **{k: Literal(v) for k, v in expr.items() if k in ["default", "separator"]}
+            **{
+                k: Literal(v) if is_text(v) and not is_variable_name(v) else jx_expression(v)
+                for k, v in expr.items()
+                if k in ["default", "separator"]
+            }
         )]
 
     def __data__(self):
-        if is_op(self.value, Variable) and is_literal(self.length):
-            output = {"concat": {self.terms[0].var: self.terms[2].value}}
+        f, s = self.terms[0], self.terms[1]
+        if is_op(f, Variable) and is_literal(s):
+            output = {"concat": {f.var: s.value}}
         else:
             output = {"concat": [t.__data__() for t in self.terms]}
         if self.separator.json != '""':
-            output["separator"] = self.terms[2].value
+            output["separator"] = self.separator.__data__()
         return output
 
     def vars(self):

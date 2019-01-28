@@ -9,18 +9,18 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import re
 
 from mo_dots import Data, coalesce, is_data, listwrap, wrap_leaves
-from mo_logs import Log
+from mo_logs import Log, strings
 from mo_times.dates import Date
-from pyLibrary import convert
 
 true = True
 false = False
 null = None
 EMPTY_DICT = {}
+
+_keep_imports = [coalesce, listwrap, Date, Log, Data, re, wrap_leaves, is_data]
 
 
 def compile_expression(source):
@@ -30,25 +30,12 @@ def compile_expression(source):
     :param source:  PYTHON SOURCE CODE
     :return:  PYTHON FUNCTION
     """
-
-    # FORCE MODULES TO BE IN NAMESPACE
-    _ = coalesce
-    _ = listwrap
-    _ = Date
-    _ = convert
-    _ = Log
-    _ = Data
-    _ = EMPTY_DICT
-    _ = re
-    _ = wrap_leaves
-    _ = is_data
-
     fake_locals = {}
     try:
         exec(
 """
 def output(row, rownum=None, rows=None):
-    _source = """ + convert.value2quote(source) + """
+    _source = """ + strings.quote(source) + """
     try:
         return """ + source + """
     except Exception as e:

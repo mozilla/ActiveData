@@ -584,7 +584,7 @@ def _normalize_domain(domain=None, limit=None, schema=None):
     if not domain:
         return Domain(type="default", limit=limit)
     elif isinstance(domain, _Column):
-        if domain.partitions:
+        if domain.partitions and domain.multi <= 1:  # MULTI FIELDS ARE TUPLES, AND THERE ARE TOO MANY POSSIBLE COMBOS AT THIS TIME
             return SetDomain(partitions=domain.partitions.left(limit))
         else:
             return DefaultDomain(type="default", limit=limit)

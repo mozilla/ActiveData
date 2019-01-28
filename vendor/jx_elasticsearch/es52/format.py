@@ -17,9 +17,9 @@ from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
 from mo_future import sort_using_key
+from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import quote
-from pyLibrary import convert
 
 
 def format_cube(aggs, es_query, query, decoders, all_selects):
@@ -265,7 +265,7 @@ def format_line(aggs, es_query, query, decoders, select):
 
     def data():
         for d in list.data:
-            yield convert.value2json(d)
+            yield value2json(d)
 
     return data()
 

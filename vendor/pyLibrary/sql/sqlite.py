@@ -531,7 +531,7 @@ def quote_list(list):
 def join_column(a, b):
     a = quote_column(a)
     b = quote_column(b)
-    return SQL(a.template.rstrip() + "." + b.template.lstrip())
+    return SQL(a.value.rstrip() + "." + b.value.lstrip())
 
 
 BEGIN = "BEGIN"

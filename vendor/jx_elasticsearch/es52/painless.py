@@ -20,6 +20,7 @@ from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_times import Date
 
+
 MAX_INT32 = 2147483647
 MIN_INT32 = -2147483648
 

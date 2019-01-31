@@ -26,14 +26,14 @@ import re
 from mock.mock import self
 
 from jx_base.utils import get_property_name, is_variable_name
-from jx_base.language import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare
+from jx_base.language import BaseExpression, TYPE_ORDER, define_language, is_expression, is_op, value_compare, ID
 from mo_dots import Null, coalesce, is_data, is_list, split_field, wrap, is_sequence
 from mo_future import first, get_function_name, is_text, items as items_, text_type, utf8_json_encoder, zip_longest
 import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
-from mo_math import is_integer, MAX, MIN, is_number
+from mo_math import is_integer, MAX, MIN, UNION
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -96,10 +96,10 @@ def _jx_expression(expr, lang):
     """
     if is_expression(expr):
         # CONVERT TO lang
-        new_op = lang[expr.id]
+        new_op = lang[expr.get_id()]
         if not new_op:
             # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
-            return language[expr.id].partial_eval()
+            return language[expr.get_id()].partial_eval()
         return expr
         # return new_op(expr.args)  # THIS CAN BE DONE, BUT IT NEEDS MORE CODING, AND I WOULD EXPECT IT TO BE SLOW
 
@@ -122,12 +122,12 @@ def _jx_expression(expr, lang):
             # ONE OF THESE IS THE OPERATOR
             full_op = operators.get(op)
             if full_op:
-                class_ = lang.ops[full_op.id]
+                class_ = lang.ops[full_op.get_id()]
                 if class_:
                     return class_.define(expr)
 
                 # THIS LANGUAGE DOES NOT SUPPORT THIS OPERATOR, GOTO BASE LANGUAGE AND GET THE MACRO
-                class_ = language[op.id]
+                class_ = language[op.get_id()]
                 output = class_.define(expr).partial_eval()
                 return _jx_expression(output, lang)
         else:
@@ -158,6 +158,10 @@ class Expression(BaseExpression):
                 Log.error("Expecting an expression")
 
     @classmethod
+    def get_id(cls):
+        return getattr(cls, ID)
+
+    @classmethod
     def define(cls, expr):
         """
         GENERAL SUPPORT FOR BUILDING EXPRESSIONS FROM JSON EXPRESSIONS
@@ -173,7 +177,7 @@ class Expression(BaseExpression):
                 op, term = item
                 full_op = operators.get(op)
                 if full_op:
-                    class_ = lang.ops[full_op.id]
+                    class_ = lang.ops[full_op.get_id()]
                     clauses = {k: jx_expression(v) for k, v in expr.items() if k != op}
                     break
             else:
@@ -269,7 +273,7 @@ class Expression(BaseExpression):
     def __eq__(self, other):
         if other is None:
             return False
-        if self.id != other.id:
+        if self.get_id() != other.get_id():
             return False
         self_class = self.__class__
         Log.note("this is slow on {{type}}", type=text_type(self_class.__name__))
@@ -836,12 +840,12 @@ class DateOp(Literal):
         return Date(self.date)
 
 
-literal_op_ids = (Literal.id, NullOp.id, TrueOp.id, FalseOp.id, DateOp.id)
+literal_op_ids = (Literal.get_id(), NullOp.get_id(), TrueOp.get_id(), FalseOp.get_id(), DateOp.get_id())
 
 
 def is_literal(l):
     try:
-        return l.id in literal_op_ids
+        return l.get_id() in literal_op_ids
     except Exception:
         return False
 

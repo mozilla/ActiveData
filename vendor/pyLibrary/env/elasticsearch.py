@@ -754,6 +754,8 @@ class Cluster(object):
             Log.error("Expecting a schema")
         elif is_text(schema):
             Log.error("Expecting a JSON schema")
+        else:
+            schema = wrap(schema)
 
         for k, m in items(schema.mappings):
             m.date_detection = False  # DISABLE DATE DETECTION

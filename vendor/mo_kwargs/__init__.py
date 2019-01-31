@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from mo_dots import get_logger, is_data, wrap, zip as dict_zip
 from mo_future import get_function_arguments, get_function_defaults, get_function_name, text_type
 from mo_logs import Except
@@ -121,16 +120,11 @@ def override(func):
 
 def params_pack(params, *args):
     settings = {}
-    for a in args:
+    for a in reversed(args):
         if a == None:
             continue
         for k, v in a.items():
-            if v == None:
-                continue
-            k = text_type(k)
-            if k in settings:
-                continue
-            settings[k] = v if v != None else None
+            settings[str(k)] = None if v == None else v
     settings["kwargs"] = settings
 
     output = {

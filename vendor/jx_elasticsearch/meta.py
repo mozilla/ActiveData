@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 from datetime import date, datetime
 from decimal import Decimal
-import itertools
 
 import jx_base
 from jx_base import TableDesc

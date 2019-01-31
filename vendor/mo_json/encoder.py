@@ -9,14 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
+import json
+import math
+import time
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-import json
 from json.encoder import encode_basestring
-import math
 from math import floor
-import time
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list
 from mo_future import PYPY, binary_type, is_binary, is_text, long, sort_using_key, text_type, utf8_json_encoder, xrange

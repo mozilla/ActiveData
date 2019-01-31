@@ -277,7 +277,7 @@ class Thread(BaseThread):
                 if emit_problem:
                     # THREAD FAILURES ARE A PROBLEM ONLY IF NO ONE WILL BE JOINING WITH IT
                     try:
-                        Log.fatal("Problem in thread {{name|quote}}", name=self.name, cause=e)
+                        Log.error("Problem in thread {{name|quote}}", name=self.name, cause=e)
                     except Exception:
                         sys.stderr.write(str("ERROR in thread: " + self.name + " " + text_type(e) + "\n"))
             finally:

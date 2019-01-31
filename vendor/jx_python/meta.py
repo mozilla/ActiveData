@@ -720,6 +720,7 @@ _merge_order = {
     NullType: 1,
     bool: 2,
     int: 3,
+    long: 3,
     Date: 4,
     float: 5,
     text_type: 6,

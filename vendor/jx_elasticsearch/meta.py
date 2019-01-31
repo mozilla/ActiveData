@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from datetime import date, datetime
 from decimal import Decimal
+import itertools
 
 import jx_base
 from jx_base import TableDesc
@@ -21,7 +22,7 @@ from jx_python.containers.list_usingPythonList import ListContainer
 from jx_python.meta import Column, ColumnList
 from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
 from mo_files import URL
-from mo_future import PY2, none_type, text_type
+from mo_future import PY2, none_type, text_type, long
 from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
@@ -903,6 +904,7 @@ python_type_to_es_type = {
     str: "string",
     text_type: "string",
     int: "integer",
+    long: "integer",
     float: "double",
     Data: "object",
     dict: "object",
@@ -914,9 +916,6 @@ python_type_to_es_type = {
     datetime: "double",
     date: "double"
 }
-
-if PY2:
-    python_type_to_es_type[long] = "integer"
 
 _merge_es_type = {
     "undefined": {

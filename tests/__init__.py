@@ -22,7 +22,7 @@ import jx_elasticsearch
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
-from mo_future import is_text, text_type
+from mo_future import is_text, text_type, transpose
 from mo_json import json2value, value2json
 import mo_json_config
 from mo_kwargs import override
@@ -295,15 +295,15 @@ def compare_to_expected(query, result, expect, places):
         assertAlmostEqual(set(result.header), set(expect.header))
 
         # MAP FROM expected COLUMN TO result COLUMN
-        mapping = zip(*zip(*filter(
+        mapping = transpose(*transpose(*filter(
             lambda v: v[0][1] == v[1][1],
             itertools.product(enumerate(expect.header), enumerate(result.header))
         ))[1])[0]
         result.header = [result.header[m] for m in mapping]
 
         if result.data:
-            columns = zip(*unwrap(result.data))
-            result.data = zip(*[columns[m] for m in mapping])
+            columns = transpose(*unwrap(result.data))
+            result.data = transpose(*(columns[m] for m in mapping))
 
         if not query.sort:
             sort_table(result)

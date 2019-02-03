@@ -7,18 +7,19 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from mo_future import is_text, is_binary
 import ast
 import sys
 
-from pyparsing import Combine, Forward, Group, Keyword, Literal, MatchFirst, Optional, ParserElement, Regex, Word, ZeroOrMore, alphanums, alphas, delimitedList, infixNotation, opAssoc, restOfLine
+from pyparsing import Word, delimitedList, Optional, Combine, Group, alphas, alphanums, Forward, restOfLine, Keyword, Literal, ParserElement, infixNotation, opAssoc, Regex, MatchFirst, ZeroOrMore
 
 ParserElement.enablePackrat()
 
 # THE PARSING DEPTH IS NASTY
-sys.setrecursionlimit(1500)
+sys.setrecursionlimit(2000)
 
 
 DEBUG = False
@@ -40,15 +41,24 @@ if DEBUG:
 else:
     debug = (nothing, nothing, record_exception)
 
-
-keywords = [
+join_keywords = {
+    "join",
+    "full join",
+    "cross join",
+    "inner join",
+    "left join",
+    "right join",
+    "full outer join",
+    "right outer join",
+    "left outer join",
+}
+keywords = {
     "and",
     "as",
     "asc",
     "between",
     "case",
     "collate nocase",
-    "cross join",
     "desc",
     "else",
     "end",
@@ -56,21 +66,25 @@ keywords = [
     "group by",
     "having",
     "in",
-    "inner join",
+    "not in",
     "is",
-    "join",
     "limit",
+    "offset",
     "like",
+    "not between",
+    "not like",
     "on",
     "or",
     "order by",
     "select",
     "then",
     "union",
+    "union all",
+    "using",
     "when",
     "where",
     "with"
-]
+} | join_keywords
 locs = locals()
 reserved = []
 for k in keywords:
@@ -81,8 +95,9 @@ RESERVED = MatchFirst(reserved)
 
 KNOWN_OPS = [
     (BETWEEN, AND),
+    (NOTBETWEEN, AND),
     Literal("||").setName("concat").setDebugActions(*debug),
-    Literal("*").setName("mult").setDebugActions(*debug),
+    Literal("*").setName("mul").setDebugActions(*debug),
     Literal("/").setName("div").setDebugActions(*debug),
     Literal("+").setName("add").setDebugActions(*debug),
     Literal("-").setName("sub").setDebugActions(*debug),
@@ -91,14 +106,16 @@ KNOWN_OPS = [
     Literal("<").setName("lt").setDebugActions(*debug),
     Literal(">=").setName("gte").setDebugActions(*debug),
     Literal("<=").setName("lte").setDebugActions(*debug),
-    IN.setName("in").setDebugActions(*debug),
-    IS.setName("is").setDebugActions(*debug),
     Literal("=").setName("eq").setDebugActions(*debug),
     Literal("==").setName("eq").setDebugActions(*debug),
     Literal("!=").setName("neq").setDebugActions(*debug),
+    IN.setName("in").setDebugActions(*debug),
+    NOTIN.setName("nin").setDebugActions(*debug),
+    IS.setName("is").setDebugActions(*debug),
+    LIKE.setName("like").setDebugActions(*debug),
+    NOTLIKE.setName("nlike").setDebugActions(*debug),
     OR.setName("or").setDebugActions(*debug),
-    AND.setName("and").setDebugActions(*debug),
-    LIKE.setName("like").setDebugActions(*debug)
+    AND.setName("and").setDebugActions(*debug)
 ]
 
 
@@ -179,6 +196,9 @@ def to_join_call(instring, tokensStart, retTokens):
 
     if tok.on:
         output['on'] = tok.on
+
+    if tok.using:
+        output['using'] = tok.using
     return output
 
 
@@ -196,21 +216,17 @@ def to_union_call(instring, tokensStart, retTokens):
     unions = tok['from']['union']
     if len(unions) == 1:
         output = unions[0]
-        if tok.get('orderby'):
-            output["orderby"] = tok.get('orderby')
-        if tok.get('limit'):
-            output["limit"] = tok.get('limit')
-        return output
     else:
         if not tok.get('orderby') and not tok.get('limit'):
             return tok['from']
         else:
-            return {
-                "from": {"union": unions},
-                "orderby": tok.get('orderby') if tok.get('orderby') else None,
-                "limit": tok.get('limit') if tok.get('limit') else None
-            }
+            output = {"from": {"union": unions}}
 
+    if tok.get('orderby'):
+        output["orderby"] = tok.get('orderby')
+    if tok.get('limit'):
+        output["limit"] = tok.get('limit')
+    return output
 
 def unquote(instring, tokensStart, retTokens):
     val = retTokens[0]
@@ -220,6 +236,8 @@ def unquote(instring, tokensStart, retTokens):
     elif val.startswith('"') and val.endswith('"'):
         val = '"'+val[1:-1].replace('""', '\\"')+'"'
         # val = val.replace(".", "\\.")
+    elif val.startswith('`') and val.endswith('`'):
+          val = "'" + val[1:-1].replace("``","`") + "'"
     elif val.startswith("+"):
         val = val[1:]
     un = ast.literal_eval(val)
@@ -238,7 +256,8 @@ intNum = Regex(r"[+-]?\d+([eE]\+?\d+)?").addParseAction(unquote)
 # STRINGS, NUMBERS, VARIABLES
 sqlString = Regex(r"\'(\'\'|\\.|[^'])*\'").addParseAction(to_string)
 identString = Regex(r'\"(\"\"|\\.|[^"])*\"').addParseAction(unquote)
-ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString, delim=".", combine=True))).setName("identifier")
+mysqlidentString = Regex(r'\`(\`\`|\\.|[^`])*\`').addParseAction(unquote)
+ident = Combine(~RESERVED + (delimitedList(Literal("*") | Word(alphas + "_", alphanums + "_$") | identString | mysqlidentString, delim=".", combine=True))).setName("identifier")
 
 # EXPRESSIONS
 expr = Forward()
@@ -297,15 +316,33 @@ selectColumn = Group(
     Literal('*')("value").setDebugActions(*debug)
 ).setName("column").addParseAction(to_select_call)
 
-
-tableName = (
-    ident("value").setName("table name").setDebugActions(*debug) +
-    Optional(AS) +
-    ident("name").setName("table alias").setDebugActions(*debug) |
+table_source = (
+    (
+        (
+            Literal("(").setDebugActions(*debug).suppress() +
+            selectStmt +
+            Literal(")").setDebugActions(*debug).suppress()
+        ).setName("table source").setDebugActions(*debug)
+    )("value") +
+    Optional(
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
+    (
+        ident("value").setName("table name").setDebugActions(*debug) +
+        Optional(AS) +
+        ident("name").setName("table alias").setDebugActions(*debug)
+    )
+    |
     ident.setName("table name").setDebugActions(*debug)
 )
 
-join = ((CROSSJOIN | INNERJOIN | JOIN)("op") + Group(tableName)("join") + Optional(ON + expr("on"))).addParseAction(to_join_call)
+join = (
+    (CROSSJOIN | FULLJOIN | FULLOUTERJOIN | INNERJOIN | JOIN | LEFTJOIN | LEFTOUTERJOIN | RIGHTJOIN | RIGHTOUTERJOIN)("op") +
+    Group(table_source)("join") +
+    Optional((ON + expr("on")) | (USING + expr("using")))
+).addParseAction(to_join_call)
 
 sortColumn = expr("value").setName("sort1").setDebugActions(*debug) + Optional(DESC("sort") | ASC("sort")) | \
              expr("value").setName("sort2").setDebugActions(*debug)
@@ -317,18 +354,20 @@ selectStmt << Group(
             Group(
                 SELECT.suppress().setDebugActions(*debug) + delimitedList(selectColumn)("select") +
                 Optional(
-                    FROM.suppress().setDebugActions(*debug) + (delimitedList(Group(tableName)) + ZeroOrMore(join))("from") +
+                    (FROM.suppress().setDebugActions(*debug) + delimitedList(Group(table_source)) + ZeroOrMore(join))("from") +
                     Optional(WHERE.suppress().setDebugActions(*debug) + expr.setName("where"))("where") +
                     Optional(GROUPBY.suppress().setDebugActions(*debug) + delimitedList(Group(selectColumn))("groupby").setName("groupby")) +
                     Optional(HAVING.suppress().setDebugActions(*debug) + expr("having").setName("having")) +
-                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
+                    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+                    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
                 )
             ),
-            delim=UNION
+            delim=(UNION | UNIONALL)
         )
     )("union"))("from") +
     Optional(ORDERBY.suppress().setDebugActions(*debug) + delimitedList(Group(sortColumn))("orderby").setName("orderby")) +
-    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit"))
+    Optional(LIMIT.suppress().setDebugActions(*debug) + expr("limit")) +
+    Optional(OFFSET.suppress().setDebugActions(*debug) + expr("offset"))
 ).addParseAction(to_union_call)
 
 
@@ -338,4 +377,3 @@ SQLParser = selectStmt
 oracleSqlComment = Literal("--") + restOfLine
 mySqlComment = Literal("#") + restOfLine
 SQLParser.ignore(oracleSqlComment | mySqlComment)
-

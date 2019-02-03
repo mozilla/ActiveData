@@ -7,16 +7,18 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import unicode_literals
 
-from mo_future import is_text, is_binary
 import json
+from collections import Mapping
 
+from mo_future import text_type, number_types, binary_type, items
 from pyparsing import ParseException, ParseResults
 
-from mo_dots import is_data
-from mo_future import binary_type, number_types, text_type
 from moz_sql_parser.sql_parser import SQLParser, all_exceptions
+from moz_sql_parser.formatting import Formatter
 
 
 def parse(sql):
@@ -24,7 +26,7 @@ def parse(sql):
         parse_result = SQLParser.parseString(sql, parseAll=True)
     except Exception as e:
         if isinstance(e, ParseException) and e.msg == "Expected end of text":
-            problems = all_exceptions[e.loc]
+            problems = all_exceptions.get(e.loc, [])
             expecting = [
                 f
                 for f in (set(p.msg.lstrip("Expected").strip() for p in problems)-{"Found unwanted token"})
@@ -35,10 +37,14 @@ def parse(sql):
     return _scrub(parse_result)
 
 
+def format(json, **kwargs):
+    return Formatter(**kwargs).format(json)
+
+
 def _scrub(result):
-    if is_text(result):
+    if isinstance(result, text_type):
         return result
-    elif is_binary(result):
+    elif isinstance(result, binary_type):
         return result.decode('utf8')
     elif isinstance(result, number_types):
         return result
@@ -57,10 +63,10 @@ def _scrub(result):
                 if rr != None
             ]
             # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
-            if all(is_data(r) and "literal" in r.keys() for r in output):
+            if all(isinstance(r, Mapping) and "literal" in r.keys() for r in output):
                 output = {"literal": [r['literal'] for r in output]}
             return output
-    elif not list(result.items()):
+    elif not items(result):
         return {}
     else:
         return {
@@ -72,3 +78,9 @@ def _scrub(result):
 
 
 _ = json.dumps
+
+
+__all__ = [
+    'parse',
+    'format'
+]

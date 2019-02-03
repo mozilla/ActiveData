@@ -14,7 +14,7 @@ from math import isnan
 
 from mo_dots import Data, data_types, listwrap
 from mo_dots.lists import list_types
-from mo_future import boolean_type, long, none_type, text_type
+from mo_future import boolean_type, long, none_type, text_type, transpose
 from mo_logs import Log
 from mo_times import Date
 
@@ -113,7 +113,7 @@ def define_language(lang_name, module_vars):
 
     if lang_name:
         # ENSURE THE ALL OPS ARE DEFINED ON THE NEW LANGUAGE
-        for base_op, new_op in list(zip(JX.ops, language.ops)):
+        for base_op, new_op in transpose(JX.ops, language.ops):
             if new_op is base_op:
                 # MISSED DEFINITION, ADD ONE
                 new_op = type(base_op.__name__, (base_op,), {})

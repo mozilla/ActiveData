@@ -124,7 +124,8 @@ def params_pack(params, *args):
         if a == None:
             continue
         for k, v in a.items():
-            settings[str(k)] = None if v == None else v
+            if v != None:
+                settings[str(k)] = v
     settings["kwargs"] = settings
 
     output = {

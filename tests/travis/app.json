@@ -34,13 +34,6 @@
 		"jx_elasticsearch.meta.DEBUG": false,
 		"jx_python.meta.DEBUG": false
 	},
-	"elasticsearch": {
-		"host": "http://localhost",
-		"port": 9200,
-		"index": "testdata",
-		"type": "test_result",
-		"debug": false
-	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
@@ -56,6 +49,13 @@
 		"port": 9200,
 		"index": "saved_queries",
 		"type": "query",
+		"debug": false
+	},
+	"elasticsearch": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "testdata",
+		"type": "test_result",
 		"debug": false
 	},
 	"debug": {

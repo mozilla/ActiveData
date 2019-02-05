@@ -1,5 +1,5 @@
 
-# Detecting Change in Uni-Variate Data (GSOC 2019)
+# Detecting Change in Uni-Variate Data
 (Requires Statistics and Machine Learning)
 
 ## Problem

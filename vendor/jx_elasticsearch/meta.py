@@ -14,15 +14,15 @@ from decimal import Decimal
 import itertools
 
 import jx_base
-from jx_base import TableDesc
+from jx_base import TableDesc, Column
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
+from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
-from jx_python.meta import Column, ColumnList
 from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
 from mo_files import URL
-from mo_future import PY2, none_type, text_type, long
+from mo_future import long, none_type, text_type
 from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override

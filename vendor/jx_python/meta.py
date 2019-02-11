@@ -480,6 +480,9 @@ class ColumnList(Table, jx_base.Container):
             self._update_meta()
             return jx.groupby(self.__iter__(), keys)
 
+    def window(self, window):
+        raise NotImplemented()
+
     @property
     def schema(self):
         if not self._schema:
@@ -498,6 +501,11 @@ class ColumnList(Table, jx_base.Container):
         if table_name != "meta.columns":
             Log.error("this container has only the meta.columns")
         return self
+
+    def get_columns(self, table_name):
+        if table_name != "meta.columns":
+            Log.error("this container has only the meta.columns")
+        return self._all_columns()
 
     def denormalized(self):
         """
@@ -676,7 +684,7 @@ def row_to_column(header, row):
 all_columns = sql_list([quote_column(c.name) for c in METADATA_COLUMNS])
 
 
-SIMPLE_METADATA_COLUMNS = (  # FOR PURLY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE
+SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE
     [
         Column(
             name=c,

@@ -7,7 +7,7 @@
 #
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import, division, unicode_literals
+from __future__ import absolute_import, division
 
 import re
 
@@ -15,12 +15,20 @@ from mo_dots import Data, coalesce, is_data, listwrap, wrap_leaves
 from mo_logs import Log, strings
 from mo_times.dates import Date
 
-true = True
-false = False
-null = None
-EMPTY_DICT = {}
-
-_keep_imports = [coalesce, listwrap, Date, Log, Data, re, wrap_leaves, is_data]
+GLOBALS = {
+    "true": True,
+    "false": False,
+    "null": None,
+    "EMPTY_DICT": {},
+    "coalesce": coalesce,
+    "listwrap": listwrap,
+    "Date": Date,
+    "Log": Log,
+    "Data": Data,
+    "re": re,
+    "wrap_leaves": wrap_leaves,
+    "is_data": is_data
+}
 
 
 def compile_expression(source):
@@ -33,17 +41,17 @@ def compile_expression(source):
     fake_locals = {}
     try:
         exec(
-"""
-def output(row, rownum=None, rows=None):
-    _source = """ + strings.quote(source) + """
-    try:
-        return """ + source + """
-    except Exception as e:
-        Log.error("Problem with dynamic function {{func|quote}}",  func=_source, cause=e)
-""",
-            globals(),
-            fake_locals
+            (
+                "def output(row, rownum=None, rows=None):\n" +
+                "    _source = " + strings.quote(source) + "\n" +
+                "    try:\n" +
+                "        return " + source + "\n" +
+                "    except Exception as e:\n" +
+                "        Log.error('Problem with dynamic function {{func|quote}}',  func=_source, cause=e)\n"
+            ),
+            GLOBALS,
+            fake_locals,
         )
     except Exception as e:
-        Log.error("Bad source: {{source}}", source=source, cause=e)
-    return fake_locals['output']
+        Log.error(u"Bad source: {{source}}", source=source, cause=e)
+    return fake_locals["output"]

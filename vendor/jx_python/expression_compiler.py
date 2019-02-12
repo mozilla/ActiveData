@@ -47,7 +47,7 @@ def compile_expression(source):
                 "    try:\n" +
                 "        return " + source + "\n" +
                 "    except Exception as e:\n" +
-                "        Log.error('Problem with dynamic function {{func|quote}}',  func=_source, cause=e)\n"
+                "        Log.error(u'Problem with dynamic function {{func|quote}}',  func=_source, cause=e)\n"
             ),
             GLOBALS,
             fake_locals,

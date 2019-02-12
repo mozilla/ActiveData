@@ -78,7 +78,7 @@ class ElasticsearchMetadata(Namespace):
         self.metadata_last_updated = Date.now() - OLD_METADATA
 
         self.meta = Data()
-        self.meta.columns = ColumnList(URL(self.es_cluster.settings.host).host)
+        self.meta.columns = ColumnList(self.es_cluster)
 
         self.alias_to_query_paths = {
             "meta.columns": [ROOT_PATH],
@@ -143,7 +143,7 @@ class ElasticsearchMetadata(Namespace):
                 for d in diff:
                     dirty = True
                     i1.add_property(*d)
-        meta = self.es_cluster.get_metadata(force=dirty).indices[canonical_index]
+        meta = self.es_cluster.get_metadata(force=dirty).indices[literal_field(canonical_index)]
 
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
@@ -314,19 +314,6 @@ class ElasticsearchMetadata(Namespace):
         if column.jx_type in STRUCT:
             Log.error("not supported")
         try:
-            if column.es_index == "meta.columns":
-                partitions = jx.sort([g[column.es_column] for g, _ in jx.groupby(self.meta.columns, column.es_column) if g[column.es_column] != None])
-                self.meta.columns.update({
-                    "set": {
-                        "partitions": partitions,
-                        "count": len(self.meta.columns),
-                        "cardinality": len(partitions),
-                        "multi": 1,
-                        "last_updated": now
-                    },
-                    "where": {"eq": {"es_index": column.es_index, "es_column": column.es_column}}
-                })
-                return
             if column.es_index == "meta.tables":
                 partitions = jx.sort([g[column.es_column] for g, _ in jx.groupby(self.meta.tables, column.es_column) if g[column.es_column] != None])
                 self.meta.columns.update({
@@ -552,7 +539,7 @@ class ElasticsearchMetadata(Namespace):
                             continue
                         elif column.last_updated > Date.now() - TOO_OLD and column.cardinality is not None:
                             # DO NOT UPDATE FRESH COLUMN METADATA
-                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
+                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)))
                             continue
                         try:
                             self._update_cardinality(column)

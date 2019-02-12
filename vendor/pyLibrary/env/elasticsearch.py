@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import deepcopy
 import re
 
+from jx_base import Column
 from jx_python import jx
-from jx_python.meta import Column
-from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
+from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap, unwrap
 from mo_files.url import URL
 from mo_future import binary_type, is_binary, is_text, items, text_type
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
@@ -98,7 +98,7 @@ class Index(Features):
                 Log.error("not allowed")
             if type == None:
                 # NO type PROVIDED, MAYBE THERE IS A SUITABLE DEFAULT?
-                about = self.cluster.get_metadata().indices[self.settings.index]
+                about = self.cluster.get_metadata().indices[literal_field(self.settings.index)]
                 type = self.settings.type = _get_best_type_from_mapping(about.mappings)[0]
                 if type == "_default_":
                     Log.error("not allowed")
@@ -146,7 +146,7 @@ class Index(Features):
     def get_properties(self, retry=True):
         if self.settings.explore_metadata:
             metadata = self.cluster.get_metadata()
-            index = metadata.indices[self.settings.index]
+            index = metadata.indices[literal_field(self.settings.index)]
 
             if index == None and retry:
                 #TRY AGAIN, JUST IN CASE
@@ -204,7 +204,7 @@ class Index(Features):
         # WAIT FOR ALIAS TO APPEAR
         while True:
             metadata = self.cluster.get_metadata(force=True)
-            if alias in metadata.indices[self.settings.index].aliases:
+            if alias in metadata.indices[literal_field(self.settings.index)].aliases:
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
             Till(seconds=1).wait()
@@ -293,6 +293,18 @@ class Index(Features):
 
         else:
             raise NotImplementedError
+
+    def delete_id(self, id):
+        result = self.cluster.delete(
+            path = self.path + "/" + id,
+            timeout=600,
+            # params={"wait_for_active_shards": wait_for_active_shards}
+        )
+        if result.failures:
+            Log.error("Failure to delete fom {{index}}:\n{{data|pretty}}", index=self.settings.index, data=result)
+
+
+
 
     def extend(self, records):
         """
@@ -597,7 +609,7 @@ class Cluster(object):
 
         index = kwargs.index
         meta = self.get_metadata()
-        type, about = _get_best_type_from_mapping(meta.indices[index].mappings)
+        type, about = _get_best_type_from_mapping(meta.indices[literal_field(index)].mappings)
 
         if typed == None:
             typed = True
@@ -802,7 +814,7 @@ class Cluster(object):
         while not Till(seconds=30):
             try:
                 metadata = self.get_metadata(force=True)
-                if index in metadata.indices:
+                if index in metadata.indices.keys():
                     break
                 Log.note("Waiting for index {{index}} to appear", index=index)
             except Exception as e:
@@ -864,7 +876,7 @@ class Cluster(object):
         with self.metadata_locker:
             self._metadata = wrap(response.metadata)
             for new_index_name, new_meta in self._metadata.indices.items():
-                old_index = old_indices[new_index_name]
+                old_index = old_indices[literal_field(new_index_name)]
                 if not old_index:
                     DEBUG_METADATA_UPDATE and Log.note("New index found {{index}} at {{time}}", index=new_index_name, time=now)
                     self.index_last_updated[new_index_name] = now
@@ -876,7 +888,7 @@ class Cluster(object):
                             DEBUG_METADATA_UPDATE and Log.note("More columns found in {{index}} at {{time}}", index=new_index_name, time=now)
                             self.index_last_updated[new_index_name] = now
             for old_index_name, old_meta in old_indices.items():
-                new_index = self._metadata.indices[old_index_name]
+                new_index = self._metadata.indices[literal_field(old_index_name)]
                 if not new_index:
                     DEBUG_METADATA_UPDATE and Log.note("Old index lost: {{index}} at {{time}}", index=old_index_name, time=now)
                     self.index_last_updated[old_index_name] = now
@@ -1018,6 +1030,9 @@ class Cluster(object):
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + utf82unicode(response.content))
+            if not response.content:
+                return Null
+
             self.debug and Log.note("response: {{response}}", response=utf82unicode(response.content)[0:300:])
 
             details = json2value(utf82unicode(response.content))

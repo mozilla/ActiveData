@@ -584,7 +584,7 @@ METADATA_COLUMNS = (
 
 
 def doc_to_column(doc):
-    return Column(**untyped(doc))
+    return Column(**wrap(untyped(doc)))
 
 
 SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE

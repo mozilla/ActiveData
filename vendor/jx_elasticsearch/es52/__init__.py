@@ -71,6 +71,11 @@ class ES52(Container):
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
+        self.es.cluster.put("/" + self.es.settings.index + "/_settings", data={"index": {
+            "max_inner_result_window": 100000,
+            "max_result_window": 100000
+        }})
+
         self._namespace = ElasticsearchMetadata(kwargs=kwargs)
         self.settings.type = self.es.settings.type
         self.edges = Data()

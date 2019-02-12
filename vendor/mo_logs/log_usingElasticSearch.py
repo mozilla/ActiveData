@@ -59,6 +59,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
             schema=schema,
             limit_replicas=True,
             typed=True,
+            read_only=False,
             kwargs=kwargs,
         )
         self.batch_size = batch_size

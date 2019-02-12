@@ -268,7 +268,7 @@ def _all_default(d, default, seen=None):
                 _all_default(existing_value, default_value, seen)
 
 
-def _getdefault(obj, key):
+def _get_dict_default(obj, key):
     """
     obj MUST BE A DICT
     key IS EXPECTED TO BE LITERAL (NO ESCAPING)
@@ -280,7 +280,28 @@ def _getdefault(obj, key):
         pass
 
     try:
-        return getattr(obj, key)
+        if float(key) == round(float(key), 0):
+            return obj[int(key)]
+    except Exception as f:
+        pass
+
+    return NullType(obj, key)
+
+
+def _getdefault(obj, key):
+    """
+    obj ANY OBJECT
+    key IS EXPECTED TO BE LITERAL (NO ESCAPING)
+    TRY BOTH ATTRIBUTE AND ITEM ACCESS, OR RETURN Null
+    """
+    try:
+        return obj[key]
+    except Exception as f:
+        pass
+
+    try:
+        if obj.__class__ is not dict:
+            return getattr(obj, key)
     except Exception as f:
         pass
 

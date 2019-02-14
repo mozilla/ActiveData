@@ -22,15 +22,15 @@ from __future__ import absolute_import, division, unicode_literals
 import operator
 import re
 
+import mo_json
 from jx_base.language import BaseExpression, ID, TYPE_ORDER, define_language, is_expression, is_op, value_compare
 from jx_base.utils import get_property_name, is_variable_name
-from mo_dots import Null, coalesce, is_data, is_list, is_sequence, split_field, wrap
+from mo_dots import Null, coalesce, is_data, is_sequence, split_field, wrap, is_container, is_many
 from mo_future import first, get_function_name, is_text, items as items_, text_type, utf8_json_encoder, zip_longest
-import mo_json
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
 from mo_logs import Except, Log
-from mo_math import MAX, MIN, UNION, is_integer, is_number
+from mo_math import is_integer, MAX, MIN, UNION, is_number
 from mo_times.dates import Date, unicode2Date
 
 ALLOW_SCRIPTING = False
@@ -184,7 +184,7 @@ class Expression(BaseExpression):
 
             if term == None:
                 return class_([], **clauses)
-            elif is_list(term):
+            elif is_container(term):
                 terms = [jx_expression(t) for t in term]
                 return class_(terms, **clauses)
             elif is_data(term):
@@ -299,7 +299,7 @@ class Variable(Expression):
             row = row.get(p)
             if row is None:
                 return None
-        if is_list(row) and len(row) == 1:
+        if is_sequence(row) and len(row) == 1:
             return row[0]
         return row
 
@@ -439,7 +439,7 @@ class SelectOp(Expression):
         expr = wrap(expr)
         term = expr.select
         terms = []
-        if not is_list(term):
+        if not is_container(term):
             raise Log.error("Expecting a list")
         for t in term:
             if is_text(t):
@@ -563,10 +563,10 @@ class Literal(Expression):
             return cls.lang[DateOp(term.get('date'))]
         return object.__new__(cls)
 
-    def __init__(self, term):
+    def __init__(self, value):
         Expression.__init__(self, None)
         self.simplified = True
-        self.term = term
+        self._value = value
 
     @classmethod
     def define(cls, expr):
@@ -592,14 +592,14 @@ class Literal(Expression):
 
     @property
     def value(self):
-        return self.term
+        return self._value
 
     @property
     def json(self):
-        if self.term == "":
+        if self._value == "":
             self._json = '""'
         else:
-            self._json = value2json(self.term)
+            self._json = value2json(self._value)
 
         return self._json
 
@@ -610,7 +610,7 @@ class Literal(Expression):
         return self
 
     def missing(self):
-        if self.term in [None, Null]:
+        if self._value in [None, Null]:
             return TRUE
         if self.value == '':
             return TRUE
@@ -627,7 +627,7 @@ class Literal(Expression):
 
     @property
     def type(self):
-        return python_type_to_json_type[self.term.__class__]
+        return python_type_to_json_type[self._value.__class__]
 
     def partial_eval(self):
         return self
@@ -854,7 +854,7 @@ class TupleOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif is_list(terms):
+        elif is_many(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1069,12 +1069,12 @@ class EqOp(Expression):
     data_type = BOOLEAN
 
     def __new__(cls, terms):
-        if is_list(terms):
+        if is_many(terms):
             return object.__new__(cls)
 
         items = terms.items()
         if len(items) == 1:
-            if is_list(items[0][1]):
+            if is_many(items[0][1]):
                 return cls.lang[InOp(items[0])]
             else:
                 return cls.lang[EqOp(items[0])]
@@ -1242,7 +1242,7 @@ class AndOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif is_list(terms):
+        elif is_many(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1476,10 +1476,8 @@ class LastOp(Expression):
         elif term is NULL:
             return term
         elif is_literal(term):
-            if is_list(term):
-                if len(term) > 0:
-                    return term[-1]
-                return NULL
+            if is_many(term):
+                return last(term)
             return term
         else:
             return self.lang[LastOp(term)]
@@ -1710,7 +1708,7 @@ class CountOp(Expression):
 
     def __init__(self, terms, **clauses):
         Expression.__init__(self, terms)
-        if is_list(terms):
+        if is_many(terms):
             # SHORTCUT: ASSUME AN ARRAY OF IS A TUPLE
             self.terms = self.lang[TupleOp(terms)]
         else:
@@ -1739,7 +1737,7 @@ class MaxOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif is_list(terms):
+        elif is_many(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -1792,7 +1790,7 @@ class MinOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif is_list(terms):
+        elif is_many(terms):
             self.terms = terms
         else:
             self.terms = [terms]
@@ -2590,7 +2588,7 @@ class BetweenOp(Expression):
     @classmethod
     def define(cls, expr):
         term = expr.between
-        if is_list(term):
+        if is_sequence(term):
             return cls.lang[BetweenOp(
                 value=jx_expression(term[0]),
                 prefix=jx_expression(term[1]),
@@ -2600,7 +2598,7 @@ class BetweenOp(Expression):
             )]
         elif is_data(term):
             var, vals = term.items()[0]
-            if is_list(vals) and len(vals) == 2:
+            if is_sequence(vals) and len(vals) == 2:
                 return cls.lang[BetweenOp(
                     value=Variable(var),
                     prefix=Literal(vals[0]),
@@ -2684,7 +2682,7 @@ class InOp(Expression):
     def __new__(cls, terms):
         if is_op(terms[0], Variable) and is_op(terms[1], Literal):
             name, value = terms
-            if not is_sequence(value.value):
+            if not is_many(value.value):
                 return cls.lang[EqOp([name, Literal([value.value])])]
         return object.__new__(cls)
 
@@ -2878,7 +2876,7 @@ class UnionOp(Expression):
         Expression.__init__(self, terms)
         if terms == None:
             self.terms = []
-        elif is_list(terms):
+        elif is_many(terms):
             self.terms = terms
         else:
             self.terms = [terms]

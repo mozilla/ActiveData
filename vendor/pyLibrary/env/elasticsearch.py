@@ -321,8 +321,6 @@ class Index(Features):
                 if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
                     Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
                 id, version, json_bytes = self.encode(r)
-                if '"_id":' in json_bytes:
-                    id, version, json_bytes = self.encode(r)
 
                 if version:
                     lines.append(value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}))
@@ -625,7 +623,7 @@ class Cluster(object):
         return Index(kwargs=kwargs, cluster=self)
 
     @override
-    def get_index(self, index, type, alias=None, typed=None, read_only=True, kwargs=None):
+    def get_index(self, index, alias=None, typed=None, read_only=True, kwargs=None):
         """
         TESTS THAT THE INDEX EXISTS BEFORE RETURNING A HANDLE
         """
@@ -797,9 +795,10 @@ class Cluster(object):
             if schema.settings.index.number_of_replicas >= health.number_of_nodes:
                 if limit_replicas_warning:
                     Log.warning(
-                        "Reduced number of replicas: {{from}} requested, {{to}} realized",
+                        "Reduced number of replicas for {{index}}: {{from}} requested, {{to}} realized",
                         {"from": schema.settings.index.number_of_replicas},
-                        to=health.number_of_nodes - 1
+                        to=health.number_of_nodes - 1,
+                        index=index
                     )
                 schema.settings.index.number_of_replicas = health.number_of_nodes - 1
 

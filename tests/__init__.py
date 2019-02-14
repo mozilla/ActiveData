@@ -180,7 +180,7 @@ class ESUtils(object):
             # MAKE CONTAINER
             container = self._es_cluster.get_or_create_index(
                 typed=typed,
-                schema=subtest.schema,
+                schema=subtest.schema or _settings.schema,
                 kwargs=_settings
             )
             container.add_alias(_settings.index)

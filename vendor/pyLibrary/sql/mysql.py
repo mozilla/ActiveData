@@ -349,7 +349,7 @@ class MySQL(object):
             Log.error("Expecting transaction to be started before issuing queries")
 
         if param:
-            sql = expand_template(sql, quote_param(param))
+            sql = expand_template(text_type(sql), quote_param(param))
         sql = outdent(sql)
         self.backlog.append(sql)
         if self.debug or len(self.backlog) >= MAX_BATCH_SIZE:

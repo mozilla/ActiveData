@@ -11,7 +11,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 import itertools
 
-from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
+from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_,
+                                 EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_,
+                                 LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_,
+                                 SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
 from jx_base.language import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -25,7 +28,7 @@ from jx_elasticsearch.es52.util import (
     pull_functions,
 )
 from jx_python.jx import value_compare
-from mo_dots import Data, Null, is_container, is_list, literal_field, set_default, wrap, is_sequence
+from mo_dots import Data, Null, is_container, literal_field, set_default, wrap, is_many
 from mo_future import first
 from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
 from mo_logs import Log, suppress_exception
@@ -172,7 +175,7 @@ class EqOp(EqOp_):
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
 
-            if is_list(rhs):
+            if is_container(rhs):
                 if len(rhs) == 1:
                     rhs = rhs[0]
                 else:
@@ -227,9 +230,9 @@ class BasicEqOp(BasicEqOp_):
             if cols:
                 lhs = first(cols).es_column
             rhs = self.rhs.value
-            if is_list(rhs):
+            if is_many(rhs):
                 if len(rhs) == 1:
-                    return {"term": {lhs: rhs[0]}}
+                    return {"term": {lhs: first(rhs)}}
                 else:
                     return {"terms": {lhs: rhs}}
             else:
@@ -463,17 +466,17 @@ class InOp(InOp_):
             var = self.value.var
             cols = schema.leaves(var)
             if not cols:
-                Log.error("expecting {{var}} to be a column", var=var)
+                return MATCH_NONE
             col = first(cols)
             var = col.es_column
 
             if col.jx_type == BOOLEAN:
-                if is_literal(self.superset) and not is_sequence(self.superset.value):
+                if is_literal(self.superset) and not is_many(self.superset.value):
                     return {"term": {var: value2boolean(self.superset.value)}}
                 else:
                     return {"terms": {var: map(value2boolean, self.superset.value)}}
             else:
-                if is_literal(self.superset) and not is_sequence(self.superset.value):
+                if is_literal(self.superset) and not is_many(self.superset.value):
                     return {"term": {var: self.superset.value}}
                 else:
                     return {"terms": {var: self.superset.value}}
@@ -701,14 +704,14 @@ def split_expression_by_path(
     :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: output: A MAP FROM PATH TO EXPRESSION
     """
+    where_vars = where.vars()
     if var_to_columns is None:
-        var_to_columns = {v.var: schema.leaves(v.var) for v in where.vars()}
+        var_to_columns = {v.var: schema.leaves(v.var) for v in where_vars}
         output = wrap({schema.query_path[0]: []})
         if not var_to_columns:
             output["\\."] += [where]  # LEGIT EXPRESSIONS OF ZERO VARIABLES
             return output
 
-    where_vars = where.vars()
     all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
 
     if len(all_paths) == 0:

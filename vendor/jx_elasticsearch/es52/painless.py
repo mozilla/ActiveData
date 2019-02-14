@@ -335,7 +335,7 @@ class Literal(Literal_):
                     type=NUMBER, expr=text_type(v.unix), frum=self, schema=schema
                 )
 
-        return _convert(self.term)
+        return _convert(self._value)
 
 
 class DateOp(DateOp_):

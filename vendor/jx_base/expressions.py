@@ -577,15 +577,15 @@ class Literal(Expression):
 
     def __eq__(self, other):
         if other == None:
-            if self.term == None:
+            if self._value == None:
                 return True
             else:
                 return False
-        elif self.term == None:
+        elif self._value == None:
             return False
 
         if is_literal(other):
-            return (self.term == other.term) or (self.json == other.json)
+            return (self._value == other._value) or (self.json == other.json)
 
     def __data__(self):
         return {"literal": self.value}

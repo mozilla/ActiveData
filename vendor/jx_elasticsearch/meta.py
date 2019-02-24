@@ -122,7 +122,7 @@ class ElasticsearchMetadata(Namespace):
 
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
-        es_metadata_update_required = not (table_desc.timestamp < es_last_updated)
+        es_metadata_update_required = es_last_updated < table_desc.last_updated
         metadata = self.es_cluster.get_metadata(force=es_metadata_update_required)
 
         props = [
@@ -147,7 +147,7 @@ class ElasticsearchMetadata(Namespace):
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
-        table_desc.timestamp = es_last_updated
+        table_desc.last_updated = es_last_updated
         return columns
 
     def _parse_properties(self, alias, mapping):
@@ -263,13 +263,13 @@ class ElasticsearchMetadata(Namespace):
                     name=alias,
                     url=None,
                     query_path=["."],
-                    timestamp=Date.MIN
+                    last_updated=Date.MIN
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
                 columns = self._reload_columns(table)
                 DEBUG and Log.note("columns from reload")
-            elif after or table.timestamp < self.es_cluster.metatdata_last_updated:
+            elif after or table.last_updated < self.es_cluster.metatdata_last_updated:
                 columns = self._reload_columns(table)
                 DEBUG and Log.note("columns from reload")
             else:
@@ -507,7 +507,7 @@ class ElasticsearchMetadata(Namespace):
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated < Date.now() - MAX_COLUMN_METADATA_AGE)  and c.jx_type not in STRUCT
+                        if (c.last_updated < Date.now() - MAX_COLUMN_METADATA_AGE) and c.jx_type not in STRUCT
                     ]
                     if old_columns:
                         DEBUG and Log.note(

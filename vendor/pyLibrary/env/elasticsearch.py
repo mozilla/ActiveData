@@ -128,9 +128,13 @@ class Index(Features):
 
         if not read_only:
             if is_text(id):
-                id_info = set_default({"id": id}, ID)
+                id_info = set_default({"field": id})
+            elif is_data(id):
+                if not id.field:
+                    id.field = ID.field
+                id_info = id
             else:
-                id_info = set_default(id, ID)
+                Log.error("do not know how to handle id={{id}}", id=id)
 
             if typed:
                 from pyLibrary.env.typed_inserter import TypedInserter
@@ -781,13 +785,13 @@ class Cluster(object):
             if self.version.startswith("6."):
                 m.dynamic_templates = [t for t in m.dynamic_templates if "default_integer" not in t]
         if self.version.startswith("5."):
+            schema.settings.index.max_result_window = None  # NOT ACCEPTED BY ES5
             schema.settings.index.max_inner_result_window = None  # NOT ACCEPTED BY ES5
             schema = json2value(value2json(schema), leaves=True)
         elif self.version.startswith("6."):
             schema = json2value(value2json(schema), leaves=True)
         else:
             schema = retro_schema(json2value(value2json(schema), leaves=True))
-
 
         if limit_replicas:
             # DO NOT ASK FOR TOO MANY REPLICAS

@@ -65,6 +65,9 @@ class Date(object):
     def __float__(self):
         return self.unix
 
+    def __int__(self):
+        return int(self.unix)
+
     def floor(self, duration=None):
         if duration is None:  # ASSUME DAY
             return _unix2Date(math.floor(self.unix / 86400) * 86400)

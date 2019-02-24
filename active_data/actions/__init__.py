@@ -18,7 +18,7 @@ from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
 from mo_dots import is_container
-from mo_future import is_text, text_type
+from mo_future import is_text, text_type, first
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
@@ -48,10 +48,7 @@ def send_error(active_data_timer, body, e):
     #         remove_trace(c)
     # remove_trace(e)
 
-    return Response(
-        unicode2utf8(value2json(e)),
-        status=status
-    )
+    return Response(unicode2utf8(value2json(e)), status=status)
 
 
 def replace_vars(text, params=None):
@@ -63,7 +60,7 @@ def replace_vars(text, params=None):
     while var:
         replace = "{{" + var + "}}"
         index = text.find(replace, 0)
-        if index==-1:
+        if index == -1:
             Log.error("could not find {{var}} (including quotes)", var=replace)
         end = index + len(replace)
 
@@ -97,20 +94,27 @@ def test_mode_wait(query):
         now = Date.now()
         alias = split_field(query["from"])[0]
         metadata_manager = find_container(alias).namespace
-        metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
+        metadata_manager.meta.tables[
+            alias
+        ].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
 
         timeout = Till(seconds=MINUTE.seconds)
         while not timeout:
             # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now, timeout=timeout) if c.jx_type not in STRUCT]
-            for c in cols:
-                if now >= c.last_updated:
-                    Log.note(
-                        "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
-                        col=c
-                    )
-                    break
+            cols = [
+                c
+                for c in metadata_manager.get_columns(
+                    table_name=alias, after=now, timeout=timeout
+                )
+                if c.jx_type not in STRUCT and now >= c.last_updated
+            ]
+            if cols:
+                Log.note(
+                    "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
+                    col=first(cols),
+                )
             else:
+                Log.note("alias {{alias}} is ready for query", alias=alias)
                 break
             Till(seconds=1).wait()
     except Exception as e:
@@ -131,7 +135,9 @@ def find_container(frum):
     global namespace
     if not namespace:
         if not container.config.default.settings:
-            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+            Log.error(
+                "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
+            )
         namespace = ElasticsearchMetadata(container.config.default.settings)
 
     if is_text(frum):
@@ -151,12 +157,8 @@ def find_container(frum):
         fact_table_name = path[0]
 
         settings = set_default(
-            {
-                "index": fact_table_name,
-                "name": frum,
-                "exists": True,
-            },
-            container.config.default.settings
+            {"index": fact_table_name, "name": frum, "exists": True},
+            container.config.default.settings,
         )
         settings.type = None
         output = container.type2container[type_](settings)
@@ -169,10 +171,9 @@ def find_container(frum):
         return container.type2container[frum.type](frum.settings)
     elif is_data(frum) and (frum["from"] or is_container(frum["from"])):
         from jx_base.query import QueryOp
+
         return QueryOp.wrap(frum)
     elif is_container(frum):
         return ListContainer("test_list", frum)
     else:
         return frum
-
-

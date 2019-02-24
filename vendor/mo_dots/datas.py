@@ -255,7 +255,7 @@ class Data(MutableMapping):
     def copy(self):
         d = self._internal_dict
         if _get(d, CLASS) is dict:
-            return Data(**self)
+            return Data(**d)
         else:
             return copy(d)
 

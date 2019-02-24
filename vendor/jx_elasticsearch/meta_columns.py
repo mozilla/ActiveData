@@ -19,8 +19,7 @@ from mo_json import STRUCT
 from mo_json.typed_encoder import unnest_path, untype_path, untyped
 from mo_logs import Log
 from mo_math import MAX
-from mo_threads import Lock, Queue, Thread, Till, MAIN_THREAD
-from mo_times import Timer
+from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
 from mo_times.dates import Date
 
 DEBUG = False
@@ -28,7 +27,8 @@ singlton = None
 META_INDEX_NAME = "meta.columns"
 META_TYPE_NAME = "column"
 COLUMN_LOAD_PERIOD = 10
-COLUMN_EXTRACT_PERIOD = 2*60
+COLUMN_EXTRACT_PERIOD = 2 * 60
+ID = {"field": ["es_index", "es_column"], "version": "last_updated"}
 
 
 class ColumnList(Table, jx_base.Container):
@@ -50,9 +50,7 @@ class ColumnList(Table, jx_base.Container):
         )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
         Thread.run(
-            "update " + META_INDEX_NAME,
-            self._synch_with_es,
-            parent_thread=MAIN_THREAD,
+            "update " + META_INDEX_NAME, self._synch_with_es, parent_thread=MAIN_THREAD
         )
 
     def _query(self, query):
@@ -70,9 +68,7 @@ class ColumnList(Table, jx_base.Container):
         }
 
         self.es_index = self.es_cluster.create_index(
-            id={"field": ["es_index", "es_column"], "version": "last_updated"},
-            index=META_INDEX_NAME,
-            schema=schema,
+            id=ID, index=META_INDEX_NAME, schema=schema
         )
         self.es_index.add_alias(META_INDEX_NAME)
 
@@ -85,7 +81,7 @@ class ColumnList(Table, jx_base.Container):
 
         try:
             self.es_index = self.es_cluster.get_index(
-                index=META_INDEX_NAME, type=META_TYPE_NAME, read_only=False
+                id=ID, index=META_INDEX_NAME, type=META_TYPE_NAME, read_only=False
             )
 
             result = self.es_index.search(
@@ -100,9 +96,9 @@ class ColumnList(Table, jx_base.Container):
                                         }
                                     }
                                 },
-                                {
+                                {  # ASSUME UNUSED COLUMNS DO NOT EXIST
                                     "range": {"cardinality.~n~": {"gt": 0}}
-                                },  # ASSUME UNUSED COLUMNS DO NOT EXIST
+                                },
                             ]
                         }
                     },
@@ -111,7 +107,7 @@ class ColumnList(Table, jx_base.Container):
                 }
             )
 
-            DEBUG and Log.note("{{num}} columns loaded", num=result.hits.total)
+            Log.note("{{num}} columns loaded", num=result.hits.total)
             with self.locker:
                 for r in result.hits.hits._source:
                     self._add(doc_to_column(r))
@@ -126,13 +122,15 @@ class ColumnList(Table, jx_base.Container):
         try:
             last_extract = Date.now()
             while not please_stop:
-                now =Date.now()
+                now = Date.now()
                 try:
-                    if (now-last_extract).seconds > COLUMN_EXTRACT_PERIOD:
+                    if (now - last_extract).seconds > COLUMN_EXTRACT_PERIOD:
                         result = self.es_index.search(
                             {
                                 "query": {
-                                    "range": {"last_updated.~n~": {"gt": self.last_load}}
+                                    "range": {
+                                        "last_updated.~n~": {"gt": self.last_load}
+                                    }
                                 },
                                 "sort": ["es_index.~s~", "name.~s~", "es_column.~s~"],
                                 "from": 0,

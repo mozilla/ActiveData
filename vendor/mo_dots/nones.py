@@ -9,7 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_binary, text_type
+from mo_future import is_binary, text_type, none_type
 
 from mo_dots import _setdefault, wrap
 from mo_dots.utils import CLASS, OBJ
@@ -109,7 +109,13 @@ class NullType(object):
         return Null
 
     def __eq__(self, other):
-        return other is None or _get(other, CLASS) is NullType or other == None
+        class_ = _get(other, CLASS)
+        if class_ in (none_type, NullType):
+            return True
+        elif class_ is list and not other:
+            return True
+        else:
+            return other == None
 
     def __ne__(self, other):
         return other is not None and _get(other, CLASS) is not NullType and other != None

@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary, integer_types
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
@@ -17,12 +16,13 @@ import time
 
 from mo_dots import CLASS, Data, DataObject, FlatList, NullType, SLOT, _get, is_data, join_field, split_field
 from mo_dots.objects import OBJ
-from mo_future import binary_type, generator_types, is_binary, is_text, long, sort_using_key, text_type
-from mo_json import BOOLEAN, ESCAPE_DCT, EXISTS, INTEGER, NESTED, NUMBER, STRING, float2json, python_type_to_json_type
-from mo_json.encoder import COLON, COMMA, UnicodeBuilder, json_encoder, problem_serializing
+from mo_future import binary_type, generator_types, integer_types, is_binary, is_text, sort_using_key, text_type
 from mo_logs import Log
 from mo_logs.strings import quote, utf82unicode
 from mo_times import Date, Duration
+
+from mo_json import BOOLEAN, ESCAPE_DCT, EXISTS, INTEGER, NESTED, NUMBER, STRING, float2json, python_type_to_json_type
+from mo_json.encoder import COLON, COMMA, UnicodeBuilder, json_encoder, problem_serializing
 
 
 def encode_property(name):

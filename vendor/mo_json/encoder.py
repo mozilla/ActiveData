@@ -308,7 +308,10 @@ def pretty_json(value):
             if is_binary(value):
                 value = utf82unicode(value)
             try:
-                return quote(value)
+                if "\n" in value and value.strip():
+                    return pretty_json({"$concat": value.split("\n"), "separator": "\n"})
+                else:
+                    return quote(value)
             except Exception as e:
                 from mo_logs import Log
 

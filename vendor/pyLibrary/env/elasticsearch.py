@@ -207,7 +207,7 @@ class Index(Features):
 
         # WAIT FOR ALIAS TO APPEAR
         while True:
-            metadata = self.cluster.get_metadata(force=True)
+            metadata = self.cluster.get_metadata(after=Date.now())
             if alias in metadata.indices[literal_field(self.settings.index)].aliases:
                 return
             Log.note("Waiting for alias {{alias}} to appear", alias=alias)
@@ -816,7 +816,7 @@ class Cluster(object):
         # CONFIRM INDEX EXISTS
         while not Till(seconds=30):
             try:
-                metadata = self.get_metadata(force=True)
+                metadata = self.get_metadata(after=Date.now())
                 if index in metadata.indices.keys():
                     break
                 Log.note("Waiting for index {{index}} to appear", index=index)
@@ -867,10 +867,12 @@ class Cluster(object):
                 for a in desc["aliases"]:
                     yield wrap({"index": index, "alias": a})
 
-    def get_metadata(self, force=False):
+    def get_metadata(self, after=None):
         if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
-        if not force and self._metadata and Date.now() < self.metatdata_last_updated + STALE_METADATA:
+        if not after and self._metadata and Date.now() < self.metatdata_last_updated + STALE_METADATA:
+            return self._metadata
+        if after < self.metatdata_last_updated:
             return self._metadata
 
         old_indices = self._metadata.indices

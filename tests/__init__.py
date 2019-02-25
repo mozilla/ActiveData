@@ -192,7 +192,7 @@ class ESUtils(object):
             # INSERT DATA
             container.extend({"value": d} for d in subtest.data)
             container.flush()
-            self._es_cluster.get_metadata(force=True)
+            self._es_cluster.get_metadata(after=Date.now())
 
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]

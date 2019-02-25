@@ -201,7 +201,12 @@ class {{class_name}}(Mapping):
 class TableDesc(
     DataClass(
         "Table",
-        ["name", "url", "query_path", {"name": "last_updated", "required": True}],
+        [
+            "name",
+            "url",
+            "query_path",
+            {"name": "last_updated", "nulls": False}
+        ],
         constraint={"and": [{"eq": [{"last": "query_path"}, {"literal": "."}]}]},
     )
 ):

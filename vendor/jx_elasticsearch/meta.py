@@ -21,7 +21,7 @@ from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
-from mo_future import long, none_type, text_type
+from mo_future import long, none_type, text_type, first
 from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
@@ -71,38 +71,43 @@ class ElasticsearchMetadata(Namespace):
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
-        self.index_to_alias = {}
-
         self.es_metadata = Null
         self.metadata_last_updated = Date.now() - OLD_METADATA
 
         self.meta = Data()
         self.meta.columns = ColumnList(self.es_cluster)
-
-        self.alias_to_query_paths = {
-            "meta.columns": [ROOT_PATH],
-            "meta.tables": [ROOT_PATH]
-        }
-        self.alias_last_updated = {
-            "meta.columns": Date.now(),
-            "meta.tables": Date.now()
-        }
-        table_columns = metadata_tables()
-        self.meta.tables = ListContainer(
-            "meta.tables",
-            [],
-            jx_base.Schema(".", table_columns)
-        )
+        table_columns = columns_for_tables()
         self.meta.columns.extend(table_columns)
+        self.meta.tables = ListContainer("meta.tables", [], jx_base.Schema(".", table_columns))
+        self.meta.table.extend(tables_for_tables())
+        self.index_to_alias = {}
+        self.alias_to_query_paths = {}
+        self.alias_last_updated = {}
+        for i, settings in self.es_cluster.get_metadata().indices.items():
+            if len(settings.aliases) == 0:
+                alias = i
+            elif len(settings.aliases) == 1:
+                alias = first(settings.aliases)
+            else:
+                Log.error("expecting only one alias per index")
+
+            desc = TableDesc(
+                name=alias,
+                url=None,
+                query_path=ROOT_PATH,
+                last_updated=self.es_cluster.metatdata_last_updated
+            )
+            self.meta.tables.add(desc)
+            self.index_to_alias[i] = alias
+            wrap(self.alias_to_query_paths)[alias] += [desc.query_path]
+            self.alias_last_updated[alias] = desc.last_updated
+
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
             self.worker = Thread.run("refresh metadata", self.monitor)
         else:
             self.worker = Thread.run("not refresh metadata", self.not_monitor)
         return
-
-
-
 
     @property
     def namespace(self):
@@ -118,12 +123,10 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
         # FIND ALL INDEXES OF ALIAS
-        es_last_updated = self.es_cluster.metatdata_last_updated
 
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
-        es_metadata_update_required = es_last_updated < table_desc.last_updated
-        metadata = self.es_cluster.get_metadata(force=es_metadata_update_required)
+        metadata = self.es_cluster.get_metadata(after=table_desc.last_updated)
 
         props = [
             (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
@@ -142,12 +145,14 @@ class ElasticsearchMetadata(Namespace):
                 for d in diff:
                     dirty = True
                     i1.add_property(*d)
-        meta = self.es_cluster.get_metadata(force=dirty).indices[literal_field(canonical_index)]
+        if dirty:
+            metadata = self.es_cluster.get_metadata(after=Date.now())
 
+        meta = metadata.indices[literal_field(canonical_index)]
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
-        table_desc.last_updated = es_last_updated
+        table_desc.last_updated = self.es_cluster.metatdata_last_updated
         return columns
 
     def _parse_properties(self, alias, mapping):
@@ -250,7 +255,7 @@ class ElasticsearchMetadata(Namespace):
 
         alias = self._find_alias(root_table_name)
         if not alias:
-            self.es_cluster.get_metadata(force=True)
+            self.es_cluster.get_metadata(after=after)
             alias = self._find_alias(root_table_name)
             if not alias:
                 Log.error("{{table|quote}} does not exist", table=table_name)
@@ -848,7 +853,8 @@ def _counting_query(c):
         }}
 
 
-def metadata_tables():
+
+def columns_for_tables():
     return wrap(
         [
             Column(
@@ -880,6 +886,23 @@ def metadata_tables():
             ]
         ]
     )
+
+
+def tables_for_tables():
+    return [
+        TableDesc(
+            name="meta.columns",
+            url=None,
+            query_path=ROOT_PATH,
+            last_updated=Date.now()
+        ),
+        TableDesc(
+            name="meta.tables",
+            url=None,
+            query_path=ROOT_PATH,
+            last_updated=Date.now()
+        ),
+    ]
 
 
 def jx_type(column):

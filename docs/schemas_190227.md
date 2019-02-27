@@ -1,7 +1,16 @@
 
 # All Schemas
 
-A semi-automated extract of the ActiveData schemas as of 2019-02-27
+A semi-automated extract of the Elasticsearch schemas as of 2019-02-27.  
+
+These are the **ElasticSearch schemas** not the original document schemas; these are more strict. The original documents have a flexible schema; and are translated to a larger namespace to handle the datatype diversity.  Roughly, every primitive property is written as an object with a *type* property; so one property can be stored as multiple types. 
+
+[The typed encoder does this document expansion](https://github.com/mozilla/ActiveData/blob/2e5df4a752d7dab99cb431f2481a643f67630800/vendor/mo_json/typed_encoder.py#L438)
+
+Elasticsearch makes no distinction between a primitive value and an array of primitive values (called a multivalue). Dealing with multivalues may need some extra work if you are puting these documents in another  document store. 
+
+The `~N~` (capital N) property indicates nested object arrays:  It is used to distinguish from an inner object, or a primitive value, that share the same property name.
+
 
 ## activedata_requests
     {

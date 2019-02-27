@@ -433,8 +433,6 @@ def _dict2json(value, sub_schema, path, net_new_properties, buffer):
         append(buffer, '1}')
 
 
-
-
 TYPE_PREFIX = "~"  # u'\u0442\u0443\u0440\u0435-'  # "туре"
 BOOLEAN_TYPE = TYPE_PREFIX + "b~"
 NUMBER_TYPE = TYPE_PREFIX + "n~"

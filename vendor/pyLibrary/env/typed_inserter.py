@@ -56,7 +56,7 @@ class TypedInserter(object):
             path = []
             if is_data(value):
                 given_id = self.get_id(value)
-                if not isinstance(given_id, text_type):
+                if given_id != None and not isinstance(given_id, text_type):
                     given_id = value2json(given_id)
                 value['_id'] = None
                 version = self.get_version(value)

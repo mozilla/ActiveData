@@ -14,7 +14,7 @@ from flask import Response
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
-from jx_elasticsearch.meta import ElasticsearchMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata, EXPECTING_SNOWFLAKE
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
 from mo_dots import is_container
@@ -91,12 +91,9 @@ def test_mode_wait(query):
         if query["from"].startswith("meta."):
             return
 
-        now = Date.now()
         alias = split_field(query["from"])[0]
-        metadata_manager = find_container(alias).namespace
-        metadata_manager.meta.tables[
-            alias
-        ].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
+        now = Date.now()
+        metadata_manager = find_container(alias, after=now).namespace
 
         timeout = Till(seconds=MINUTE.seconds)
         while not timeout:
@@ -127,7 +124,7 @@ namespace = None
 container_cache = {}  # MAP NAME TO Container OBJECT
 
 
-def find_container(frum):
+def find_container(frum, after):
     """
     :param frum:
     :return:
@@ -139,6 +136,7 @@ def find_container(frum):
                 "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
+    namespace.get_columns(frum, after=after)  # FORCE A RELOAD
 
     if is_text(frum):
         if frum in container_cache:

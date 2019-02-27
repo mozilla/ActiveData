@@ -60,9 +60,12 @@ def sql_query(path):
                     if not data.sql:
                         Log.error("Expecting a `sql` parameter")
                     jx_query = parse_sql(data.sql)
-                    if data.meta.testing:
-                        test_mode_wait(jx_query)
-                    frum = find_container(jx_query['from'])
+                    if jx_query['from'] != None:
+                        if data.meta.testing:
+                            test_mode_wait(jx_query)
+                        frum = find_container(jx_query['from'], after=None)
+                    else:
+                        frum = None
                     result = jx.run(jx_query, container=frum)
                     if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(jx_query.format)

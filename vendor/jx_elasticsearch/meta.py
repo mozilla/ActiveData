@@ -9,19 +9,19 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-import itertools
 from datetime import date, datetime
 from decimal import Decimal
+import itertools
 
 import jx_base
-from jx_base import TableDesc, Column
+from jx_base import Column, TableDesc
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import Data, FlatList, Null, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
-from mo_future import long, none_type, text_type, first
+from mo_dots import Data, FlatList, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
+from mo_future import first, long, none_type, text_type
 from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
@@ -33,11 +33,11 @@ from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
-MAX_COLUMN_METADATA_AGE = 12 * HOUR
+DEBUG = True
 ENABLE_META_SCAN = True
-DEBUG = False
 TOO_OLD = 2*HOUR
 OLD_METADATA = MINUTE
+MAX_COLUMN_METADATA_AGE = 12 * HOUR
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 
@@ -67,22 +67,17 @@ class ElasticsearchMetadata(Namespace):
         self.settings = kwargs
         self.default_name = coalesce(name, alias, index)
         self.es_cluster = elasticsearch.Cluster(kwargs=kwargs)
-
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
-        self.es_metadata = Null
-        self.metadata_last_updated = Date.now() - OLD_METADATA
+        table_columns = columns_for_tables()
 
         self.meta = Data()
         self.meta.columns = ColumnList(self.es_cluster)
-        table_columns = columns_for_tables()
         self.meta.columns.extend(table_columns)
         self.meta.tables = ListContainer("meta.tables", [], jx_base.Schema(".", table_columns))
         self.meta.table.extend(tables_for_tables())
-        self.index_to_alias = {}
         self.alias_to_query_paths = {}
-        self.alias_last_updated = {}
         for i, settings in self.es_cluster.get_metadata().indices.items():
             if len(settings.aliases) == 0:
                 alias = i
@@ -98,9 +93,8 @@ class ElasticsearchMetadata(Namespace):
                 last_updated=self.es_cluster.metatdata_last_updated
             )
             self.meta.tables.add(desc)
-            self.index_to_alias[i] = alias
-            wrap(self.alias_to_query_paths)[alias] += [desc.query_path]
-            self.alias_last_updated[alias] = desc.last_updated
+            self.alias_to_query_paths[alias] = [desc.query_path]
+            self.alias_to_query_paths[self._find_alias(alias)] = [desc.query_path]
 
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
@@ -117,7 +111,7 @@ class ElasticsearchMetadata(Namespace):
     def url(self):
         return self.es_cluster.url / self.default_name.replace(".", "/")
 
-    def _reload_columns(self, table_desc):
+    def _reload_columns(self, table_desc, after):
         """
         :param alias: A REAL ALIAS (OR NAME OF INDEX THAT HAS NO ALIAS)
         :return:
@@ -126,7 +120,7 @@ class ElasticsearchMetadata(Namespace):
 
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
-        metadata = self.es_cluster.get_metadata(after=table_desc.last_updated)
+        metadata = self.es_cluster.get_metadata(after=after)
 
         props = [
             (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
@@ -189,9 +183,7 @@ class ElasticsearchMetadata(Namespace):
 
             # ENSURE ALL TABLES HAVE THE QUERY PATHS SET
             self.alias_to_query_paths[alias] = query_paths
-            for i, a in self.index_to_alias.items():
-                if a == alias:
-                    self.alias_to_query_paths[i] = query_paths
+            self.alias_to_query_paths[self._find_alias(alias)] = query_paths
 
             # ENSURE COLUMN HAS CORRECT jx_type
             # PICK DEEPEST NESTED PROPERTY AS REPRESENTATIVE
@@ -217,7 +209,7 @@ class ElasticsearchMetadata(Namespace):
                 canonical = self.meta.columns.add(abs_column)
                 canonicals.append(canonical)
 
-            self.todo.extend(canonicals)
+            self.todo.extend((c, None) for c in canonicals)
             return canonicals
 
     def query(self, _query):
@@ -230,14 +222,18 @@ class ElasticsearchMetadata(Namespace):
         )))
 
     def _find_alias(self, name):
-        if self.metadata_last_updated < self.es_cluster.metatdata_last_updated:
-            for a in self.es_cluster.get_aliases():
-                self.index_to_alias[a.index] = coalesce(a.alias, a.index)
-                self.alias_last_updated.setdefault(a.alias, Date.MIN)
-        if name in self.alias_last_updated:
-            return name
-        else:
-            return self.index_to_alias.get(name)
+        indices = self.es_cluster.get_metadata().indices
+        settings = indices[name]
+        if settings:
+            aliases = settings.aliases;
+            if not aliases:
+                return name
+            else:
+                return aliases[0]
+
+        for settings in indices.values():
+            if name in settings.aliases:
+                return name
 
     def get_columns(self, table_name, column_name=None, after=None, timeout=None):
         """
@@ -272,16 +268,13 @@ class ElasticsearchMetadata(Namespace):
                 )
                 with self.meta.tables.locker:
                     self.meta.tables.add(table)
-                columns = self._reload_columns(table)
-                DEBUG and Log.note("columns from reload")
-            elif after or table.last_updated < self.es_cluster.metatdata_last_updated:
-                columns = self._reload_columns(table)
-                DEBUG and Log.note("columns from reload")
+                columns = self._reload_columns(table, after=after)
+            elif after and table.last_updated < after:
+                columns = self._reload_columns(table, after=after)
+            elif table.last_updated < self.es_cluster.metatdata_last_updated:
+                columns = self._reload_columns(table, after=self.es_cluster.metatdata_last_updated)
             else:
                 columns = self.meta.columns.find(alias, column_name)
-                DEBUG and Log.note("columns from find()")
-
-            DEBUG and Log.note("columns for {{table}} are {{ids}}", table=table_name, ids=[id(c) for c in columns])
 
             columns = jx.sort(columns, "name")
 
@@ -457,7 +450,13 @@ class ElasticsearchMetadata(Namespace):
             else:
                 parts = jx.sort(aggs.buckets.key)
 
-            DEBUG and Log.note("update metadata for {{column.es_index}}.{{column.es_column}} (id={{id}}) at {{time}}", id=id(column), column=column, time=now)
+            DEBUG and Log.note(
+                "update metadata for {{column.es_index}}.{{column.es_column}} (id={{id}}) card={{card}} at {{time}}",
+                id=id(column),
+                column=column,
+                card=cardinality,
+                time=now
+            )
             self.meta.columns.update({
                 "set": {
                     "count": count,
@@ -477,7 +476,7 @@ class ElasticsearchMetadata(Namespace):
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
             if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
-                Log.warning("Missing index {{col.es_index}}", col=column, cause=e)
+                Log.warning("Missing index {{col.es_index}}", col=column)
                 self.meta.columns.update({
                     "clear": ".",
                     "where": {"eq": {"es_index": column.es_index}}
@@ -509,10 +508,12 @@ class ElasticsearchMetadata(Namespace):
         while not please_stop:
             try:
                 if not self.todo:
+                    # LOOK FOR OLD COLUMNS WE CAN RE-SCAN
+                    last_good_update = Date.now() - MAX_COLUMN_METADATA_AGE
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated < Date.now() - MAX_COLUMN_METADATA_AGE) and c.jx_type not in STRUCT
+                        if (c.last_updated < last_good_update) and c.jx_type not in STRUCT
                     ]
                     if old_columns:
                         DEBUG and Log.note(
@@ -520,16 +521,18 @@ class ElasticsearchMetadata(Namespace):
                             names=wrap(old_columns).es_column,
                             dates=[Date(t).format() for t in wrap(old_columns).last_updated]
                         )
-                        self.todo.extend(old_columns)
+                        self.todo.extend((c, max(last_good_update, c.last_updated)) for c in old_columns)
                     else:
                         DEBUG and Log.note("no more metatdata to update")
 
-                column = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
-                if column:
-                    if column is THREAD_STOP:
+                pair = self.todo.pop(Till(seconds=(10*MINUTE).seconds))
+                if pair:
+                    if pair is THREAD_STOP:
                         continue
+                    column, after = pair
 
-                    with Timer("update {{table}}.{{column}}", param={"table": column.es_index, "column": column.es_column}, silent=not DEBUG):
+                    now = Date.now()
+                    with Timer("review {{table}}.{{column}}", param={"table": column.es_index, "column": column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
                             DEBUG and Log.note("{{column.es_column}} does not exist", column=column)
                             self.meta.columns.update({
@@ -538,13 +541,20 @@ class ElasticsearchMetadata(Namespace):
                             })
                             continue
                         if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
-                            DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
-                            column.last_updated = Date.now()
+                            DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
+                            column.last_updated = now
                             continue
-                        elif column.last_updated > Date.now() - TOO_OLD and column.cardinality is not None:
+                        elif column.cardinality is None:
+                            pass  # NO CARDINALITY MEANS WE MUST GET UPDATE IT
+                        elif after and column.last_updated < after:
+                            pass  # COLUMN IS TOO OLD
+                        elif column.last_updated < now - TOO_OLD:
+                            pass  # COLUMN IS WAY TOO OLD
+                        else:
                             # DO NOT UPDATE FRESH COLUMN METADATA
-                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)))
+                            DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(now-Date(column.last_updated)))
                             continue
+
                         try:
                             self._update_cardinality(column)
                             (DEBUG and not column.es_index.startswith(TEST_TABLE_PREFIX)) and Log.note("updated {{column.name}}", column=column)
@@ -615,6 +625,9 @@ class ElasticsearchMetadata(Namespace):
         return self.get_snowflake(root).get_schema(rest)
 
 
+EXPECTING_SNOWFLAKE = "Expecting snowflake {{name}} to exist"
+
+
 class Snowflake(object):
     """
     REPRESENT ONE ALIAS, AND ITS NESTED ARRAYS
@@ -623,6 +636,8 @@ class Snowflake(object):
     def __init__(self, name, namespace):
         self.name = name
         self.namespace = namespace
+        if name not in self.namespace.alias_to_query_paths:
+            Log.error(EXPECTING_SNOWFLAKE, name=name)
 
     def get_schema(self, query_path):
         return Schema(query_path, self)

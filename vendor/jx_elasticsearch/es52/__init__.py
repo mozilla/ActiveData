@@ -65,18 +65,18 @@ class ES52(Container):
                 "settings": unwrap(kwargs)
             }
         self.settings = kwargs
-        self.name = name = coalesce(name, index)
+        self._namespace = ElasticsearchMetadata(kwargs=kwargs)
+        self.name = name = self._namespace._find_alias(coalesce(name, index))
         if read_only:
-            self.es = elasticsearch.Alias(alias=index, kwargs=kwargs)
+            self.es = elasticsearch.Alias(alias=name, index=None, kwargs=kwargs)
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
-        self.es.cluster.put("/" + self.es.settings.index + "/_settings", data={"index": {
+        self.es.cluster.put("/" + name + "/_settings", data={"index": {
             "max_inner_result_window": 100000,
             "max_result_window": 100000
         }})
 
-        self._namespace = ElasticsearchMetadata(kwargs=kwargs)
         self.settings.type = self.es.settings.type
         self.edges = Data()
         self.worker = None

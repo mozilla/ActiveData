@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from importlib import import_module
 import sys
 
 from mo_future import binary_type, generator_types, is_binary, is_text, text_type
@@ -193,17 +194,6 @@ def hash_value(v):
     else:
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
 
-
-
-def _setdefault(obj, key, value):
-    """
-    DO NOT USE __dict__.setdefault(obj, key, value), IT DOES NOT CHECK FOR obj[key] == None
-    """
-    v = obj.get(key)
-    if v == None:
-        obj[key] = value
-        return value
-    return v
 
 
 def set_default(*params):
@@ -617,3 +607,8 @@ from mo_dots.datas import Data, SLOT, data_types, is_data
 from mo_dots.nones import Null, NullType
 from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
 from mo_dots.objects import DataObject
+
+import mo_dots.nones as temp
+temp.wrap = wrap
+temp.is_sequence = is_sequence
+del temp

@@ -48,9 +48,10 @@ class ES52(Container):
     def __init__(
         self,
         host,
-        index,
+        index,  # THE NAME OF THE SNOWFLAKE (IF WRITING)
+        alias=None,  # THE NAME OF THE SNOWFLAKE (FOR READING)
         type=None,
-        name=None,
+        name=None,  # THE FULL NAME OF THE TABLE (THE NESTED PATH INTO THE SNOWFLAKE)
         port=9200,
         read_only=True,
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
@@ -66,7 +67,7 @@ class ES52(Container):
             }
         self.settings = kwargs
         self._namespace = ElasticsearchMetadata(kwargs=kwargs)
-        self.name = name = self._namespace._find_alias(coalesce(name, index))
+        self.name = name = self._namespace._find_alias(coalesce(alias, index, name))
         if read_only:
             self.es = elasticsearch.Alias(alias=name, index=None, kwargs=kwargs)
         else:

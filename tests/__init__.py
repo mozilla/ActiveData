@@ -19,6 +19,7 @@ import subprocess
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 import jx_elasticsearch
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
@@ -192,7 +193,10 @@ class ESUtils(object):
             # INSERT DATA
             container.extend({"value": d} for d in subtest.data)
             container.flush()
-            self._es_cluster.get_metadata(after=Date.now())
+
+            now = Date.now()
+            namespace = ElasticsearchMetadata(self._es_cluster.settings)
+            namespace.get_columns(_settings.alias, after=now)  # FORCE A RELOAD
 
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
@@ -202,6 +206,7 @@ class ESUtils(object):
                 subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.alias)
             else:
                 Log.error("Do not know how to handle")
+
         except Exception as e:
             Log.error("can not load {{data}} into container", data=subtest.data, cause=e)
 

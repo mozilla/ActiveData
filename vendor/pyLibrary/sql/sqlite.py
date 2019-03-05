@@ -322,7 +322,7 @@ class Sqlite(DB):
                     with self.locker:
                         if self.too_long is None:
                             self.too_long = Till(seconds=TOO_LONG_TO_HOLD_TRANSACTION)
-                            self.too_long.on_go(self.show_transactions_blocked_warning)
+                            self.too_long.then(self.show_transactions_blocked_warning)
                         self.delayed_queries.append(command_item)
                     return
             elif self.transaction_stack and self.transaction_stack[-1] not in [transaction, transaction.parent]:
@@ -330,7 +330,7 @@ class Sqlite(DB):
                 with self.locker:
                     if self.too_long is None:
                         self.too_long = Till(seconds=TOO_LONG_TO_HOLD_TRANSACTION)
-                        self.too_long.on_go(self.show_transactions_blocked_warning)
+                        self.too_long.then(self.show_transactions_blocked_warning)
                     self.delayed_transactions.append(command_item)
                 return
             else:

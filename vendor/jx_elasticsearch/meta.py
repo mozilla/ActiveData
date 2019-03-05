@@ -59,7 +59,7 @@ class ElasticsearchMetadata(Namespace):
         return output
 
     @override
-    def __init__(self, host, index, sql_file='metadata.sqlite', alias=None, name=None, port=9200, kwargs=None):
+    def __init__(self, host, index, alias=None, name=None, port=9200, kwargs=None):
         if hasattr(self, "settings"):
             return
 
@@ -96,6 +96,8 @@ class ElasticsearchMetadata(Namespace):
             self.alias_to_query_paths[alias] = [desc.query_path]
             self.alias_to_query_paths[self._find_alias(alias)] = [desc.query_path]
 
+        # WE MUST PAUSE?
+
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
             self.worker = Thread.run("refresh metadata", self.monitor)
@@ -114,10 +116,11 @@ class ElasticsearchMetadata(Namespace):
     def _reload_columns(self, table_desc, after):
         """
         :param alias: A REAL ALIAS (OR NAME OF INDEX THAT HAS NO ALIAS)
+        :param after: ENSURE DATA IS YOUNGER THAN after
         :return:
         """
-        # FIND ALL INDEXES OF ALIAS
 
+        # FIND ALL INDEXES OF ALIAS
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
         metadata = self.es_cluster.get_metadata(after=after)
@@ -146,10 +149,21 @@ class ElasticsearchMetadata(Namespace):
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
+
         table_desc.last_updated = self.es_cluster.metatdata_last_updated
+
+        # ASK FOR COLUMNS TO BE RE-SCANNED
+        self.todo.extend((c, after) for c in columns)
         return columns
 
     def _parse_properties(self, alias, mapping):
+        """
+        PARSE THE mapping, UPDATE self.meta.columns, AND RETURN CANONICAL COLUMNS
+        :param alias:
+        :param mapping:
+        :return:
+        """
+
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
         if DEBUG and any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
             Log.warning(
@@ -209,7 +223,6 @@ class ElasticsearchMetadata(Namespace):
                 canonical = self.meta.columns.add(abs_column)
                 canonicals.append(canonical)
 
-            self.todo.extend((c, None) for c in canonicals)
             return canonicals
 
     def query(self, _query):
@@ -504,7 +517,7 @@ class ElasticsearchMetadata(Namespace):
                 Log.warning("Could not get {{col.es_index}}.{{col.es_column}} info", col=column, cause=e)
 
     def monitor(self, please_stop):
-        please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
+        please_stop.then(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
             try:
                 if not self.todo:
@@ -571,7 +584,7 @@ class ElasticsearchMetadata(Namespace):
 
     def not_monitor(self, please_stop):
         Log.alert("metadata scan has been disabled")
-        please_stop.on_go(lambda: self.todo.add(THREAD_STOP))
+        please_stop.then(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
             column = self.todo.pop()
             if column == THREAD_STOP:
@@ -625,7 +638,7 @@ class ElasticsearchMetadata(Namespace):
         return self.get_snowflake(root).get_schema(rest)
 
 
-EXPECTING_SNOWFLAKE = "Expecting snowflake {{name}} to exist"
+EXPECTING_SNOWFLAKE = "Expecting snowflake {{name|quote}} to exist"
 
 
 class Snowflake(object):

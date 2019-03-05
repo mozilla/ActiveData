@@ -11,6 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from active_data import OVERVIEW
+from mo_dots import wrap
 from mo_json_config import URL
 from mo_logs.strings import unicode2utf8
 from pyLibrary import convert
@@ -59,18 +60,23 @@ class TestBasicRequests(BaseTestCase):
         self.assertEqual(response.all_content, OVERVIEW)
 
     def test_rest_get(self):
-        settings = self.utils.fill_container({
-            "data": [
-                {"a": 0, "b": 0},
-                {"a": 0, "b": 1},
-                {"a": 1, "b": 0},
-                {"a": 1, "b": 1}
-            ],
-            "query": {"from": ""}  # DUMMY LINE
+        data = [
+            {"a": 0, "b": 0},
+            {"a": 0, "b": 1},
+            {"a": 1, "b": 0},
+            {"a": 1, "b": 1}
+        ]
+
+        test = wrap({
+            "data": data,
+            "query": {"from": TEST_TABLE},
+            "expecting_list": {"data": data}
         })
 
+        self.utils.execute_tests(test)  # LOAD, AND SET meta.testing=True
+
         url = URL(self.utils.testing.query)
-        url.path = "json/" + settings.index
+        url.path = "json/" + test.query['from']
         url.query = {"a": 1}
 
         response = self.utils.try_till_response(str(url), data=b"")

@@ -97,10 +97,11 @@ class ES52(Container):
             all_paths = {".": None}  # MAP FROM path TO parent TO MAKE A TREE
 
             def nested_path_of(v):
-                if not v:
-                    return []
+                parent = all_paths[v]
+                if not parent:
+                    return ['.']
                 else:
-                    return [v] + nested_path_of(all_paths[v])
+                    return [parent] + nested_path_of(parent)
 
             all = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
             for step in sorted(all):
@@ -114,15 +115,13 @@ class ES52(Container):
                                 best = candidate
                     all_paths[step] = best
             for p in all_paths.keys():
-                nested_path = nested_path_of(all_paths[p])
-                if not nested_path:
-                    nested_path = ['.']
+                nested_path = nested_path_of(p)
                 self.namespace.meta.columns.add(Column(
                     name=p,
                     es_column=p,
                     es_index=self.name,
                     es_type=OBJECT,
-                    jx_type=EXISTS,
+                    jx_type=OBJECT,
                     nested_path=nested_path,
                     last_updated=Date.now()
                 ))

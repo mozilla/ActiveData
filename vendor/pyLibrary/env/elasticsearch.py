@@ -861,8 +861,10 @@ class Cluster(object):
             return self._metadata
 
         old_indices = self._metadata.indices
+        now = Date.now()
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
-        now = self.metatdata_last_updated = Date.now()
+        self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
+
         with self.metadata_locker:
             self._metadata = wrap(response.metadata)
             for new_index_name, new_meta in self._metadata.indices.items():

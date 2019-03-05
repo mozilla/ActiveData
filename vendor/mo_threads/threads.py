@@ -171,8 +171,8 @@ class MainThread(BaseThread):
 
         if isinstance(please_stop, Signal):
             # MUTUAL SIGNALING MAKES THESE TWO EFFECTIVELY THE SAME SIGNAL
-            self.please_stop.on_go(please_stop.go)
-            please_stop.on_go(self.please_stop.go)
+            self.please_stop.then(please_stop.go)
+            please_stop.then(self.please_stop.go)
         else:
             please_stop = self.please_stop
 
@@ -181,9 +181,9 @@ class MainThread(BaseThread):
             with self_thread.child_lock:
                 pending = copy(self_thread.children)
             children_done = AndSignals(please_stop, len(pending))
-            children_done.signal.on_go(self.please_stop.go)
+            children_done.signal.then(self.please_stop.go)
             for p in pending:
-                p.stopped.on_go(children_done.done)
+                p.stopped.then(children_done.done)
 
         try:
             if allow_exit:

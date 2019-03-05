@@ -94,11 +94,11 @@ class ES52(Container):
 
         if not typed:
             # ADD EXISTENCE COLUMNS
-            all_paths = {".": None}  # MAP FROM path TO parent TO MAKE A TREE
+            all_paths = {'.': None}  # MAP FROM path TO parent TO MAKE A TREE
 
             def nested_path_of(v):
                 parent = all_paths[v]
-                if not parent:
+                if parent is None:
                     return ['.']
                 else:
                     return [parent] + nested_path_of(parent)

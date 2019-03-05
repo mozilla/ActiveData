@@ -155,7 +155,7 @@ def find_container(frum, after):
         fact_table_name = path[0]
 
         settings = set_default(
-            {"index": fact_table_name, "name": frum, "exists": True},
+            {"alias": fact_table_name, "name": frum, "exists": True},
             container.config.default.settings,
         )
         settings.type = None

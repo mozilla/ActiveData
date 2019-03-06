@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import jx_base
 from jx_base import Column, Table
-from jx_base.meta_columns import METADATA_COLUMNS, SIMPLE_METADATA_COLUMNS
+from jx_base.meta_columns import META_COLUMNS_NAME, META_COLUMNS_TYPE_NAME, SIMPLE_METADATA_COLUMNS, META_COLUMNS_DESC
 from jx_base.schema import Schema
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap
@@ -24,8 +24,6 @@ from mo_times.dates import Date
 
 DEBUG = False
 singlton = None
-META_INDEX_NAME = "meta.columns"
-META_TYPE_NAME = "column"
 COLUMN_LOAD_PERIOD = 10
 COLUMN_EXTRACT_PERIOD = 2 * 60
 ID = {"field": ["es_index", "es_column"], "version": "last_updated"}
@@ -37,7 +35,7 @@ class ColumnList(Table, jx_base.Container):
     """
 
     def __init__(self, es_cluster):
-        Table.__init__(self, META_INDEX_NAME)
+        Table.__init__(self, META_COLUMNS_NAME)
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
         self.locker = Lock()
         self._schema = None
@@ -50,7 +48,7 @@ class ColumnList(Table, jx_base.Container):
         )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
         Thread.run(
-            "update " + META_INDEX_NAME, self._synch_with_es, parent_thread=MAIN_THREAD
+            "update " + META_COLUMNS_NAME, self._synch_with_es, parent_thread=MAIN_THREAD
         )
 
     def _query(self, query):
@@ -64,15 +62,15 @@ class ColumnList(Table, jx_base.Container):
     def _db_create(self):
         schema = {
             "settings": {"index.number_of_shards": 1, "index.number_of_replicas": 2},
-            "mappings": {META_TYPE_NAME: {}},
+            "mappings": {META_COLUMNS_TYPE_NAME: {}},
         }
 
         self.es_index = self.es_cluster.create_index(
-            id=ID, index=META_INDEX_NAME, schema=schema
+            id=ID, index=META_COLUMNS_NAME, schema=schema
         )
-        self.es_index.add_alias(META_INDEX_NAME)
+        self.es_index.add_alias(META_COLUMNS_NAME)
 
-        for c in METADATA_COLUMNS:
+        for c in META_COLUMNS_DESC.columns:
             self._add(c)
             self.es_index.add({"value": c.__dict__()})
 
@@ -81,7 +79,7 @@ class ColumnList(Table, jx_base.Container):
 
         try:
             self.es_index = self.es_cluster.get_index(
-                id=ID, index=META_INDEX_NAME, type=META_TYPE_NAME, read_only=False
+                id=ID, index=META_COLUMNS_NAME, type=META_COLUMNS_TYPE_NAME, read_only=False
             )
 
             result = self.es_index.search(
@@ -114,7 +112,7 @@ class ColumnList(Table, jx_base.Container):
 
         except Exception as e:
             Log.warning(
-                "no {{index}} exists, making one", index=META_INDEX_NAME, cause=e
+                "no {{index}} exists, making one", index=META_COLUMNS_NAME, cause=e
             )
             self._db_create()
 
@@ -221,33 +219,35 @@ class ColumnList(Table, jx_base.Container):
         if not self.dirty:
             return
 
-        for mcl in self.data.get(META_INDEX_NAME).values():
-            for mc in mcl:
-                count = 0
-                values = set()
-                objects = 0
-                multi = 1
-                for column in self._all_columns():
-                    value = column[mc.name]
-                    if value == None:
-                        pass
+        now = Date.now()
+        for mc in META_COLUMNS_DESC.columns:
+            count = 0
+            values = set()
+            objects = 0
+            multi = 1
+            for column in self._all_columns():
+                value = column[mc.name]
+                if value == None:
+                    pass
+                else:
+                    count += 1
+                    if is_list(value):
+                        multi = max(multi, len(value))
+                        try:
+                            values |= set(value)
+                        except Exception:
+                            objects += len(value)
+                    elif is_data(value):
+                        objects += 1
                     else:
-                        count += 1
-                        if is_list(value):
-                            multi = max(multi, len(value))
-                            try:
-                                values |= set(value)
-                            except Exception:
-                                objects += len(value)
-                        elif is_data(value):
-                            objects += 1
-                        else:
-                            values.add(value)
-                mc.count = count
-                mc.cardinality = len(values) + objects
-                mc.partitions = jx.sort(values)
-                mc.multi = multi
-                mc.last_updated = Date.now()
+                        values.add(value)
+            mc.count = count
+            mc.cardinality = len(values) + objects
+            mc.partitions = jx.sort(values)
+            mc.multi = multi
+            mc.last_updated = now
+
+        META_COLUMNS_DESC.last_updated = now
         self.dirty = False
 
     def _all_columns(self):
@@ -264,7 +264,7 @@ class ColumnList(Table, jx_base.Container):
             return iter(self._all_columns())
 
     def __len__(self):
-        return self.data[META_INDEX_NAME]["es_index"].count
+        return self.data[META_COLUMNS_NAME]["es_index"].count
 
     def update(self, command):
         self.dirty = True
@@ -358,13 +358,13 @@ class ColumnList(Table, jx_base.Container):
             self._update_meta()
             if not self._schema:
                 self._schema = Schema(
-                    ".", [c for cs in self.data[META_INDEX_NAME].values() for c in cs]
+                    ".", [c for cs in self.data[META_COLUMNS_NAME].values() for c in cs]
                 )
             snapshot = self._all_columns()
 
         from jx_python.containers.list_usingPythonList import ListContainer
 
-        query.frum = ListContainer(META_INDEX_NAME, snapshot, self._schema)
+        query.frum = ListContainer(META_COLUMNS_NAME, snapshot, self._schema)
         return jx.run(query)
 
     def groupby(self, keys):
@@ -381,7 +381,7 @@ class ColumnList(Table, jx_base.Container):
             with self.locker:
                 self._update_meta()
                 self._schema = Schema(
-                    ".", [c for cs in self.data[META_INDEX_NAME].values() for c in cs]
+                    ".", [c for cs in self.data[META_COLUMNS_NAME].values() for c in cs]
                 )
         return self._schema
 
@@ -390,13 +390,13 @@ class ColumnList(Table, jx_base.Container):
         return self
 
     def get_table(self, table_name):
-        if table_name != META_INDEX_NAME:
-            Log.error("this container has only the " + META_INDEX_NAME)
+        if table_name != META_COLUMNS_NAME:
+            Log.error("this container has only the " + META_COLUMNS_NAME)
         return self
 
     def get_columns(self, table_name):
-        if table_name != META_INDEX_NAME:
-            Log.error("this container has only the " + META_INDEX_NAME)
+        if table_name != META_COLUMNS_NAME:
+            Log.error("this container has only the " + META_COLUMNS_NAME)
         return self._all_columns()
 
     def denormalized(self):
@@ -430,7 +430,7 @@ class ColumnList(Table, jx_base.Container):
         return ListContainer(
             self.name,
             data=output,
-            schema=jx_base.Schema(META_INDEX_NAME, SIMPLE_METADATA_COLUMNS),
+            schema=jx_base.Schema(META_COLUMNS_NAME, SIMPLE_METADATA_COLUMNS),
         )
 
 

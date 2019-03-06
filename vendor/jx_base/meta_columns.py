@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import Mapping
 
-from jx_base import Column
+from jx_base import Column, TableDesc
 from jx_base.schema import Schema
 from mo_collections import UniqueIndex
 from mo_dots import (
@@ -25,15 +25,16 @@ from mo_dots import (
     listwrap,
     split_field,
     unwraplist,
-)
+    wrap)
 from mo_future import binary_type, items, long, none_type, reduce, text_type
 from mo_json import INTEGER, NUMBER, STRING, python_type_to_json_type
 from mo_times.dates import Date
 
 DEBUG = False
+META_TABLES_NAME = "meta.tables"
+META_COLUMNS_NAME = "meta.columns"
+META_COLUMNS_TYPE_NAME = "column"
 singlton = None
-META_INDEX_NAME = "meta.columns"
-META_TYPE_NAME = "column"
 
 
 def get_schema_from_list(table_name, frum, native_type_to_json_type=python_type_to_json_type):
@@ -133,57 +134,104 @@ def get_id(column):
     return column.es_index + "|" + column.es_column
 
 
-METADATA_COLUMNS = (
-    [
-        Column(
-            name=c,
-            es_index=META_INDEX_NAME,
-            es_column=c,
-            es_type="keyword",
-            jx_type=STRING,
-            last_updated=Date.now(),
-            nested_path=ROOT_PATH,
-        )
-        for c in [
-            "name",
-            "es_type",
-            "jx_type",
-            "nested_path",
-            "es_column",
-            "es_index",
-            "partitions",
+META_COLUMNS_DESC = TableDesc(
+    name=META_COLUMNS_NAME,
+    url=None,
+    query_path=ROOT_PATH,
+    last_updated=Date.now(),
+    columns=wrap(
+        [
+            Column(
+                name=c,
+                es_index=META_COLUMNS_NAME,
+                es_column=c,
+                es_type="keyword",
+                jx_type=STRING,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH,
+            )
+            for c in [
+                "name",
+                "es_type",
+                "jx_type",
+                "nested_path",
+                "es_column",
+                "es_index",
+                "partitions",
+            ]
         ]
-    ]
-    + [
-        Column(
-            name=c,
-            es_index=META_INDEX_NAME,
-            es_column=c,
-            es_type="integer",
-            jx_type=INTEGER,
-            last_updated=Date.now(),
-            nested_path=ROOT_PATH,
-        )
-        for c in ["count", "cardinality", "multi"]
-    ]
-    + [
-        Column(
-            name="last_updated",
-            es_index=META_INDEX_NAME,
-            es_column="last_updated",
-            es_type="double",
-            jx_type=NUMBER,
-            last_updated=Date.now(),
-            nested_path=ROOT_PATH,
-        )
-    ]
+        + [
+            Column(
+                name=c,
+                es_index=META_COLUMNS_NAME,
+                es_column=c,
+                es_type="integer",
+                jx_type=INTEGER,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH,
+            )
+            for c in ["count", "cardinality", "multi"]
+        ]
+        + [
+            Column(
+                name="last_updated",
+                es_index=META_COLUMNS_NAME,
+                es_column="last_updated",
+                es_type="double",
+                jx_type=NUMBER,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH
+            )
+        ]
+    )
+
 )
+
+META_TABLES_DESC = TableDesc(
+    name=META_TABLES_NAME,
+    url=None,
+    query_path=ROOT_PATH,
+    last_updated=Date.now(),
+    columns=wrap(
+        [
+            Column(
+                name=c,
+                es_index=META_TABLES_NAME,
+                es_column=c,
+                es_type="string",
+                jx_type=STRING,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH
+            )
+            for c in [
+                "name",
+                "url",
+                "query_path"
+            ]
+        ] + [
+            Column(
+                name=c,
+                es_index=META_TABLES_NAME,
+                es_column=c,
+                es_type="integer",
+                jx_type=INTEGER,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH
+            )
+            for c in [
+                "timestamp"
+            ]
+        ]
+    )
+)
+
+
 
 SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE
     [
         Column(
             name=c,
-            es_index=META_INDEX_NAME,
+            es_index=META_COLUMNS_NAME,
             es_column=c,
             es_type="string",
             jx_type=STRING,
@@ -195,7 +243,7 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO 
     + [
         Column(
             name=c,
-            es_index=META_INDEX_NAME,
+            es_index=META_COLUMNS_NAME,
             es_column=c,
             es_type="long",
             jx_type=INTEGER,
@@ -207,7 +255,7 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO 
     + [
         Column(
             name="last_updated",
-            es_index=META_INDEX_NAME,
+            es_index=META_COLUMNS_NAME,
             es_column="last_updated",
             es_type="time",
             jx_type=NUMBER,

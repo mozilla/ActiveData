@@ -574,7 +574,7 @@ def listwrap(value):
         return FlatList()
     elif is_list(value):
         return wrap(value)
-    elif isinstance(value, set):
+    elif is_many(value):
         return wrap(list(value))
     else:
         return wrap([unwrap(value)])
@@ -598,7 +598,7 @@ def tuplewrap(value):
     """
     INTENDED TO TURN lists INTO tuples FOR USE AS KEYS
     """
-    if isinstance(value, (list, set, tuple) + generator_types):
+    if is_many(value):
         return tuple(tuplewrap(v) if is_sequence(v) else v for v in value)
     return unwrap(value),
 

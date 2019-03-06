@@ -15,6 +15,7 @@ from flask import Response
 import jx_elasticsearch
 from jx_python.containers.cube import Cube
 from mo_dots import wrap
+from mo_future import first
 from mo_json import json2value
 from mo_kwargs import override
 from mo_logs import Log
@@ -130,7 +131,7 @@ class SaveQueries(object):
             available[e.hash] = False
 
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
-        best = [h for h in short_hashes if available[h]][0]
+        best = first(h for h in short_hashes if available[h])
 
         self.queue.add({
             "id": best,
@@ -142,7 +143,7 @@ class SaveQueries(object):
             }
         })
 
-        Log.note("Saved query as {{hash}}", hash=best)
+        Log.note("Saved {{json}} query as {{hash}}", json=json, hash=best)
 
         return best
 

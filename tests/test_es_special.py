@@ -154,7 +154,7 @@ class TestESSpecial(BaseTestCase):
         )
 
         self.db.execute("BEGIN")
-        self.db.execute('UPDATE "meta.columns" SET name=name')
+        self.db.execute('UPDATE META_COLUMNS_NAME SET name=name')
         try:
 
             test = {
@@ -221,7 +221,7 @@ class TestESSpecial(BaseTestCase):
         try:
             with db.transaction() as t:
                 t.execute(
-                    "insert into " + quote_column("meta.columns") +
+                    "insert into " + quote_column(META_COLUMNS_NAME) +
                     "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
                     quote_set([
                         ".", "object", "exists", '["."]', ".", cont.alias, Date.now()
@@ -232,7 +232,7 @@ class TestESSpecial(BaseTestCase):
         try:
             with db.transaction() as t:
                 t.execute(
-                    "insert into " + quote_column("meta.columns") +
+                    "insert into " + quote_column(META_COLUMNS_NAME) +
                     "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
                     quote_set([
                         "~e~", "long", "exists", '["."]', "~e~", cont.alias, Date.now()

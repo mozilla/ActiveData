@@ -29,7 +29,6 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 class TestLoadAndSaveQueries(BaseTestCase):
 
     def test_save_then_load(self):
-
         test = {
             "data": [
                 {"a": "b"}
@@ -49,18 +48,19 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         settings = self.utils.fill_container(test)
 
-        bytes = unicode2utf8(value2json({
-            "from": settings.index,
+        json = value2json({
+            "from": settings.alias,
             "select": "a",
             "format": "list"
-        }))
+        })
+        bytes = unicode2utf8(json)
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
+        Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
         wrap(test).expecting_list.meta.saved_as = expected_hash
 
         self.utils.send_queries(test)
 
         # ENSURE THE QUERY HAS BEEN INDEXED
-        Log.note("Flush saved query (with hash {{hash}})", hash=expected_hash)
         container = elasticsearch.Index(index="saved_queries", type=save_query.DATA_TYPE, kwargs=settings)
         container.flush(forced=True)
         with Timer("wait for 5 seconds"):
@@ -72,7 +72,6 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.all_content, bytes)
 
     def test_recovery_of_empty_string(self):
-
         test = wrap({
             "data": [
                 {"a": "bee"}
@@ -112,7 +111,4 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
 
-
     # TODO: TEST RECOVERY OF QUERY USING {"prefix": {var: ""}} (EMPTY STRING IS NOT RECORDED RIGHT
-
-

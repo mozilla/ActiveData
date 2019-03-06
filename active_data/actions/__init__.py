@@ -23,6 +23,7 @@ from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
+from mo_times import Timer
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
 
@@ -92,28 +93,28 @@ def test_mode_wait(query):
             return
 
         alias = split_field(query["from"])[0]
-        now = Date.now()
-        metadata_manager = find_container(alias, after=now).namespace
+        after = Date.now()
+        with Timer("Get columns for {{table}} after {{after}}", {"table": alias, "after": after}, silent=not DEBUG):
+            metadata_manager = find_container(alias, after=after).namespace
 
-        timeout = Till(seconds=MINUTE.seconds)
-        while not timeout:
-            # GET FRESH VERSIONS
-            cols = [
-                c
-                for c in metadata_manager.get_columns(
-                    table_name=alias, after=now, timeout=timeout
-                )
-                if c.jx_type not in STRUCT and now >= c.last_updated
-            ]
-            if cols:
-                Log.note(
-                    "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
-                    col=first(cols),
-                )
-            else:
-                Log.note("alias {{alias}} is ready for query", alias=alias)
-                break
-            Till(seconds=1).wait()
+            timeout = Till(seconds=MINUTE.seconds)
+            while not timeout:
+                # GET FRESH VERSIONS
+                cols = [
+                    c
+                    for c in metadata_manager.get_columns(
+                        table_name=alias, after=after, timeout=timeout
+                    )
+                    if c.jx_type not in STRUCT and (after >= c.last_updated or c.cardinality == None)
+                ]
+                if cols:
+                    Log.note(
+                        "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
+                        col=first(cols),
+                    )
+                else:
+                    break
+                Till(seconds=1).wait()
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 
@@ -136,7 +137,7 @@ def find_container(frum, after):
                 "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
-    namespace.get_columns(frum, after=after)  # FORCE A RELOAD
+    cs = namespace.get_columns(frum, after=after)  # FORCE A RELOAD
 
     if is_text(frum):
         if frum in container_cache:

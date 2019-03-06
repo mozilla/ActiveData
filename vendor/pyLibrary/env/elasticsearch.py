@@ -17,7 +17,7 @@ from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap, unwrap
 from mo_files import File
 from mo_files.url import URL
-from mo_future import binary_type, is_binary, is_text, items, text_type, first
+from mo_future import binary_type, is_binary, is_text, items, text_type, first, generator_types
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, json_type_to_inserter_type
 from mo_kwargs import override
@@ -312,7 +312,7 @@ class Index(Features):
 
     def _data_bytes(self, records):
         """
-        :param records:
+        :param records:  EXPECTING METHOD THAT PRODUCES A GENERATOR
         :return: GENERATOR OF BYTES FOR POSTING TO ES
         """
         for r in records:
@@ -339,6 +339,8 @@ class Index(Features):
             Log.error("Index opened in read only mode, no changes allowed")
         if not records:
             return
+        if isinstance(records, generator_types):
+            Log.error("generators no longer accepted, use lambda to make generator")
 
         try:
             with Timer("Add {{num}} documents to {{index}}", {"num": "unknown", "index": self.settings.index}, silent=not self.debug):

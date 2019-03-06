@@ -3,11 +3,12 @@
 Provide high speed filtering and aggregation over data see [ActiveData Wiki Page](https://wiki.mozilla.org/Auto-tools/Projects/ActiveData) for project details
 
 
-|Branch      |Status   |
-|------------|---------|
-|master      | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=master)](https://travis-ci.org/mozilla/ActiveData) |
-|dev         | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=dev)](https://travis-ci.org/mozilla/ActiveData)    |
-|v1.7        | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=v1.7)](https://travis-ci.org/mozilla/ActiveData)    |
+|Branch      |Status   | Coverage |
+|------------|---------|----------|
+|master      | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=master)](https://travis-ci.org/mozilla/ActiveData) | |
+|dev         | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=dev)](https://travis-ci.org/mozilla/ActiveData)    | [![Coverage Status](https://coveralls.io/repos/github/mozilla/ActiveData/badge.svg)](https://coveralls.io/github/mozilla/ActiveData) |
+|v1.7        | [![Build Status](https://travis-ci.org/mozilla/ActiveData.svg?branch=v1.7)](https://travis-ci.org/mozilla/ActiveData)    ||
+
 
 
 

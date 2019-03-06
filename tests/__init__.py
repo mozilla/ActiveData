@@ -191,7 +191,7 @@ class ESUtils(object):
             ESUtils.indexes.append(_settings.index)
 
             # INSERT DATA
-            container.extend({"value": d} for d in subtest.data)
+            container.extend([{"value": d} for d in subtest.data])
             container.flush()
 
             now = Date.now()

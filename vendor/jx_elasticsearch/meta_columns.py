@@ -153,9 +153,9 @@ class ColumnList(Table, jx_base.Container):
                         DEBUG and updates and Log.note(
                             "{{num}} columns to push to db", num=len(updates)
                         )
-                        self.es_index.extend(
+                        self.es_index.extend([
                             {"value": column.__dict__()} for column in updates
-                        )
+                        ])
                 except Exception as e:
                     Log.warning("problem updating database", cause=e)
 

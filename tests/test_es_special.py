@@ -141,37 +141,6 @@ class TestESSpecial(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_db_is_busy(self):
-        FILENAME = "metadata.localhost.sqlite"
-        db_file = File(FILENAME)
-        if not db_file.exists:
-            Log.error("Expecting activedata server to be using {{file}}", file=FILENAME)
-
-        self.db = sqlite3.connect(
-            database=db_file.abspath,
-            check_same_thread=False,
-            isolation_level=None
-        )
-
-        self.db.execute("BEGIN")
-        self.db.execute('UPDATE META_COLUMNS_NAME SET name=name')
-        try:
-
-            test = {
-                "data": [
-                    {"a": "b"}
-                ],
-                "query": {
-                    "from": TEST_TABLE
-                },
-                "expecting_list": {
-                    "meta": {"format": "list"}, "data": [{"a": "b"}]},
-            }
-            self.utils.execute_tests(test)
-            Till(seconds=10).wait()
-        finally:
-            self.db.execute("COMMIT")
-
     def test_prefix_uses_prefix(self):
         test = {
             "data": [

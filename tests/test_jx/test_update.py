@@ -36,7 +36,7 @@ class TestUpdate(BaseTestCase):
 
         self.utils.send_queries({
             "query": {
-                "from": settings.index,
+                "from": settings.alias,
                 "select": ["c", "a"]
             },
             "expecting_table": {

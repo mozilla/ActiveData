@@ -153,7 +153,7 @@ class ElasticsearchMetadata(Namespace):
         table_desc.last_updated = self.es_cluster.metatdata_last_updated
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
-        self.todo.extend((c, after) for c in columns)
+        self.todo.extend((c, after) for c in columns if c.es_index != META_COLUMNS_NAME)
         return columns
 
     def _parse_properties(self, alias, mapping):
@@ -308,7 +308,7 @@ class ElasticsearchMetadata(Namespace):
                     if len(pending) > 10:
                         Log.note("waiting for {{num}} columns to update by {{timestamp}}", num=len(pending), timestamp=after)
                     else:
-                        Log.note("waiting for columns to update by {{timestamp}}; {{columns|json}}", timestamp=after, columns=[c.es_index + "." + c.es_column + " id="+text_type(id(c)) for c in pending])
+                        Log.note("waiting for columns to update by {{timestamp}}; {{columns|json}}", timestamp=after, columns=[concat_field(c.es_index, c.es_column) + " id="+text_type(id(c)) for c in pending])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
@@ -496,7 +496,8 @@ class ElasticsearchMetadata(Namespace):
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
             if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
-                Log.warning("Missing index {{col.es_index}}", col=column)
+                if not is_test_table:
+                    Log.warning("Missing index {{col.es_index}}", col=column)
                 self.meta.columns.update({
                     "clear": ".",
                     "where": {"eq": {"es_index": column.es_index}}
@@ -534,7 +535,7 @@ class ElasticsearchMetadata(Namespace):
                     old_columns = [
                         c
                         for c in self.meta.columns
-                        if (c.last_updated < last_good_update) and c.jx_type not in STRUCT
+                        if (c.last_updated < last_good_update) and c.jx_type not in STRUCT and c.es_index != META_COLUMNS_NAME
                     ]
                     if old_columns:
                         DEBUG and Log.note(
@@ -557,7 +558,7 @@ class ElasticsearchMetadata(Namespace):
                     now = Date.now()
                     with Timer("review {{table}}.{{column}}", param={"table": column.es_index, "column": column.es_column}, silent=not DEBUG):
                         if column.es_index in self.index_does_not_exist:
-                            DEBUG and Log.note("{{column.es_column}} does not exist", column=column)
+                            DEBUG and Log.note("{{column.es_column}} of {{column.es_index}} does not exist", column=column)
                             self.meta.columns.update({
                                 "clear": ".",
                                 "where": {"eq": {"es_index": column.es_index}}

@@ -10,15 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sqlite3
-
-from mo_times import Date
-from pyLibrary.sql import sql_list, sql_iso, quote_set
-
 from mo_dots import wrap
-from mo_files import File
-from mo_logs import Log
-from mo_threads import Till
+from mo_times import Date
+from pyLibrary.sql import quote_set
 from pyLibrary.sql.sqlite import Sqlite, quote_column
 from tests.test_jx import BaseTestCase, TEST_TABLE
 

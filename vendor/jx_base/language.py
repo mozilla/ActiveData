@@ -72,6 +72,8 @@ class Language(object):
         self.ops = None
 
     def __getitem__(self, item):
+        if item == None:
+            Log.error("expecting operator")
         class_ = self.ops[item.get_id()]
         if class_.__name__ != item.__class__.__name__:
             Log.error("programming error")

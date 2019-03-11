@@ -1287,6 +1287,19 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
     RETURN THE COLUMN DEFINITIONS IN THE GIVEN esProperties OBJECT
     """
     columns = FlatList()
+
+    if parent_name == '.':
+        # ROOT PROPERTY IS THE ELASTICSEARCH DOCUMENT (AN OBJECT)
+        columns.append(Column(
+            name='.',
+            es_index=parent_index_name,
+            es_column='.',
+            es_type="object",
+            jx_type=OBJECT,
+            last_updated=Date.now(),
+            nested_path=nested_path
+        ))
+
     for name, property in esProperties.items():
         index_name = parent_index_name
         column_name = concat_field(parent_name, name)

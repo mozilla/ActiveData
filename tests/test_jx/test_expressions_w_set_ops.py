@@ -613,7 +613,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": None},
                 {},
                 {"v": "a"}
             ],
@@ -659,7 +659,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": None},
                 {},
                 {"v": "a"}
             ],
@@ -682,7 +682,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": None},
                 {},
                 {"v": "a"}
             ],

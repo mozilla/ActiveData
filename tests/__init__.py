@@ -191,6 +191,8 @@ class ESUtils(object):
             ESUtils.indexes.append(_settings.index)
 
             # INSERT DATA
+            if '"null"' in value2json(subtest.data):
+                Log.error("not expected")
             container.extend([{"value": d} for d in subtest.data])
             container.flush()
 
@@ -255,6 +257,7 @@ class ESUtils(object):
         query = wrap(query)
 
         try:
+            query.meta.testing = True
             query = unicode2utf8(value2json(query))
             # EXECUTE QUERY
             response = self.try_till_response(self.testing.query, data=query)

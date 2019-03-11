@@ -231,7 +231,7 @@ Column = DataClass(
     ],
     constraint={
         "and": [
-            # {"not": {"eq": {"es_column": "."}}},
+            {"not": {"find": {"es_column": "null"}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},

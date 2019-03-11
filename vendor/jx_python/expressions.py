@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import coalesce, is_data, is_list, split_field, unwrap
+from mo_dots import coalesce, is_data, is_list, split_field, unwrap, Null
 from mo_future import PY2, is_text, text_type
 from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
 from mo_logs import Log, strings
@@ -24,6 +24,7 @@ from jx_base.expressions import (
     BasicEqOp as BasicEqOp_,
     BasicIndexOfOp as BasicIndexOfOp_,
     BetweenOp as BetweenOp_,
+    BooleanOp as BooleanOp_,
     CaseOp as CaseOp_,
     CoalesceOp as CoalesceOp_,
     ConcatOp as ConcatOp_,
@@ -93,6 +94,9 @@ def jx_expression_to_function(expr):
     """
     RETURN FUNCTION THAT REQUIRES PARAMETERS (row, rownum=None, rows=None):
     """
+    if expr == None:
+        return Null
+
     if is_expression(expr):
         if is_op(expr, ScriptOp) and not is_text(expr.script):
             return expr.script
@@ -218,6 +222,15 @@ class RowsOp(RowsOp_):
         for p in path[:-1]:
             agg = agg + ".get(" + strings.quote(p) + ", EMPTY_DICT)"
         return agg + ".get(" + strings.quote(path[-1]) + ")"
+
+
+class BooleanOp(BooleanOp_):
+    def to_python(self, not_null=False, boolean=False, many=False):
+        return assign_and_eval(
+            "f",
+            Python[self.term].to_python(),
+            "False if f is False or f is None else True"
+        )
 
 
 class IntegerOp(IntegerOp_):
@@ -434,7 +447,7 @@ class NeOp(NeOp_):
 
 class NotOp(NotOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return "not (" + Python[self.term].to_python(boolean=True) + ")"
+        return "not (" + BooleanOp(Python[self.term]).to_python(boolean=True) + ")"
 
 
 class AndOp(AndOp_):
@@ -442,12 +455,12 @@ class AndOp(AndOp_):
         if not self.terms:
             return "True"
         else:
-            return " and ".join("(" + Python[t].to_python() + ")" for t in self.terms)
+            return " and ".join("(" + BooleanOp(Python[t]).to_python() + ")" for t in self.terms)
 
 
 class OrOp(OrOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return " or ".join("(" + Python[t].to_python() + ")" for t in self.terms)
+        return " or ".join("(" + BooleanOp(Python[t]).to_python() + ")" for t in self.terms)
 
 
 class LengthOp(LengthOp_):
@@ -656,16 +669,11 @@ class NotRightOp(NotRightOp_):
 
 class BasicIndexOfOp(BasicIndexOfOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        find = (
-            "("
-            + Python[self.value].to_python()
-            + ").find("
-            + Python[self.find].to_python()
-            + ", "
-            + Python[self.start].to_python()
-            + ")"
+        return assign_and_eval(
+            "f",
+            "(" + Python[self.value].to_python() + ").find" + "(" + Python[self.find].to_python() + ")",
+            "None if f==-1 else f"
         )
-        return "[None if i==-1 else i for i in [" + find + "]][0]"
 
 
 class SplitOp(SplitOp_):
@@ -681,14 +689,11 @@ class SplitOp(SplitOp_):
 
 class FindOp(FindOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return (
-            "(("
-            + quote(self.substring)
-            + " in "
-            + Python[self.var].to_python()
-            + ") if "
-            + Python[self.var].to_python()
-            + "!=None else False)"
+        # [Null if f==-1 else f for f in [(self.value.find(self.find))]][0]
+        return assign_and_eval(
+            "f",
+            "(" + Python[self.value].to_python() + ").find" + "(" + Python[self.find].to_python() + ")",
+            "None if f==-1 else f"
         )
 
 
@@ -741,6 +746,16 @@ class WhenOp(WhenOp_):
             + Python[self.els_].to_python()
             + ")"
         )
+
+
+def assign_and_eval(var, expression, eval):
+    """
+    :param var: NAME GIVEN TO expression
+    :param expression: THE EXPRESSION TO COMPUTE FIRST
+    :param eval: THE EXPRESSION TO COMPUTE SECOND, WITH var ASSIGNED
+    :return: PYTHON EXPRESSION
+    """
+    return "[(" + eval + ") for " + var + " in [" + expression + "]][0]"
 
 
 Python = define_language("Python", vars())

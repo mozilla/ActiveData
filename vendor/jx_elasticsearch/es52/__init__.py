@@ -65,6 +65,8 @@ class ES52(Container):
                 "type": "elasticsearch",
                 "settings": unwrap(kwargs)
             }
+        self.edges = Data()  # SET EARLY, SO OTHER PROCESSES CAN REQUEST IT
+        self.worker = None
         self.settings = kwargs
         self._namespace = ElasticsearchMetadata(kwargs=kwargs)
         self.name = name = self._namespace._find_alias(coalesce(alias, index, name))
@@ -79,8 +81,6 @@ class ES52(Container):
         }})
 
         self.settings.type = self.es.settings.type
-        self.edges = Data()
-        self.worker = None
 
         columns = self.snowflake.columns  # ABSOLUTE COLUMNS
         is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
@@ -266,7 +266,6 @@ class ES52(Container):
             response = self.es.cluster.post(
                 es_index.path + "/" + "_bulk",
                 data=content,
-                headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,
                 params={"wait_for_active_shards": self.settings.wait_for_active_shards}
             )

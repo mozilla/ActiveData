@@ -73,6 +73,9 @@ def simplified(func):
 
 
 def jx_expression(expr, schema=None):
+    if expr == None:
+        return Null
+
     # UPDATE THE VARIABLE WITH THIER KNOWN TYPES
     if not schema:
         output = _jx_expression(expr, language)
@@ -142,8 +145,9 @@ class Expression(BaseExpression):
 
     def __init__(self, args):
         self.simplified = False
+        # SOME BASIC VERIFICATION THAT THESE ARE REASONABLE PARAMETERS
         if is_sequence(args):
-            if not all(is_expression(t) for t in args):
+            if not all(t == None or is_expression(t) for t in args):
                 Log.error("Expecting an expression")
         elif is_data(args):
             if not all(is_op(k, Variable) and is_literal(v) for k, v in args.items()):
@@ -655,10 +659,10 @@ class NullOp(Literal):
         Literal.__init__(self, None)
 
     def __nonzero__(self):
-        return False
+        return True
 
     def __eq__(self, other):
-        return other == None
+        return other is NULL
 
     def __gt__(self, other):
         return False
@@ -702,6 +706,10 @@ class NullOp(Literal):
 
     def __hash__(self):
         return id(None)
+
+    def __bool__(self):
+        Log.error("Detecting truthiness of NullOp is too confusing to be allowed")
+
 
 NULL = NullOp()
 TYPE_ORDER[NullOp] = 9
@@ -756,6 +764,9 @@ class TrueOp(Literal):
     def __str__(self):
         return b"true"
 
+    def __bool__(self):
+        return True
+
 
 TRUE = TrueOp()
 
@@ -805,6 +816,9 @@ class FalseOp(Literal):
 
     def __str__(self):
         return b"false"
+
+    def __bool__(self):
+        return False
 
 
 FALSE = FalseOp()
@@ -1738,7 +1752,7 @@ class MaxOp(Expression):
         if terms == None:
             self.terms = []
         elif is_many(terms):
-            self.terms = terms
+            self.terms = [t for t in terms if t != None]
         else:
             self.terms = [terms]
 
@@ -2809,7 +2823,7 @@ class CaseOp(Expression):
             Log.error("Expecting at least one clause")
 
         for w in terms[:-1]:
-            if not is_op(w, WhenOp) or w.els_:
+            if not is_op(w, WhenOp) or w.els_ is not NULL:
                 Log.error("case expression does not allow `else` clause in `when` sub-clause")
         self.whens = terms
 

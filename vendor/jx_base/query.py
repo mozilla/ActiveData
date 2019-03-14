@@ -38,7 +38,7 @@ def _late_import():
     global _jx
     global _Column
 
-    from jx_python.meta import Column as _Column
+    from jx_base import Column as _Column
     from jx_python import jx as _jx
 
     _ = _jx

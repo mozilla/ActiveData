@@ -14,15 +14,16 @@ from flask import Response
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
-from jx_elasticsearch.meta import ElasticsearchMetadata
+from jx_elasticsearch.meta import ElasticsearchMetadata, EXPECTING_SNOWFLAKE
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
 from mo_dots import is_container
-from mo_future import is_text, text_type
+from mo_future import is_text, text_type, first
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
 from mo_logs.strings import expand_template, unicode2utf8
 from mo_threads import Till
+from mo_times import Timer
 from mo_times.dates import Date
 from mo_times.durations import MINUTE
 
@@ -48,10 +49,7 @@ def send_error(active_data_timer, body, e):
     #         remove_trace(c)
     # remove_trace(e)
 
-    return Response(
-        unicode2utf8(value2json(e)),
-        status=status
-    )
+    return Response(unicode2utf8(value2json(e)), status=status)
 
 
 def replace_vars(text, params=None):
@@ -63,7 +61,7 @@ def replace_vars(text, params=None):
     while var:
         replace = "{{" + var + "}}"
         index = text.find(replace, 0)
-        if index==-1:
+        if index == -1:
             Log.error("could not find {{var}} (including quotes)", var=replace)
         end = index + len(replace)
 
@@ -94,25 +92,29 @@ def test_mode_wait(query):
         if query["from"].startswith("meta."):
             return
 
-        now = Date.now()
         alias = split_field(query["from"])[0]
-        metadata_manager = find_container(alias).namespace
-        metadata_manager.meta.tables[alias].timestamp = now  # TRIGGER A METADATA RELOAD AFTER THIS TIME
+        after = Date.now()
+        with Timer("Get columns for {{table}} after {{after}}", {"table": alias, "after": after}, silent=not DEBUG):
+            metadata_manager = find_container(alias, after=after).namespace
 
-        timeout = Till(seconds=MINUTE.seconds)
-        while not timeout:
-            # GET FRESH VERSIONS
-            cols = [c for c in metadata_manager.get_columns(table_name=alias, after=now, timeout=timeout) if c.jx_type not in STRUCT]
-            for c in cols:
-                if now >= c.last_updated:
+            timeout = Till(seconds=MINUTE.seconds)
+            while not timeout:
+                # GET FRESH VERSIONS
+                cols = [
+                    c
+                    for c in metadata_manager.get_columns(
+                        table_name=alias, after=after, timeout=timeout
+                    )
+                    if c.jx_type not in STRUCT and (after >= c.last_updated or c.cardinality == None)
+                ]
+                if cols:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
-                        col=c
+                        col=first(cols),
                     )
+                else:
                     break
-            else:
-                break
-            Till(seconds=1).wait()
+                Till(seconds=1).wait()
     except Exception as e:
         Log.warning("could not pickup columns", cause=e)
 
@@ -123,7 +125,7 @@ namespace = None
 container_cache = {}  # MAP NAME TO Container OBJECT
 
 
-def find_container(frum):
+def find_container(frum, after):
     """
     :param frum:
     :return:
@@ -131,8 +133,11 @@ def find_container(frum):
     global namespace
     if not namespace:
         if not container.config.default.settings:
-            Log.error("expecting jx_base.container.config.default.settings to contain default elasticsearch connection info")
+            Log.error(
+                "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
+            )
         namespace = ElasticsearchMetadata(container.config.default.settings)
+    cs = namespace.get_columns(frum, after=after)  # FORCE A RELOAD
 
     if is_text(frum):
         if frum in container_cache:
@@ -151,12 +156,8 @@ def find_container(frum):
         fact_table_name = path[0]
 
         settings = set_default(
-            {
-                "index": fact_table_name,
-                "name": frum,
-                "exists": True,
-            },
-            container.config.default.settings
+            {"alias": fact_table_name, "name": frum, "exists": True},
+            container.config.default.settings,
         )
         settings.type = None
         output = container.type2container[type_](settings)
@@ -169,10 +170,9 @@ def find_container(frum):
         return container.type2container[frum.type](frum.settings)
     elif is_data(frum) and (frum["from"] or is_container(frum["from"])):
         from jx_base.query import QueryOp
+
         return QueryOp.wrap(frum)
     elif is_container(frum):
         return ListContainer("test_list", frum)
     else:
         return frum
-
-

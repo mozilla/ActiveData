@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary, integer_types
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 import math
@@ -17,7 +16,7 @@ import re
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
 from mo_dots.objects import DataObject
-from mo_future import PY2, is_binary, is_text, items, long, none_type, text_type
+from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text_type
 from mo_logs import Except, Log, strings
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration

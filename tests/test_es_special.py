@@ -10,15 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import sqlite3
-
-from mo_times import Date
-from pyLibrary.sql import sql_list, sql_iso, quote_set
-
 from mo_dots import wrap
-from mo_files import File
-from mo_logs import Log
-from mo_threads import Till
+from mo_times import Date
+from pyLibrary.sql import quote_set
 from pyLibrary.sql.sqlite import Sqlite, quote_column
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -141,37 +135,6 @@ class TestESSpecial(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_db_is_busy(self):
-        FILENAME = "metadata.localhost.sqlite"
-        db_file = File(FILENAME)
-        if not db_file.exists:
-            Log.error("Expecting activedata server to be using {{file}}", file=FILENAME)
-
-        self.db = sqlite3.connect(
-            database=db_file.abspath,
-            check_same_thread=False,
-            isolation_level=None
-        )
-
-        self.db.execute("BEGIN")
-        self.db.execute('UPDATE "meta.columns" SET name=name')
-        try:
-
-            test = {
-                "data": [
-                    {"a": "b"}
-                ],
-                "query": {
-                    "from": TEST_TABLE
-                },
-                "expecting_list": {
-                    "meta": {"format": "list"}, "data": [{"a": "b"}]},
-            }
-            self.utils.execute_tests(test)
-            Till(seconds=10).wait()
-        finally:
-            self.db.execute("COMMIT")
-
     def test_prefix_uses_prefix(self):
         test = {
             "data": [
@@ -221,7 +184,7 @@ class TestESSpecial(BaseTestCase):
         try:
             with db.transaction() as t:
                 t.execute(
-                    "insert into " + quote_column("meta.columns") +
+                    "insert into " + quote_column(META_COLUMNS_NAME) +
                     "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
                     quote_set([
                         ".", "object", "exists", '["."]', ".", cont.alias, Date.now()
@@ -232,7 +195,7 @@ class TestESSpecial(BaseTestCase):
         try:
             with db.transaction() as t:
                 t.execute(
-                    "insert into " + quote_column("meta.columns") +
+                    "insert into " + quote_column(META_COLUMNS_NAME) +
                     "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
                     quote_set([
                         "~e~", "long", "exists", '["."]', "~e~", cont.alias, Date.now()

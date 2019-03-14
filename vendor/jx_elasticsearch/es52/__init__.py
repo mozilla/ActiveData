@@ -48,9 +48,10 @@ class ES52(Container):
     def __init__(
         self,
         host,
-        index,
+        index,  # THE NAME OF THE SNOWFLAKE (IF WRITING)
+        alias=None,  # THE NAME OF THE SNOWFLAKE (FOR READING)
         type=None,
-        name=None,
+        name=None,  # THE FULL NAME OF THE TABLE (THE NESTED PATH INTO THE SNOWFLAKE)
         port=9200,
         read_only=True,
         timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
@@ -64,17 +65,22 @@ class ES52(Container):
                 "type": "elasticsearch",
                 "settings": unwrap(kwargs)
             }
+        self.edges = Data()  # SET EARLY, SO OTHER PROCESSES CAN REQUEST IT
+        self.worker = None
         self.settings = kwargs
-        self.name = name = coalesce(name, index)
+        self._namespace = ElasticsearchMetadata(kwargs=kwargs)
+        self.name = name = self._namespace._find_alias(coalesce(alias, index, name))
         if read_only:
-            self.es = elasticsearch.Alias(alias=index, kwargs=kwargs)
+            self.es = elasticsearch.Alias(alias=name, index=None, kwargs=kwargs)
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
-        self._namespace = ElasticsearchMetadata(kwargs=kwargs)
+        self.es.cluster.put("/" + name + "/_settings", data={"index": {
+            "max_inner_result_window": 100000,
+            "max_result_window": 100000
+        }})
+
         self.settings.type = self.es.settings.type
-        self.edges = Data()
-        self.worker = None
 
         columns = self.snowflake.columns  # ABSOLUTE COLUMNS
         is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
@@ -89,13 +95,14 @@ class ES52(Container):
 
         if not typed:
             # ADD EXISTENCE COLUMNS
-            all_paths = {".": None}  # MAP FROM path TO parent TO MAKE A TREE
+            all_paths = {'.': None}  # MAP FROM path TO parent TO MAKE A TREE
 
             def nested_path_of(v):
-                if not v:
-                    return []
+                parent = all_paths[v]
+                if parent is None:
+                    return ['.']
                 else:
-                    return [v] + nested_path_of(all_paths[v])
+                    return [parent] + nested_path_of(parent)
 
             all = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
             for step in sorted(all):
@@ -109,15 +116,13 @@ class ES52(Container):
                                 best = candidate
                     all_paths[step] = best
             for p in all_paths.keys():
-                nested_path = nested_path_of(all_paths[p])
-                if not nested_path:
-                    nested_path = ['.']
+                nested_path = nested_path_of(p)
                 self.namespace.meta.columns.add(Column(
                     name=p,
                     es_column=p,
                     es_index=self.name,
                     es_type=OBJECT,
-                    jx_type=EXISTS,
+                    jx_type=OBJECT,
                     nested_path=nested_path,
                     last_updated=Date.now()
                 ))
@@ -261,7 +266,6 @@ class ES52(Container):
             response = self.es.cluster.post(
                 es_index.path + "/" + "_bulk",
                 data=content,
-                headers={"Content-Type": "application/json"},
                 timeout=self.settings.timeout,
                 params={"wait_for_active_shards": self.settings.wait_for_active_shards}
             )

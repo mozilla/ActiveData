@@ -19,10 +19,11 @@ import subprocess
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
 import jx_elasticsearch
+from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
-from mo_future import is_text, text_type
+from mo_future import is_text, text_type, transpose
 from mo_json import json2value, value2json
 import mo_json_config
 from mo_kwargs import override
@@ -180,7 +181,7 @@ class ESUtils(object):
             # MAKE CONTAINER
             container = self._es_cluster.get_or_create_index(
                 typed=typed,
-                schema=subtest.schema,
+                schema=subtest.schema or _settings.schema,
                 kwargs=_settings
             )
             container.add_alias(_settings.index)
@@ -190,18 +191,24 @@ class ESUtils(object):
             ESUtils.indexes.append(_settings.index)
 
             # INSERT DATA
-            container.extend({"value": d} for d in subtest.data)
+            if '"null"' in value2json(subtest.data):
+                Log.error("not expected")
+            container.extend([{"value": d} for d in subtest.data])
             container.flush()
-            self._es_cluster.get_metadata(force=True)
+
+            now = Date.now()
+            namespace = ElasticsearchMetadata(self._es_cluster.settings)
+            namespace.get_columns(_settings.alias, after=now)  # FORCE A RELOAD
 
             # ENSURE query POINTS TO CONTAINER
             frum = subtest.query["from"]
             if frum == None:
-                subtest.query["from"] = _settings.index
+                subtest.query["from"] = _settings.alias
             elif is_text(frum):
-                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.index)
+                subtest.query["from"] = frum.replace(test_jx.TEST_TABLE, _settings.alias)
             else:
                 Log.error("Do not know how to handle")
+
         except Exception as e:
             Log.error("can not load {{data}} into container", data=subtest.data, cause=e)
 
@@ -250,6 +257,7 @@ class ESUtils(object):
         query = wrap(query)
 
         try:
+            query.meta.testing = True
             query = unicode2utf8(value2json(query))
             # EXECUTE QUERY
             response = self.try_till_response(self.testing.query, data=query)
@@ -295,15 +303,15 @@ def compare_to_expected(query, result, expect, places):
         assertAlmostEqual(set(result.header), set(expect.header))
 
         # MAP FROM expected COLUMN TO result COLUMN
-        mapping = zip(*zip(*filter(
+        mapping = transpose(*transpose(*filter(
             lambda v: v[0][1] == v[1][1],
             itertools.product(enumerate(expect.header), enumerate(result.header))
         ))[1])[0]
         result.header = [result.header[m] for m in mapping]
 
         if result.data:
-            columns = zip(*unwrap(result.data))
-            result.data = zip(*[columns[m] for m in mapping])
+            columns = transpose(*unwrap(result.data))
+            result.data = transpose(*(columns[m] for m in mapping))
 
         if not query.sort:
             sort_table(result)

@@ -249,6 +249,19 @@ Highest integer less than, or equal to, `dividend`
     
         {"floor": [dividend, divisor]} ⇒ dividend - (dividend % divisor)
 
+### `random` Operator ###
+
+Generate a random number. There are two versions:
+
+Return an integer `z` where `0 <= z < 10`. Only integers are accepted.
+
+        {"random": 10}
+
+
+If you provide an empty object as a parameter, then it will return a number `r` where `0.0 <= r < 1.0`.
+    
+        {"random": {}}
+
 
 Search Operators
 ----------------

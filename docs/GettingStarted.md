@@ -33,7 +33,7 @@ You will need
 
 As of this writing (September 2016) the following tables are available. 
 
-    {"from": "meta.tables"}  # only available in dev branch 
+    {"from": META_COLUMNS_NAME}  # only available in dev branch 
 
 * **unittest** - All individual test results (approx. 10billion from the past 3weeks)
 * **jobs** - All buildbot jobs 

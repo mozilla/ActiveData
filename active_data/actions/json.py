@@ -37,7 +37,7 @@ def get_raw_json(path):
                 limit = args.limit if args.limit else 10
                 args.limit = None
 
-                frum = find_container(path)
+                frum = find_container(path, after=None)
                 result = jx.run({
                     "from": path,
                     "where": {"eq": args},

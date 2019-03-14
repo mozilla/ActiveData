@@ -18,6 +18,7 @@ from pyLibrary.env.flask_wrappers import cors_wrapper
 
 CONTRIBUTE = File.new_instance("contribute.json").read_bytes()
 
+
 @cors_wrapper
 def send_contribute():
     """

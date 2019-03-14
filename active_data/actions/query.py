@@ -57,7 +57,7 @@ def jx_query(path):
 
                 translate_timer = Timer("translate", silent=True)
                 with translate_timer:
-                    frum = find_container(data['from'])
+                    frum = find_container(data['from'], after=None)
                     result = jx.run(data, container=frum)
 
                     if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers

@@ -148,5 +148,5 @@ pull_functions = {
     IS_NULL: lambda x: None,
     STRING: lambda x: x,
     NUMBER: lambda x: float(x) if x !=None else None,
-    BOOLEAN: value2boolean
+    BOOLEAN: value2boolean,
 }

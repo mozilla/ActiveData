@@ -450,3 +450,112 @@ class TestSorting(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_nested_array(self):
+
+        test = {
+            "data": [
+                [
+                    {"a": 4},
+                    {"a": 1},
+                    {"a": 3},
+                    {"a": 7},
+                    {"a": 2}
+                ],
+                [
+                    {"a": -4},
+                    {"a": -1},
+                    {"a": -3},
+                    {"a": -7},
+                    {"a": -2}
+                ],
+                [
+                    {"a": 4},
+                    {"a": 1},
+                    {"a": -3},
+                    {"a": -7},
+                    {"a": 2}
+                ],
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "sort": [{"a": "asc"}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": -7},
+                    {"a": -7},
+                    {"a": -4},
+                    {"a": -3},
+                    {"a": -3},
+                    {"a": -2},
+                    {"a": -1},
+                    {"a": 1},
+                    {"a": 1},
+                    {"a": 2},
+                    {"a": 2},
+                    {"a": 3},
+                    {"a": 4},
+                    {"a": 4},
+                    {"a": 7},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
+
+
+    def test_nested(self):
+
+        test = {
+            "data": [
+                {"b": [
+                    {"a": 4},
+                    {"a": 1},
+                    {"a": 3},
+                    {"a": 7},
+                    {"a": 2}
+                ]},
+                {"b": [
+                    {"a": -4},
+                    {"a": -1},
+                    {"a": -3},
+                    {"a": -7},
+                    {"a": -2}
+                ]},
+                {"b": [
+                    {"a": 4},
+                    {"a": 1},
+                    {"a": -3},
+                    {"a": -7},
+                    {"a": 2}
+                ]},
+            ],
+            "query": {
+                "from": TEST_TABLE+".b",
+                "sort": [{"a": "asc"}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": -7},
+                    {"a": -7},
+                    {"a": -4},
+                    {"a": -3},
+                    {"a": -3},
+                    {"a": -2},
+                    {"a": -1},
+                    {"a": 1},
+                    {"a": 1},
+                    {"a": 2},
+                    {"a": 2},
+                    {"a": 3},
+                    {"a": 4},
+                    {"a": 4},
+                    {"a": 7},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
+
+

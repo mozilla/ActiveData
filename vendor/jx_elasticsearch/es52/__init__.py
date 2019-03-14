@@ -75,6 +75,7 @@ class ES52(Container):
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
+        # TODO : CHECK IF THIS IS ALREADY SET, IT TAKES TOO LONG
         self.es.cluster.put("/" + name + "/_settings", data={"index": {
             "max_inner_result_window": 100000,
             "max_result_window": 100000

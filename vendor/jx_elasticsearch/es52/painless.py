@@ -226,7 +226,7 @@ class ModOp(ModOp_):
 
 class CaseOp(CaseOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        acc = self.whens[-1].partial_eval().to_es_script(schema)
+        acc = Painless[self.whens[-1]].partial_eval().to_es_script(schema)
         for w in reversed(self.whens[0:-1]):
             acc = (
                 WhenOp(w.when, **{"then": w.then, "else": acc})

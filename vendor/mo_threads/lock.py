@@ -14,6 +14,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_future import allocate_lock as _allocate_lock
+from mo_math.randoms import Random
 from mo_threads.signal import Signal
 
 _Log = None
@@ -49,17 +50,21 @@ class Lock(object):
     """
     A NON-RE-ENTRANT LOCK WITH wait()
     """
-    __slots__ = ["name", "debug", "lock", "waiting"]
+    __slots__ = ["name", "debug", "sample", "lock", "waiting"]
 
-    def __init__(self, name="", debug=DEBUG):
-        if debug and not _Log:
+    def __init__(self, name="", debug=DEBUG, sample=False):
+        if (debug or sample) and not _Log:
             _late_import()
         self.debug = debug
+        self.sample = sample
         self.name = name
         self.lock = _allocate_lock()
         self.waiting = None
 
     def __enter__(self):
+        if self.sample and Random.int(100) == 0:
+            _Log.warning("acquire  lock {{name|quote}}", name=self.name)
+
         self.debug and _Log.note("acquire  lock {{name|quote}}", name=self.name)
         self.lock.acquire()
         self.debug and _Log.note("acquired lock {{name|quote}}", name=self.name)

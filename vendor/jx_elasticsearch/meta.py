@@ -593,9 +593,10 @@ class ElasticsearchMetadata(Namespace):
         Log.alert("metadata scan has been disabled")
         please_stop.then(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
-            column = self.todo.pop()
-            if column == THREAD_STOP:
+            pair = self.todo.pop()
+            if pair == THREAD_STOP:
                 break
+            column, after = pair
 
             with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
                 if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
@@ -605,6 +606,9 @@ class ElasticsearchMetadata(Namespace):
                     # DO NOT UPDATE FRESH COLUMN METADATA
                     DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                     continue
+                elif after and column.last_updated > after:
+                    continue  # COLUMN IS STILL YOUNG
+
                 if untype_path(column.name) in ["build.type", "run.type"]:
                     try:
                         self._update_cardinality(column)

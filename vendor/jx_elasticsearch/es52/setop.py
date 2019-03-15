@@ -28,6 +28,9 @@ from mo_logs import Log
 from mo_math import AND, MAX
 from mo_times.timer import Timer
 
+
+DEBUG = False
+
 format_dispatch = {}
 
 
@@ -201,7 +204,7 @@ def es_setop(es, query):
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
-    with Timer("call to ES", silent=True) as call_timer:
+    with Timer("call to ES", silent=DEBUG) as call_timer:
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits

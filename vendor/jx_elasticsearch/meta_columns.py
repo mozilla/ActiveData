@@ -37,7 +37,7 @@ class ColumnList(Table, jx_base.Container):
     def __init__(self, es_cluster):
         Table.__init__(self, META_COLUMNS_NAME)
         self.data = {}  # MAP FROM ES_INDEX TO (abs_column_name to COLUMNS)
-        self.locker = Lock(name="meta column lock", sample=True)
+        self.locker = Lock()
         self._schema = None
         self.dirty = False
         self.es_cluster = es_cluster

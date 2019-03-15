@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from unittest import skip
+
 from jx_base.expressions import NULL
 from mo_dots import wrap
 from mo_logs import Log
@@ -451,6 +453,7 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("ES can not sort nested amoung docs")
     def test_nested_array(self):
 
         test = {
@@ -505,8 +508,8 @@ class TestSorting(BaseTestCase):
         self.utils.execute_tests(test)
 
 
+    @skip("ES can not sort nested amoung docs")
     def test_nested(self):
-
         test = {
             "data": [
                 {"b": [
@@ -558,4 +561,33 @@ class TestSorting(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_single_nested(self):
+        test = {
+            "data": [
+                {"b": [
+                    {"a": 4},
+                    {"a": 4},
+                ]},
+                {"b": [
+                    {"a": -4},
+                ]},
+                {"b": [
+                    {"a": 1},
+                ]},
+            ],
+            "query": {
+                "from": TEST_TABLE+".b",
+                "sort": [{"a": "asc"}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": -4},
+                    {"a": 1},
+                    {"a": 4},
+                    {"a": 4},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
 

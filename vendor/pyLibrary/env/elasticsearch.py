@@ -1144,7 +1144,6 @@ class Alias(Features):
         if index != None:
             Log.error("index is no longer accepted")
         self.debug = debug
-        self.debug and Log.alert("Elasticsearch debugging on {{index|quote}} is on", index=kwargs.index)
         self.settings = kwargs
         self.cluster = Cluster(kwargs)
 
@@ -1171,6 +1170,7 @@ class Alias(Features):
             if type == None:
                 Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
 
+        self.debug and Log.alert("Elasticsearch debugging on {{alias|quote}} is on", index=alias)
         self.path = "/" + alias + "/" + type
 
     @property

@@ -562,7 +562,7 @@ class ElasticsearchMetadata(Namespace):
                             })
                             continue
                         if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
-                            DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
+                            # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
                             column.last_updated = now
                             continue
                         elif column.cardinality is None:
@@ -602,14 +602,14 @@ class ElasticsearchMetadata(Namespace):
 
             with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
                 if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
-                    DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
-                    continue
-                elif column.last_updated > Date.now() - TOO_OLD and column.cardinality>0:
-                    # DO NOT UPDATE FRESH COLUMN METADATA
-                    DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
+                    # DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
                     continue
                 elif after and column.last_updated > after:
                     continue  # COLUMN IS STILL YOUNG
+                elif column.last_updated > Date.now() - TOO_OLD and column.cardinality > 0:
+                    # DO NOT UPDATE FRESH COLUMN METADATA
+                    DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
+                    continue
 
                 if untype_path(column.name) in ["build.type", "run.type"]:
                     try:

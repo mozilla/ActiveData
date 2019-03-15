@@ -34,7 +34,7 @@ from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
-DEBUG = True
+DEBUG = False
 ENABLE_META_SCAN = True
 TOO_OLD = 24*HOUR
 OLD_METADATA = MINUTE

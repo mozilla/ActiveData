@@ -1267,11 +1267,9 @@ class TestSetOps(BaseTestCase):
                 "from": TEST_TABLE,
                 "select": {"name": "a", "value": {"floor": ["a", 100]}}
             },
-            "expecting_list":{
+            "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [
-                    {"a": 10},
-                ]
+                "data": [1000]
             }
         }
 

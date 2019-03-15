@@ -115,6 +115,8 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
 
+        Log.note("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
+
         # FIND ALL INDEXES OF ALIAS
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index
@@ -253,7 +255,7 @@ class ElasticsearchMetadata(Namespace):
         :param timeout: Signal; True when should give up
         :return:
         """
-        DEBUG and after and Log.note("getting columns for after {{time}}", time=after)
+        DEBUG and after and Log.note("getting columns for {{table}} after {{time}}", table=table_name, time=after)
         if table_name in (META_COLUMNS_NAME, META_TABLES_NAME):
             root_table_name = table_name
         else:

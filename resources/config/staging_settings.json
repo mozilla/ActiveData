@@ -6,18 +6,18 @@
 		},
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
-		"jx_elasticsearch.meta.DEBUG": true
+		"jx_elasticsearch.meta.DEBUG": false
 	},
-	"request_logs": {
-		"host": "http://localhost",
-		"port": 9200,
-		"index": "activedata_requests",
-		"type": "request_log",
-		"typed": false,
-		"schema": {
-			"$ref": "//../schema/request_log.schema.json"
-		}
-	},
+//	"request_logs": {
+//		"host": "http://localhost",
+//		"port": 9200,
+//		"index": "activedata_requests",
+//		"type": "request_log",
+//		"typed": false,
+//		"schema": {
+//			"$ref": "//../schema/request_log.schema.json"
+//		}
+//	},
 	"saved_queries":{
 		"host": "http://localhost",
 		"port": 9200,

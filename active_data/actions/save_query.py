@@ -106,6 +106,11 @@ class SaveQueries(object):
         return query
 
     def save(self, query):
+        """
+        SAVE query TO ES FOR LATER RECOVERY
+        :param query:
+        :return: HAS TO USE FOR RECOVERY
+        """
         query.meta = None
         json = convert.value2json(query)
         hash = unicode2utf8(json)
@@ -157,6 +162,7 @@ class SaveQueries(object):
             self.queue.close()
         except Exception as f:
             pass
+
 
 SCHEMA = {
     "settings": {

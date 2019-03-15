@@ -1258,6 +1258,24 @@ class TestSetOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_float_div_by_integer(self):
+        test = {
+            "data": [
+                {"a": 1000.1},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {"name": "a", "value": {"floor": ["a", 100]}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1000]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
+
 
 # TODO: {"left": {variable: sentinel}}
 # TODO: {"find": {variable: subtring}, "default": -1}

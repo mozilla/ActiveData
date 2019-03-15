@@ -14,8 +14,8 @@ from decimal import Decimal
 import itertools
 
 import jx_base
-from jx_base import Column, TableDesc
-from jx_base.meta_columns import META_COLUMNS_DESC, META_TABLES_DESC, META_TABLES_NAME, META_COLUMNS_NAME
+from jx_base import TableDesc
+from jx_base.meta_columns import META_COLUMNS_DESC, META_COLUMNS_NAME, META_TABLES_DESC, META_TABLES_NAME
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_elasticsearch.meta_columns import ColumnList
@@ -23,7 +23,7 @@ from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Data, FlatList, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
 from mo_future import first, long, none_type, text_type
-from mo_json import BOOLEAN, EXISTS, INTEGER, OBJECT, STRING, STRUCT
+from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
 from mo_logs import Log
@@ -36,7 +36,7 @@ from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_
 
 DEBUG = True
 ENABLE_META_SCAN = True
-TOO_OLD = 2*HOUR
+TOO_OLD = 24*HOUR
 OLD_METADATA = MINUTE
 MAX_COLUMN_METADATA_AGE = 12 * HOUR
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
@@ -64,9 +64,8 @@ class ElasticsearchMetadata(Namespace):
         if hasattr(self, "settings"):
             return
 
-        self.too_old = TOO_OLD
         self.settings = kwargs
-        self.default_name = coalesce(name, alias, index)
+        self.too_old = TOO_OLD
         self.es_cluster = elasticsearch.Cluster(kwargs=kwargs)
         self.index_does_not_exist = set()
         self.todo = Queue("refresh metadata", max=100000, unique=True)
@@ -89,7 +88,7 @@ class ElasticsearchMetadata(Namespace):
                 name=alias,
                 url=None,
                 query_path=ROOT_PATH,
-                last_updated=self.es_cluster.metatdata_last_updated,
+                last_updated=Date.MIN,
                 columns=[]
             )
             self.meta.tables.add(desc)
@@ -108,10 +107,6 @@ class ElasticsearchMetadata(Namespace):
     @property
     def namespace(self):
         return self.meta.columns.namespace
-
-    @property
-    def url(self):
-        return self.es_cluster.url / self.default_name.replace(".", "/")
 
     def _reload_columns(self, table_desc, after):
         """
@@ -530,7 +525,7 @@ class ElasticsearchMetadata(Namespace):
             try:
                 if not self.todo:
                     # LOOK FOR OLD COLUMNS WE CAN RE-SCAN
-                    now = Date.now();
+                    now = Date.now()
                     last_good_update = now - MAX_COLUMN_METADATA_AGE
                     old_columns = [
                         c

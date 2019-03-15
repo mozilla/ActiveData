@@ -48,7 +48,7 @@ class ColumnList(Table, jx_base.Container):
         )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
         Thread.run(
-            "update " + META_COLUMNS_NAME, self._synch_with_es, parent_thread=MAIN_THREAD
+            "update " + META_COLUMNS_NAME, self._update_from_es, parent_thread=MAIN_THREAD
         )
 
     def _query(self, query):
@@ -61,7 +61,7 @@ class ColumnList(Table, jx_base.Container):
 
     def _db_create(self):
         schema = {
-            "settings": {"index.number_of_shards": 1, "index.number_of_replicas": 2},
+            "settings": {"index.number_of_shards": 1, "index.number_of_replicas": 6},
             "mappings": {META_COLUMNS_TYPE_NAME: {}},
         }
 
@@ -116,7 +116,7 @@ class ColumnList(Table, jx_base.Container):
             )
             self._db_create()
 
-    def _synch_with_es(self, please_stop):
+    def _update_from_es(self, please_stop):
         try:
             last_extract = Date.now()
             while not please_stop:
@@ -127,7 +127,7 @@ class ColumnList(Table, jx_base.Container):
                             {
                                 "query": {
                                     "range": {
-                                        "last_updated.~n~": {"gt": self.last_load}
+                                        "last_updated.~n~": {"gte": self.last_load}
                                     }
                                 },
                                 "sort": ["es_index.~s~", "name.~s~", "es_column.~s~"],

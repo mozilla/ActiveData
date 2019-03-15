@@ -55,7 +55,7 @@ def jx_query(path):
                     if data.meta.testing:
                         test_mode_wait(data)
 
-                translate_timer = Timer("translate", silent=True)
+                translate_timer = Timer("translate", silent=False)
                 with translate_timer:
                     frum = find_container(data['from'], after=None)
                     result = jx.run(data, container=frum)

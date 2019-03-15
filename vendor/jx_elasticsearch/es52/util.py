@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import Variable
 from jx_base.language import is_op
 from mo_dots import wrap
-from mo_future import is_text
+from mo_future import is_text, first
 from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from pyLibrary.convert import value2boolean
@@ -56,7 +56,6 @@ def es_query_template(path):
         return output, wrap([f0])
 
 
-
 def jx_sort_to_es_sort(sort, schema):
     if not sort:
         return []
@@ -73,10 +72,20 @@ def jx_sort_to_es_sort(sort, schema):
             for type in types:
                 for c in cols:
                     if c.jx_type is type:
-                        if s.sort == -1:
-                            output.append({c.es_column: "desc"})
+                        np = first(c.nested_path)
+                        if np == '.':
+                            if s.sort == -1:
+                                output.append({c.es_column: "desc"})
+                            else:
+                                output.append(c.es_column)
                         else:
-                            output.append(c.es_column)
+                            output.append({c.es_column: {
+                                "order": {1: "asc", -1: "desc"}[s.sort],
+                                "nested": {
+                                    "path": np,
+                                    "filter": {"match_all": {}}
+                                },
+                            }})
         else:
             from mo_logs import Log
 

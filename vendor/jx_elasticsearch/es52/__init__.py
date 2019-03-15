@@ -75,11 +75,7 @@ class ES52(Container):
         else:
             self.es = elasticsearch.Cluster(kwargs=kwargs).get_index(read_only=read_only, kwargs=kwargs)
 
-        self.es.cluster.put("/" + name + "/_settings", data={"index": {
-            "max_inner_result_window": 100000,
-            "max_result_window": 100000
-        }})
-
+        self._ensure_max_result_window_set(name)
         self.settings.type = self.es.settings.type
 
         columns = self.snowflake.columns  # ABSOLUTE COLUMNS
@@ -167,6 +163,18 @@ class ES52(Container):
     @property
     def url(self):
         return self.es.url
+
+    def _ensure_max_result_window_set(self, name):
+        # TODO : CHECK IF THIS IS ALREADY SET, IT TAKES TOO LONG
+        for i, s in self.es.cluster.get_metadata().indices.items():
+            if name == i or name in s.aliases:
+                if s.settings.index.max_result_window != '100000' or s.settings.index.max_inner_result_window != '100000':
+                    Log.note("setting max_result_window")
+                    self.es.cluster.put("/" + name + "/_settings", data={"index": {
+                        "max_inner_result_window": 100000,
+                        "max_result_window": 100000
+                    }})
+                    break
 
     def query(self, _query):
         try:

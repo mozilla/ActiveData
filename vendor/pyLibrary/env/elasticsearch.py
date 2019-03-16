@@ -864,15 +864,16 @@ class Cluster(object):
                     yield wrap({"index": index, "alias": a})
 
     def get_metadata(self, after=None):
+        now = Date.now()
+
         if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
-        if not after and self._metadata and Date.now() < self.metatdata_last_updated + STALE_METADATA:
+        if not after and self._metadata and now < self.metatdata_last_updated + STALE_METADATA:
             return self._metadata
-        if after < self.metatdata_last_updated:
+        if after <= self.metatdata_last_updated:
             return self._metadata
 
         old_indices = self._metadata.indices
-        now = Date.now()
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
 
         Log.warning("Got metadata for {{cluster}}", cluster=self.url)

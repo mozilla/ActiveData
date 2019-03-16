@@ -115,7 +115,7 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
 
-        Log.note("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
+        Log.alert("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
 
         # FIND ALL INDEXES OF ALIAS
         alias = table_desc.name
@@ -285,6 +285,7 @@ class ElasticsearchMetadata(Namespace):
             elif after and table.last_updated < after:
                 columns = self._reload_columns(table, after=after)
             elif table.last_updated < self.es_cluster.metatdata_last_updated:
+                # TODO: THIS IS TOO EXTREME; WE SHOULD WAIT FOR SOME SENSE OF "OLDNESS"
                 columns = self._reload_columns(table, after=self.es_cluster.metatdata_last_updated)
             else:
                 columns = self.meta.columns.find(alias, column_name)

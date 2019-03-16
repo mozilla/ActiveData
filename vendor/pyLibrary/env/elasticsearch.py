@@ -14,11 +14,10 @@ import re
 
 from jx_base import Column
 from jx_python import jx
-from mo_collections import UniqueIndex
-from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap, unwrap
+from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
 from mo_files import File
 from mo_files.url import URL
-from mo_future import binary_type, is_binary, is_text, items, text_type, first, generator_types
+from mo_future import binary_type, generator_types, is_binary, is_text, items, text_type
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, json_type_to_inserter_type
 from mo_kwargs import override
@@ -875,6 +874,7 @@ class Cluster(object):
         old_indices = self._metadata.indices
         now = Date.now()
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
+        self.debug and Log.alert("Got metadata for {{cluster}}", cluster=self.url)
         self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
 
         with self.metadata_locker:

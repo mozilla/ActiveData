@@ -115,8 +115,6 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
 
-        Log.alert("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
-
         # FIND ALL INDEXES OF ALIAS
         alias = table_desc.name
         canonical_index = self.es_cluster.get_best_matching_index(alias).index

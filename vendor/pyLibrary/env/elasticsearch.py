@@ -27,7 +27,7 @@ from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till
-from mo_times import Date, MINUTE, Timer
+from mo_times import Date, MINUTE, Timer, HOUR
 from pyLibrary.convert import quote2string, value2number
 from pyLibrary.env import http
 
@@ -42,7 +42,7 @@ SUFFIX_PATTERN = r'\d{8}_\d{6}'
 ID = Data(field='_id')
 LF = "\n".encode('utf8')
 
-STALE_METADATA = 10 * MINUTE
+STALE_METADATA = HOUR
 DATA_KEY = text_type("data")
 
 
@@ -876,7 +876,7 @@ class Cluster(object):
         old_indices = self._metadata.indices
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
 
-        Log.warning("Got metadata for {{cluster}}", cluster=self.url)
+        self.debug and Log.alert("Got metadata for {{cluster}}", cluster=self.url)
 
         self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
 

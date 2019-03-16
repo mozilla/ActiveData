@@ -14,6 +14,7 @@ import re
 
 from jx_base import Column
 from jx_python import jx
+from mo_collections import UniqueIndex
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap, unwrap
 from mo_files import File
 from mo_files.url import URL
@@ -566,6 +567,7 @@ class Cluster(object):
         self._version = None
         self.url = URL(host, port=port)
         self.lang = None
+        self.known_indices = {}
         if self.version.startswith("6."):
             from jx_elasticsearch.es52.expressions import ES52
             self.lang = ES52
@@ -611,7 +613,16 @@ class Cluster(object):
                 )
             kwargs.typed = typed
 
-        return Index(kwargs=kwargs, cluster=self)
+        return self._new_handle_to_index(kwargs)
+
+    def _new_handle_to_index(self, kwargs):
+        key = (kwargs.index, kwargs.typed, kwargs.read_only)
+        known_index = self.known_indices.get(key)
+        if not known_index:
+            known_index = Index(kwargs=kwargs, cluster=self)
+            self.known_indices[key]=known_index
+        return known_index
+
 
     @override
     def get_index(self, index, alias=None, typed=None, read_only=True, kwargs=None):
@@ -631,7 +642,7 @@ class Cluster(object):
                 kwargs.index = match.index
             else:
                 Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
-            return Index(kwargs=kwargs, cluster=self)
+            return self._new_handle_to_index(kwargs)
         else:
             # GET BEST MATCH, INCLUDING PROTOTYPE
             best = self.get_best_matching_index(index, alias)
@@ -645,7 +656,7 @@ class Cluster(object):
                 kwargs.alias = kwargs.index
                 kwargs.index = best.index
 
-            return Index(kwargs=kwargs, cluster=self)
+            return self._new_handle_to_index(kwargs)
 
     def get_alias(self, alias):
         """
@@ -657,7 +668,7 @@ class Cluster(object):
             settings = self.settings.copy()
             settings.alias = alias
             settings.index = alias
-            return Index(read_only=True, kwargs=settings, cluster=self)
+            self._new_handle_to_index(set_default({"read_only": True}, settings))
         Log.error("Can not find any index with alias {{alias_name}}", alias_name=alias)
 
     def get_canonical_index(self, alias):
@@ -812,8 +823,7 @@ class Cluster(object):
             Till(seconds=1).wait()
         Log.alert("Made new index {{index|quote}}", index=index)
 
-        es = Index(kwargs=kwargs, cluster=self)
-        return es
+        return self._new_handle_to_index(kwargs)
 
     def delete_index(self, index_name):
         if not is_text(index_name):

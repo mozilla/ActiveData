@@ -195,12 +195,13 @@ def hash_value(v):
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
 
 
-
 def set_default(*params):
     """
-    INPUT dicts IN PRIORITY ORDER
     UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
+
+    :param params:  dicts IN PRIORITY ORDER, FIRST IS HIGHES PRIORITY
+    :return: FIRST dict OR NEW dict WITH PROPERTIES SET
     """
     p0 = params[0]
     agg = p0 if p0 or _get(p0, CLASS) in data_types else {}

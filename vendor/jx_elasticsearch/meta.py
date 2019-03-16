@@ -115,7 +115,7 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
 
-        Log.warning("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
+        Log.alert("Reload columns for {{table}} after {{after}}", table=table_desc.name, after=after)
 
         # FIND ALL INDEXES OF ALIAS
         alias = table_desc.name

@@ -874,7 +874,7 @@ class Cluster(object):
         old_indices = self._metadata.indices
         now = Date.now()
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
-        self.debug and Log.alert("Got metadata for {{cluster}}", cluster=self.url)
+        Log.alert("Got metadata for {{cluster}}", cluster=self.url)
         self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
 
         with self.metadata_locker:

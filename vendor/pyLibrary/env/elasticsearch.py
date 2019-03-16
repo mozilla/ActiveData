@@ -14,10 +14,10 @@ import re
 
 from jx_base import Column
 from jx_python import jx
-from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap, unwrap
+from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
 from mo_files import File
 from mo_files.url import URL
-from mo_future import binary_type, is_binary, is_text, items, text_type, first, generator_types
+from mo_future import binary_type, generator_types, is_binary, is_text, items, text_type
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, json_type_to_inserter_type
 from mo_kwargs import override
@@ -27,7 +27,7 @@ from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till
-from mo_times import Date, MINUTE, Timer
+from mo_times import Date, MINUTE, Timer, HOUR
 from pyLibrary.convert import quote2string, value2number
 from pyLibrary.env import http
 
@@ -42,7 +42,7 @@ SUFFIX_PATTERN = r'\d{8}_\d{6}'
 ID = Data(field='_id')
 LF = "\n".encode('utf8')
 
-STALE_METADATA = 10 * MINUTE
+STALE_METADATA = HOUR
 DATA_KEY = text_type("data")
 
 
@@ -566,6 +566,7 @@ class Cluster(object):
         self._version = None
         self.url = URL(host, port=port)
         self.lang = None
+        self.known_indices = {}
         if self.version.startswith("6."):
             from jx_elasticsearch.es52.expressions import ES52
             self.lang = ES52
@@ -611,7 +612,16 @@ class Cluster(object):
                 )
             kwargs.typed = typed
 
-        return Index(kwargs=kwargs, cluster=self)
+        return self._new_handle_to_index(kwargs)
+
+    def _new_handle_to_index(self, kwargs):
+        key = (kwargs.index, kwargs.typed, kwargs.read_only)
+        known_index = self.known_indices.get(key)
+        if not known_index:
+            known_index = Index(kwargs=kwargs, cluster=self)
+            self.known_indices[key]=known_index
+        return known_index
+
 
     @override
     def get_index(self, index, alias=None, typed=None, read_only=True, kwargs=None):
@@ -631,7 +641,7 @@ class Cluster(object):
                 kwargs.index = match.index
             else:
                 Log.error("Can not find index {{index_name}}", index_name=kwargs.index)
-            return Index(kwargs=kwargs, cluster=self)
+            return self._new_handle_to_index(kwargs)
         else:
             # GET BEST MATCH, INCLUDING PROTOTYPE
             best = self.get_best_matching_index(index, alias)
@@ -645,7 +655,7 @@ class Cluster(object):
                 kwargs.alias = kwargs.index
                 kwargs.index = best.index
 
-            return Index(kwargs=kwargs, cluster=self)
+            return self._new_handle_to_index(kwargs)
 
     def get_alias(self, alias):
         """
@@ -657,7 +667,7 @@ class Cluster(object):
             settings = self.settings.copy()
             settings.alias = alias
             settings.index = alias
-            return Index(read_only=True, kwargs=settings, cluster=self)
+            self._new_handle_to_index(set_default({"read_only": True}, settings))
         Log.error("Can not find any index with alias {{alias_name}}", alias_name=alias)
 
     def get_canonical_index(self, alias):
@@ -812,8 +822,7 @@ class Cluster(object):
             Till(seconds=1).wait()
         Log.alert("Made new index {{index|quote}}", index=index)
 
-        es = Index(kwargs=kwargs, cluster=self)
-        return es
+        return self._new_handle_to_index(kwargs)
 
     def delete_index(self, index_name):
         if not is_text(index_name):
@@ -855,16 +864,20 @@ class Cluster(object):
                     yield wrap({"index": index, "alias": a})
 
     def get_metadata(self, after=None):
+        now = Date.now()
+
         if not self.settings.explore_metadata:
             Log.error("Metadata exploration has been disabled")
-        if not after and self._metadata and Date.now() < self.metatdata_last_updated + STALE_METADATA:
+        if not after and self._metadata and now < self.metatdata_last_updated + STALE_METADATA:
             return self._metadata
-        if after < self.metatdata_last_updated:
+        if after <= self.metatdata_last_updated:
             return self._metadata
 
         old_indices = self._metadata.indices
-        now = Date.now()
         response = self.get("/_cluster/state", retry={"times": 3}, timeout=30, stream=False)
+
+        self.debug and Log.alert("Got metadata for {{cluster}}", cluster=self.url)
+
         self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
 
         with self.metadata_locker:
@@ -1144,7 +1157,6 @@ class Alias(Features):
         if index != None:
             Log.error("index is no longer accepted")
         self.debug = debug
-        self.debug and Log.alert("Elasticsearch debugging on {{index|quote}} is on", index=kwargs.index)
         self.settings = kwargs
         self.cluster = Cluster(kwargs)
 
@@ -1171,6 +1183,7 @@ class Alias(Features):
             if type == None:
                 Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
 
+        self.debug and Log.alert("Elasticsearch debugging on {{alias|quote}} is on", alias=alias)
         self.path = "/" + alias + "/" + type
 
     @property

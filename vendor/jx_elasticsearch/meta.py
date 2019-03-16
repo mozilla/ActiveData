@@ -34,7 +34,7 @@ from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
-DEBUG = True
+DEBUG = False
 ENABLE_META_SCAN = True
 TOO_OLD = 24*HOUR
 OLD_METADATA = MINUTE
@@ -253,7 +253,7 @@ class ElasticsearchMetadata(Namespace):
         :param timeout: Signal; True when should give up
         :return:
         """
-        DEBUG and after and Log.note("getting columns for after {{time}}", time=after)
+        DEBUG and after and Log.note("getting columns for {{table}} after {{time}}", table=table_name, time=after)
         if table_name in (META_COLUMNS_NAME, META_TABLES_NAME):
             root_table_name = table_name
         else:
@@ -283,6 +283,7 @@ class ElasticsearchMetadata(Namespace):
             elif after and table.last_updated < after:
                 columns = self._reload_columns(table, after=after)
             elif table.last_updated < self.es_cluster.metatdata_last_updated:
+                # TODO: THIS IS TOO EXTREME; WE SHOULD WAIT FOR SOME SENSE OF "OLDNESS"
                 columns = self._reload_columns(table, after=self.es_cluster.metatdata_last_updated)
             else:
                 columns = self.meta.columns.find(alias, column_name)
@@ -560,7 +561,7 @@ class ElasticsearchMetadata(Namespace):
                             })
                             continue
                         if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
-                            DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
+                            # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
                             column.last_updated = now
                             continue
                         elif column.cardinality is None:
@@ -593,18 +594,22 @@ class ElasticsearchMetadata(Namespace):
         Log.alert("metadata scan has been disabled")
         please_stop.then(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
-            column = self.todo.pop()
-            if column == THREAD_STOP:
+            pair = self.todo.pop()
+            if pair == THREAD_STOP:
                 break
+            column, after = pair
 
             with Timer("Update {{col.es_index}}.{{col.es_column}}", param={"col": column}, silent=not DEBUG, too_long=0.05):
                 if column.jx_type in STRUCT or split_field(column.es_column)[-1] == EXISTS_TYPE:
-                    DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
+                    # DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
                     continue
-                elif column.last_updated > Date.now() - TOO_OLD and column.cardinality>0:
+                elif after and column.last_updated > after:
+                    continue  # COLUMN IS STILL YOUNG
+                elif column.last_updated > Date.now() - TOO_OLD and column.cardinality > 0:
                     # DO NOT UPDATE FRESH COLUMN METADATA
                     DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                     continue
+
                 if untype_path(column.name) in ["build.type", "run.type"]:
                     try:
                         self._update_cardinality(column)

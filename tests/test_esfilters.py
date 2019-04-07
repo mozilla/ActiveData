@@ -88,6 +88,21 @@ class TestESFilters(FuzzyTestCase):
         # THIS TEST IS USED TO FORCE-IMPORT OF elasticsearch EXTENSION METHODS
         a = EsScript(type=OBJECT, expr=NULL, frum=NULL, schema=identity_schema)
 
+    def test_null_startswith(self):
+        filter = ES52[jx_expression({"prefix": [{"null": {}}, {"literal": "something"}]})].to_esfilter(Null)
+        expected = {"bool": {"must_not": {"match_all": {}}}}
+        self.assertEqual(filter, expected)
+        self.assertEqual(expected, filter)
+
+    def test_null_startswith_null(self):
+        filter = ES52[jx_expression({"prefix": [{"null": {}}, {"literal": ""}]})].to_esfilter(Null)
+        expected = {"match_all": {}}
+        self.assertEqual(filter, expected)
+        self.assertEqual(expected, filter)
+
+
+
+
 
 class S(object):
     snowflake = Null

@@ -5,11 +5,11 @@ JSON expressions are null aware; which is important for dealing with JSON from a
 
 ## Definitions
 
-We will deliberately avoid the meaning of `null`. Instead, we will categorize operator behaviour on `null`, realizing that the behaviour depends on the meaning.
+We will deliberately avoid the definition of `null`. Instead, we will categorize operator behaviour on `null`, realizing that the behaviour depends on the definition.
 
-The different operator variations can depend on the meaning `null`. For example, Javascript has both `null`, and `undefined`; Arguably, a single operator can have two different behaviours, depending on the type of null used in its operands.
+The different operator variations can depend on the definition of `null` and the definition of the operator. For example, Javascript has both `null`, and `undefined`; Arguably, a single operator can have two different behaviours, depending on the type of null used in its operands.
 
-Although we define three clear categories, operators can overlap these categories and be inconsistent.
+Although we define three clear categories, operators can overlap these categories, and be inconsistent.
 
 
 Let `●` represent an operator. For a given operator, we can classify its behaviour in one of three variations:
@@ -40,11 +40,11 @@ for example, the SQL `OR` operator is considered conservative, even though there
 
 ## Choosing a category for JSON Expressions
 
-Strict operators are common in most procedural languages. Conservative operators are used in SQL expressions. In both these cases we can get good practice with the coding style required to operate on unclean JSON.
+Strict operators are common in most procedural languages. Conservative operators are used in SQL expressions. In both these cases we become well practices with the coding style required to operate on unclean JSON.
 
 The decisive operators are rare: Most applications have clear internal data structures; and a decisive operator will only hide coding mistakes. The value of decisive operators is only apparent in domains that have `nulls`, and this does not happen in most applications because the use of `nulls` can always be mitigated with a "better" set of type definitions.
 
-*If* you do not dictate the type system, or the types are changing often, or you deal with types from many different systems; in other words, you are processing "unclean data"; the conservative and strict operators will demand verbose code that checks for those nulls. Decisive operators work better in this enviroment. For example, SQL aggregation operators are decisive: 
+*If* you do not dictate the type system, or the types are changing often, or you deal with types from many different systems; or you are processing "unclean data"; the conservative and strict operators will demand verbose code that checks for those nulls. Decisive operators work better in this enviroment. For example, SQL aggregation operators are decisive: 
 
 ```sql
 	AVG(42, 24, null) => (42+24)/2 => 33
@@ -62,7 +62,7 @@ which makes comparing values complicated:
 
 ### Conservative Operators are dangerous
 
-Conservative operators make Boolean logic expressions difficult to write: Familiar Boolean identies  
+Conservative operators make Boolean logic expressions difficult to write: Familiar Boolean identities  
 
 ### Strict operators are verbose
 

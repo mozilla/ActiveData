@@ -236,7 +236,7 @@ Given well formed data, we can now compare to XPath:
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store..price`          | `{"from":"store", "select":"price"}` |       |
+| `$.store..price`          | `{"from":"store", "select":"price"}` |  
 
 
 
@@ -247,7 +247,7 @@ This type of query should never be needed: The store will sell books, or acquire
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
 | `$..book[2]`<br>              
-  `$..book[(@.length-1)]`   |   <pre>{
+| `$..book[(@.length-1)]`   |   <pre>{
     "from":{
         "from":"store", 
         "window":{

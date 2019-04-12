@@ -238,16 +238,17 @@ Given well formed data, we can now compare to XPath:
 |---------------------------|---------------------|
 | `$.store..price`          | `{"from":"store", "select":"price"}` |  
 
-
-
 **the third book**
 
 This type of query should never be needed: The store will sell books, or acquire new ones, messing with the order.  If this type of query is needed, then there is something in the order of the books that is somehow meaningful: Does the store have only one shelf? Are the books stacked on a table?  Are they ranked by how long they have been in the store?  In any case, we will use a window function to order the inventory, and then pick the third one.
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[2]`<br>              
-| `$..book[(@.length-1)]`   |   <pre>{
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[2]
+$..book[(@.length-1)]</pre>
+</td><td>
+<pre>{
     "from":{
         "from":"store", 
         "window":{
@@ -256,60 +257,99 @@ This type of query should never be needed: The store will sell books, or acquire
             "groupby":"item_type"
         }
     },
-    "where": {"eq":{"order":2}}
-}</pre>       |
+    "where": {"and":[
+        {"eq":{"item_type":"book":}}, 
+        {"lt":{"order":2}}
+    ]}
+}</pre>
+</td></tr>
+</table>
 
      
 **the last book in order.**
 
 Getting the first or last elements in a list make sense.
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[-1:]`            | <pre>{
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[-1:]</pre>
+</td><td>
+<pre>{
     "from":"store", 
     "select":{"aggregate":"last"}
-}</pre> |
+}</pre>
+</td></tr>
+</table>
 
 **the first two books**
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[0,1]`<br>
-  `$..book[:2]`             | <pre>{
-    "from":{"from":"store", "window":{"name":"order", "value":"rownum", "groupby":"item_type"}},
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[0,1]
+$..book[:2]</pre>
+</td><td>
+<pre>{
+    "from":{
+        "from":"store", 
+        "window":{
+            "name":"order", 
+            "value":"rownum", 
+            "groupby":"item_type"
+        }
+    },
     "where": {"and":[
         {"eq":{"item_type":"book":}}, 
         {"lt":{"order":2}}
     ]}
-}</pre>       |       |
+}</pre>
+</td></tr>
+</table>
 
 **filter all books with isbn number**
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[?(@.isbn)]`      | <pre>{
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[?(@.isbn)]</pre>
+</td><td>
+<pre>{
     "from":"store",
     "where":{"exists":"isbn"}
-}</pre>    |
-
+}</pre>
+</td></tr>
+</table>
 
 **filter all books cheaper than 10**
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `book[price<10]`<br>             
-  `$..book[?(@.price<10)]`  | <pre>{
+
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>book[price<10]
+$..book[?(@.price<10)]</pre>
+</td><td>
+<pre>{
     "from":"store",
     "where":{"and":[
         {"eq":{"item_type":"book"}},
         {"lt":{"price":10}}
     ]}
-}</pre>|
+}</pre>
+</td></tr>
+</table>
+
 
 
 **all Elements in XML document. All members of JSON structure.** 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..*`                    | `{"from":"source"}` |
+
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..*</pre>
+</td><td>
+<pre>{"from":"source"}</pre>
+</td></tr>
+</table>
      
 

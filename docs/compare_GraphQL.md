@@ -37,7 +37,7 @@ Calling GraphQL a "query language" is good marketing, and like all good marketin
 
 **Complex Language** 
 
-XML got it wrong when it combined maps and lists into a single type: Every tag has a name, has attributes for describing the tag itself, and has children tags to hold content. I blame this fundamental triple as the source of all complexity built atop the XML landscape. GraphQL makes the same mistake; every element is triple: a name, a map, and a list.
+XML got it wrong when it combined maps and lists into a single type called a "tag": Every tag has a name, has attributes for describing the tag itself, and has children tags to hold content. I blame this fundamental triple as the source of all complexity built atop the XML landscape. GraphQL makes the same mistake; every element is triple: a name, a map, and a list.
 
     {user (id: 1) {name}}
 
@@ -59,7 +59,7 @@ I realize many people enjoy "$#:%@" in their languages, and maybe you can defend
 
 ## Detailed Comparison
 
-The rest of this document goes into detail. My argument depends on the use of a "host language"; which is the Turing-complete language you are using to send JSON Expressions. The host language is most likely Javascript, or Python because they make composing JSON easy, but other languages can host JSON Expressions too. What's important to point out is GraphQL is also used in the context of a host language; its extra "features" result in two ways of doing the same thing.
+The rest of this document goes into detail. My argument depends on the use of a "host language"; which is the Turing-complete language you are using to send queries. The host language is most likely Javascript, or Python because they make composing JSON easy, but other languages can host queries too. Both GraphQL and JSON Query Expressions are used in the context of a host language, but GraphQL's extra "features" result in two ways of doing the same thing.
 
 My objective is to demonstrate that the simple semantics of JSON Expressions allow the host language to compose JSON queries, negating the need for pre-processing operators, and making for a simpler query language to reason about. 
 
@@ -75,7 +75,7 @@ GraphQL elements are a compound structure consisting of a name, a map inside the
         }
     }
 
-JSON Queries are explicit about the arguments, this makes them more verbose, but also makes them easy to compose in code.  Here is the same in JSON Query Expressions:
+JSON Queries are explicit about the arguments, this makes them more verbose, but also makes them easy to compose in code. Here is the same in JSON Query Expressions:
 
     {
         "from": "user",
@@ -227,6 +227,8 @@ GraphQL - use `$` as a prefix to declare variables, and their type:
 
 JSON Queries do not have variables, again resting on the host language. In this case, setting the `where` clause to the condition required using a `setdefault` function [(python example)](https://github.com/klahnakoski/pyLibrary/blob/5ba9998dee239ec74a0905123a823069581cd8f2/pyLibrary/dot/__init__.py#L144). The technique shown here is to use JSON as a template, and then add the required annotations to build the final result.
 
+Her we define `HeroNameAndFriends` like above
+
     HeroNameAndFriends = {
         "from": "hero"
         "select": [
@@ -234,6 +236,8 @@ JSON Queries do not have variables, again resting on the host language. In this 
             "friends.name"
         ],
     }
+
+..and here we show how to use it
 
     query = setdefault(
         {"where":{"eq":{"episode":"JEDI"}}}, 

@@ -1,14 +1,6 @@
 # JSONPath vs JSON Query Expressions
 
-[JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise.
-
-Path expressions are related to graph query languages, with limitation
-
-### XML NORMAL FORM
-http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf
-
-
-
+[JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise. Here is a summary of the common operators [from goessner.net](http://goessner.net/articles/JsonPath/) in both: 
 
 
 | XPath  | JSONPath           | Description |
@@ -215,32 +207,43 @@ Given well formed data, we can now compare to XPath:
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store.book[*].author`  | `{"from":"store", "select":"author"}`      |
+| `$.store.book[*].author`  | `{"from": store, "select":"author"}`      |
 
 
 **all authors**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$..author`               | `{"from":"store", "groupby":"author"}`      |
+| `$..author`               | `{"from": store, "groupby":"author"}`      |
 
 
 **all things in store, which are some books and a red bicycle**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `/store/*`                | `"from":"store"`    |
+| `/store/*`                | `"from": store`    |
 
 
 **the price of everything in the store**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store..price`          | `{"from":"store", "select":"price"}` |  
+| `$.store..price`          | `{"from": store, "select":"price"}` |  
 
 **the third book**
 
-This type of query should never be needed: The store will sell books, or acquire new ones, messing with the order.  If this type of query is needed, then there is something in the order of the books that is somehow meaningful: Does the store have only one shelf? Are the books stacked on a table?  Are they ranked by how long they have been in the store?  In any case, we will use a window function to order the inventory, and then pick the third one.
+If you need this type of query, then the data is in bad form: Something about the order is important, yet undocumented. The store will sell books, or acquire new ones, messing with the order. Does the store have only one shelf? Are the books stacked on a table?  Are they ranked by how long they have been in the store?  
+
+To proceed we will add an `order` property to the inventory using a window function:
+
+    store = {
+        "from": store, 
+        "window":{
+            "name":"order", 
+            "value":"rownum", 
+            "groupby":"item_type"
+        }
+    }
 
 <table>
 <tr><th>XPath</th><th>JSON Expression</th></tr>
@@ -249,14 +252,7 @@ This type of query should never be needed: The store will sell books, or acquire
 $..book[(@.length-1)]</pre>
 </td><td>
 <pre>{
-    "from":{
-        "from":"store", 
-        "window":{
-            "name":"order", 
-            "value":"rownum", 
-            "groupby":"item_type"
-        }
-    },
+    "from": store,
     "where": {"and":[
         {"eq":{"item_type":"book":}}, 
         {"lt":{"order":2}}
@@ -276,8 +272,9 @@ Getting the first or last elements in a list make sense.
 <pre>$..book[-1:]</pre>
 </td><td>
 <pre>{
-    "from":"store", 
-    "select":{"aggregate":"last"}
+    "from": store, 
+    "select":{"aggregate":"last"},
+    "where": {"eq":{"item_type":"book":}}
 }</pre>
 </td></tr>
 </table>
@@ -291,14 +288,7 @@ Getting the first or last elements in a list make sense.
 $..book[:2]</pre>
 </td><td>
 <pre>{
-    "from":{
-        "from":"store", 
-        "window":{
-            "name":"order", 
-            "value":"rownum", 
-            "groupby":"item_type"
-        }
-    },
+    "from": store,
     "where": {"and":[
         {"eq":{"item_type":"book":}}, 
         {"lt":{"order":2}}
@@ -315,7 +305,7 @@ $..book[:2]</pre>
 <pre>$..book[?(@.isbn)]</pre>
 </td><td>
 <pre>{
-    "from":"store",
+    "from": store,
     "where":{"exists":"isbn"}
 }</pre>
 </td></tr>
@@ -330,7 +320,7 @@ $..book[:2]</pre>
 $..book[?(@.price<10)]</pre>
 </td><td>
 <pre>{
-    "from":"store",
+    "from": store,
     "where":{"and":[
         {"eq":{"item_type":"book"}},
         {"lt":{"price":10}}
@@ -348,8 +338,21 @@ $..book[?(@.price<10)]</pre>
 <tr><td>
 <pre>$..*</pre>
 </td><td>
-<pre>{"from":"source"}</pre>
+<pre>{"from": store}</pre>
 </td></tr>
 </table>
      
 
+## Conclusion
+
+JSONPath is definitely more compact than JSON Query Expressions, but JSON query expressions benefit 
+
+* Any language where `[?(@._<1)]` is legitimate syntax should not be used: It is unreadable.
+* The recursive decent operator (`..`) is dangerous: When dealing with messy data, you do not know what properties, at what depth, you will capture with this operator.
+* The [grammar is more complex](https://github.com/dchester/jsonpath/blob/master/lib/grammar.js), which makes it difficult [to interpret](https://github.com/browserify/static-eval/blob/master/index.js) and translate to other data stores. It also inhibits automated composition. 
+
+------
+
+**Notes**
+
+* XML normal form - http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf

@@ -298,7 +298,7 @@ Test if a property is `null`, or missing from the record
 
 ### `exists` Operator ###
 
-Test is a property is not `null`
+Test if a property is not `null`
 
         {"exists": variable}
 

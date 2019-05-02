@@ -2133,7 +2133,7 @@ class PrefixOp(Expression):
         return FALSE
 
     def partial_eval(self):
-        if not self.expr:
+        if self.expr.missing() or self.prefix.missing():
             return TRUE
 
         return WhenOp(

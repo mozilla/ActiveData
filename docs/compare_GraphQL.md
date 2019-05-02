@@ -53,9 +53,13 @@ If you consider conglomerations of GraphQL triples to be a language, then you ca
 
 Of course, you can also see these pre-proccessing operators as language features; in which case we have a sophisticated language that should be contrasted with another query language, to give perspective.
 
+**Inscrutable**
+
+Phrasing a query will be impossible without the schema specification at hand; which will be incomplete in some important way. There is no way to pull example objects, and no way to pull top-level properties.  Only the GraphQL endpoint implementer truly knows the exposed schema.
+
 **Line Noise**
 
-I realize many people enjoy "$#:%@" in their languages, and maybe you can defend it on the basis of "internationalization", but I personally despise punctuation when words can be used: Bits are cheap, please use words instead of symbols. They are easier to Google too.
+I realize many people enjoy `$#:%@` in their languages, and maybe you can defend it on the basis of "internationalization", but I personally despise punctuation when words can be used: Bits are cheap, please use words instead of symbols. They are easier to Google too.
 
 ## Detailed Comparison
 

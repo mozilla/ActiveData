@@ -254,7 +254,9 @@ class ElasticsearchMetadata(Namespace):
         :return:
         """
         DEBUG and after and Log.note("getting columns for {{table}} after {{time}}", table=table_name, time=after)
-        if table_name in (META_COLUMNS_NAME, META_TABLES_NAME):
+        if table_name == META_TABLES_NAME:
+            return self.meta.tables.schema.columns
+        elif table_name == META_COLUMNS_NAME:
             root_table_name = table_name
         else:
             root_table_name = first(split_field(table_name))
@@ -643,7 +645,7 @@ class ElasticsearchMetadata(Namespace):
         if name == META_COLUMNS_NAME:
             return self.meta.columns.schema
         if name == META_TABLES_NAME:
-            return self.meta.tables
+            return self.meta.tables.schema
         root, rest = tail_field(name)
         return self.get_snowflake(root).get_schema(rest)
 

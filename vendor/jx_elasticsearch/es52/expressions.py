@@ -414,7 +414,7 @@ class BasicStartsWithOp(BasicStartsWithOp_):
             var = first(schema.leaves(self.value.var)).es_column
             return {"prefix": {var: self.prefix.value}}
         else:
-            output = PainlessBasicStartsWithOp.self.to_es_script(self, schema)
+            output = PainlessBasicStartsWithOp.to_es_script(self, schema)
             if output is false_script:
                 return MATCH_NONE
             return output
@@ -422,16 +422,13 @@ class BasicStartsWithOp(BasicStartsWithOp_):
 
 class PrefixOp(PrefixOp_):
     def partial_eval(self):
-        if self.expr.missing():
-            return TRUE
-        if self.prefix.exists():
-            return FALSE
-
         expr = PainlessStringOp(self.expr).partial_eval()
         prefix = PainlessStringOp(self.prefix).partial_eval()
 
-        if self.expr is NULL:
+        if prefix is NULL:
             return TRUE
+        if expr is NULL:
+            return FALSE
 
         return PrefixOp([expr, prefix])
 

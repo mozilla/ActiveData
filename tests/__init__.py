@@ -251,7 +251,7 @@ class ESUtils(object):
                     name=subtest.name
                 )
         except Exception as e:
-            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
+            Log.error("Failed test {{name|quote}}", name=subtest, cause=e)
 
     def execute_query(self, query):
         query = wrap(query)

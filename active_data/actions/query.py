@@ -61,7 +61,7 @@ def jx_query(path):
                         frum = find_container(data['from'], after=None)
                     result = jx.run(data, container=frum)
 
-                    if isinstance(result, Container):  #TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                    if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(data.format)
 
                 save_timer = Timer("save")

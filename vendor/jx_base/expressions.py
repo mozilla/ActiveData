@@ -2133,13 +2133,11 @@ class PrefixOp(Expression):
         return FALSE
 
     def partial_eval(self):
-        if self.expr.missing() or self.prefix.missing():
-            return TRUE
-
-        return WhenOp(
-            self.lang[AndOp([self.expr.exists(), self.prefix.exists()])],
-            **{"then": self.lang[BasicStartsWithOp([self.expr, self.prefix])], "else": FALSE}
-        ).partial_eval()
+        return CaseOp([
+            WhenOp(self.prefix.missing(), then=TRUE),
+            WhenOp(self.expr.missing(), then=FALSE),
+            self.lang[BasicStartsWithOp([self.expr, self.prefix])]
+        ]).partial_eval()
 
 
 class SuffixOp(Expression):

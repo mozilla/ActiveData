@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_future import is_text, is_binary
-from jx_base.expressions import AddOp, AndOp, BaseBinaryOp, BaseInequalityOp, BasicIndexOfOp, BasicMultiOp, BasicSubstringOp, BetweenOp, BooleanOp, CaseOp, CoalesceOp, ConcatOp, CountOp, DateOp, DivOp, EqOp, ExistsOp, FALSE, FalseOp, FindOp, FloorOp, FromUnixOp, InOp, IntegerOp, LeavesOp, LeftOp, LengthOp, Literal, MaxOp, MinOp, MissingOp, NULL, NeOp, NotLeftOp, NotOp, NotRightOp, NullOp, NumberOp, ONE, OrOp, PrefixOp, RangeOp, RegExpOp, RightOp, SqlEqOp, SqlInstrOp, SqlSubstrOp, StringOp, SubOp, SuffixOp, TRUE, TrueOp, TupleOp, UnixOp, Variable, WhenOp, ZERO, builtin_ops, extend, simplified
+from jx_base.expressions import AddOp, AndOp, BaseBinaryOp, BaseInequalityOp, BasicIndexOfOp, BasicMultiOp, BasicSubstringOp, BetweenOp, BooleanOp, CaseOp, CoalesceOp, ConcatOp, CountOp, DateOp, DivOp, EqOp, ExistsOp, FALSE, FalseOp, FindOp, FloorOp, FromUnixOp, InOp, IntegerOp, LeavesOp, LeftOp, LengthOp, Literal, MaxOp, MinOp, MissingOp, NULL, NeOp, NotLeftOp, NotOp, NotRightOp, NullOp, NumberOp, ONE, OrOp, PrefixOp, RangeOp, RegExpOp, RightOp, SqlEqOp, SqlInstrOp, SqlSubstrOp, StringOp, SubOp, SuffixOp, TRUE, TrueOp, TupleOp, UnixOp, Variable, WhenOp, ZERO, builtin_ops, extend, simplified, is_literal
 from jx_base.queries import get_property_name
 from jx_base.utils import is_op
 from jx_sqlite import GUID, quoted_GUID

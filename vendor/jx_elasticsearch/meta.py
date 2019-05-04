@@ -161,8 +161,8 @@ class ElasticsearchMetadata(Namespace):
 
         abs_columns = elasticsearch.parse_properties(alias, ".", ROOT_PATH, mapping.properties)
         if DEBUG and any(c.cardinality == 0 and c.name != '_id' for c in abs_columns):
-            Log.warning(
-                "Some columns are not stored in {{url}} {{index|quote}} table:\n{{names}}",
+            Log.note(
+                "Some columns are always missing in {{url}} {{index|quote}} table:\n{{names}}",
                 url=self.es_cluster.url,
                 index=alias,
                 names=[

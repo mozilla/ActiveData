@@ -422,8 +422,10 @@ class BasicStartsWithOp(BasicStartsWithOp_):
 
 class PrefixOp(PrefixOp_):
     def partial_eval(self):
-        if not self.expr:
+        if self.expr.missing():
             return TRUE
+        if self.prefix.exists():
+            return FALSE
 
         expr = PainlessStringOp(self.expr).partial_eval()
         prefix = PainlessStringOp(self.prefix).partial_eval()

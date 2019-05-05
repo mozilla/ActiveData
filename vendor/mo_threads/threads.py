@@ -107,8 +107,7 @@ class MainThread(BaseThread):
 
     def stop(self):
         """
-        BLOCKS UNTIL ALL THREADS HAVE STOPPED
-        THEN RUNS sys.exit(0)
+        BLOCKS UNTIL ALL KNOWN THREADS, EXCEPT MainThread, HAVE STOPPED
         """
         global DEBUG
 
@@ -147,10 +146,6 @@ class MainThread(BaseThread):
 
         write_profiles(self.cprofiler)
         DEBUG and Log.note("Thread {{name|quote}} now stopped", name=self.name)
-        try:
-            sys.exit()
-        except Exception as e:
-            pass  # THIS HAPPENS WHEN CALLED MORE THAN ONCE
 
     def wait_for_shutdown_signal(
         self,

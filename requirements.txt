@@ -1,5 +1,6 @@
 Flask
 pymysql
 requests
+moz-sql-parser
 boto
 ujson

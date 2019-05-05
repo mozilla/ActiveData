@@ -1,5 +1,5 @@
 [run]
-include =
+source =
     active_data/*
     vendor/*
 

@@ -29,7 +29,7 @@ script:
   - "coverage run active_data/app.py --settings=tests/travis/app.json &"
   - "sleep 5"
   - "export TEST_CONFIG=tests/travis/app.json"
-#  - "python -m unittest discover tests --failfast"
+  - "python -m unittest discover tests --failfast"
   - "curl http://localhost:5000/exit"
   - "cat activedata.pid"
   - "wait `cat activedata.pid`"

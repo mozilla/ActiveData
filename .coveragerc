@@ -1,7 +1,2 @@
 [run]
-source =
-    ./active_data/*
-    ./vendor/*
-
-omit =
-    */virtualenv/*
+source = .

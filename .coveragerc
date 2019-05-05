@@ -2,3 +2,6 @@
 include =
     active_data/*
     vendor/*
+
+omit =
+    */virtualenv/*

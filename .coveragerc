@@ -1,2 +1,4 @@
 [run]
-source = .
+source =
+    ./active_data
+    ./vendor

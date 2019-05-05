@@ -1,11 +1,11 @@
 [run]
 source =
-    active_data/*
-    vendor/*
-    
+    ./active_data/*
+    ./vendor/*
+
 include =
-    active_data/*
-    vendor/*
+    ./active_data/*
+    ./vendor/*
 
 omit =
     */virtualenv/*

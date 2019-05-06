@@ -33,3 +33,4 @@ version.json
 /*.sqlite-journal
 /metadata*
 /*.pid
+/.coverage

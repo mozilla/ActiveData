@@ -31,7 +31,6 @@ script:
   - "export TEST_CONFIG=tests/travis/app.json"
 #  - "python -m unittest discover tests --failfast"
   - "curl http://localhost:5000/exit"
-  - "cat activedata.pid"
   - "wait `cat activedata.pid`"
 
 after_success:

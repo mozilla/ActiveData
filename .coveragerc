@@ -4,4 +4,8 @@ source =
     ./vendor
 
 [report]
-include = *
+exclude_lines =
+    pragma: no cover
+    except Exception as
+    except BaseException as
+    if DEBUG

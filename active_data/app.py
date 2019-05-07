@@ -30,7 +30,7 @@ from jx_base import container
 from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text_type
-from mo_logs import Log, constants, startup
+from mo_logs import Log, constants, startup, machine_metadata
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import RegisterThread
@@ -111,6 +111,8 @@ def setup():
 
     constants.set(config.constants)
     Log.start(config.debug)
+
+    File.new_instance("activedata.pid").write(text_type(machine_metadata.pid))
 
     # PIPE REQUEST LOGS TO ES DEBUG
     if config.request_logs:

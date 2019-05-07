@@ -1,0 +1,7 @@
+[run]
+source =
+    ./active_data
+    ./vendor
+
+[report]
+include = *

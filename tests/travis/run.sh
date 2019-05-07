@@ -1,6 +1,6 @@
 export PYTHONPATH=.:vendor
 
-python active_data/app.py --settings=tests/travis/app.json &
+coverage run active_data/app.py --settings=tests/travis/app.json &
 sleep 5
 
 export TEST_CONFIG=tests/travis/app.json

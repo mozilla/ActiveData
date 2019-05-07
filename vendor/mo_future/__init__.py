@@ -29,6 +29,9 @@ boolean_type = type(True)
 if PY3:
     import itertools
     import collections
+    from collections import Callable
+
+
     from functools import cmp_to_key
     from configparser import ConfigParser
     from itertools import zip_longest
@@ -120,6 +123,8 @@ if PY3:
 
 else:
     import collections
+    from collections import Callable
+
     import __builtin__
     from types import GeneratorType
     from ConfigParser import ConfigParser

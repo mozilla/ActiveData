@@ -1,14 +1,6 @@
 # JSONPath vs JSON Query Expressions
 
-[JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise.
-
-Path expressions are related to graph query languages, with limitation
-
-### XML NORMAL FORM
-http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf
-
-
-
+[JSONPath](http://goessner.net/articles/JsonPath/) is a mini query language inspired by the XPath line noise. Here is a summary of the common operators [from goessner.net](http://goessner.net/articles/JsonPath/) in both: 
 
 
 | XPath  | JSONPath           | Description |
@@ -27,11 +19,7 @@ http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf
 |   n/a  | `()`               |script expression, using the underlying script engine. 
 
 
-## Property Limited JSON 
-
-
-
-
+## Fixed-Property JSON 
 
 ### Example
 
@@ -69,7 +57,7 @@ We will use the example from [goessner.net](http://goessner.net/articles/JsonPat
         "bicycle":{"color":"red","price":19.95}
     }}
 
-This is badly designed data: There is no upper limit on the property names because they are being used to encode the inventory category (eg `book`, `bycycle`).  Putting data values in property names is similar to using positional arguments: The values are placed at a numbered position, and the numbered position relates to an implicit named type. For example, the `book` type is position-encoded, but we can do the same for other properties:
+This is badly designed data: There is no upper limit on the property names because they are being used to encode the inventory category (eg `book`, `bicycle`).  Putting data values in property names is similar to using positional arguments: The values are placed at a numbered position, and the numbered position relates to an implicit named type. For example, the `book` type is position-encoded. At an extreme, we can do that for all properties:
 
     {"store":{
         "book": {
@@ -105,7 +93,7 @@ This is badly designed data: There is no upper limit on the property names becau
         "bicycle":{"red":{"19.95":{}}}
     }}
 
-This form maps path depth, or path position, to an implicit named typed; Definitely more compact, but context is lost about what the property names mean. A similar effect can be had by storing the data in tuples.
+This above form maps path depth, or path position, to an implicit named typed; Definitely more compact, but context is lost about what the property names mean. A similar effect can be had by storing the data in tuples.
 
     {"store":[
         ["book", "reference", "Nigel Rees", "Sayings of the Century", 8.95],
@@ -115,9 +103,9 @@ This form maps path depth, or path position, to an implicit named typed; Definit
         ["bicycle", "red", 19.95]
     ]}
 
-In either case, and many others, we achieve data compression by removing context.  This is bad for JSON.
+In either case, and many others, we achieve data compression by removing context. This is a bad data format.
 
-JSON data should be in ***limited property form***, which means fixing the number of properties, as much as is reasonable, for the given data source. One option is to convert the `{key: value}` form to `{"key":key, "value":value}` by assigning static names to the property names. In the example of store inventory we label the item type, and the inventory explicitly: 
+JSON data should be in ***fixed-property form***, which means fixing the number of properties, as much as is reasonable, for the given data source. We do this by assigning names to keys. In the example of store inventory we label the item type, and the inventory explicitly: 
 
     {"store":[
         {
@@ -165,26 +153,9 @@ JSON data should be in ***limited property form***, which means fixing the numbe
         }
     ]}
 
-Even this form normalized: The `item_type` context is required to interpret any inventory item: It is better to annotate all the inventory items with the `item_type`; which will allow use to flatten the structure further. 
+This is not fully denormalized: The `item_type` context is required to interpret any inventory item. It is better to annotate all the inventory items with the `item_type`; which will allow use to flatten the structure further. 
 
-This transformation can be done with 
-
-    {
-        "from":{"items":"store"},
-        "select":{
-            "name":"store",
-            "aggregate":"union", 
-            "value":{
-                "from":"..value",
-                "select":[
-                    {"name":"item_type", "value":"..name"}
-                    "."
-                ]
-            }
-        }
-    }
-
-Which results in an explicit, and flatter structure:
+Which results well formed data: It is explicit; every property is names. It is flatter, so easier to manipulate. It is denormalized, so each record stands on its own.
 
     {"store":[
         {
@@ -225,6 +196,8 @@ Which results in an explicit, and flatter structure:
     ]}
 
 
+&lt; ADD JX EXPRESSION TO TRANSFORM ORIGINAL TO DENORMALIZED FORM >
+
 ## Comparision
 
 Given well formed data, we can now compare to XPath:
@@ -234,91 +207,152 @@ Given well formed data, we can now compare to XPath:
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store.book[*].author`  | `{"from":"store", "select":"author"}`      |
+| `$.store.book[*].author`  | `{"from": store, "select":"author"}`      |
 
 
 **all authors**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$..author`               | `{"from":"store", "select":"author"}`      |
+| `$..author`               | `{"from": store, "groupby":"author"}`      |
 
 
 **all things in store, which are some books and a red bicycle**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `/store/*`                | `"from":"store"`    |
+| `/store/*`                | `"from": store`    |
 
 
 **the price of everything in the store**
 
 |           XPath           |   JSON Expression   |
 |---------------------------|---------------------|
-| `$.store..price`          | `{"from":"store", "select":"price"}` |       |
-
-
+| `$.store..price`          | `{"from": store, "select":"price"}` |  
 
 **the third book**
 
-This type of query should never be needed: The store will sell books, or acquire new ones, messing with the order.  There is something in the order of the books that is somehow meaningful: Does the store have only one shelf? Are the books stacked on a table?  Are they ranked by how long they have been in the store? 
+If you need this type of query, then the data is in bad form: Something about the order is important, yet undocumented. The store will sell books, or acquire new ones, messing with the order. Does the store have only one shelf? Are the books stacked on a table?  Are they ranked by how long they have been in the store?  
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[2]`<br>              
-  `$..book[(@.length-1)]`   |   <pre>{
-    "from":{"from":"store", "window":{"name":"order", "value":"rownum", "groupby":"item_type"}},
-    "where": {"eq":{"order":2}}
-}</pre>       |
+To proceed we will add an `order` property to the inventory using a window function:
+
+    store = {
+        "from": store, 
+        "window":{
+            "name":"order", 
+            "value":"rownum", 
+            "groupby":"item_type"
+        }
+    }
+
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[2]
+$..book[(@.length-1)]</pre>
+</td><td>
+<pre>{
+    "from": store,
+    "where": {"and":[
+        {"eq":{"item_type":"book":}}, 
+        {"lt":{"order":2}}
+    ]}
+}</pre>
+</td></tr>
+</table>
 
      
 **the last book in order.**
 
 Getting the first or last elements in a list make sense.
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[-1:]`            | <pre>{
-    "from":"store", 
-    "select":{"aggregate":"last"}
-}</pre> |
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[-1:]</pre>
+</td><td>
+<pre>{
+    "from": store, 
+    "select":{"aggregate":"last"},
+    "where": {"eq":{"item_type":"book":}}
+}</pre>
+</td></tr>
+</table>
 
 **the first two books**
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[0,1]`<br>
-  `$..book[:2]`             | <pre>{
-    "from":{"from":"store", "window":{"name":"order", "value":"rownum", "groupby":"item_type"}},
-    "where": {"lt":{"order":2}}
-}</pre>       |       |
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[0,1]
+$..book[:2]</pre>
+</td><td>
+<pre>{
+    "from": store,
+    "where": {"and":[
+        {"eq":{"item_type":"book":}}, 
+        {"lt":{"order":2}}
+    ]}
+}</pre>
+</td></tr>
+</table>
 
 **filter all books with isbn number**
 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..book[?(@.isbn)]`      | <pre>{
-    "from":"store",
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..book[?(@.isbn)]</pre>
+</td><td>
+<pre>{
+    "from": store,
     "where":{"exists":"isbn"}
-}</pre>    |
-
+}</pre>
+</td></tr>
+</table>
 
 **filter all books cheaper than 10**
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `book[price<10]`<br>             
-  `$..book[?(@.price<10)]`  | <pre>{
-    "from":"store",
+
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>book[price<10]
+$..book[?(@.price<10)]</pre>
+</td><td>
+<pre>{
+    "from": store,
     "where":{"and":[
         {"eq":{"item_type":"book"}},
         {"lt":{"price":10}}
     ]}
-}</pre>|
+}</pre>
+</td></tr>
+</table>
+
 
 
 **all Elements in XML document. All members of JSON structure.** 
-|           XPath           |   JSON Expression   |
-|---------------------------|---------------------|
-| `$..*`                    | `{"from":"source"}` |
+
+<table>
+<tr><th>XPath</th><th>JSON Expression</th></tr>
+<tr><td>
+<pre>$..*</pre>
+</td><td>
+<pre>{"from": store}</pre>
+</td></tr>
+</table>
      
 
+## Conclusion
+
+JSONPath is definitely more compact than JSON Query Expressions, but JSON query expressions benefit 
+
+* Any language where `[?(@._<1)]` is legitimate syntax should not be used: It is unreadable.
+* The recursive decent operator (`..`) is dangerous: When dealing with messy data, you do not know what properties, at what depth, you will capture with this operator.
+* The [grammar is more complex](https://github.com/dchester/jsonpath/blob/master/lib/grammar.js), which makes it difficult [to interpret](https://github.com/browserify/static-eval/blob/master/index.js) and translate to other data stores. It also inhibits automated composition. 
+
+------
+
+**Notes**
+
+* XML normal form - http://www.cs.toronto.edu/tox/papers/xnf_pods02.pdf

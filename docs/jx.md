@@ -16,6 +16,7 @@ of SQL can jump-start your use of JSON Expressions.
 * [Select Clause](jx_clause_select.md) - Data transformation using the `select` clause
 * [Edges Clause](jx_clause_edges.md) - Grouping and Aggregation using the `edges` clause
 * [Window Clause](jx_clause_window.md) - Using window functions
+* [Domains](jx_domains_and_dimensions.md) - Defining business rules using domains and dimensions 
 * [Time Math](jx_time.md) - Writing expressions in the time domain
 * [Commands](jx_update.md) - Update data with JSON Expressions
 * [Reference](jx_reference.md) - A bare list of allowed clauses and options for JSON query expressions

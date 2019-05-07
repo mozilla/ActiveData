@@ -23,7 +23,7 @@ from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
 from mo_future import sort_using_key
-from mo_json import EXISTS, OBJECT, value2json
+from mo_json import OBJECT, value2json
 from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Except, Log

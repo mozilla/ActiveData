@@ -704,6 +704,10 @@ class NullOp(Literal):
     def __str__(self):
         return b"null"
 
+    @property
+    def type(self):
+        return IS_NULL
+
     def __hash__(self):
         return id(None)
 
@@ -2103,8 +2107,8 @@ class PrefixOp(Expression):
     def __init__(self, term):
         Expression.__init__(self, term)
         if not term:
-            self.expr = None
-            self.prefix = None
+            self.expr = NULL
+            self.prefix = NULL
         elif is_data(term):
             self.expr, self.prefix = term.items()[0]
         else:
@@ -2133,13 +2137,11 @@ class PrefixOp(Expression):
         return FALSE
 
     def partial_eval(self):
-        if not self.expr:
-            return TRUE
-
-        return WhenOp(
-            self.lang[AndOp([self.expr.exists(), self.prefix.exists()])],
-            **{"then": self.lang[BasicStartsWithOp([self.expr, self.prefix])], "else": FALSE}
-        ).partial_eval()
+        return self.lang[CaseOp([
+            WhenOp(self.prefix.missing(), then=TRUE),
+            WhenOp(self.expr.missing(), then=FALSE),
+            BasicStartsWithOp([self.expr, self.prefix])
+        ])].partial_eval()
 
 
 class SuffixOp(Expression):

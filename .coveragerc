@@ -1,0 +1,11 @@
+[run]
+source =
+    ./active_data
+    ./vendor
+
+[report]
+exclude_lines =
+    pragma: no cover
+    except Exception as
+    except BaseException as
+    if DEBUG

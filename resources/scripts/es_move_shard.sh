@@ -1,5 +1,8 @@
 
 
+curl -XPOST http://localhost:9200/_cluster/reroute -d "{\"commands\":[{\"cancel\": {\"index\": \"coverage20190403_000000\",\"shard\": 6, \"node\":\"backup1\", \"allow_primary\":true}}]}"  -H "Content-Type: application/json"
+curl -XPOST http://localhost:9200/_cluster/reroute -d "{\"commands\":[{\"cancel\": {\"index\": \"coverage20190403_000000\",\"shard\": 2, \"node\":\"backup1\", \"allow_primary\":true}}]}"  -H "Content-Type: application/json"
+
 
 
 
@@ -12,7 +15,6 @@ curl -XPUT http://localhost:9200/_cluster/settings -d"{\"persistent\": {\"index.
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160729_131157\",\"shard\": 79, \"node\":\"primary\", \"allow_primary\":true}}]}"
 
 
-curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160810_175547\",\"shard\": 4, \"node\":\"secondary\", \"allow_primary\":true}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160810_175547\",\"shard\": 26, \"node\":\"secondary\", \"allow_primary\":true}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160810_175547\",\"shard\": 31, \"node\":\"secondary\", \"allow_primary\":true}}]}"
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20160810_175547\",\"shard\": 33, \"node\":\"secondary\", \"allow_primary\":true}}]}"

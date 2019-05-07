@@ -345,7 +345,7 @@ Pre-Defined Dimensions
 
 Pre-defined dimensions simplify queries, and double as type information for 
 the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.com/klahnakoski/Qb/blob/master/html/es/js/Dimension-Bugzilla.js).
-[More documentation on dimension definitions here](Dimension Definitions.md).
+[More documentation on dimension definitions here](jx_domains_and_dimensions.md).
 
   - **select** - Any pre-defined dimension with a partition defined can be used in a select clause. Each record will be
   assigned it's part.

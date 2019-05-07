@@ -251,7 +251,7 @@ class ESUtils(object):
                     name=subtest.name
                 )
         except Exception as e:
-            Log.error("Failed test {{name|quote}}", {"name": subtest.name}, e)
+            Log.error("Failed test {{name|quote}}", name=subtest.name, cause=e)
 
     def execute_query(self, query):
         query = wrap(query)
@@ -300,7 +300,10 @@ def compare_to_expected(query, result, expect, places):
     expect = wrap(expect)
 
     if result.meta.format == "table":
-        assertAlmostEqual(set(result.header), set(expect.header))
+        try:
+            assertAlmostEqual(set(result.header), set(expect.header))
+        except Exception as e:
+            Log.error("format=table headers do not match", cause=e)
 
         # MAP FROM expected COLUMN TO result COLUMN
         mapping = transpose(*transpose(*filter(

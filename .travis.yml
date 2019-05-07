@@ -19,8 +19,21 @@ install:
   - "sudo cp -f tests/travis/elasticsearch.yml ./elasticsearch-${ES_VERSION}/config/elasticsearch.yml"
   - "./elasticsearch-$ES_VERSION/bin/elasticsearch &"
   - "pip install -r requirements.txt"
-  - "wget -q --waitretry=1 --retry-connrefused -T 10 -O - http://127.0.0.1:9200"
+  - "pip install coverage"
+  - "pip install coveralls"
+  - "wget -q --wait=10 --retry-connrefused -T 10 -O - http://127.0.0.1:9200"
 
 # command to run tests
 script:
-  - tests/travis/run.sh
+  - "export PYTHONPATH=.:vendor"
+  - "coverage run ./active_data/app.py --settings=tests/travis/app.json &"
+  - "sleep 5"
+  - "export TEST_CONFIG=tests/travis/app.json"
+  - "python -m unittest discover tests --failfast"
+  - "curl http://localhost:5000/exit"
+  - "wait `cat activedata.pid`"
+
+after_success:
+  - coveralls
+
+

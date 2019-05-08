@@ -146,6 +146,7 @@ class MainThread(BaseThread):
 
         write_profiles(self.cprofiler)
         DEBUG and Log.note("Thread {{name|quote}} now stopped", name=self.name)
+        exit(0)
 
     def wait_for_shutdown_signal(
         self,

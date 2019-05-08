@@ -33,7 +33,7 @@ from mo_future import text_type
 from mo_logs import Log, constants, startup, machine_metadata
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
-from mo_threads.threads import RegisterThread
+from mo_threads.threads import RegisterThread, MAIN_THREAD
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -125,7 +125,6 @@ def setup():
             http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
         dockerflow(flask_app, backend_check)
 
-
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
     container.config.default = {
         "type": "elasticsearch",
@@ -137,6 +136,13 @@ def setup():
         setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
 
     HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
+
+    # ENSURE MAIN THREAD SHUTDOWN TRIGGERS Flask SHUTDOWN
+    shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+    if shutdown:
+        MAIN_THREAD.please_stop.then(shutdown)
+    else:
+        Log.warning("werkzeug.server.shutdown does not exist")
 
 
 def run_flask():

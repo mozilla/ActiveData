@@ -138,11 +138,7 @@ def setup():
     HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
 
     # ENSURE MAIN THREAD SHUTDOWN TRIGGERS Flask SHUTDOWN
-    shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-    if shutdown:
-        MAIN_THREAD.please_stop.then(shutdown)
-    else:
-        Log.warning("werkzeug.server.shutdown does not exist")
+    MAIN_THREAD.stopped.then(exit)
 
 
 def run_flask():

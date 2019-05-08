@@ -78,10 +78,11 @@ def read_settings(filename=None, defs=None):
 
     args.filename = coalesce(filename, args.filename, "./config.json")
     settings_file = File(args.filename)
-    if not settings_file.exists:
-        Log.error("Can not read configuration file {{filename}}", {
-            "filename": settings_file.abspath
-        })
+    if settings_file.exists:
+        Log.note("Using {{filename}} for configuration", filename=settings_file.abspath)
+    else:
+        Log.error("Can not read configuration file {{filename}}", filename=settings_file.abspath)
+
     settings = mo_json_config.get_file(settings_file)
     settings.args = args
     return settings

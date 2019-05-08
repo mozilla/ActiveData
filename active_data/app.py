@@ -217,11 +217,14 @@ def _exit():
             else:
                 Log.warning("werkzeug.server.shutdown does not exist")
 
+
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
         if config.flask:
             run_flask()
+    except SystemExit as f:
+        pass
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
         stop_main_thread()

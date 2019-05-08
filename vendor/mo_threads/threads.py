@@ -102,6 +102,7 @@ class MainThread(BaseThread):
         BaseThread.__init__(self, get_ident())
         self.name = "Main Thread"
         self.please_stop = Signal()
+        self.stopped = Signal()
         self.stop_logging = Log.stop
         self.timers = None
 
@@ -146,7 +147,7 @@ class MainThread(BaseThread):
 
         write_profiles(self.cprofiler)
         DEBUG and Log.note("Thread {{name|quote}} now stopped", name=self.name)
-        exit(0)
+        self.stopped.go()
 
     def wait_for_shutdown_signal(
         self,

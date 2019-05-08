@@ -45,7 +45,7 @@ class ActiveDataApp(Flask):
         try:
             Flask.run(self, *args, **kwargs)
         except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
-            if e.args and e.args[0] == 0:
+            if e.args and not e.args[0]:
                 pass  # ASSUME NORMAL EXIT
             else:
                 Log.warning("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
@@ -137,15 +137,6 @@ def setup():
 
     HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
 
-    # ENSURE MAIN THREAD SHUTDOWN TRIGGERS Flask SHUTDOWN
-    shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-    if shutdown:
-        MAIN_THREAD.please_stop.then(shutdown)
-    else:
-        Log.warning("werkzeug.server.shutdown does not exist")
-
-
-def run_flask():
     if config.flask.port and config.args.process_num:
         config.flask.port += config.args.process_num
 
@@ -160,7 +151,8 @@ def run_flask():
             Log.error("can not serve ssl and multiple Flask instances at once")
         setup_flask_ssl()
 
-    flask_app.run(**config.flask)
+    # ENSURE MAIN THREAD SHUTDOWN TRIGGERS Flask SHUTDOWN
+    MAIN_THREAD.stopped.then(exit)
 
 
 def setup_flask_ssl():
@@ -221,13 +213,14 @@ def _exit():
             else:
                 Log.warning("werkzeug.server.shutdown does not exist")
 
+
 if __name__ in ("__main__", "active_data.app"):
     try:
         setup()
-        if config.flask:
-            run_flask()
     except BaseException as e:  # MUST CATCH BaseException BECAUSE argparse LIKES TO EXIT THAT WAY, AND gunicorn WILL NOT REPORT
         Log.error("Serious problem with ActiveData service construction!  Shutdown!", cause=e)
         stop_main_thread()
 
+    if config.flask:
+        flask_app.run(**config.flask)
 

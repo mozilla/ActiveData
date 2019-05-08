@@ -57,7 +57,7 @@ def argparse(defs):
     return wrap(output)
 
 
-def read_settings(filename=None, defs=None):
+def read_settings(defs=None, filename=None, default_filename=None):
     """
     :param filename: Force load a file
     :param defs: arguments you want to accept

@@ -76,7 +76,12 @@ def read_settings(defs=None, filename=None, default_filename=None):
     })
     args = argparse(defs)
 
-    args.filename = coalesce(filename, args.filename, default_filename, "./config.json")
+    args.filename = coalesce(
+        filename,
+        args.filename if args.filename.endswith(".json") else None,
+        default_filename,
+        "./config.json"
+    )
     settings_file = File(args.filename)
     if settings_file.exists:
         Log.note("Using {{filename}} for configuration", filename=settings_file.abspath)

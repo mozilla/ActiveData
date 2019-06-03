@@ -65,7 +65,7 @@ def jx_query(path):
                     if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                         result = result.format(data.format)
 
-                save_timer = Timer("save")
+                save_timer = Timer("save", silent=not DEBUG)
                 with save_timer:
                     if data.meta.save:
                         try:

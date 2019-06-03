@@ -617,7 +617,7 @@ class ElasticsearchMetadata(Namespace):
                     DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                     continue
 
-                if untype_path(column.name) in ["build.type", "run.type", "build.platform", ]:
+                if untype_path(column.name) in ["build.type", "run.type", "build.platform", "file.path"]:
                     try:
                         self._update_cardinality(column)
                     except Exception as e:

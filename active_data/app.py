@@ -96,7 +96,7 @@ def setup():
     global config
 
     config = startup.read_settings(
-        filename=os.environ.get('ACTIVEDATA_CONFIG'),
+        default_filename=os.environ.get('ACTIVEDATA_CONFIG'),
         defs=[
             {
                 "name": ["--process_num", "--process"],

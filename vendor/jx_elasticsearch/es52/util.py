@@ -71,7 +71,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.jx_type is type:
+                    if c.jx_type == type:
                         np = first(c.nested_path)
                         if np == '.':
                             if s.sort == -1:

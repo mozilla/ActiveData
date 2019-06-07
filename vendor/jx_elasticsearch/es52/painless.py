@@ -468,7 +468,7 @@ class DivOp(DivOp_):
 
         output = (
             WhenOp(
-                OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])]),
+                OrOp([lhs.missing(), rhs.missing(), EqOp([rhs, ZERO])]),
                 **{
                     "then": self.default,
                     "else": EsScript(

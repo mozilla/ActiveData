@@ -19,7 +19,7 @@ from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify, CountAggs
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
-from jx_elasticsearch.es52.painless import Painless
+from jx_elasticsearch.es52.painless import Painless, NumberOp
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
@@ -403,7 +403,7 @@ def es_aggsop(es, frum, query):
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(aggregates[s.aggregate])
-            nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": text_type(Painless[s.value].to_es_script(schema))}}, s))
+            nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": text_type(NumberOp(s.value).partial_eval().to_es_script(schema))}}, s))
 
     acc = NestedAggs(query_path).add(acc)
     split_decoders = get_decoders_by_path(query)

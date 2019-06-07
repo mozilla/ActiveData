@@ -878,6 +878,7 @@ class IntegerOp(IntegerOp_):
 class NumberOp(NumberOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         term = FirstOp(self.term).partial_eval()
+
         value = term.to_es_script(schema)
 
         if is_op(value.frum, CoalesceOp_):
@@ -892,7 +893,7 @@ class NumberOp(NumberOp_):
             return EsScript(
                 miss=term.missing().partial_eval(),
                 type=NUMBER,
-                expr=value.expr + " ? 1 : 0",
+                expr="(" + value.expr + ") ? 1 : 0",
                 frum=self,
                 schema=schema,
             )

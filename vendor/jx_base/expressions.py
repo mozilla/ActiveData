@@ -1471,8 +1471,6 @@ class FirstOp(Expression):
             return self.lang[WhenOp(term.when, **{"then": FirstOp(term.then), "else": FirstOp(term.els_)})].partial_eval()
         elif term.type != OBJECT and not term.many:
             return term
-        elif term is NULL:
-            return term
         elif is_literal(term):
             Log.error("not handled yet")
         else:
@@ -1640,7 +1638,9 @@ class NumberOp(Expression):
         term = self.lang[FirstOp(self.term)].partial_eval()
 
         if is_literal(term):
-            if term is FALSE or term is NULL:
+            if term is NULL:
+                return NULL
+            elif term is FALSE:
                 return ZERO
             elif term is TRUE:
                 return ONE
@@ -1665,7 +1665,7 @@ class NumberOp(Expression):
             return self.lang[WhenOp(term.when, **{"then": NumberOp(term.then), "else": NumberOp(term.els_)})].partial_eval()
         elif is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([NumberOp(t) for t in term.terms])]
-        return self
+        return term
 
 
 class IsNumberOp(Expression):

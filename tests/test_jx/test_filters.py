@@ -262,7 +262,6 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-
     def test_edges_and_null_prefix(self):
         test = {
             "data": [{"v": "test"}],
@@ -405,3 +404,23 @@ class TestFilters(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_where_is_array(self):
+        test = {
+            "data": [
+                {"a": 1, "b": 1},
+                {"a": 1, "b": 2},
+                {"a": 2, "b": 1},
+                {"a": 2, "b": 2}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "*",
+                "where": [{"eq": {"a": 1}}, {"eq": {"b": 1}}]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": [{"a": 1, "b": 1}]
+            }
+        }
+        self.utils.execute_tests(test)
+

@@ -2161,7 +2161,7 @@ class PrefixOp(Expression):
             return {"prefix": [self.expr.__data__(), self.prefix.__data__()]}
 
     def vars(self):
-        if not self.expr:
+        if self.expr is NULL:
             return set()
         return self.expr.vars() | self.prefix.vars()
 

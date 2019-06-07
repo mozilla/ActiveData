@@ -607,7 +607,7 @@ class BasicEqOp(BasicEqOp_):
             else:
                 return EsScript(
                     type=BOOLEAN,
-                    expr="(" + lhs.expr + "==" + rhs.expr + ")",
+                    expr="(" + lhs.expr + ")==(" + rhs.expr + ")",
                     frum=self,
                     schema=schema,
                 )

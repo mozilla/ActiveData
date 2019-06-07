@@ -26,7 +26,7 @@ from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap, concat_field
 from mo_future import first, is_text, text_type
-from mo_json import EXISTS, NESTED, OBJECT
+from mo_json import EXISTS, NESTED, OBJECT, NUMBER, INTEGER
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
@@ -223,8 +223,9 @@ def es_aggsop(es, frum, query):
                 else:
                     s.pull = jx_expression_to_function({"add": canonical_names})
             elif s.aggregate == "median":
-                if len(columns) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
+                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                if len(columns) != 1:
+                    Log.error("Do not know how to perform median on columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = canonical_name + " percentile"
                 acc.add(ExprAggs(key, {"percentiles": {
@@ -233,8 +234,9 @@ def es_aggsop(es, frum, query):
                 }}, s))
                 s.pull = jx_expression_to_function("values.50\\.0")
             elif s.aggregate == "percentile":
-                if len(columns) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
+                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                if len(columns) != 1:
+                    Log.error("Do not know how to perform percentile on columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = canonical_name + " percentile"
                 if is_text(s.percentile) or s.percetile < 0 or 1 < s.percentile:
@@ -253,8 +255,9 @@ def es_aggsop(es, frum, query):
                     acc.add(ExprAggs(path, {"cardinality": {"field": column.es_column}}, s))
                 s.pull = jx_expression_to_function("value")
             elif s.aggregate == "stats":
-                if len(columns) > 1:
-                    Log.error("Do not know how to count columns with more than one type (script probably)")
+                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                if len(columns) != 1:
+                    Log.error("Do not know how to perform stats on columns with more than one type (script probably)")
                 # REGULAR STATS
                 acc.add(ExprAggs(canonical_name, {"extended_stats": {"field": first(columns).es_column}}, s))
                 s.pull = get_pull_stats()

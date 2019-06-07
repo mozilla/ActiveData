@@ -73,7 +73,7 @@ class AggsDecoder(object):
                     )
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)
-                elif col.partitions == None:
+                elif col.multi <= 1 and col.partitions == None:
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)
                 else:
@@ -443,16 +443,16 @@ class RangeDecoder(AggsDecoder):
 
 class MultivalueDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
-        AggsDecoder.__init__(self, edge, query, limit)
+        SetDecoder.__init__(self, edge, query, limit)
         self.var = edge.value.var
-        self.values = query.frum.schema[edge.value.var][0].partitions
         self.parts = []
 
     def append_query(self, query_path, es_query):
         es_field = first(self.query.frum.schema.leaves(self.var)).es_column
 
         return Aggs().add(TermsAggs("_match", {
-            "script": expand_template(LIST_TO_PIPE, {"expr": 'doc[' + quote(es_field) + '].values'})
+            "script": expand_template(LIST_TO_PIPE, {"expr": 'doc[' + quote(es_field) + '].values'}),
+            "size": self.limit
         }, self).add(es_query))
 
     def get_value_from_row(self, row):

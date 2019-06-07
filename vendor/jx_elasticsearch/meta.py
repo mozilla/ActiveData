@@ -148,12 +148,16 @@ class ElasticsearchMetadata(Namespace):
         table_desc.last_updated = self.es_cluster.metatdata_last_updated
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
-        self.todo.extend(
+        rescan = [
             (c, after)
             for c in columns
-            if not (c.last_updated > after)
-            and c.es_index != META_COLUMNS_NAME
-        )
+            if c.es_index != META_COLUMNS_NAME and (
+                c.cardinality == None or
+                not (c.last_updated > after)
+            )
+        ]
+        self.todo.extend(rescan)
+        DEBUG and Log.note("asked for {{num}} columns to be rescanned", num=len(rescan))
         return columns
 
     def _parse_properties(self, alias, mapping):

@@ -974,10 +974,10 @@ class DivOp(BaseBinaryOp):
     op = "div"
 
     def missing(self):
-        return AndOp([
+        return self.lang[AndOp([
             self.default.missing(),
-            self.lang[OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])]
-        ]).partial_eval()
+            OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])
+        ])].partial_eval()
 
     def partial_eval(self):
         default = self.default.partial_eval()

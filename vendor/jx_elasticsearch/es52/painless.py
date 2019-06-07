@@ -468,7 +468,7 @@ class DivOp(DivOp_):
 
         output = (
             WhenOp(
-                OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])]),
+                OrOp([lhs.missing(), rhs.missing(), EqOp([rhs, ZERO])]),
                 **{
                     "then": self.default,
                     "else": EsScript(
@@ -607,7 +607,7 @@ class BasicEqOp(BasicEqOp_):
             else:
                 return EsScript(
                     type=BOOLEAN,
-                    expr="(" + lhs.expr + "==" + rhs.expr + ")",
+                    expr="(" + lhs.expr + ")==(" + rhs.expr + ")",
                     frum=self,
                     schema=schema,
                 )

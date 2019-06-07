@@ -837,6 +837,45 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_div_w_two_types(self):
+        test = {
+            "data": [
+                {"v": 0},
+                {"v": "1"},
+                {"v": 2},
+                {}
+            ],
+            "query": {
+                "select": [
+                    {"value": "v"},
+                    {"name": "div", "value": {"div": [2, "v"]}},
+                    {"name": "gt", "value": {"gt": [{"div": [2, "v"]}, 0.9]}}
+                ],
+                "from": TEST_TABLE
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {
+                        "v": 0,
+                        "gt": False,
+                    },
+                    {
+                        "v": "1",
+                        "div": 2,
+                        "gt": True,
+                    },
+                    {
+                        "v": 2,
+                        "div": 1,
+                        "gt": True,
+                    },
+                    {"gt": False}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
     def test_between(self):
         test = {
             "data": [

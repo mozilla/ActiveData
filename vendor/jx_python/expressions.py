@@ -472,7 +472,7 @@ class LengthOp(LengthOp_):
 class FirstOp(FirstOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         value = Python[self.term].to_python()
-        return "listwrap(" + value + ").first()"
+        return "listwrap(" + value + ")[0]"
 
 
 class NumberOp(NumberOp_):

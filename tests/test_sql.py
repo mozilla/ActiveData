@@ -14,7 +14,7 @@ from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
 from mo_dots import Data, wrap
 from mo_files.url import URL
-from mo_json import json2value, utf82unicode
+from mo_json import json2value, utf82unicode, value2json
 from mo_logs import Log
 from tests import compare_to_expected
 from tests.test_jx import BaseTestCase, TEST_TABLE
@@ -139,6 +139,38 @@ class TestSQL(BaseTestCase):
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
+    def test_tuid_health(self):
+        sql = """
+            SELECT count(1) AS error_count,
+            timestamp/86400 AS "date"
+            FROM "debug-etl"
+            WHERE timestamp>date("today-month")
+              AND template='TUID service has problems.'
+            GROUP BY floor(timestamp, 86400) AS "date"
+        """
+        expected = {
+            "meta": {
+                "es_query": {},
+                "format": "table",
+                "jx_query": {
+                    "format": "table",
+                    "from": "debug-etl",
+                    "groupby": {"name": "date", "value": {"floor": ["timestamp", 86400]}},
+                    "select": [
+                        {"aggregate": "count", "name": "error_count", "value": 1},
+                        {"name": "date", "value": {"div": ["timestamp", 86400]}}
+                    ],
+                    "where": {"and": [
+                        {"gt": ["timestamp", {"date": "today-month"}]},
+                        {"eq": ["template", {"literal": "TUID service has problems."}]}
+                    ]}
+                },
+            },
+            "header": ["error_count", "date"],
+        }
+        result = self._run_sql_query(sql)
+        compare_to_expected(result.meta.jx_query, result, expected, places=6)
+
     def execute(self, test):
         test = wrap(test)
         self.utils.fill_container(test)
@@ -158,3 +190,5 @@ class TestSQL(BaseTestCase):
         self.assertEqual(response.status_code, 200)
         return json2value(utf82unicode(response.content))
 
+
+_ = value2json

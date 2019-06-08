@@ -109,7 +109,7 @@ class EsScript(EsScript_):
         return self.miss
 
     def __data__(self):
-        return {"script": self.script}
+        return {"script": text_type(self)}
 
     def __eq__(self, other):
         if not isinstance(other, EsScript_):

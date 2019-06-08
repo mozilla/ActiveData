@@ -13,20 +13,20 @@ from collections import deque
 
 from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, TupleOp, Variable as Variable_
-from jx_base.query import DEFAULT_LIMIT
 from jx_base.language import is_op
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
-from jx_elasticsearch.es52.es_query import Aggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify, CountAggs
+from jx_elasticsearch.es52.es_query import Aggs, CountAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
-from jx_elasticsearch.es52.painless import Painless, NumberOp
+from jx_elasticsearch.es52.painless import NumberOp, Painless
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
-from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap, concat_field
+from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap
 from mo_future import first, is_text, text_type
-from mo_json import EXISTS, NESTED, OBJECT, NUMBER, INTEGER
+from mo_json import EXISTS, INTEGER, NESTED, NUMBER, OBJECT
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote

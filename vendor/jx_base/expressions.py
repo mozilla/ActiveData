@@ -1665,7 +1665,7 @@ class NumberOp(Expression):
             return self.lang[WhenOp(term.when, **{"then": NumberOp(term.then), "else": NumberOp(term.els_)})].partial_eval()
         elif is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([NumberOp(t) for t in term.terms])]
-        return term
+        return self.lang[NumberOp(term)]
 
 
 class IsNumberOp(Expression):

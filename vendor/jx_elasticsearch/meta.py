@@ -30,7 +30,7 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
-from mo_times import Date, HOUR, MINUTE, Timer, WEEK
+from mo_times import Date, HOUR, MINUTE, Timer, WEEK, YEAR
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
@@ -148,7 +148,16 @@ class ElasticsearchMetadata(Namespace):
         table_desc.last_updated = self.es_cluster.metatdata_last_updated
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
-        self.todo.extend((c, after) for c in columns if c.es_index != META_COLUMNS_NAME)
+        rescan = [
+            (c, after)
+            for c in columns
+            if c.es_index != META_COLUMNS_NAME and (
+                c.cardinality == None or
+                not (c.last_updated > after)
+            )
+        ]
+        self.todo.extend(rescan)
+        DEBUG and Log.note("asked for {{num}} columns to be rescanned", num=len(rescan))
         return columns
 
     def _parse_properties(self, alias, mapping):
@@ -612,7 +621,7 @@ class ElasticsearchMetadata(Namespace):
                     DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                     continue
 
-                if untype_path(column.name) in ["build.type", "run.type"]:
+                if untype_path(column.name) in ["build.type", "run.type", "build.platform", "file.path"]:
                     try:
                         self._update_cardinality(column)
                     except Exception as e:

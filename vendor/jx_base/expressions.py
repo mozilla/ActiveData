@@ -1223,7 +1223,7 @@ class NotOp(Expression):
                     term.when,
                     **{"then": inverse(term.then), "else": inverse(term.els_)}
                 )].partial_eval()
-            elif is_op(term, CaseOp):
+            elif is_op(term, CaseOp):  # REWRITING
                 output = self.lang[CaseOp(
                     [
                         WhenOp(w.when, **{"then": inverse(w.then)}) if is_op(w, WhenOp) else inverse(w)
@@ -1454,11 +1454,22 @@ class FirstOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.lang[self.term].partial_eval()
-        if is_op(self.term, FirstOp):
+        if is_op(term, FirstOp):
             return term
+        elif is_op(term, CaseOp):  # REWRITING
+            return self.lang[CaseOp(
+                [
+                    WhenOp(
+                        t.when,
+                        **{"then": FirstOp(t.then)}
+                    )
+                    for t in term.whens[:-1]
+                ] +
+                [FirstOp(term.whens[-1])]
+            )].partial_eval()
+        elif is_op(term, WhenOp):
+            return self.lang[WhenOp(term.when, **{"then": FirstOp(term.then), "else": FirstOp(term.els_)})].partial_eval()
         elif term.type != OBJECT and not term.many:
-            return term
-        elif term is NULL:
             return term
         elif is_literal(term):
             Log.error("not handled yet")
@@ -1625,9 +1636,36 @@ class NumberOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.lang[FirstOp(self.term)].partial_eval()
-        if is_op(term, CoalesceOp):
+
+        if is_literal(term):
+            if term is NULL:
+                return NULL
+            elif term is FALSE:
+                return ZERO
+            elif term is TRUE:
+                return ONE
+            elif isinstance(term.value, text_type):
+                return Literal(float(text_type))
+            elif isinstance(term.value, (int, float)):
+                return term
+            else:
+                Log.error("can not convert {{value|json}} to number", value=term.value)
+        elif is_op(term, CaseOp):  # REWRITING
+            return self.lang[CaseOp(
+                [
+                    WhenOp(
+                        t.when,
+                        **{"then": NumberOp(t.then)}
+                    )
+                    for t in term.whens[:-1]
+                ] +
+                [NumberOp(term.whens[-1])]
+            )].partial_eval()
+        elif is_op(term, WhenOp):  # REWRITING
+            return self.lang[WhenOp(term.when, **{"then": NumberOp(term.then), "else": NumberOp(term.els_)})].partial_eval()
+        elif is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([NumberOp(t) for t in term.terms])]
-        return self
+        return self.lang[NumberOp(term)]
 
 
 class IsNumberOp(Expression):
@@ -2123,7 +2161,7 @@ class PrefixOp(Expression):
             return {"prefix": [self.expr.__data__(), self.prefix.__data__()]}
 
     def vars(self):
-        if not self.expr:
+        if self.expr is NULL:
             return set()
         return self.expr.vars() | self.prefix.vars()
 

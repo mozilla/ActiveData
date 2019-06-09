@@ -141,35 +141,29 @@ class TestSQL(BaseTestCase):
 
     def test_tuid_health(self):
         sql = """
-            SELECT count(1) AS error_count,
-            timestamp/86400 AS "date"
+            SELECT 
+                count(1) AS error_count,
+                floor(timestamp, 86400) AS "date"
             FROM "debug-etl"
             WHERE timestamp>date("today-month")
               AND template='TUID service has problems.'
             GROUP BY floor(timestamp, 86400) AS "date"
         """
+
+        jx_query = parse_sql(sql)
         expected = {
-            "meta": {
-                "es_query": {},
-                "format": "table",
-                "jx_query": {
-                    "format": "table",
-                    "from": "debug-etl",
-                    "groupby": {"name": "date", "value": {"floor": ["timestamp", 86400]}},
-                    "select": [
-                        {"aggregate": "count", "name": "error_count", "value": 1},
-                        {"name": "date", "value": {"div": ["timestamp", 86400]}}
-                    ],
-                    "where": {"and": [
-                        {"gt": ["timestamp", {"date": "today-month"}]},
-                        {"eq": ["template", {"literal": "TUID service has problems."}]}
-                    ]}
-                },
-            },
-            "header": ["error_count", "date"],
+            "format": "table",
+            "from": "debug-etl",
+            "groupby": {"name": "date", "value": {"floor": ["timestamp", 86400]}},
+            "select": [
+                {"aggregate": "count", "name": "error_count", "value": 1}
+            ],
+            "where": {"and": [
+                {"gt": ["timestamp", {"date": "today-month"}]},
+                {"eq": ["template", {"literal": "TUID service has problems."}]}
+            ]}
         }
-        result = self._run_sql_query(sql)
-        compare_to_expected(result.meta.jx_query, result, expected, places=6)
+        self.assertAlmostEqual(jx_query, expected, places=6)
 
     def execute(self, test):
         test = wrap(test)

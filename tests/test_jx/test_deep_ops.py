@@ -1762,6 +1762,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("attempt to make failing test for https://github.com/mozilla/ActiveData/issues/125")
     def test_deep_nested_document_w_multitype_filter(self):
         test = {
             "data": [

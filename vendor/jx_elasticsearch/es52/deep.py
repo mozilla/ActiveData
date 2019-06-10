@@ -79,9 +79,7 @@ def es_deepop(es, query):
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
 
-    # es_query.sort = jx_sort_to_es_sort(query.sort)
     map_to_es_columns = schema.map_to_es()
-    # {c.name: c.es_column for c in schema.leaves(".")}
     query_for_es = query.map(map_to_es_columns)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
 
@@ -138,12 +136,11 @@ def es_deepop(es, query):
                     for np in n.nested_path:
                         c_name = untype_path(relative_field(n.name, np))
                         if startswith_field(c_name, select.value.var):
+                            # PREFER THE MOST-RELATIVE NAME
                             child = relative_field(c_name, select.value.var)
                             break
                     else:
                         continue
-                        # REMOVED BECAUSE SELECTING INNER PROPERTIES IS NOT ALLOWED
-                        # child = relative_field(untype_path(relative_field(n.name, n.nested_path[0])), s.value.var)
 
                     new_select.append({
                         "name": select.name,
@@ -177,6 +174,8 @@ def es_deepop(es, query):
                 "put": {"name": select.name, "index": put_index, "child": "."}
             })
             put_index += 1
+
+    es_query.stored_fields = sorted(es_query.stored_fields)
 
     # <COMPLICATED> ES needs two calls to get all documents
     more = []

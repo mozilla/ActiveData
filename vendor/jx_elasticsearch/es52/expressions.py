@@ -324,7 +324,7 @@ class NotOp(NotOp_):
             elif len(cols) == 1:
                 return {"exists": {"field": first(cols).es_column}}
             else:
-                return es_and([{"exists": {"field": c.es_column}} for c in cols])
+                return es_or([{"exists": {"field": c.es_column}} for c in cols])
         else:
             operand = ES52[self.term].to_esfilter(schema)
             return es_not(operand)

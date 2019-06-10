@@ -1762,6 +1762,42 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_deep_nested_document_w_multitype_filter(self):
+        test = {
+            "data": [
+                {"o": 3, "_a": [
+                    {"b": "x", "v": [{"k": 1}, {"k": 2}]},
+                    {"b": "y", "v": [{"k": "3"}]}
+                ]},
+                {"o": 1, "_a": {"b": "x", "v": [{"k": 5}]}},
+                {"o": 2, "_a": [
+                    {"b": "x", "v": [{"k": 7}]},
+                ]},
+                {"o": 4, "c": "x"},
+                {"o": 4, "c": "x", "v": [{"m": 1}]}
+            ],
+            "query": {
+                "from": TEST_TABLE + "._a",
+                "where": {"exists": "v.k"}
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "edges": [
+                    {
+                        "name": "rownum",
+                        "domain": {"type": "rownum", "min": 0, "max": 6, "interval": 1}
+                    }
+                ],
+                "data": {".": [
+                    {"o": 3, "_a": {"b": "x", "v": [{"k": 1}, {"k": 2}]}},
+                    {"o": 3, "_a": {"b": "y", "v": {"k": 3}}},
+                    {"o": 1, "_a": {"b": "x", "v": {"k": 5}}},
+                    {"o": 2, "_a": {"b": "x", "v": {"k": 7}}}
+                ]}
+            }
+        }
+
+        self.utils.execute_tests(test)
 
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?

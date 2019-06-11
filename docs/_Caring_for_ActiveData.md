@@ -61,13 +61,19 @@ opening IPs for machine access
 
 ## Daily Operations
 
-### Check Frontend ES Health
+### Check ES Health
 
 The **coordinator** node is a small node on the **FrontEnd** that serves all query requests to the outside world, and acts as a circuit breaker for the rest of the cluster. It can be bounced without affecting ES the overall cluster. No queries can be serviced when this node is down. 
 
 * Ensure your IP is allowed inbound to the `ActiveData-Frontend` group 
 * Map port 9201 to remote port 9200 `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
 * Use Elasticsearch Head to verify ES is available, or not
+
+If you can connect, then review the status:
+
+* **green** - everything ok.  IF there is a problem, then it must be elsewhere.
+* **yellow** - If a large number of random shards are not allocated, then there was a recent loss of spot nodes, or an OutOfMemory event.
+* **red** - look at which shards are not allocated: If it is just new indexes, then this state should disappear in a minute. If random shards are not allocated, then there has been a catastrophic failure over many machines proceed to [Emergency Proceedures](https://github.com/mozilla/ActiveData/blob/dev/docs/_Caring_for_ActiveData.md#Emergency+Procedures)
 
 If you can not connect, then attempt to bounce the **coordinator** node. 
 
@@ -77,17 +83,21 @@ If you can not connect, then attempt to bounce the **coordinator** node.
 * `restart es`
 * `tail -f es`
 
-Watch the logs for connection problems. It will take a short while for the node to reconnect. If the node continues to complain it can not find the cluster, then proceed to [Emergency Proceedures](#Emergency+Procedures)
+Watch the logs for connection problems. It will take a short while for the node to reconnect. If the node continues to complain it can not find the cluster, then proceed to [Emergency Proceedures](https://github.com/mozilla/ActiveData/blob/dev/docs/_Caring_for_ActiveData.md#Emergency+Procedures)
 
-If you can connect, then review the status:
+### Check ETL Pipeline Health
 
-* **green** - everything ok.  IF there is a problem, then it must be elsewhere.
-* **yellow** - If a large number of random shards are not allocated, then there was a recent loss of spot nodes, or an OutOfMemory event.
-* **red** - look at which shards are not allocated: If it is just new indexes, then this state should disappear in a minute. If random shards are not allocated, then there has been a catastrophic failure over many machines proceed to [Emergency Proceedures](#Emergency+Procedures)
+Use Elasticsearch Head, look at the coverage indexes: If the latest one is today, then everything is OK. If not, then look at the SQS queues to see the backlog. A backlog will happen if 
+
+* The ES cluster has been recovering
+* The push-to-es on the ES spot nodes is not running
+* The ETL is not given enough money to cover the load
+* The ETL is sending large amounts of errors with specifics 
+
 
 ### Check service throughput
 
-If ES is "fine" then the problem can be `gunicorn` (the ActiveData service).
+If there is a problem, but If ES is "fine", then cause might be `gunicorn` (the ActiveData service).
 
 Check the nginx logs, to get a sense of the problem 
 
@@ -127,11 +137,21 @@ This is a simple machine running a simple program the listens to the taskcluster
 
 The ETL is covered by two projects
 
-* [ActiveData-ETL](https://github.com/klahnakoski/ActiveData-ETL) (using the `etl` branch) - is the workhorse
+* [ActiveData-ETL](https://github.com/klahnakoski/ActiveData-ETL) (using the `etl` branch) - is the main program
 * [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying instances of the above
 
+#### Upgrading existing pipelines
 
-### Production Deployment Steps
+Code pushed to the `etl` branch is deployed automatically by the SpotManager, but existing machines are not touched. Despite being spot instances, these ETL machines can run for days. To upgrade the existing running machines 
+
+* Ensure your IP is allowed inbound to the `ActiveData-ETL` group 
+* `export PYTHONPATH=.:vendor`
+* `python activedata_etl\update_etl.py --settings=resources\settings\update_etl.json`
+
+The program will login to 40 machines at a time; update the repo and bounce the ETL process on each.
+
+
+#### Adding Pipelines
 
 In the event we are adding new ETL pipelines, we must make sure the schema is properly established before the army of robots start filling it. Otherwise we run the risk of creating multiple table instances, all with similar names.
 
@@ -178,7 +198,7 @@ The ActiveData program is a stateless query translation service. It was designed
 Updating the web server is relatively easy
 
 1. On the `frontend` machine run `git pull origin master`
-2. Use supervisor to `restart flask:*` services
+2. `sudo supervisorctl restart gunicorn`
 
 
 Configuration and Logs 

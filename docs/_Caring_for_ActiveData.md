@@ -200,15 +200,10 @@ Updating the web server is relatively easy
 1. On the `frontend` machine run `git pull origin master`
 2. `sudo supervisorctl restart gunicorn`
 
-
-Configuration and Logs 
-----------------------
-
-### Config and Logs
+#### Config and Logs
 
 * Configuration is `~/ActiveData/resources/config/supervisord.conf`
 * Logs are `/data1/logs/active_data.log`
-
 
 ## ActiveData Manager
 
@@ -218,15 +213,13 @@ Overall, the *Manager* machine is responsible for running CRON jobs against Acti
 * [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
 * Logs are found at `/data1/logs`
 
-
-
 ## More about ElasticSearch
 
 Elasticsearch is powerful magic. Only the ES developers really know the plethora of ways this magic will turn against you. There are only two paths forward: You have already performed the operation before on a multi-terabyte index, and you know the safe incantation. Or, you have not done this before, and you will screw things up. Feeling lucky? Please ensure you got the next two days free to fix your mistake: Everything is backed up to S3, so the worst case is you must rebuild the index. (Which has not been done for years, so the code is probably rotten).
 
 ### Fixing Cluster
 
-ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled.  Be sure these commands are run on the **coordinator6** node (which is the ES master located on the **Frontend** machine).
+ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled. Be sure these commands are run on the **coordinator6** node (which is the ES master located on the **Frontend** machine).
  
  1. **Ensure all nodes are reliable** - This is a lengthy process, disable the SPOT nodes, or `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : "spot"}}' http://localhost:9200/_cluster/settings` If you do not do this step, a shutdown of a node may leave a single shard in the `spot` zone, which will be at risk of loss until it is replicated back to a safe node. 
  2. **Disable shard movement** - This will prevent the cluster from making copies of any shards that are on the bouncing node.  `curl -X PUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"none\"}}" http://localhost:9200/_cluster/settings`
@@ -288,7 +281,7 @@ The ETL machines put a significant query load on the ES cluster. Stopping them w
 * `nano SpotManager-ETL/examples/config/etl_settings.json`
 * set price to zero 
 
-**<span style="color:red;">Warning: Be sure you are changing the "ETL" settings. The manager machine also has configuration for the ES cluster: dialing it down to zero will cause suffering</span>**
+<span style="color:red;">Warning: Be sure you are changing the "ETL" settings. The manager machine also has configuration for the ES cluster: dialing it down to zero will cause suffering</span>
 
 Here is an example, with price set to `2` (2 dollars per hour)
 

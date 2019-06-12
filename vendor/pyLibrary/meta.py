@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from functools import wraps
+
 from mo_future import is_text, is_binary
 from collections import namedtuple
 from types import FunctionType
@@ -85,9 +87,6 @@ def get_function_by_name(full_name):
         return output
     except Exception as e:
         Log.error("Can not find function {{name}}",  name= full_name, cause=e)
-
-
-
 
 
 class cache(object):

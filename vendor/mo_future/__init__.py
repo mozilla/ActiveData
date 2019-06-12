@@ -29,16 +29,8 @@ boolean_type = type(True)
 if PY3:
     import itertools
     import collections
-<<<<<<< .mine
     from collections import Callable
-
-
-    from functools import cmp_to_key
-||||||| .r1698
-    from functools import cmp_to_key
-=======
     from functools import cmp_to_key, reduce, update_wrapper
->>>>>>> .r1713
     from configparser import ConfigParser
     from itertools import zip_longest
     import builtins as __builtin__

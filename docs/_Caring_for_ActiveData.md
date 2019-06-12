@@ -57,6 +57,13 @@ If you are using Windows, with Putty, then you can tunnelling to ES using SSH on
 
 opening IPs for machine access
 
+### AWS
+
+There are three resource categories that may interest you in AWS:
+
+* **EC2** - Listing all machines, and links to security groups. Security groups are used to open your local machine to ActiveData instances
+* **SQS** - Used to monitor ETL backlog, and ingestion backlog
+* **S3** - Used to peruse the raw data that went through the pipeline
 
 
 ## Daily Operations
@@ -97,7 +104,7 @@ Use Elasticsearch Head, look at the coverage indexes: If the latest one is today
 
 ### Check service throughput
 
-If there is a problem, but If ES is "fine", then cause might be `gunicorn` (the ActiveData service).
+If there is a problem, but ES is "fine", then cause might be `gunicorn` (the ActiveData service).
 
 Check the nginx logs, to get a sense of the problem 
 
@@ -113,7 +120,7 @@ Maybe bouncing the service will help:
 * `sudo supervisorctl`
 * `restart gunicorn`
 
-If there are still problems, then "it is complicated". Coding will be required to filter out the problem. 
+If there are still problems, then "it is complicated": Coding will be required to filter out the problem. 
 
 
 ## Overview of Parts
@@ -122,18 +129,21 @@ If there are still problems, then "it is complicated". Coding will be required t
 
 the `esShardBalancer` is responsible for distributing shards over the cluster so that the shards are evenly distributed according to the capabilities of the machines available. 
 
+> It is safe to turn of the `esShardBalancer` for hours at a time. When `esShardBalancer` is down, ES can recover lost shards, but it will be unable to balance those shards, or setup new ones.  Over ?days?, query speeds will get ever-slower as spot nodes are lost; eventually all load will be on the three backup machines, which will be unable to keep up with the workload load. 
 
 ### Spot Manager
 
 The SpotManager is responsible for bidding on EC2 machines and setting them up. There are two instances running: One manages the ETL machines, and the other manages the ES cluster.  
 
+> It is not safe to change the spending on the ES cluster; spending less will cause nodes to be shutdown. It is safe to mess with spending on the ETL pipeline, and it is safe to disable the cron jobs that execute the Spot Managers; but not for too many hours.
+
 ### TC Logger
 
 This is a simple machine running a simple program the listens to the taskcluster pulse queues and writes the messages to S3. It has not been touched in years. It is listed in the moving parts.
 
+> This is the only critical piece of the whole system: During failure, there is less than 1/2 hour before data starts getting lost.  
 
-### ETL
-
+### ETL (Extract Transform Load)
 
 The ETL is covered by two projects
 
@@ -162,7 +172,7 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 3. Create S3 buckets and queues
 4. Use development to run ETL and confirm use of buckets and queues, and confirm creation of new tables in production
 5. Push code to `etl` branch
-6. Pull SpotManager changes (on `managera` branch) to its instance
+6. Pull SpotManager changes (on `manager` branch) to its instance
 7. Start Spot manager;
 8. Confirm nothing blows up; which will take several minutes as SpotManager negotiates pricing and waits to setup instances
 9. Run the backfill, if desired
@@ -274,14 +284,14 @@ The esShardBalancer will try it's best to bring ES to yellow state, even to the 
 
 ### Stopping ETL
 
-The ETL machines put a significant query load on the ES cluster. Stopping them will make stuff fix faster.  
+The ETL machines put a significant query load on the ES cluster. Stopping them will allow ES to heal faster, and reduce the number of errors emitted by the ETL machines.  
 
 * Ensure your IP is allowed inbound to the `ActiveData-Manager` group
 * Login to **manager** machine
 * `nano SpotManager-ETL/examples/config/etl_settings.json`
 * set price to zero 
 
-<span style="color:red;">Warning: Be sure you are changing the "ETL" settings. The manager machine also has configuration for the ES cluster: dialing it down to zero will cause suffering</span>
+> **Warning** - Be sure you are changing the "ETL" settings. The manager machine also has configuration for the ES cluster: dialing it down to zero will cause suffering
 
 Here is an example, with price set to `2` (2 dollars per hour)
 
@@ -297,7 +307,7 @@ Here is an example, with price set to `2` (2 dollars per hour)
 
 To resume ETL, turn the price back up. 
 
-> Changing the price, either up or down, has no destructive effect; in the short term, you can set it as you please without loosing data. If not set high enough, a backlog will form, which will start to expire in 14 days.
+> Changing the price, either up or down, has no destructive effect; in the short term, you can set it as you please without loosing data. If set too low, a backlog will form, which will start to expire in 14 days, and then data is lost.
 
 
 ### Stopping ingestion

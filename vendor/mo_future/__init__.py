@@ -274,15 +274,13 @@ else:
 
 
 class decorate(object):
-
     def __init__(self, func):
         self.func = func
 
     def __call__(self, caller):
         """
-        IT IS EXPECTED THE caller WILL CALL func
-        :param caller:
-        :return:
+        :param caller: A METHOD THAT IS EXPECTED TO CALL func
+        :return: caller, BUT WITH SIGNATURE OF  self.func
         """
         return update_wrapper(caller, self.func)
 

@@ -121,6 +121,7 @@ if PY3:
 else:
     import collections
     from collections import Callable
+    from functools import cmp_to_key, reduce, update_wrapper
 
     import __builtin__
     from types import GeneratorType

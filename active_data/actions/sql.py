@@ -23,6 +23,7 @@ from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8
 import mo_math
 from mo_testing.fuzzytestcase import assertAlmostEqual
+from mo_threads.threads import register_thread
 from mo_times.timer import Timer
 import moz_sql_parser
 from pyLibrary.env.flask_wrappers import cors_wrapper

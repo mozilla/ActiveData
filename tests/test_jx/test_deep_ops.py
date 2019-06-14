@@ -1762,39 +1762,34 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("attempt to make failing test for https://github.com/mozilla/ActiveData/issues/125")
-    def test_deep_nested_document_w_multitype_filter(self):
+    def test_nested_document_selection(self):
         test = {
             "data": [
-                {"o": 3, "_a": [
+                [
                     {"b": "x", "v": [{"k": 1}, {"k": 2}]},
                     {"b": "y", "v": [{"k": "3"}]}
-                ]},
-                {"o": 1, "_a": {"b": "x", "v": [{"k": 5}]}},
-                {"o": 2, "_a": [
+                ],
+                {"b": "x", "v": [{"k": 5}]},
+                [
                     {"b": "x", "v": [{"k": 7}]},
-                ]},
-                {"o": 4, "c": "x"},
-                {"o": 4, "c": "x", "v": [{"m": 1}]}
+                ],
+                [],
+                [{"m": 1}]
             ],
             "query": {
-                "from": TEST_TABLE + "._a",
-                "where": {"exists": "v.k"}
+                "select": ["b", "v"],
+                "from": TEST_TABLE,
+                "format": "list"
             },
-            "expecting_cube": {
-                "meta": {"format": "cube"},
-                "edges": [
-                    {
-                        "name": "rownum",
-                        "domain": {"type": "rownum", "min": 0, "max": 6, "interval": 1}
-                    }
-                ],
-                "data": {".": [
-                    {"o": 3, "_a": {"b": "x", "v": [{"k": 1}, {"k": 2}]}},
-                    {"o": 3, "_a": {"b": "y", "v": {"k": 3}}},
-                    {"o": 1, "_a": {"b": "x", "v": {"k": 5}}},
-                    {"o": 2, "_a": {"b": "x", "v": {"k": 7}}}
-                ]}
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"b": "x", "v": [{"k": 1}, {"k": 2}]},
+                    {"b": "y", "v": {"k": "3"}},
+                    {"b": "x", "v": {"k": 5}},
+                    {"b": "x", "v": {"k": 7}},
+                    NULL
+                ]
             }
         }
 

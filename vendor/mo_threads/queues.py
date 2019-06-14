@@ -149,7 +149,7 @@ class Queue(object):
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
         start = time()
-        stop_waiting = Till(till=start+timeout)
+        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
 
         while not self.closed and len(self.queue) >= self.max:
             if stop_waiting:

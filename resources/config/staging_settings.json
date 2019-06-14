@@ -55,9 +55,19 @@
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
 				"port": 9200,
-				"index": "debug_active_data",
-				"type": "active_data",
-				"timeout": 600
+				"index": "debug-activedata",
+				"type": "activedata",
+				"timeout": 600,
+				"schema": {
+					"settings": {
+						"index.number_of_replicas": 1,
+						"index.number_of_shards": 3
+					}
+				},
+				"rollover": {
+					"interval": "3month",
+					"max":"year"
+				}
 			},
 			{
 				"class": "logging.handlers.RotatingFileHandler",

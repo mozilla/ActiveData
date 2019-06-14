@@ -68,6 +68,15 @@ There are three resource categories that may interest you in AWS:
 
 ## Daily Operations
 
+### Machine Health
+
+When logging into machines, always check the disk. Some logs do not roll over, and some crashes can fill the drives with crash reports
+ 
+    df -h
+
+
+
+
 ### Check ES Health
 
 The **coordinator** node is a small node on the **FrontEnd** that serves all query requests to the outside world, and acts as a circuit breaker for the rest of the cluster. It can be bounced without affecting ES the overall cluster. No queries can be serviced when this node is down. 
@@ -91,6 +100,17 @@ If you can not connect, then attempt to bounce the **coordinator** node.
 * `tail -f es`
 
 Watch the logs for connection problems. It will take a short while for the node to reconnect. If the node continues to complain it can not find the cluster, then proceed to [Emergency Proceedures](https://github.com/mozilla/ActiveData/blob/dev/docs/_Caring_for_ActiveData.md#Emergency+Procedures)
+
+### Drive is full?
+
+The problem may be caused by a full drive (`df -h`). This is most often caused by a crash dump filling the drive; remove it:
+
+    sudo rm /usr/local/elasticsearch/*.hprof
+
+If that is not the problem, then you can hunt down the big directories with:
+
+    du -sh -- *
+
 
 ### Check ETL Pipeline Health
 

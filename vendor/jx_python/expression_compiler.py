@@ -31,18 +31,19 @@ GLOBALS = {
 }
 
 
-def compile_expression(source):
+def compile_expression(source, function_name="output"):
     """
     THIS FUNCTION IS ON ITS OWN FOR MINIMAL GLOBAL NAMESPACE
 
     :param source:  PYTHON SOURCE CODE
+    :param function_name:  OPTIONAL NAME TO GIVE TO OUTPUT FUNCTION
     :return:  PYTHON FUNCTION
     """
     fake_locals = {}
     try:
         exec(
             (
-                "def output(row, rownum=None, rows=None):\n" +
+                "def " + function_name + "(row, rownum=None, rows=None):\n" +
                 "    _source = " + strings.quote(source) + "\n" +
                 "    try:\n" +
                 "        return " + source + "\n" +

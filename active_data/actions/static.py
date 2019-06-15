@@ -16,7 +16,7 @@ from werkzeug.wrappers import Response
 from active_data import record_request
 from mo_files import File
 from mo_logs import Log
-from mo_threads.threads import RegisterThread
+from mo_threads.threads import register_thread
 from mo_times.durations import DAY
 from pyLibrary.env.flask_wrappers import cors_wrapper
 from pyLibrary.meta import cache
@@ -25,42 +25,42 @@ STATIC_DIRECTORY = File.new_instance("active_data/public")
 
 
 @cors_wrapper
+@register_thread
 def download(filename):
     """
     DOWNLOAD FILE CONTENTS
     :param filename:  URL PATH
     :return: Response OBJECT WITH FILE CONTENT
     """
-    with RegisterThread():
-        try:
-            record_request(flask.request, None, flask.request.get_data(), None)
-            content, status, mimetype = _read_file(filename)
-            return Response(
-                content,
-                status=status,
-                headers={
-                    "Content-Type": mimetype
-                }
-            )
-        except Exception as e:
-            Log.error("Could not get file {{file}}", file=filename, cause=e)
+    try:
+        record_request(flask.request, None, flask.request.get_data(), None)
+        content, status, mimetype = _read_file(filename)
+        return Response(
+            content,
+            status=status,
+            headers={
+                "Content-Type": mimetype
+            }
+        )
+    except Exception as e:
+        Log.error("Could not get file {{file}}", file=filename, cause=e)
 
 
 @cors_wrapper
+@register_thread
 def send_favicon():
-    with RegisterThread():
-        try:
-            record_request(flask.request, None, flask.request.get_data(), None)
-            content, status, mimetype = _read_file("favicon.ico")
-            return Response(
-                content,
-                status=status,
-                headers={
-                    "Content-Type": "image/x-icon"
-                }
-            )
-        except Exception as e:
-            Log.error("Could not get file {{file}}", file="favicon.ico", cause=e)
+    try:
+        record_request(flask.request, None, flask.request.get_data(), None)
+        content, status, mimetype = _read_file("favicon.ico")
+        return Response(
+            content,
+            status=status,
+            headers={
+                "Content-Type": "image/x-icon"
+            }
+        )
+    except Exception as e:
+        Log.error("Could not get file {{file}}", file="favicon.ico", cause=e)
 
 
 @cache(duration=DAY)

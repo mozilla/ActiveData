@@ -22,7 +22,7 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread
-from mo_threads.threads import RegisterThread
+from mo_threads.threads import register_thread
 from mo_times.dates import Date
 from pyLibrary import convert
 from pyLibrary.env.elasticsearch import Cluster
@@ -35,34 +35,34 @@ query_finder = None
 
 
 @cors_wrapper
+@register_thread
 def find_query(hash):
     """
     FIND QUERY BY HASH, RETURN Response OBJECT
     :param hash:
     :return: Response OBJECT
     """
-    with RegisterThread():
-        try:
-            hash = hash.split("/")[0]
-            query = query_finder.find(hash)
+    try:
+        hash = hash.split("/")[0]
+        query = query_finder.find(hash)
 
-            if not query:
-                return Response(
-                    b'{"type": "ERROR", "template": "not found"}',
-                    status=404
-                )
-            else:
-                return Response(
-                    unicode2utf8(query),
-                    status=200
-                )
-        except Exception as e:
-            e = Except.wrap(e)
-            Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
+        if not query:
             return Response(
-                unicode2utf8(convert.value2json(e)),
-                status=400
+                b'{"type": "ERROR", "template": "not found"}',
+                status=404
             )
+        else:
+            return Response(
+                unicode2utf8(query),
+                status=200
+            )
+    except Exception as e:
+        e = Except.wrap(e)
+        Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
+        return Response(
+            unicode2utf8(convert.value2json(e)),
+            status=400
+        )
 
 
 class SaveQueries(object):

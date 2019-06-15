@@ -14,7 +14,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from collections import deque
 from datetime import datetime
 from time import time
@@ -56,7 +55,6 @@ class Queue(object):
         self.closed = Signal("stop adding signal for " + name)  # INDICATE THE PRODUCER IS DONE GENERATING ITEMS TO QUEUE
         self.lock = Lock("lock for queue " + name)
         self.queue = deque()
-        self.next_warning = time()  # FOR DEBUGGING
 
     def __iter__(self):
         try:
@@ -87,12 +85,11 @@ class Queue(object):
                 self._wait_for_queue_space(timeout=timeout)
             if self.closed and not self.allow_add_after_close:
                 Log.error("Do not add to closed queue")
-            else:
-                if self.unique:
-                    if value not in self.queue:
-                        self.queue.append(value)
-                else:
+            if self.unique:
+                if value not in self.queue:
                     self.queue.append(value)
+            else:
+                self.queue.append(value)
         return self
 
     def push(self, value):
@@ -144,38 +141,32 @@ class Queue(object):
     def _wait_for_queue_space(self, timeout=DEFAULT_WAIT_TIME):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
+
+        :param timeout:  IN SECONDS
         """
         wait_time = 5
 
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
-        now = time()
-        if timeout != None:
-            time_to_stop_waiting = now + timeout
-        else:
-            time_to_stop_waiting = now + DEFAULT_WAIT_TIME
-
-        if self.next_warning < now:
-            self.next_warning = now + wait_time
+        start = time()
+        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
 
         while not self.closed and len(self.queue) >= self.max:
-            if now > time_to_stop_waiting:
+            if stop_waiting:
                 Log.error(THREAD_TIMEOUT)
 
             if self.silent:
-                self.lock.wait(Till(till=time_to_stop_waiting))
+                self.lock.wait(stop_waiting)
             else:
                 self.lock.wait(Till(seconds=wait_time))
-                if len(self.queue) >= self.max:
+                if not stop_waiting and len(self.queue) >= self.max:
                     now = time()
-                    if self.next_warning < now:
-                        self.next_warning = now + wait_time
-                        Log.alert(
-                            "Queue by name of {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
-                            name=self.name,
-                            num=len(self.queue),
-                            wait_time=wait_time
-                        )
+                    Log.alert(
+                        "Queue by name of {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
+                        name=self.name,
+                        num=len(self.queue),
+                        wait_time=now-start
+                    )
 
     def __len__(self):
         with self.lock:

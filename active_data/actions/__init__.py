@@ -52,32 +52,6 @@ def send_error(active_data_timer, body, e):
     return Response(unicode2utf8(value2json(e)), status=status)
 
 
-def replace_vars(text, params=None):
-    """
-    REPLACE {{vars}} WITH ENVIRONMENTAL VALUES
-    """
-    start = 0
-    var = strings.between(text, "{{", "}}", start)
-    while var:
-        replace = "{{" + var + "}}"
-        index = text.find(replace, 0)
-        if index == -1:
-            Log.error("could not find {{var}} (including quotes)", var=replace)
-        end = index + len(replace)
-
-        try:
-            replacement = text_type(Date(var).unix)
-            text = text[:index] + replacement + text[end:]
-            start = index + len(replacement)
-        except Exception as _:
-            start += 1
-
-        var = strings.between(text, "{{", "}}", start)
-
-    text = expand_template(text, coalesce(params, {}))
-    return text
-
-
 def test_mode_wait(query):
     """
     WAIT FOR METADATA TO ARRIVE ON INDEX

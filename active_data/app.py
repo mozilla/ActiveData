@@ -30,10 +30,10 @@ from jx_base import container
 from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text_type
-from mo_logs import Log, constants, startup, machine_metadata
+from mo_logs import Log, constants, machine_metadata, startup
 from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
-from mo_threads.threads import RegisterThread, MAIN_THREAD
+from mo_threads.threads import MAIN_THREAD, register_thread
 from pyLibrary.env import elasticsearch, http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
 
@@ -195,23 +195,23 @@ def setup_flask_ssl():
     config.flask.ssl_context = None
 
 
+@register_thread
 def _exit():
-    with RegisterThread():
-        Log.note("Got request to shutdown")
-        try:
-            return Response(
-                unicode2utf8(OVERVIEW),
-                status=400,
-                headers={
-                    "Content-Type": "text/html"
-                }
-            )
-        finally:
-            shutdown = flask.request.environ.get('werkzeug.server.shutdown')
-            if shutdown:
-                shutdown()
-            else:
-                Log.warning("werkzeug.server.shutdown does not exist")
+    Log.note("Got request to shutdown")
+    try:
+        return Response(
+            unicode2utf8(OVERVIEW),
+            status=400,
+            headers={
+                "Content-Type": "text/html"
+            }
+        )
+    finally:
+        shutdown = flask.request.environ.get('werkzeug.server.shutdown')
+        if shutdown:
+            shutdown()
+        else:
+            Log.warning("werkzeug.server.shutdown does not exist")
 
 
 if __name__ in ("__main__", "active_data.app"):

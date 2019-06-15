@@ -330,20 +330,24 @@ def format_table(T, select, query=None):
     )
 
 
+def scrub_select(select):
+    return wrap([{k: v for k, v in s.items() if k not in ['pull', 'put']} for s in select])
+
+
 def format_cube(T, select, query=None):
     with Timer("format table"):
         table = format_table(T, select, query)
 
     if len(table.data) == 0:
         return Cube(
-            select,
+            scrub_select(select),
             edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1}}],
             data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
         )
 
     cols = transpose(*unwrap(table.data))
     return Cube(
-        select,
+        scrub_select(select),
         edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
         data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)}
     )

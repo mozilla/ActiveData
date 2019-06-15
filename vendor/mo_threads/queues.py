@@ -512,7 +512,8 @@ class ThreadedQueue(Queue):
             self._wait_for_queue_space()
             if not self.closed:
                 self.queue.extend(values)
-            Log.note("{{name}} has {{num}} items", name=self.name, num=len(self.queue))
+            if not self.silent:
+                Log.note("{{name}} has {{num}} items", name=self.name, num=len(self.queue))
         return self
 
     def __enter__(self):

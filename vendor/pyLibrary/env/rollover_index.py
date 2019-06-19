@@ -8,9 +8,6 @@
 #
 from __future__ import unicode_literals
 
-from mo_future import is_text, is_binary
-from activedata_etl import etl2path, key2etl
-
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Null, coalesce, wrap
@@ -26,6 +23,7 @@ from mo_times.durations import Duration
 from mo_times.timer import Timer
 from pyLibrary.aws.s3 import KEY_IS_WRONG_FORMAT, strip_extension
 from pyLibrary.env import elasticsearch
+
 
 MAX_RECORD_LENGTH = 400000
 DATA_TOO_OLD = "data is too old to be indexed"
@@ -136,6 +134,7 @@ class RolloverIndex(object):
 
     # ADD keys() SO ETL LOOP CAN FIND WHAT'S GETTING REPLACED
     def keys(self, prefix=None):
+        from activedata_etl import etl2path, key2etl
         path = jx.reverse(etl2path(key2etl(prefix)))
 
         if self.cluster.version.startswith(("5.", "6.")):

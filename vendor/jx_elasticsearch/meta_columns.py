@@ -206,9 +206,7 @@ class ColumnList(Table, jx_base.Container):
                     for key in Column.__slots__:
                         old_value = canonical[key]
                         new_value = column[key]
-                        if new_value == None:
-                            pass  # DO NOT BOTHER CLEARING OLD VALUES (LIKE cardinality AND paritiions)
-                        elif new_value == old_value:
+                        if new_value == old_value:
                             pass  # NO NEED TO UPDATE WHEN NO CHANGE MADE (COMMON CASE)
                         else:
                             canonical[key] = new_value

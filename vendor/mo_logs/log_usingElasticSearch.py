@@ -13,8 +13,8 @@ from datetime import date, datetime
 import sys
 
 from jx_python import jx
-from mo_dots import coalesce, listwrap, set_default, wrap
-from mo_future import number_types, text_type
+from mo_dots import coalesce, listwrap, set_default, wrap, is_data, is_sequence
+from mo_future import number_types, text_type, is_text, is_binary
 from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, strings

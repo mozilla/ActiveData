@@ -9,14 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from functools import wraps
-
-from mo_future import is_text, is_binary
 from collections import namedtuple
+import gc
 from types import FunctionType
 
 from mo_dots import Null, _get_attr, set_default
-from mo_future import get_function_arguments, get_function_name, text_type
+from mo_future import get_function_arguments, get_function_name, is_text, text_type
 import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import Except

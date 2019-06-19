@@ -439,7 +439,7 @@ class PrefixOp(PrefixOp_):
         expr = self.expr
 
         if expr is NULL:
-            return es_not(MATCH_ALL)
+            return MATCH_NONE
         elif not expr:
             return MATCH_ALL
 
@@ -447,8 +447,10 @@ class PrefixOp(PrefixOp_):
             expr = expr.term
 
         if is_op(expr, Variable_) and is_literal(self.prefix):
-            var = first(schema.leaves(expr.var)).es_column
-            return {"prefix": {var: self.prefix.value}}
+            col = first(schema.leaves(expr.var))
+            if not col:
+                return MATCH_NONE
+            return {"prefix": {col.es_column: self.prefix.value}}
         else:
             return PainlessPrefixOp.to_es_script(self, schema).to_esfilter(schema)
 

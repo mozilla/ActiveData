@@ -414,19 +414,23 @@ class GetOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, term)
-        self.var, self.offset = term
+        self.var = term[0]
+        self.offsets = term[1:]
 
     def __data__(self):
-        if is_literal(self.var) and is_literal(self.offset):
-            return {"get": {self.var.json, self.offset.value}}
+        if is_literal(self.var) and len(self.offsets) == 1 and is_literal(self.offset):
+            return {"get": {self.var.json, self.offsets[0].value}}
         else:
-            return {"get": [self.var.__data__(), self.offset.__data__()]}
+            return {"get": [self.var.__data__()] + [o.__data__() for o in self.offsets]}
 
     def vars(self):
-        return self.var.vars() | self.offset.vars()
+        output = self.var.vars()
+        for o in self.offsets:
+            output |= o.vars()
+        return output
 
     def map(self, map_):
-        return self.lang[GetOp([self.var.map(map_), self.offset.map(map_)])]
+        return self.lang[GetOp([self.var.map(map_)] + [o.map(map_) for o in self.offsets])]
 
 
 class SelectOp(Expression):

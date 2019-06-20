@@ -32,15 +32,16 @@ Tending to ActiveData will require
 
 All the secrets are assumed to be in `~/private.json` on your development machine. All config files point to this file.
 
-```
-{
-    "aws_credentials":{
-        "aws_access_key_id":"id",
-        "aws_secret_access_key" :"secret",
-        "region":"us-west-2"
+    {
+        "fabric":{
+            "key_filename": "path/to/private/key.pem",
+        },
+        "aws_credentials":{
+            "aws_access_key_id":"id",
+            "aws_secret_access_key" :"secret",
+            "region":"us-west-2"
+        }
     }
-}
-```
 
 ### Connections
 
@@ -49,13 +50,33 @@ All machines are listed in the moving parts, but these two are the most useful
 * Frontend
 * Manager
 
-Use the AWS dashboard to ensure your IP is allowed to connect to each machine 
+Use the AWS dashboard to ensure your IP is allowed to connect to each machine. 
+
+#### Test Connection
+
+**Linux**
+
+Be sure to add the ssh private key: `ssh-add ~/.ssh/<key>.pem`, and test your connection:
+
+    ssh ec2-user@activedata.allizom.org
+
+**Windows**
+
+Setup a Putty configuration (called "`active-data-frontend`").  Ensure you can connect.
+
+#### Test Tunneling 
+
+You must be able to tunnel from localhost:9201 to the frontend on port 9200 so you can access the ES cluster:
+
+**Linux**
+
+    ssh -v -N -L 9201:localhost:9200 ec2-user@activedata.allizom.org 
+
+**Windows**
 
 If you are using Windows, with Putty, then you can tunnelling to ES using SSH on windows
 
- `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
-
-opening IPs for machine access
+    plink -v -N -L 9201:localhost:9200 "active-data-frontend"
 
 ### AWS
 
@@ -74,16 +95,15 @@ When logging into machines, always check the disk. Some logs do not roll over, a
  
     df -h
 
-
-
-
 ### Check ES Health
 
 The **coordinator** node is a small node on the **FrontEnd** that serves all query requests to the outside world, and acts as a circuit breaker for the rest of the cluster. It can be bounced without affecting ES the overall cluster. No queries can be serviced when this node is down. 
 
 * Ensure your IP is allowed inbound to the `ActiveData-Frontend` group 
-* Map port 9201 to remote port 9200 `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
-* Use Elasticsearch Head to verify ES is available, or not
+* Map port 9201 to remote port 9200:<br>
+  Linux - `ssh -v -N -L 9201:localhost:9200 ec2-user@activedata.allizom.org`<br>
+  Windows - `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
+* Use Elasticsearch Head (connecting to `localhost:9201`) to verify ES is available, or not
 
 If you can connect, then review the status:
 
@@ -149,7 +169,7 @@ If there are still problems, then "it is complicated": Coding will be required t
 
 the `esShardBalancer` is responsible for distributing shards over the cluster so that the shards are evenly distributed according to the capabilities of the machines available. 
 
-> It is safe to turn of the `esShardBalancer` for hours at a time. When `esShardBalancer` is down, ES can recover lost shards, but it will be unable to balance those shards, or setup new ones.  Over ?days?, query speeds will get ever-slower as spot nodes are lost; eventually all load will be on the three backup machines, which will be unable to keep up with the workload load. 
+> It is safe to turn off the `esShardBalancer` for hours at a time. When `esShardBalancer` is down, ES can recover lost shards, but it will be unable to balance those shards, or setup new ones.  Over ?days?, query speeds will get ever-slower as spot nodes are lost; more load goes to the three backup nodes, which will be unable to keep up, and will then crash, turning the cluster red. 
 
 ### Spot Manager
 

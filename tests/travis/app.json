@@ -62,6 +62,24 @@
 		"log": [
 			{
 				"log_type": "console"
+			},
+			{
+				"log_type": "elasticsearch",
+				"host": "http://localhost",
+				"port": 9200,
+				"index": "debug-activedata",
+				"type": "activedata",
+				"timeout": 600,
+				"schema": {
+					"settings": {
+						"index.number_of_replicas": 1,
+						"index.number_of_shards": 3
+					}
+				},
+				"rollover": {
+					"interval": "3month",
+					"max":"year"
+				}
 			}
 		]
 	}

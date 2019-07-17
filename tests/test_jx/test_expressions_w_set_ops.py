@@ -619,6 +619,35 @@ class TestSetOps(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
+                "select": [
+                    "v",
+                    {"name": "f", "value": {"find": {"v": "test"}}}
+                ]
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test", "f": 0},
+                    {"v": "not test", "f": 4},
+                    {"v": NULL, "f": NULL},
+                    {"f": NULL},
+                    {"v": "a", "f": NULL}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_where_find(self):
+        test = {
+            "data": [
+                {"v": "test"},
+                {"v": "not test"},
+                {"v": None},
+                {},
+                {"v": "a"}
+            ],
+            "query": {
+                "from": TEST_TABLE,
                 "where": {"find": {"v": "test"}}
             },
             "expecting_list": {
@@ -631,7 +660,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_or_find(self):
+    def test_where_or_find(self):
         test = {
             "data": [
                 {"v": "test"},
@@ -654,7 +683,7 @@ class TestSetOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_and_find(self):
+    def test_where_and_find(self):
         test = {
             "data": [
                 {"v": "test"},

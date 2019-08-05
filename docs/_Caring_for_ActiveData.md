@@ -107,6 +107,8 @@ The **coordinator** node is a small node on the **FrontEnd** that serves all que
 
 If you can connect, then review the status:
 
+> When ES suffers from node loss, the status endpoint will stall, making it appears ES is down. Attempt an ActiveData query `{"from":"unittest"}` to see if the query endpoint is still working.  If the query endpoint is still working, wait a bit. 
+
 * **green** - everything ok.  IF there is a problem, then it must be elsewhere.
 * **yellow** - If a large number of random shards are not allocated, then there was a recent loss of spot nodes, or an OutOfMemory event.
 * **red** - look at which shards are not allocated: If it is just new indexes, then this state should disappear in a minute. If random shards are not allocated, then there has been a catastrophic failure over many machines proceed to [Emergency Proceedures](https://github.com/mozilla/ActiveData/blob/dev/docs/_Caring_for_ActiveData.md#Emergency+Procedures)

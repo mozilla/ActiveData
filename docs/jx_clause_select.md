@@ -1,12 +1,9 @@
 
-`select` Clause
-===============
+# `select` Clause
 
+## Introduction
 
-Introduction
-------------
-
-Getting a feel for the JSON Expressions `select` clause is easiest done by comparing to SQL. Just like SQL, the `select` clause is used for renaming:
+Getting a feel for the JSON Query Expressions `select` clause is easiest done by comparing to SQL. Just like SQL, the `select` clause is used for renaming:
 
 <table><tr><td>
 <b>JSON Query Expression</b><br>
@@ -32,11 +29,10 @@ FROM
 </pre>
 </td></tr></table>
 
-JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, plus the `select` clause can do more than SQL.
+JSON expressions are clearly more verbose than SQL, but there are many shortcuts to mitigate this, and we will go over those in this document.
 
 
-The Standard `select` Clause
-----------------------------
+## The Standard `select` Clause
 
 The select clause is used for both selecting particular values, and for creating new structures from those values. A select clause is a list that maps the leaves of one data structure to the leaves of another.
 

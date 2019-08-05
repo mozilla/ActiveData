@@ -2,5 +2,5 @@ Flask
 pymysql
 requests
 moz-sql-parser
-boto=2.48.0
+boto==2.48.0
 ujson

@@ -13,9 +13,7 @@ import os
 from ssl import SSLContext
 
 import flask
-from flask import Flask
-from werkzeug.contrib.fixers import HeaderRewriterFix
-from werkzeug.wrappers import Response
+from flask import Flask, Response
 
 import active_data
 from active_data import OVERVIEW, record_request
@@ -52,6 +50,11 @@ class ActiveDataApp(Flask):
         finally:
             Log.stop()
             stop_main_thread()
+
+    def process_response(self, response):
+        del response.headers['Date']
+        del response.headers['Server']
+        return response
 
 
 flask_app = ActiveDataApp(__name__)
@@ -137,8 +140,6 @@ def setup():
     # TRIGGER FIRST INSTANCE
     if config.saved_queries:
         setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
-
-    HeaderRewriterFix(flask_app, remove_headers=['Date', 'Server'])
 
     if config.flask.port and config.args.process_num:
         config.flask.port += config.args.process_num

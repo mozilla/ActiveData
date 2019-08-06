@@ -80,10 +80,11 @@ flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 @flask_app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
 @flask_app.route('/<path:path>', methods=['GET', 'POST'])
 @cors_wrapper
+@register_thread
 def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
-    Log.note("using default")
+    Log.alert("using default to access {{path}}", path=path)
 
     return Response(
         unicode2utf8(OVERVIEW),

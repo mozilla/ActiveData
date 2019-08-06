@@ -83,6 +83,8 @@ flask_app.add_url_rule('/json/<path:path>', None, get_raw_json, methods=['GET'])
 def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
+    Log.note("using default")
+
     return Response(
         unicode2utf8(OVERVIEW),
         status=200,

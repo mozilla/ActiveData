@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from unittest import skipIf
+
 from mo_logs import Log
 
 from active_data import OVERVIEW
@@ -18,7 +20,7 @@ from mo_json_config import URL
 from mo_logs.strings import unicode2utf8
 from pyLibrary import convert
 from pyLibrary.env import http
-from tests.test_jx import BaseTestCase, TEST_TABLE
+from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 
 class TestBasicRequests(BaseTestCase):
@@ -45,6 +47,7 @@ class TestBasicRequests(BaseTestCase):
         response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
 
+    @skipIf(global_settings.is_travis, "travis is scrubbing GET paths: https://travis-ci.community/t/http-header-rewriting/4587")
     def test_bad_file_request(self):
         url = URL(self.utils.testing.query)
         url.path = "/tools/../../README.md"

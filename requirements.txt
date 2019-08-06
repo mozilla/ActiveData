@@ -1,4 +1,4 @@
-Flask
+Flask==1.0.3
 pymysql
 requests
 moz-sql-parser

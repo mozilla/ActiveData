@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import time
 
 from boto import sqs, utils as boto_utils
-from boto3.sqs.message import Message
+from boto.sqs.message import Message
 import requests
 
 from mo_dots import coalesce, unwrap, wrap

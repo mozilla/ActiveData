@@ -17,6 +17,7 @@ The shape of the data is important for manipulation. Organization of data is imp
 * Shape of the data
 * Use cases driving data extraction APIs and declaring schema
 
+
 Use-case driven analysis vs automated ingestion
 
 
@@ -81,10 +82,11 @@ A database server solves many of these problems.  Many micro-service candidates 
 
 ## Solution: ActiveData
 
-* simpler data model
+* simpler data model (shape reduces choices)
 * simpler query language
 * ETL ingestion from various sources
 
+ETL is for decoupling from transactional systems
 
 
 
@@ -126,21 +128,6 @@ sharing
 
 ### Operations
 
-redundancy
-
-self healing
-
-security updates
-
-
-
-
-
-
-
-ETL is for decoupling from transactional systems
-
-
 
 
 offset query load from transactional systems
@@ -168,9 +155,7 @@ no loops, no joins, computationally bounded
 
 
 
-complex queries
 
-understand the schema
 
 
 

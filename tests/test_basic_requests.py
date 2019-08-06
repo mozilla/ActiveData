@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_logs import Log
+
 from active_data import OVERVIEW
 from mo_dots import wrap
 from mo_json_config import URL
@@ -48,6 +50,10 @@ class TestBasicRequests(BaseTestCase):
         url.path = "/tools/../../README.md"
 
         response = self.utils.try_till_response(str(url), data=b"")
+
+        if response.status_code==200:
+            Log.note("Response is:\n{{response|indent}}", response=response.content)
+
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.all_content, "")
 

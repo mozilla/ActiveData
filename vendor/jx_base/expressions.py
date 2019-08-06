@@ -901,6 +901,11 @@ class TupleOp(Expression):
     def missing(self):
         return FALSE
 
+    def partial_eval(self):
+        if all(is_literal(t) for t in self.terms):
+            return Literal([t.value for t in self.terms])
+
+        return self
 
 class LeavesOp(Expression):
     date_type = OBJECT
@@ -2779,7 +2784,7 @@ class InOp(Expression):
         elif is_literal(value) and is_literal(superset):
             return Literal(self())
         else:
-            return self
+            return InOp([value, superset])
 
     def __call__(self):
         return self.value() in self.superset()

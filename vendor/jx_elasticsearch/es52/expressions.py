@@ -14,7 +14,7 @@ import itertools
 from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_,
                                  EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_,
                                  LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_,
-                                 SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
+                                 SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal, TupleOp)
 from jx_base.language import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -476,18 +476,24 @@ class InOp(InOp_):
             col = first(cols)
             var = col.es_column
 
-            if col.jx_type == BOOLEAN:
-                if is_literal(self.superset) and not is_many(self.superset.value):
-                    return {"term": {var: value2boolean(self.superset.value)}}
+            if is_literal(self.superset):
+                if col.jx_type == BOOLEAN:
+                    if is_literal(self.superset) and not is_many(self.superset.value):
+                        return {"term": {var: value2boolean(self.superset.value)}}
+                    else:
+                        return {"terms": {var: map(value2boolean, self.superset.value)}}
                 else:
-                    return {"terms": {var: map(value2boolean, self.superset.value)}}
-            else:
-                if is_literal(self.superset) and not is_many(self.superset.value):
-                    return {"term": {var: self.superset.value}}
-                else:
-                    return {"terms": {var: self.superset.value}}
-        else:
-            return Painless[self].to_es_script(schema).to_esfilter(schema)
+                    if is_literal(self.superset) and not is_many(self.superset.value):
+                        return {"term": {var: self.superset.value}}
+                    else:
+                        return {"terms": {var: self.superset.value}}
+            elif is_op(self.superset, TupleOp):
+                return OrOp([
+                    EqOp([self.value, s])
+                    for s in self.superset.terms
+                ]).partial_eval().to_esfilter(schema)
+        # THE HARD WAY
+        return Painless[self].to_es_script(schema).to_esfilter(schema)
 
 
 class ScriptOp(ScriptOp_):

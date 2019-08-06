@@ -51,7 +51,7 @@ class TestBasicRequests(BaseTestCase):
 
         response = self.utils.try_till_response(str(url), data=b"")
 
-        if response.status_code==200:
+        if response.status_code == 200:
             Log.note("Response is:\n{{response|indent}}", response=response.content)
 
         self.assertEqual(response.status_code, 404)

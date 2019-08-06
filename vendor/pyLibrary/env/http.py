@@ -120,7 +120,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
             _to_ascii_dict(kwargs)
 
             # HEADERS
-            headers = kwargs['headers'] = unwrap(set_default(headers, session.headers, default_headers))
+            headers = kwargs['headers'] = unwrap(set_default(headers, default_headers, session.headers))
             _to_ascii_dict(headers)
             del kwargs['headers']
 

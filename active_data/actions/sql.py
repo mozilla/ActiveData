@@ -107,10 +107,16 @@ def sql_query(path):
         return send_error(query_timer, request_body, e)
 
 
-KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile"}
+KNOWN_SQL_AGGREGATES = {"sum", "count", "avg", "median", "percentile", "max", "min"}
 
 
 def parse_sql(sql):
+    # TODO: CONVERT tuple OF LITERALS INTO LITERAL LIST
+    # # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
+    # if all(isinstance(r, number_types) for r in output):
+    #     pass
+    # elif all(isinstance(r, number_types) or (is_data(r) and "literal" in r.keys()) for r in output):
+    #     output = {"literal": [r['literal'] if is_data(r) else r for r in output]}
     query = wrap(moz_sql_parser.parse(sql))
     redundant_select = []
     # PULL OUT THE AGGREGATES

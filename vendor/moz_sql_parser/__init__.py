@@ -16,7 +16,8 @@ from threading import Lock
 from mo_future import binary_type, items, number_types, text_type
 from pyparsing import ParseException, ParseResults
 
-from moz_sql_parser.sql_parser import SQLParser, all_exceptions
+from moz_sql_parser.debugs import all_exceptions
+from moz_sql_parser.sql_parser import SQLParser
 
 
 def __deploy__():
@@ -80,8 +81,10 @@ def _scrub(result):
                 if rr != None
             ]
             # IF ALL MEMBERS OF A LIST ARE LITERALS, THEN MAKE THE LIST LITERAL
-            if all(isinstance(r, Mapping) and "literal" in r.keys() for r in output):
-                output = {"literal": [r['literal'] for r in output]}
+            if all(isinstance(r, number_types) for r in output):
+                pass
+            elif all(isinstance(r, number_types) or (isinstance(r, Mapping) and "literal" in r.keys()) for r in output):
+                output = {"literal": [r['literal'] if isinstance(r, Mapping) else r for r in output]}
             return output
     elif not items(result):
         return {}

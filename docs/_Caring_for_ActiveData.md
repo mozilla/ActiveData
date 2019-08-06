@@ -32,15 +32,16 @@ Tending to ActiveData will require
 
 All the secrets are assumed to be in `~/private.json` on your development machine. All config files point to this file.
 
-```
-{
-    "aws_credentials":{
-        "aws_access_key_id":"id",
-        "aws_secret_access_key" :"secret",
-        "region":"us-west-2"
+    {
+        "fabric":{
+            "key_filename": "path/to/private/key.pem",
+        },
+        "aws_credentials":{
+            "aws_access_key_id":"id",
+            "aws_secret_access_key" :"secret",
+            "region":"us-west-2"
+        }
     }
-}
-```
 
 ### Connections
 
@@ -49,13 +50,33 @@ All machines are listed in the moving parts, but these two are the most useful
 * Frontend
 * Manager
 
-Use the AWS dashboard to ensure your IP is allowed to connect to each machine 
+Use the AWS dashboard to ensure your IP is allowed to connect to each machine. 
+
+#### Test Connection
+
+**Linux**
+
+Be sure to add the ssh private key: `ssh-add ~/.ssh/<key>.pem`, and test your connection:
+
+    ssh ec2-user@activedata.allizom.org
+
+**Windows**
+
+Setup a Putty configuration (called "`active-data-frontend`").  Ensure you can connect.
+
+#### Test Tunneling 
+
+You must be able to tunnel from localhost:9201 to the frontend on port 9200 so you can access the ES cluster:
+
+**Linux**
+
+    ssh -v -N -L 9201:localhost:9200 ec2-user@activedata.allizom.org 
+
+**Windows**
 
 If you are using Windows, with Putty, then you can tunnelling to ES using SSH on windows
 
- `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
-
-opening IPs for machine access
+    plink -v -N -L 9201:localhost:9200 "active-data-frontend"
 
 ### AWS
 
@@ -74,18 +95,19 @@ When logging into machines, always check the disk. Some logs do not roll over, a
  
     df -h
 
-
-
-
 ### Check ES Health
 
 The **coordinator** node is a small node on the **FrontEnd** that serves all query requests to the outside world, and acts as a circuit breaker for the rest of the cluster. It can be bounced without affecting ES the overall cluster. No queries can be serviced when this node is down. 
 
 * Ensure your IP is allowed inbound to the `ActiveData-Frontend` group 
-* Map port 9201 to remote port 9200 `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
-* Use Elasticsearch Head to verify ES is available, or not
+* Map port 9201 to remote port 9200:<br>
+  Linux - `ssh -v -N -L 9201:localhost:9200 ec2-user@activedata.allizom.org`<br>
+  Windows - `plink -v -N -L 9201:localhost:9200 "active-data-frontend"`
+* Use Elasticsearch Head (connecting to `localhost:9201`) to verify ES is available, or not
 
 If you can connect, then review the status:
+
+> When ES suffers from node loss, the status endpoint will stall, making it appears ES is down. Attempt an ActiveData query `{"from":"unittest"}` to see if the query endpoint is still working.  If the query endpoint is still working, wait a bit. 
 
 * **green** - everything ok.  IF there is a problem, then it must be elsewhere.
 * **yellow** - If a large number of random shards are not allocated, then there was a recent loss of spot nodes, or an OutOfMemory event.
@@ -145,13 +167,58 @@ If there are still problems, then "it is complicated": Coding will be required t
 
 ## Overview of Parts
 
-### Shard Balancer
+### ActiveData Frontend
+
+ActiveData has a web server on the **Frontend** machine.  It has a local instance of ES (with no data) to minimize search delays, and to improve search load balancing in the ES cluster.
+
+**Nginx**
+
+Nginx is used in production for three reasons.
+
+- Serve static files (located at `~/ActiveData/active_data/public`)
+- Serve SSH (The Flask server can deliver its own SSH, probably slower, if required)
+- Distribute calls to other services; primarily the query service
+
+A **copy** of the Configuration is `~/ActiveData/resources/config/nginx.conf`
+
+**Gunicorn**
+
+Gunicorn is used to pre-fork the ActiveData service, so it can serve multiple requests at once, and quicker than Flask. Since ActiveData has no concept of session, so coordinating instances is not required. 
+
+Configuration is `~/ActiveData/resources/config/gunicorn.conf`
+
+**ActiveData Python Program**
+
+The ActiveData program is a stateless query translation service. It was designed to be agnostic about schema changes and migrations. Upgrading is simple.
+
+**Production Deployment Steps**
+
+Updating the web server is relatively easy
+
+1. On the `frontend` machine run `git pull origin master`
+2. `sudo supervisorctl restart gunicorn`
+
+#### Config and Logs
+
+* Configuration is `~/ActiveData/resources/config/supervisord.conf`
+* Logs are `/data1/logs/active_data.log`
+
+
+### ActiveData Manager
+
+Overall, the **Manager** machine is responsible for running CRON jobs against ActiveData.  The code for these jobs are found on multiple repositories, under the `manager` branch.  
+
+* The [Manager setup](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
+* [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
+* Logs are found at `/data1/logs`
+
+#### Shard Balancer
 
 the `esShardBalancer` is responsible for distributing shards over the cluster so that the shards are evenly distributed according to the capabilities of the machines available. 
 
-> It is safe to turn of the `esShardBalancer` for hours at a time. When `esShardBalancer` is down, ES can recover lost shards, but it will be unable to balance those shards, or setup new ones.  Over ?days?, query speeds will get ever-slower as spot nodes are lost; eventually all load will be on the three backup machines, which will be unable to keep up with the workload load. 
+> It is safe to turn off the `esShardBalancer` for hours at a time. When `esShardBalancer` is down, ES can recover lost shards, but it will be unable to balance those shards, or setup new ones.  Over ?days?, query speeds will get ever-slower as spot nodes are lost; more load goes to the three backup nodes, which will be unable to keep up, and will then crash, turning the cluster red. 
 
-### Spot Manager
+#### Spot Manager
 
 The SpotManager is responsible for bidding on EC2 machines and setting them up. There are two instances running: One manages the ETL machines, and the other manages the ES cluster.  
 
@@ -199,55 +266,11 @@ With new ETL comes new tables, new S3 buckets and new Amazon Queues.
 10. Increase SpotManager budget, if desired
  
 
-### ActiveData Frontend
-
-ActiveData has a web server on the **Frontend** machine.  It has a local instance of ES (with no data) to minimize search delays, and to improve search load balancing in the ES cluster.
-
-**Nginx**
-
-Nginx is used in production for three reasons.
-
-- Serve static files (located at `~/ActiveData/active_data/public`)
-- Serve SSH (The Flask server can deliver its own SSH, probably slower, if required)
-- Distribute calls to other services; primarily the query service
-
-A **copy** of the Configuration is `~/ActiveData/resources/config/nginx.conf`
-
-**Gunicorn**
-
-Gunicorn is used to pre-fork the ActiveData service, so it can serve multiple requests at once, and quicker than Flask. Since ActiveData has no concept of session, so coordinating instances is not required. 
-
-Configuration is `~/ActiveData/resources/config/gunicorn.conf`
-
-**ActiveData Python Program**
-
-The ActiveData program is a stateless query translation service. It was designed to be agnostic about schema changes and migrations. Upgrading is simple.
-
-**Production Deployment Steps**
-
-Updating the web server is relatively easy
-
-1. On the `frontend` machine run `git pull origin master`
-2. `sudo supervisorctl restart gunicorn`
-
-#### Config and Logs
-
-* Configuration is `~/ActiveData/resources/config/supervisord.conf`
-* Logs are `/data1/logs/active_data.log`
-
-## ActiveData Manager
-
-Overall, the *Manager* machine is responsible for running CRON jobs against ActiveData.  The code for these jobs are found on multiple repositories, under the `manager` branch.  
-
-* The [Manager setup](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
-* [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
-* Logs are found at `/data1/logs`
-
-## More about ElasticSearch
+### ElasticSearch
 
 Elasticsearch is powerful magic. Only the ES developers really know the plethora of ways this magic will turn against you. There are only two paths forward: You have already performed the operation before on a multi-terabyte index, and you know the safe incantation. Or, you have not done this before, and you will screw things up. Feeling lucky? Please ensure you got the next two days free to fix your mistake: Everything is backed up to S3, so the worst case is you must rebuild the index. (Which has not been done for years, so the code is probably rotten).
 
-### Fixing Cluster
+#### Fixing Cluster
 
 ES still breaks, sometimes. All problems encountered so far only require a bounce, but that bounce must be controlled. Be sure these commands are run on the **coordinator6** node (which is the ES master located on the **Frontend** machine).
  
@@ -257,7 +280,7 @@ ES still breaks, sometimes. All problems encountered so far only require a bounc
  4. **Enable shard movement** - `curl -XPUT -d "{\"persistent\": {\"cluster.routing.allocation.enable\": \"all\"}}" http://localhost:9200/_cluster/settings`
  5. **Re-enable spot nodes** - `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
 
-### Changing Cluster Config
+#### Changing Cluster Config
 
 ES will take any opportunity to loose your data if you make any configuration changes. To prevent this you must ensure no important shards are on the node you are changing: Either it has no primaries, or all primaries are replicated to another node. You can ensure this happens by telling ES to exclude the machine you want cleared of shards. Due to enormous size of the ActiveData indexes, you will probably need to deploy more machines to handle the volume while you make a transition.  
 
@@ -278,7 +301,6 @@ be sure the transient settings for the same do not interfere with your plans:
  8. Re-enable spot nodes: `curl -XPUT -d '{"persistent" : {"cluster.routing.allocation.exclude.zone" : ""}}' http://localhost:9200/_cluster/settings`
 
 Upon which another node can be upgraded
-
 
 
 # Emergency Procedures

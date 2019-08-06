@@ -55,7 +55,7 @@ class TestBasicRequests(BaseTestCase):
             Log.note("Response is:\n{{response|indent}}", response=response.content)
 
         self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.all_content, "")
+        self.assertEqual(response.content, b"")
 
     def test_query_on_static_file(self):
         url = URL(self.utils.testing.query)

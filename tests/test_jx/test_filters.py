@@ -486,7 +486,6 @@ class TestFilters(BaseTestCase):
                 },
                 "data": [
                     {"v": "this-is-a-test"},
-                    {"v": "this-is-a-vest"},
                     {"v": "test"},
                 ]
             }

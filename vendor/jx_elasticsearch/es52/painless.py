@@ -326,7 +326,7 @@ class Literal(Literal_):
             if class_ in (FlatList, list, tuple):
                 return EsScript(
                     type=OBJECT,
-                    expr="new Object[]{\n" + ",\n".join(_convert(vv).expr for vv in v) + "\n}",
+                    expr="new Object[]{" + ", ".join(_convert(vv).expr for vv in v) + "}",
                     frum=self,
                     schema=schema,
                 )
@@ -573,14 +573,14 @@ class BasicEqOp(BasicEqOp_):
                 else:
                     return EsScript(
                         type=BOOLEAN,
-                        expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",
+                        expr="Arrays.asList(" + lhs.expr + ").contains(" + rhs.expr + ")",
                         frum=self,
                         schema=schema,
                     )
         elif rhs.many:
             return EsScript(
                 type=BOOLEAN,
-                expr="(" + rhs.expr + ").contains(" + lhs.expr + ")",
+                expr="Arrays.asList(" + rhs.expr + ").contains(" + lhs.expr + ")",
                 frum=self,
                 schema=schema,
             )
@@ -1169,7 +1169,7 @@ class InOp(InOp_):
         value = Painless[self.value].to_es_script(schema)
         return EsScript(
             type=BOOLEAN,
-            expr="(" + superset.expr + ").contains(" + value.expr + ")",
+            expr="Arrays.asList(" + superset.expr + ").contains(" + value.expr + ")",
             frum=self,
             schema=schema,
         )

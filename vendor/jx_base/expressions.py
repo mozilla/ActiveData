@@ -1555,7 +1555,7 @@ class BooleanOp(Expression):
         elif term.type is BOOLEAN:
             return term
 
-        exists = self.lang[NotOp(term.missing())].partial_eval()
+        exists = self.lang[term.exists()].partial_eval()
         return exists
 
 

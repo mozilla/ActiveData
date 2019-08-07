@@ -183,7 +183,7 @@ class EqOp(EqOp_):
                 else:
                     types = Data()  # MAP JSON TYPE TO LIST OF LITERALS
                     for r in rhs:
-                        types[python_type_to_json_type[rhs.__class__]] += [r]
+                        types[python_type_to_json_type[r.__class__]] += [r]
                     if len(types) == 1:
                         jx_type, values = first(types.items())
                         for c in cols:
@@ -309,14 +309,14 @@ class NeOp(NeOp_):
                 else:
                     return es_not(
                         ScriptOp(
-                            "(" + lhs.expr + ").contains(" + rhs.expr + ")"
+                            "Arrays.asList(" + lhs.expr + ").contains(" + rhs.expr + ")"
                         ).to_esfilter(schema)
                     )
             else:
                 if rhs.many:
                     return es_not(
                         ScriptOp(
-                            "(" + rhs.expr + ").contains(" + lhs.expr + ")"
+                            "Arrays.asList(" + rhs.expr + ").contains(" + lhs.expr + ")"
                         ).to_esfilter(schema)
                     )
                 else:

@@ -1,7 +1,7 @@
 [run]
 source =
     ./active_data
-    ./vendor
+    ./vendor/jx_elasticsearch
 
 [report]
 exclude_lines =

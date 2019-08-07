@@ -461,3 +461,35 @@ class TestFilters(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_find_uses_regex(self):
+        test = {
+            "data": [
+                {"v": "this-is-a-test"},
+                {"v": "this-is-a-vest"},
+                {"v": "test"},
+                {"v": ""},
+                {"v": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"find": {"v": "test"}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list",
+                    "es_query": {
+                        "from": 0,
+                        "query": {"regexp": {"v.~s~": ".*test.*"}},
+                        "size": 10
+                    },
+                },
+                "data": [
+                    {"v": "this-is-a-test"},
+                    {"v": "this-is-a-vest"},
+                    {"v": "test"},
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+

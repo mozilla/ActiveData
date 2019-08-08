@@ -176,6 +176,8 @@ class EqOp(EqOp_):
             rhs = self.rhs.value
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
+            if not cols:
+                Log.warning("{{col}} does not exist while processing {{expr}}", col=lhs, expr=self.__data__())
 
             if is_container(rhs):
                 if len(rhs) == 1:

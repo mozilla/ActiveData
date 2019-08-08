@@ -83,7 +83,7 @@ COMPARE_TUPLE = """
 
 
 MAX_OF_TUPLE = """
-(Object[])(Arrays.asList(new Object[]{{{expr1}}, {{expr2}}}).stream().{{op}}("""+COMPARE_TUPLE+""").get())
+(Object[])([{{expr1}}, {{expr2}}].stream().{{op}}("""+COMPARE_TUPLE+""").get())
 """
 
 

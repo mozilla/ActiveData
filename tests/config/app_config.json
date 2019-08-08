@@ -68,7 +68,7 @@
 				"host": "http://localhost",
 				"port": 9200,
 				"index": "debug-activedata",
-				"type": "active_data"
+				"type": "activedata"
 			}
 		]
 	}

@@ -48,8 +48,8 @@
 				"log_type": "elasticsearch",
 				"host": {"$ref":"env://ES_HOST"},
 				"port": {"$ref":"env://ES_PORT"},
-				"index": "debug_active_data",
-				"type": "active_data"
+				"index": "debug-activedata",
+				"type": "activedata"
 			},
 			{
 				"class": "logging.handlers.RotatingFileHandler",

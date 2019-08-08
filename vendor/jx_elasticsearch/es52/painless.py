@@ -326,7 +326,7 @@ class Literal(Literal_):
             if class_ in (FlatList, list, tuple):
                 return EsScript(
                     type=OBJECT,
-                    expr="new Object[]{" + ", ".join(_convert(vv).expr for vv in v) + "}",
+                    expr="Arrays.asList(new Object[]{" + ", ".join(_convert(vv).expr for vv in v) + "})",
                     frum=self,
                     schema=schema,
                 )

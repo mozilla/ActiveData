@@ -573,14 +573,14 @@ class BasicEqOp(BasicEqOp_):
                 else:
                     return EsScript(
                         type=BOOLEAN,
-                        expr="Arrays.asList(" + lhs.expr + ").contains(" + rhs.expr + ")",
+                        expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",
                         frum=self,
                         schema=schema,
                     )
         elif rhs.many:
             return EsScript(
                 type=BOOLEAN,
-                expr="Arrays.asList(" + rhs.expr + ").contains(" + lhs.expr + ")",
+                expr="(" + rhs.expr + ").contains(" + lhs.expr + ")",
                 frum=self,
                 schema=schema,
             )
@@ -1169,7 +1169,7 @@ class InOp(InOp_):
         value = Painless[self.value].to_es_script(schema)
         return EsScript(
             type=BOOLEAN,
-            expr="Arrays.asList(" + superset.expr + ").contains(" + value.expr + ")",
+            expr="(" + superset.expr + ").contains(" + value.expr + ")",
             frum=self,
             schema=schema,
         )

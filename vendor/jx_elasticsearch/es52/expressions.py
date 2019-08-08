@@ -311,14 +311,14 @@ class NeOp(NeOp_):
                 else:
                     return es_not(
                         ScriptOp(
-                            "Arrays.asList(" + lhs.expr + ").contains(" + rhs.expr + ")"
+                            "(" + lhs.expr + ").contains(" + rhs.expr + ")"
                         ).to_esfilter(schema)
                     )
             else:
                 if rhs.many:
                     return es_not(
                         ScriptOp(
-                            "Arrays.asList(" + rhs.expr + ").contains(" + lhs.expr + ")"
+                            "(" + rhs.expr + ").contains(" + lhs.expr + ")"
                         ).to_esfilter(schema)
                     )
                 else:

@@ -9,17 +9,6 @@ With the spectre of ActiveData's retirement; maybe replaced with Google's Big Qu
 The problems we discuss are common in the data management space, and can be split into 3 major categories 
 
 
-### Data
-
-The shape of the data is important for manipulation. Organization of data is important for discovery. 
-
-* Locating data; required data is sparse
-* Shape of the data
-* Use cases driving data extraction APIs and declaring schema
-
-
-Use-case driven analysis vs automated ingestion
-
 
 ### Service
 
@@ -33,27 +22,30 @@ The problems relating to maintaining a service
 * Low query latency is work - The time between submitting the query and getting back an answer depends on the machine power and data locality and data structure
 * Data Timeliness is work - any caching, or warehouse 
 
+### Data
 
+The shape of the data is important for manipulation. Organization of data is important for discovery. 
+
+* Locating data; required data is sparse
+* Shape of the data; standard data
+* Use cases driving data extraction APIs and declaring schema
+
+
+Use-case driven analysis vs automated ingestion
 
 
 ### Analysis
 
-
-
-
-Large data extraction
-
+* Large data extraction (data moved to code, which is wrong)
 * Support complex queries - Analysis is hard; the data must go through verification, links to other data, transformed for presentation   
-
-Update and fix data
-
-Analytic Functions (window functions)
+* Update and fix data
+* Analytic Functions (window functions)
 
 
 
-## Solution: Database as a Service!?
+## Service Solution: Database as a Service!?
 
-A database server solves many of these problems.  Many micro-service candidates get built into a larger application because a database server solves many of the above problems
+A database server solves many of these problems. Many micro-service candidates get built into a larger application because a database server solves many of the above problems
 
 ### More problems
 
@@ -65,75 +57,68 @@ A database server solves many of these problems.  Many micro-service candidates 
 * SQL Computationally unbounded 
 
 
-## Solution: ElasticSearch?
+## Service Solution: ElasticSearch?
 
 * Another service candidate
-* Document database is denomalized, is a hierarchical database
+* Document database is denormalized, is a hierarchical database
 * Everything indexed - low query latency
+* no loops, no joins, computationally bounded
 * Bounded resources per query
 * No locking
 * Handle multitude of schemas from many sources
+* scales to multiple machines
+* recovery restoration
+* automated schema management 
+* offset query load from transactional systems
+
 
 ### Problems
 
 * Separate service, ETL required
 * Query language not suited for analysis
+* Many machines is expensive
+* OutOfMemory exceptions 
 
 
-## Solution: ActiveData
+## Service Solution: ElasticSearch + ActiveData
 
 * simpler data model (shape reduces choices)
 * simpler query language
 * ETL ingestion from various sources
-
-ETL is for decoupling from transactional systems
-
-
-
-
-# Denormalization, reverse indexes, nested documents
+* SpotManager - Cheaper nodes, but diverse nodes cause shard balancing problems 
+* esShardBlancer - Balance shards according to machine capabilities
+* Supervisor for OoM - but still have zombie nodes 
 
 
-Problems
+ETL is for decoupling from transactional systems and denormalizing the data
 
 
+## Service Solution: BigQuery 
+
+* is a 3rd party service
+* centralized destination for data
+* low query latency?
+* offset query load from transactional systems
+* regular query language
+ 
+### Data Problems
+
+* Human-managed schema (ActiveData)
+* SQL is not suited for simple queries
+* SQL Computationally unbounded (ActiveData) 
+* ETL ingestion from various sources (ActiveData)
 
 
+## Interlude: General Design Patterns
 
 
-
-
-
-
-always-on-service
-
-
-effort to get data
-
-low query latency (fast because data does not move)
-
-
-
-
-
-has everything
-
-standard data
-
-central location of data
-
-
-sharing
-
-
-### Operations
+bring code to data, not data to the code
 
 
 
-offset query load from transactional systems
+## Data Solution: Typed JSON
 
-
-
+* Typed JSON
 
 dynamic schema
 
@@ -141,39 +126,42 @@ all data is array data
 
 json -> matrix
 
-regular query language
 
+## Data Solution: Denormalization
 
-large data extraction
-
-bring code to data, not data to the code
-
-no loops, no joins, computationally bounded
-
-
-
-
-
-
-
-
-
-
+* reverse indexes
+* 
+* MySQL_to_S3
 
 denormalized is smaller
 
 
-|test.id| = number of records in test
-|test.name| = number of unique test names
+    |test.id| = number of records in test
+    |test.name| = number of unique test names
 
 
-|task.id| = unique tasks
-|timestamp| = timestamp
-|task.id|
+    |task.id| = unique tasks
+    |timestamp| = timestamp
+    |task.id|
 
 
-|test.id|*(sizeof(test.id)+sizeof(test.name))
+    |test.id|*(sizeof(test.id)+sizeof(test.name))
 
-|task.name| -> |task.id| => |task.id| -> |test.id| => |test.id| -> |test.name|
+    |task.name| -> |task.id| => |task.id| -> |test.id| => |test.id| -> |test.name|
 
-|test.task.name| -> |test.id| => |test.id| -> |test.name|   
+    |test.task.name| -> |test.id| => |test.id| -> |test.name|
+
+
+## Data Solution: JSON Query Expressions
+
+* dot-delimited paths to other tables
+* edges (SQL select by cube)
+* regular query language
+
+
+## Data Solution: Many Implemantaionsjx-
+
+* jx-elasticsearch
+* jx-python
+* jx-sqlite
+

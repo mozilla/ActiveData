@@ -1795,6 +1795,37 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_nested_filter_with_groupby(self):
+        test = {
+            "data": [
+                {"b": "x", "v": [{"m": "a", "k": 1}, {"m": "a", "k": 2}]},
+                {"b": "y", "v": [{"m": "a", "k": "3"}]},
+                {"b": "x", "v": [{"m": "a", "k": 1}]},
+                {"b": "x", "v": [{"m": "a", "k": 1}]},
+                {"m": 1}
+            ],
+            "query": {
+                "from": TEST_TABLE+".v",
+                "groupby": {"name": "k", "value": "v.k"},
+                "where": [
+                    {"eq": {"b": "x"}},
+                    {"eq": {"k": 1}}
+                ],
+                "format": "list"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"k": 1, "count": 3},
+                ]
+            }
+        }
+
+        self.utils.execute_tests(test)
+
+
+
+
 
 # TODO: WHAT DOES * MEAN IN THE CONTEXT OF A DEEP QUERY?
 # THIS SHOULD RETURN SOMETHING, NOT FAIL

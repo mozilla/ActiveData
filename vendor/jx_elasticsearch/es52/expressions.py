@@ -9,12 +9,9 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-import itertools
+import re
 
-from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_,
-                                 EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_,
-                                 LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_,
-                                 SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
+from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, FindOp as FindOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, TupleOp, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
 from jx_base.language import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -28,11 +25,11 @@ from jx_elasticsearch.es52.util import (
     pull_functions,
 )
 from jx_python.jx import value_compare
-from mo_dots import Data, Null, is_container, literal_field, set_default, wrap, is_many
+from mo_dots import Data, Null, is_container, is_many, literal_field, wrap
 from mo_future import first
-from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type
-from mo_logs import Log, suppress_exception
-from mo_math import MAX, OR
+from mo_json import BOOLEAN, NESTED, OBJECT, python_type_to_json_type, STRING
+from mo_logs import Log
+from mo_math import MAX
 from pyLibrary.convert import string2regexp, value2boolean
 
 
@@ -179,6 +176,8 @@ class EqOp(EqOp_):
             rhs = self.rhs.value
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
+            if not cols:
+                Log.warning("{{col}} does not exist while processing {{expr}}", col=lhs, expr=self.__data__())
 
             if is_container(rhs):
                 if len(rhs) == 1:
@@ -186,7 +185,7 @@ class EqOp(EqOp_):
                 else:
                     types = Data()  # MAP JSON TYPE TO LIST OF LITERALS
                     for r in rhs:
-                        types[python_type_to_json_type[rhs.__class__]] += [r]
+                        types[python_type_to_json_type[r.__class__]] += [r]
                     if len(types) == 1:
                         jx_type, values = first(types.items())
                         for c in cols:
@@ -225,6 +224,23 @@ class EqOp(EqOp_):
                 .partial_eval()
                 .to_esfilter(schema)
             )
+
+
+class FindOp(FindOp_):
+    def to_esfilter(self, schema):
+        if is_op(self.value, Variable_) and is_literal(self.find) and self.default is NULL and is_literal(self.start) and self.start.value == 0:
+            columns = [c for c in schema.leaves(self.value.var) if c.jx_type == STRING]
+            if len(columns) == 1:
+                return {"regexp": {columns[0].es_column: ".*" + re.escape(self.find.value) + ".*"}}
+        # CONVERT TO SCRIPT, SIMPLIFY, AND THEN BACK TO FILTER
+        self.simplified = False
+        return ES52[Painless[self].partial_eval()].to_esfilter(schema)
+
+    def missing(self):
+        return NotOp(self)
+
+    def exists(self):
+        return BooleanOp(self)
 
 
 class BasicEqOp(BasicEqOp_):
@@ -364,7 +380,9 @@ class OrOp(OrOp_):
 class BooleanOp(BooleanOp_):
     def to_esfilter(self, schema):
         if is_op(self.term, Variable_):
-            return {"term": {self.term.var: True}}
+            return es_exists(self.term.var)
+        elif is_op(self.term, FindOp):
+            return self.term.to_esfilter(schema)
         else:
             return self.to_es_script(schema).to_esfilter(schema)
 
@@ -476,18 +494,24 @@ class InOp(InOp_):
             col = first(cols)
             var = col.es_column
 
-            if col.jx_type == BOOLEAN:
-                if is_literal(self.superset) and not is_many(self.superset.value):
-                    return {"term": {var: value2boolean(self.superset.value)}}
+            if is_literal(self.superset):
+                if col.jx_type == BOOLEAN:
+                    if is_literal(self.superset) and not is_many(self.superset.value):
+                        return {"term": {var: value2boolean(self.superset.value)}}
+                    else:
+                        return {"terms": {var: map(value2boolean, self.superset.value)}}
                 else:
-                    return {"terms": {var: map(value2boolean, self.superset.value)}}
-            else:
-                if is_literal(self.superset) and not is_many(self.superset.value):
-                    return {"term": {var: self.superset.value}}
-                else:
-                    return {"terms": {var: self.superset.value}}
-        else:
-            return Painless[self].to_es_script(schema).to_esfilter(schema)
+                    if is_literal(self.superset) and not is_many(self.superset.value):
+                        return {"term": {var: self.superset.value}}
+                    else:
+                        return {"terms": {var: self.superset.value}}
+            elif is_op(self.superset, TupleOp):
+                return OrOp([
+                    EqOp([self.value, s])
+                    for s in self.superset.terms
+                ]).partial_eval().to_esfilter(schema)
+        # THE HARD WAY
+        return Painless[self].to_es_script(schema).to_esfilter(schema)
 
 
 class ScriptOp(ScriptOp_):

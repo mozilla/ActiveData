@@ -30,7 +30,7 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till
-from mo_times import Date, HOUR, MINUTE, Timer, WEEK, YEAR
+from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
@@ -121,6 +121,7 @@ class ElasticsearchMetadata(Namespace):
         metadata = self.es_cluster.get_metadata(after=after)
 
         props = [
+            # NOTICE THIS TRIPLE (index, type, properties)
             (self.es_cluster.get_index(index=i, type=t, debug=DEBUG), t, m.properties)
             for i, d in metadata.indices.items()
             if alias in d.aliases
@@ -140,12 +141,21 @@ class ElasticsearchMetadata(Namespace):
         if dirty:
             metadata = self.es_cluster.get_metadata(after=Date.now())
 
+        now = self.es_cluster.metatdata_last_updated
         meta = metadata.indices[literal_field(canonical_index)]
         data_type, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
+        table_desc.last_updated = now
 
-        table_desc.last_updated = self.es_cluster.metatdata_last_updated
+        column_names = {c.es_column for c in columns}
+        # DELETE SOME COLUMNS
+        for c in self.meta.columns.find(alias):
+            if c.es_column not in column_names:
+                DEBUG and Log.note("delete {{col|quote}}", col=c.es_column)
+                c.cardinality = 0
+                c.multi = 0
+                c.last_updated = now
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
         rescan = [

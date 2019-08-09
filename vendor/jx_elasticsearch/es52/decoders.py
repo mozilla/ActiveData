@@ -557,7 +557,9 @@ class ObjectDecoder(AggsDecoder):
 
         output = Data()
         for k, v in transpose(self.put, parts):
-            output[k] = v.get('key')
+            v_key = v.get('key')
+            if v_key != None:
+                output[k] = v_key
         return output
 
     def get_value(self, index):

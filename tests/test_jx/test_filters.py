@@ -424,3 +424,71 @@ class TestFilters(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_in_using_tuple_of_literals(self):
+        test = {
+            "data": [
+                {"a": "1"},
+                {"a": "2"},
+                {"a": "3"},
+                {"a": "4"},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "a",
+                "where": {"in": ["a", [{"literal": "4"}, {"literal": "2"}]]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": ["4", "2"]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_eq_using_tuple_of_literals(self):
+        test = {
+            "data": [
+                {"a": "1"},
+                {"a": "2"},
+                {"a": "3"},
+                {"a": "4"},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "a",
+                "where": {"eq": ["a", [{"literal": "4"}, {"literal": "2"}]]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"}, "data": ["4", "2"]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_find_uses_regex(self):
+        test = {
+            "data": [
+                {"v": "this-is-a-test"},
+                {"v": "this-is-a-vest"},
+                {"v": "test"},
+                {"v": ""},
+                {"v": None}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"find": {"v": "test"}}
+            },
+            "expecting_list": {
+                "meta": {
+                    "format": "list",
+                    "es_query": {
+                        "from": 0,
+                        "query": {"regexp": {"v.~s~": ".*test.*"}},
+                        "size": 10
+                    },
+                },
+                "data": [
+                    {"v": "this-is-a-test"},
+                    {"v": "test"},
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+

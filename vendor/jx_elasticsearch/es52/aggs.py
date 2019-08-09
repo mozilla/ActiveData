@@ -83,7 +83,7 @@ COMPARE_TUPLE = """
 
 
 MAX_OF_TUPLE = """
-(Object[])Arrays.asList(new Object[]{{{expr1}}, {{expr2}}}).stream().{{op}}("""+COMPARE_TUPLE+""").get()
+(Object[])([{{expr1}}, {{expr2}}].stream().{{op}}("""+COMPARE_TUPLE+""").get())
 """
 
 
@@ -346,7 +346,7 @@ def es_aggsop(es, frum, query):
                 selfy = text_type(Painless[s.value].partial_eval().to_es_script(schema))
 
                 script = {"scripted_metric": {
-                    'init_script': 'params._agg.best = ' + nully + ';',
+                    'init_script': 'params._agg.best = ' + nully + '.toArray();',
                     'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
                     'combine_script': 'return params._agg.best',
                     'reduce_script': 'return params._aggs.stream().'+op+'(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',

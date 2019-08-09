@@ -18,11 +18,12 @@ from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, Nested
 from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions
+from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
 from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap
 from mo_future import first, is_text, text_type, transpose
 from mo_json import EXISTS, OBJECT, STRING
-from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path
+from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path, unnest_path
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 import mo_math
@@ -71,9 +72,16 @@ class AggsDecoder(object):
                         name=concat_field(col.es_index, col.es_column),
                         id=id(col)
                     )
+                    if unnest_path(e.value.var) in KNOWN_MULTITYPES:
+                        Log.warning("{{var}} is not multivalued", var = e.value.var)
+                        return object.__new__(MultivalueDecoder)
+
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)
                 elif col.multi <= 1 and col.partitions == None:
+                    if unnest_path(e.value.var) in KNOWN_MULTITYPES:
+                        Log.warning("{{var}} is not multivalued", var = e.value.var)
+                        return object.__new__(MultivalueDecoder)
                     e.domain = set_default(DefaultDomain(limit=limit), e.domain.__data__())
                     return object.__new__(DefaultDecoder)
                 else:

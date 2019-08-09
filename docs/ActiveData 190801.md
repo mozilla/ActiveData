@@ -115,6 +115,15 @@ ETL is for decoupling from transactional systems and denormalizing the data
 bring code to data, not data to the code
 
 
+* OLTP - fast update data
+* OLAP - fast query data
+
+* send queries to server
+* not SQL, use grids
+
+
+
+
 
 ## Data Solution: Typed JSON
 

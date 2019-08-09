@@ -44,6 +44,8 @@ TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 known_clusters = {}  # MAP FROM id(Cluster) TO ElasticsearchMetadata INSTANCE
 
+KNOWN_MULTITYPES = ["build.type", "run.type", "build.platform", "file.path"]
+
 
 class ElasticsearchMetadata(Namespace):
     """
@@ -631,7 +633,7 @@ class ElasticsearchMetadata(Namespace):
                     DEBUG and Log.note("{{column.es_column}} is still fresh ({{ago}} ago)", column=column, ago=(Date.now()-Date(column.last_updated)).seconds)
                     continue
 
-                if untype_path(column.name) in ["build.type", "run.type", "build.platform", "file.path"]:
+                if untype_path(column.name) in KNOWN_MULTITYPES:
                     try:
                         self._update_cardinality(column)
                     except Exception as e:

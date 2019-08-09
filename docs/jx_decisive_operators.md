@@ -38,21 +38,32 @@ for example, the SQL `OR` operator is considered conservative, even though there
     True OR NULL => True
 
 
-## Choosing a category for JSON Expressions
+## Strict Operators for JSON Expressions?
 
-Strict operators are common in most procedural languages. Conservative operators are used in SQL expressions. In both these cases we become well practices with the coding style required to operate on unclean JSON.
+Strict operators are common in most procedural languages. Conservative operators are used in SQL expressions. In both these cases we become well practised with the coding style required to operate on unclean JSON.
 
 The decisive operators are rare: Most applications have clear internal data structures; and a decisive operator will only hide coding mistakes. The value of decisive operators is only apparent in domains that have `nulls`, and this does not happen in most applications because the use of `nulls` can always be mitigated with a "better" set of type definitions.
 
-*If* you do not dictate the type system, or the types are changing often, or you deal with types from many different systems; or you are processing "unclean data"; the conservative and strict operators will demand verbose code that checks for those nulls. Decisive operators work better in this enviroment. For example, SQL aggregation operators are decisive: 
+There are some situations where strict operators demand verbose code:
+
+* If you do not dictate the type system, or 
+* the types are changing often, or 
+* you deal with types from many different systems, or
+* you are processing "unclean data"
+
+The null checks required makes code verbose. Decisive operators work better in these situations. For example, SQL aggregation operators are decisive: 
 
 ```sql
 	AVG(42, 24, null) => (42+24)/2 => 33
 ```
 
-On the other hand, SQL comparision (`=`) is conservative 
+On the other hand, SQL comparision (`=`) is conservative; comparing to `NULL` results in `NULL`; a falsey value.
 
-    1 = NULL  => NULL
+    CASE 
+    WHEN NULL = NULL 
+    THEN 'never happens` 
+    ELSE 'ok'
+    END
 
 which makes comparing values complicated:
 
@@ -60,16 +71,23 @@ which makes comparing values complicated:
     SELECT a.name=b.name or (a.name IS NULL AND b.name IS NULL) as is_same FROM my_table 
 ```
 
-### Conservative Operators are dangerous
-
-Conservative operators make Boolean logic expressions difficult to write: Familiar Boolean identities  
-
 ### Strict operators are verbose
 
-*Strict* operators give no answer when dealing with nulls, which forces null handling to be explicit, and therefore verbose.
+*Strict* operators demand explicit null handling and demand verbose code:
 
-    if (null + 1 < 0)
+Consider the decisive expression
 
+    return (a + b) < 0
+
+the strict version is:
+
+    if (a == null) {
+        if (b == null) return false;
+        return b < 0 ;
+    }
+    if (b == null) return a < 0;
+    return (a + b) < 0
 
 ## Summary
 
+Decisive operators

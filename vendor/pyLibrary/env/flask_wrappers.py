@@ -10,15 +10,16 @@ from __future__ import absolute_import, division, unicode_literals
 
 from functools import update_wrapper
 
-from mo_future import is_text, is_binary
 import flask
 from flask import Response
 
 from mo_dots import coalesce
 from mo_files import File
+from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import unicode2utf8
+from pyLibrary.env import git
 from pyLibrary.env.big_data import ibytes2icompressed
 
 TOO_SMALL_TO_COMPRESS = 510  # DO NOT COMPRESS DATA WITH LESS THAN THIS NUMBER OF BYTES
@@ -116,3 +117,36 @@ def dockerflow(flask_app, backend_check):
 
 
 VERSION_JSON = None
+
+
+def add_version(flask_app):
+    """
+    ADD ROUTING TO HANDLE REQUEST FOR /__version__
+    :param flask_app: THE (Flask) APP
+    :return:
+    """
+    try:
+        version_info = unicode2utf8(value2json(
+            {
+                "source": "https://github.com/mozilla/ActiveData/tree/" + git.get_branch(),
+                # "version": "",
+                "commit": git.get_revision(),
+            },
+            pretty=True
+        ) + text_type("\n"))
+
+        @cors_wrapper
+        def version():
+            return Response(
+                version_info,
+                status=200,
+                headers={
+                    "Content-Type": "application/json"
+                }
+            )
+
+        flask_app.add_url_rule(str('/__version__'), None, version, defaults={}, methods=[str('GET'), str('POST')])
+    except Exception as e:
+        Log.error("Problem setting up listeners for dockerflow", cause=e)
+
+

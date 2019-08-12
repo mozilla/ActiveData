@@ -33,7 +33,7 @@ from mo_logs.strings import unicode2utf8
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
 from pyLibrary.env import elasticsearch, http
-from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow
+from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow, add_version
 
 
 class ActiveDataApp(Flask):
@@ -128,6 +128,9 @@ def setup():
         def backend_check():
             http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
         dockerflow(flask_app, backend_check)
+    else:
+        # IF NOT USING DOCKERFLOW, THEN RESPOND WITH A SIMPLER __version__.json
+        add_version(flask_app)
 
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY
     container.config.default = {

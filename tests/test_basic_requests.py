@@ -47,7 +47,6 @@ class TestBasicRequests(BaseTestCase):
         response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
 
-    @skipIf(global_settings.is_travis, "travis is scrubbing GET paths: https://travis-ci.community/t/http-header-rewriting/4587")
     def test_bad_file_request(self):
         url = URL(self.utils.testing.query)
         url.path = "/tools/../../README.md"

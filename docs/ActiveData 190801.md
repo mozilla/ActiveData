@@ -31,7 +31,12 @@ The problems relating to maintaining a service
 The shape of the data is important for manipulation. Organization of data is important for discovery. 
 
 * Locating data; required data is sparse
+  * Name
+  * similar data
 * Shape of the data; standard data
+  * fields
+  * relations to connected data
+  * 
 * Use cases driving data extraction APIs and declaring schema
 
 
@@ -58,7 +63,7 @@ A database server solves many of these problems. Many micro-service candidates g
 * Queries consume resources, locking database from other transactions
 * Human-managed schema
 * SQL is not suited for simple queries
-* SQL Computationally unbounded 
+* SQL computationally unbounded (QoS) 
 
 
 ## Service Solution: ElasticSearch?
@@ -67,8 +72,7 @@ A database server solves many of these problems. Many micro-service candidates g
 * Document database is denormalized, is a hierarchical database
 * Everything indexed - low query latency
 * no loops, no joins, computationally bounded
-* Bounded resources per query
-* No locking
+* No locking transactional system
 * Handle multitude of schemas from many sources
 * scales to multiple machines
 * recovery restoration
@@ -85,13 +89,13 @@ A database server solves many of these problems. Many micro-service candidates g
 * OutOfMemory exceptions 
 
 
-## Service Solution: ElasticSearch + ActiveData
+## Service Solution: ElasticSearch + ActiveData + ETL
 
 * public gateway for ES
 * simpler data model (shape reduces choices)
 * simpler query language
 * ETL ingestion from various sources
-* SpotManager - Cheaper nodes, but diverse nodes cause shard balancing problems 
+* SpotManager - Cheaper nodes, but diverse nodes cause shard balancing problems, Docker, but better 
 * esShardBlancer - Balance shards according to machine capabilities
 * Supervisor for OoM - but still have zombie nodes 
 
@@ -99,20 +103,10 @@ A database server solves many of these problems. Many micro-service candidates g
 ETL is for decoupling from transactional systems and denormalizing the data
 
 
-## Service Solution: BigQuery 
 
-* is a 3rd party service
-* centralized destination for data
-* low query latency?
-* offset query load from transactional systems
-* standard query language
- 
-### Data Problems
 
-* Human-managed schema (ActiveData)
-* SQL is not suited for queries over unclean data
-* SQL Computationally unbounded (ActiveData) 
-* ETL ingestion from various sources (ActiveData)
+
+
 
 
 ## Interlude: General Design Patterns
@@ -120,20 +114,20 @@ ETL is for decoupling from transactional systems and denormalizing the data
 * bring code to data, not data to the code
 * OLTP - fast update data
 * OLAP - fast query data
-* send queries to server
+* send queries to server, do not pull data to client
 
 
-
-
-\## Data Solution: Typed JSON
+## Data Solution: Typed JSON
 
 * Typed JSON
 
 dynamic schema
 
-all data is array data
+all data is array data (logically, not in implementation)
 
-json -> matrix
+json -> matrix  SIMD  
+
+parallelism - threads, tasks (async), 
 
 
 ## Data Solution: Denormalization
@@ -205,4 +199,27 @@ All values are array of values
 * jx-elasticsearch
 * jx-python
 * jx-sqlite
+
+
+
+
+# Future Solutions
+
+## Service Solution: BigQuery 
+
+* is a 3rd party service
+* centralized destination for data
+* low query latency?
+* offset query load from transactional systems
+* standard query language
+ 
+
+### Problems
+
+* Human-managed schema (ActiveData?)
+* SQL is not suited for queries over unclean data (ActiveData?)
+* SQL Computationally unbounded (ActiveData?) 
+* ETL ingestion from various sources (ActiveData?)
+
+
 

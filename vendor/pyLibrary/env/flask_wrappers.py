@@ -135,7 +135,7 @@ def add_version(flask_app):
             pretty=True
         ) + text_type("\n"))
 
-        Log.note("Running\n{{version}}", version=version_info)
+        Log.note("Using github version\n{{version}}", version=version_info)
 
         @cors_wrapper
         def version():

@@ -1,4 +1,8 @@
 
+
+every component should have a name show activedata as a series of components
+
+
 # ActiveData Capability Overview (August 2019)
 
 With the spectre of ActiveData's retirement; maybe replaced with Google's Big Query: We will summarize ActiveData in terms of problems it solves and the  capabilities it provides. This can serve as a checklist for a successor.
@@ -25,6 +29,12 @@ The problems relating to maintaining a service
 * Transactional systems can not answer big questions - Even if you have a data service they must work with other data services to be useful.  Consider  Bugzilla x Tasks x Alerts  - Copy the data in, or 
 * Low query latency is work - The time between submitting the query and getting back an answer depends on the machine power and data locality and data structure
 * Data Timeliness is work - any caching, or warehouse 
+
+example hg
+feedback loop 
+fabricator 
+going through logs
+
 
 ### Data
 
@@ -89,7 +99,7 @@ A database server solves many of these problems. Many micro-service candidates g
 * OutOfMemory exceptions 
 
 
-## Service Solution: ElasticSearch + ActiveData + ETL
+## Service Solution: ActiveData (ES + ETL)
 
 * public gateway for ES
 * simpler data model (shape reduces choices)
@@ -100,8 +110,14 @@ A database server solves many of these problems. Many micro-service candidates g
 * Supervisor for OoM - but still have zombie nodes 
 
 
+* define ETL
 ETL is for decoupling from transactional systems and denormalizing the data
 
+doc database is interesting
+"pre-joins" give an example
+ 
+add reference /drawing of the many machines
+many machines is interesting
 
 
 
@@ -115,6 +131,19 @@ ETL is for decoupling from transactional systems and denormalizing the data
 * OLTP - fast update data
 * OLAP - fast query data
 * send queries to server, do not pull data to client
+* ML primitives and aggregation primitives and filtering primitives 
+* better example of machine learning
+* bounded 
+
+
+* examples of 
+* sql.t.m.o easier to use in code
+* machine compostable language constructes
+* 
+* 
+
+
+
 
 
 ## Data Solution: Typed JSON
@@ -122,6 +151,8 @@ ETL is for decoupling from transactional systems and denormalizing the data
 * Typed JSON
 
 dynamic schema
+
+example treeherder.bugs 
 
 all data is array data (logically, not in implementation)
 
@@ -206,6 +237,8 @@ All values are array of values
 # Future Solutions
 
 ## Service Solution: BigQuery 
+
+online sql database, its charges for how much you scan for a query. 
 
 * is a 3rd party service
 * centralized destination for data

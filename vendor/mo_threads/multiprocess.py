@@ -8,7 +8,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 import os
 import subprocess
 
@@ -16,6 +15,7 @@ from mo_dots import NullType, set_default
 from mo_future import none_type
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
+
 from mo_threads.lock import Lock
 from mo_threads.queues import Queue
 from mo_threads.signal import Signal

@@ -54,6 +54,8 @@ Mozilla has a 40-node cluster of Elasticsearch machines with multiple terabytes 
 
 Elasticsearch has a [machine learning API](https://www.elastic.co/guide/en/elasticsearch/reference/current/ml-apis.html), but it is more about managing machine learning jobs. From demonstrations, it appears to require large data to work properly. 
 
+More reading on balancing entropy, model paramters, and confidence: https://statmodeling.stat.columbia.edu/wp-content/uploads/2012/07/timeseries06272012.pdf
+
 
 
   

@@ -71,7 +71,7 @@ test_data_3 = [
     {"a": TODAY, "t": Date("today-3day").unix, "v": 5},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 7},
     {"a": TODAY, "t": Date("today-5day").unix, "v": 11},
-    {"a": TODAY, "t": None, "v": 27},
+    {"a": TODAY, "t": NULL, "v": 27},
     {"a": TODAY, "t": Date("today-day").unix, "v": 13},
     {"a": TODAY, "t": Date("today-2day").unix, "v": 17},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 19},

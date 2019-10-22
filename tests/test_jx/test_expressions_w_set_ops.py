@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from mo_dots import wrap
+from mo_json import null
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -613,7 +614,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": null},
                 {},
                 {"v": "a"}
             ],
@@ -629,9 +630,9 @@ class TestSetOps(BaseTestCase):
                 "data": [
                     {"v": "test", "f": 0},
                     {"v": "not test", "f": 4},
-                    {"v": NULL, "f": NULL},
-                    {"f": NULL},
-                    {"v": "a", "f": NULL}
+                    {"v": null, "f": null},
+                    {"f": null},
+                    {"v": "a", "f": null}
                 ]
             }
         }
@@ -665,7 +666,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": null},
                 {},
                 {"v": "a"}
             ],
@@ -688,7 +689,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": null},
                 {},
                 {"v": "a"}
             ],
@@ -711,7 +712,7 @@ class TestSetOps(BaseTestCase):
             "data": [
                 {"v": "test"},
                 {"v": "not test"},
-                {"v": NULL},
+                {"v": null},
                 {},
                 {"v": "a"}
             ],
@@ -736,19 +737,19 @@ class TestSetOps(BaseTestCase):
     def test_left_and_right(self):
         test = {
             "data": [
-                {"i": 0, "t": -1, "v": NULL},
+                {"i": 0, "t": -1, "v": null},
                 {"i": 1, "t": -1, "v": ""},
                 {"i": 2, "t": -1, "v": "a"},
                 {"i": 3, "t": -1, "v": "abcdefg"},
-                {"i": 4, "t": 0, "v": NULL},
+                {"i": 4, "t": 0, "v": null},
                 {"i": 5, "t": 0, "v": ""},
                 {"i": 6, "t": 0, "v": "a"},
                 {"i": 7, "t": 0, "v": "abcdefg"},
-                {"i": 8, "t": 3, "v": NULL},
+                {"i": 8, "t": 3, "v": null},
                 {"i": 9, "t": 3, "v": ""},
                 {"i": 10, "t": 3, "v": "a"},
                 {"i": 11, "t": 3, "v": "abcdefg"},
-                {"i": 12, "t": 7, "v": NULL},
+                {"i": 12, "t": 7, "v": null},
                 {"i": 13, "t": 7, "v": ""},
                 {"i": 14, "t": 7, "v": "a"},
                 {"i": 15, "t": 7, "v": "abcdefg"}
@@ -1090,7 +1091,7 @@ class TestSetOps(BaseTestCase):
     def test_not_left(self):
         test = {
             "data": [
-                {"url": NULL},
+                {"url": null},
                 {"url": "/"},
                 #        012345678901234567890123456789
                 {"url": "https://hg.mozilla.org/"},

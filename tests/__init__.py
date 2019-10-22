@@ -33,7 +33,7 @@ from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times import Date, MINUTE
 from pyLibrary.env import http
-from pyLibrary.env.elasticsearch import Cluster
+from pyLibrary.env.elasticsearch import Cluster, scrub
 from pyLibrary.testing import elasticsearch
 from tests import test_jx
 

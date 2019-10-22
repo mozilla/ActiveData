@@ -269,7 +269,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test, tjson=True)
+        self.utils.execute_tests(test)
 
     def test_max_on_value(self):
         test = {
@@ -295,7 +295,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test, tjson=True)
+        self.utils.execute_tests(test)
 
     def test_max_object_on_value(self):
         test = {
@@ -320,7 +320,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test, tjson=True)
+        self.utils.execute_tests(test)
 
     # @skipIf(global_settings.use == "sqlite", "sqlite does not have a median function")
     def test_median_on_value(self):
@@ -346,7 +346,7 @@ class TestAggOps(BaseTestCase):
                 }
             }
         }
-        self.utils.execute_tests(test, tjson=True, places=2)
+        self.utils.execute_tests(test, places=2)
 
     def test_many_aggs_on_value(self):
         # ES WILL NOT ACCEPT TWO (NAIVE) AGGREGATES ON SAME FIELD, COMBINE THEM USING stats AGGREGATION
@@ -372,7 +372,7 @@ class TestAggOps(BaseTestCase):
                 ]
             }
         }
-        self.utils.execute_tests(test, tjson=True)
+        self.utils.execute_tests(test)
 
     def test_cardinality(self):
         test = {

@@ -13,6 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import skip, skipIf
 
 from jx_base.expressions import NULL
+from mo_json import null
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 
@@ -1506,7 +1507,7 @@ class TestEdge1(BaseTestCase):
     def test_edge_using_between(self):
         test = {
             "data": [
-                {"url": NULL},
+                {"url": null},
                 {"url": "/"},
                 {"url": "https://hg.mozilla.org/"},
                 {"url": "https://hg.mozilla.org/a/"},
@@ -2192,7 +2193,7 @@ structured_test_data = [
     {"b": {"r": "d", "d": 1}, "v": 10},
     {"b": {"r": "d", "d": 2}, "v": 11},
     {"b": {"r": "d", "d": 3}, "v": 12},
-    {"b": {"r": NULL, "d": 3}, "v": 13}
+    {"b": {"r": null, "d": 3}, "v": 13}
 ]
 
 

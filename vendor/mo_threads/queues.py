@@ -207,7 +207,7 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
-            output = [l for l in list(self.queue) if l is not THREAD_STOP]
+            output = list(self.queue)
             self.queue.clear()
 
         return output

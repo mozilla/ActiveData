@@ -16,6 +16,7 @@ import shutil
 from tempfile import NamedTemporaryFile, mkdtemp
 
 from mo_dots import Null, coalesce, get_module, is_list
+from mo_files import mimetype
 from mo_files.url import URL
 from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
@@ -142,7 +143,7 @@ class File(object):
             return ".".join(parts[0:-1])
 
     @property
-    def mime_type(self, mimetype=None):
+    def mime_type(self):
         if not self._mime_type:
             if self.abspath.endswith(".js"):
                 self._mime_type = "application/javascript"

@@ -14,10 +14,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import types
 from collections import deque
 from datetime import datetime
 from time import time
+import types
 
 from mo_dots import Null, coalesce
 from mo_future import long
@@ -78,6 +78,7 @@ class Queue(object):
         with self.lock:
             if value is THREAD_STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
+                self.queue.append(value)
                 self.closed.go()
                 return
 
@@ -206,10 +207,7 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
-            chunk = list(self.queue)
-            if any(l is THREAD_STOP for l in chunk):
-                Log.error("not expected")
-            output = [l for l in list(self.queue) if l is not THREAD_STOP]
+            output = list(self.queue)
             self.queue.clear()
 
         return output
@@ -226,7 +224,7 @@ class Queue(object):
             else:
                 v =self.queue.pop()
                 if v is THREAD_STOP:  # SENDING A STOP INTO THE QUEUE IS ALSO AN OPTION
-                    Log.error("not expected")
+                    self.closed.go()
                 return v
 
     def close(self):
@@ -273,6 +271,7 @@ class PriorityQueue(Queue):
         with self.lock:
             if value is THREAD_STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
+                self.queue[priority].queue.append(value)
                 self.closed.go()
                 return
 
@@ -503,24 +502,16 @@ class ThreadedQueue(Queue):
     def add(self, value, timeout=None):
         with self.lock:
             self._wait_for_queue_space(timeout=timeout)
-            if value is THREAD_STOP:
-                self.closed.go()
-                return self
             if not self.closed:
                 self.queue.append(value)
         return self
 
     def extend(self, values):
         with self.lock:
-            if self.closed:
-                return self
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
-            for v in values:
-                if v is THREAD_STOP:
-                    self.closed.go()
-                else:
-                    self.queue.append(v)
+            if not self.closed:
+                self.queue.extend(values)
             if not self.silent:
                 Log.note("{{name}} has {{num}} items", name=self.name, num=len(self.queue))
         return self

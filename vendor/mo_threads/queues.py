@@ -78,7 +78,6 @@ class Queue(object):
         with self.lock:
             if value is THREAD_STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
-                self.queue.append(value)
                 self.closed.go()
                 return
 
@@ -505,6 +504,9 @@ class ThreadedQueue(Queue):
     def add(self, value, timeout=None):
         with self.lock:
             self._wait_for_queue_space(timeout=timeout)
+            if value is THREAD_STOP:
+                self.closed.go()
+                return self
             if not self.closed:
                 self.queue.append(value)
         return self

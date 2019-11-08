@@ -20,7 +20,7 @@ def get_revision():
     """
     GET THE CURRENT GIT REVISION
     """
-    proc = Process("git log", ["git", "log", "-1"], shell=True)
+    proc = Process("git log", ["git", "log", "-1"])
 
     try:
         for line in proc.stdout:
@@ -36,7 +36,7 @@ def get_remote_revision(url, branch):
     """
     GET REVISION OF A REMOTE BRANCH
     """
-    proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch], shell=True)
+    proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch])
 
     try:
         for line in proc.stdout:
@@ -56,7 +56,7 @@ def get_branch():
     """
     GET THE CURRENT GIT BRANCH
     """
-    proc = Process("git status", ["git", "status"], shell=True)
+    proc = Process("git status", ["git", "status"])
 
     try:
         for line in proc.stdout:

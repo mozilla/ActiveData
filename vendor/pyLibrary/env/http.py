@@ -30,8 +30,7 @@ import mo_math
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap
 from mo_files.url import URL
-from mo_future import PY2, text_type
-from mo_future import is_text
+from mo_future import PY2, is_text, text_type
 from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except

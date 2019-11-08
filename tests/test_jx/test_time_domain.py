@@ -13,6 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
 from mo_dots import wrap
+from mo_json import null
 from mo_logs import Log
 from mo_times.dates import Date
 from mo_times.durations import DAY, WEEK
@@ -27,7 +28,7 @@ test_data_1 = [
     {"a": "x", "t": Date("today-3day").unix, "v": 5},
     {"a": "x", "t": Date("today-4day").unix, "v": 7},
     {"a": "x", "t": Date("today-5day").unix, "v": 11},
-    {"a": "x", "t": None, "v": 27},
+    {"a": "x", "t": null, "v": 27},
     {"a": "y", "t": Date("today-day").unix, "v": 13},
     {"a": "y", "t": Date("today-2day").unix, "v": 17},
     {"a": "y", "t": Date("today-4day").unix, "v": 19},
@@ -71,7 +72,7 @@ test_data_3 = [
     {"a": TODAY, "t": Date("today-3day").unix, "v": 5},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 7},
     {"a": TODAY, "t": Date("today-5day").unix, "v": 11},
-    {"a": TODAY, "t": None, "v": 27},
+    {"a": TODAY, "t": null, "v": 27},
     {"a": TODAY, "t": Date("today-day").unix, "v": 13},
     {"a": TODAY, "t": Date("today-2day").unix, "v": 17},
     {"a": TODAY, "t": Date("today-4day").unix, "v": 19},

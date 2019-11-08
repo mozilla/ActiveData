@@ -83,7 +83,7 @@ class RolloverIndex(object):
         if queue == None:
             candidates = jx.run({
                 "from": ListContainer(".", self.cluster.get_aliases()),
-                "where": {"regex": {"index": self.settings.index + "\d\d\d\d\d\d\d\d_\d\d\d\d\d\d"}},
+                "where": {"regex": {"index": self.settings.index + "\\d\\d\\d\\d\\d\\d\\d\\d_\\d\\d\\d\\d\\d\\d"}},
                 "sort": "index"
             })
             best = None
@@ -158,6 +158,9 @@ class RolloverIndex(object):
             return set()
 
     def extend(self, documents, queue=None):
+        if len(documents) == 0:
+            return
+
         i = 0
         if queue == None:
             for i, doc in enumerate(documents):

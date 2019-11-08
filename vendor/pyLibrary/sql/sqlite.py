@@ -10,15 +10,16 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
-from collections import Mapping, namedtuple
 import os
 import re
 import sys
+from collections import Mapping, namedtuple
 
-from mo_dots import Data, coalesce, unwraplist
+from mo_dots import Data, coalesce, unwraplist, listwrap, wrap
 from mo_files import File
 from mo_future import allocate_lock as _allocate_lock, text_type
+from mo_future import is_text
+from mo_future import zip_longest
 from mo_json import BOOLEAN, INTEGER, NESTED, NUMBER, OBJECT, STRING
 from mo_kwargs import override
 from mo_logs import Log
@@ -28,7 +29,9 @@ from mo_math.stats import percentile
 from mo_threads import Lock, Queue, Thread, Till
 from mo_times import Date, Duration, Timer
 from pyLibrary import convert
-from pyLibrary.sql import DB, SQL, SQL_FALSE, SQL_NULL, SQL_SELECT, SQL_TRUE, sql_iso, sql_list
+from pyLibrary.sql import DB, SQL, SQL_FALSE, SQL_NULL, SQL_SELECT, SQL_TRUE, sql_iso, sql_list, SQL_AND, ConcatSQL, \
+    SQL_EQ, SQL_IS_NULL, SQL_COMMA, _Join, SQL_FROM, SQL_WHERE, SQL_ORDERBY, SQL_STAR, SQL_CREATE, SQL_VALUES, \
+    SQL_INSERT, SQL_OP, SQL_CP, SQL_DOT
 
 DEBUG = False
 TRACE = True
@@ -110,6 +113,7 @@ class Sqlite(DB):
                 self.db = db
         except Exception as e:
             Log.error("could not open file {{filename}}", filename=self.filename, cause=e)
+        self.upgrade = upgrade
         load_functions and self._load_functions()
 
         self.locker = Lock()
@@ -117,7 +121,6 @@ class Sqlite(DB):
         self.queue = Queue("sql commands")   # HOLD (command, result, signal, stacktrace) TUPLES
 
         self.get_trace = coalesce(get_trace, TRACE)
-        self.upgrade = upgrade
         self.closed = False
 
         # WORKER VARIABLES
@@ -159,6 +162,14 @@ class Sqlite(DB):
         output = Transaction(self, parent=parent)
         self.available_transactions.append(output)
         return output
+
+    def about(self, table_name):
+        """
+        :param table_name: TABLE IF INTEREST
+        :return: SOME INFORMATION ABOUT THE TABLE
+        """
+        details = self.query("PRAGMA table_info" + sql_iso(quote_value(table_name)))
+        return details.data
 
     def query(self, command):
         """
@@ -381,7 +392,7 @@ class Sqlite(DB):
                 # EXECUTE QUERY
                 self.last_command_item = command_item
                 DEBUG and Log.note(FORMAT_COMMAND, command=query)
-                curr = self.db.execute(query)
+                curr = self.db.execute(text_type(query))
                 result.meta.format = "table"
                 result.header = [d[0] for d in curr.description] if curr.description else None
                 result.data = curr.fetchall()
@@ -460,7 +471,7 @@ class Transaction(object):
             # RUN THEM
             for c in todo:
                 DEBUG and Log.note(FORMAT_COMMAND, command=c.command)
-                self.db.db.execute(c.command)
+                self.db.db.execute(text_type(c.command))
         except Exception as e:
             Log.error("problem running commands", current=c, cause=e)
 
@@ -487,8 +498,14 @@ class Transaction(object):
 
 CommandItem = namedtuple("CommandItem", ("command", "result", "is_done", "trace", "transaction"))
 
+_simple_word = re.compile(r"^\w+$", re.UNICODE)
 
-_no_need_to_quote = re.compile(r"^\w+$", re.UNICODE)
+
+def _no_need_to_quote(name):
+    if name == "table":
+        return False
+    else:
+        return _simple_word.match(name)
 
 
 def quote_column(column_name, table=None):
@@ -498,9 +515,9 @@ def quote_column(column_name, table=None):
     if not is_text(column_name):
         Log.error("expecting a name")
     if table != None:
-        return SQL(" d" + quote(table) + "." + quote(column_name) + " ")
+        return SQL(" " + quote(table) + "." + quote(column_name) + " ")
     else:
-        if _no_need_to_quote.match(column_name):
+        if _no_need_to_quote(column_name):
             return SQL(" " + column_name + " ")
         return SQL(" " + quote(column_name) + " ")
 
@@ -524,13 +541,95 @@ def quote_value(value):
         return SQL(text_type(value))
 
 
-def quote_list(list):
-    return sql_iso(sql_list(map(quote_value, list)))
+def quote_list(values):
+    return sql_iso(sql_list(map(quote_value, values)))
+
 
 def join_column(a, b):
-    a = quote_column(a)
-    b = quote_column(b)
-    return SQL(a.value.rstrip() + "." + b.value.lstrip())
+    return ConcatSQL(quote_column(a), SQL_DOT, quote_column(b))
+
+
+def sql_eq(**item):
+    """
+    RETURN SQL FOR COMPARING VARIABLES TO VALUES (AND'ED TOGETHER)
+
+    :param item: keyword parameters representing variable and value
+    :return: SQL
+    """
+    return SQL_AND.join([
+        ConcatSQL((quote_column(k), SQL_EQ, quote_value(v)))
+        if v != None
+        else ConcatSQL((quote_column(k), SQL_IS_NULL))
+        for k, v in item.items()
+    ])
+
+
+def sql_query(command):
+    """
+    VERY BASIC QUERY EXPRESSION TO SQL
+    :param command: jx-expression
+    :return: SQL
+    """
+    command = wrap(command)
+    acc = [SQL_SELECT]
+    if command.select:
+        acc.append(_Join(SQL_COMMA, map(quote_column, listwrap(command.select))))
+    else:
+        acc.append(SQL_STAR)
+
+    acc.append(SQL_FROM)
+    acc.append(quote_column(command['from']))
+    if command.where.eq:
+        acc.append(SQL_WHERE)
+        acc.append(sql_eq(**command.where.eq))
+    if command.orderby:
+        acc.append(SQL_ORDERBY)
+        acc.append(_Join(SQL_COMMA, map(quote_column, listwrap(command.orderby))))
+    return ConcatSQL(acc)
+
+def sql_create(table, properties, primary_key=None, unique=None):
+    """
+    :param table:  NAME OF THE TABLE TO CREATE
+    :param properties: DICT WITH {name: type} PAIRS (type can be plain text)
+    :param primary_key: COLUMNS THAT MAKE UP THE PRIMARY KEY
+    :param unique: COLUMNS THAT SHOULD BE UNIQUE
+    :return:
+    """
+    acc = [SQL_CREATE, quote_column(table), SQL_OP, sql_list([
+        quote_column(k) + SQL(v)
+        for k, v in properties.items()
+    ])]
+
+    if primary_key:
+        acc.append(SQL_COMMA),
+        acc.append(SQL(" PRIMARY KEY ")),
+        acc.append(sql_iso(sql_list([
+            quote_column(c) for c in listwrap(primary_key)
+        ])))
+    if unique:
+        acc.append(SQL_COMMA),
+        acc.append(SQL(" UNIQUE ")),
+        acc.append(sql_iso(sql_list([
+            quote_column(c) for c in listwrap(unique)
+        ])))
+
+    acc.append(SQL_CP)
+    return ConcatSQL(acc)
+
+
+def sql_insert(table, records):
+    records = listwrap(records)
+    keys = list({k for r in records for k in r.keys()})
+    return ConcatSQL([
+        SQL_INSERT,
+        quote_column(table),
+        sql_iso(sql_list(map(quote_column, keys))),
+        SQL_VALUES,
+        sql_list(
+            sql_iso(sql_list([quote_value(r[k]) for k in keys]))
+            for r in records
+        )
+    ])
 
 
 BEGIN = "BEGIN"
@@ -543,23 +642,20 @@ def _upgrade():
     global _sqlite3
 
     try:
-        Log.note("sqlite not upgraded")
-        # return
-        #
-        # import sys
-        # import platform
-        # if "windows" in platform.system().lower():
-        #     original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
-        #     if platform.architecture()[0]=='32bit':
-        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
-        #     else:
-        #         source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
-        #
-        #     if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
-        #         original_dll.backup()
-        #         File.copy(source_dll, original_dll)
-        # else:
-        #     pass
+        import sys
+        import platform
+        if "windows" in platform.system().lower():
+            original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
+            if platform.architecture()[0] == '32bit':
+                source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
+            else:
+                source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
+
+            if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
+                original_dll.backup()
+                File.copy(source_dll, original_dll)
+        else:
+            pass
     except Exception as e:
         Log.warning("could not upgrade python's sqlite", cause=e)
 

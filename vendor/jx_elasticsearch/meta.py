@@ -618,7 +618,7 @@ class ElasticsearchMetadata(Namespace):
         please_stop.then(lambda: self.todo.add(THREAD_STOP))
         while not please_stop:
             pair = self.todo.pop()
-            if pair == THREAD_STOP:
+            if pair is THREAD_STOP:
                 break
             column, after = pair
 

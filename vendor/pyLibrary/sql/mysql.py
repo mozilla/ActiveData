@@ -26,7 +26,9 @@ from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.strings import expand_template, indent, outdent
 from mo_math import is_number
 from mo_times import Date
-from pyLibrary.sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_alias, sql_iso, sql_list
+from pyLibrary.sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, \
+    SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_alias, sql_iso, sql_list, SQL_INSERT, SQL_VALUES, ConcatSQL, SQL_EQ, \
+    SQL_UPDATE, SQL_SET
 from pyLibrary.sql.sqlite import join_column
 
 DEBUG = False
@@ -375,9 +377,9 @@ class MySQL(object):
 
         try:
             command = (
-                "INSERT INTO " + quote_column(table_name) +
+                SQL_INSERT + quote_column(table_name) +
                 sql_iso(sql_list([quote_column(k) for k in keys])) +
-                " VALUES " +
+                SQL_VALUES +
                 sql_iso(sql_list([quote_value(record[k]) for k in keys]))
             )
             self.execute(command)
@@ -389,14 +391,9 @@ class MySQL(object):
     def insert_new(self, table_name, candidate_key, new_record):
         candidate_key = listwrap(candidate_key)
 
-        condition = SQL_AND.join([
-            quote_column(k) + "=" + quote_value(new_record[k])
-            if new_record[k] != None
-            else quote_column(k) + SQL_IS_NULL
-            for k in candidate_key
-        ])
+        condition = sql_eq(**{k: new_record[k] for k in candidate_key})
         command = (
-            "INSERT INTO " + quote_column(table_name) + sql_iso(sql_list(
+            SQL_INSERT + quote_column(table_name) + sql_iso(sql_list(
                 quote_column(k) for k in new_record.keys()
             )) +
             SQL_SELECT + "a.*" + SQL_FROM + sql_iso(
@@ -428,12 +425,12 @@ class MySQL(object):
 
         try:
             command = (
-                "INSERT INTO " + quote_column(table_name) +
+                SQL_INSERT + quote_column(table_name) +
                 sql_iso(sql_list([quote_column(k) for k in keys])) +
-                " VALUES " + sql_list([
-                sql_iso(sql_list([quote_value(r[k]) for k in keys]))
-                for r in records
-            ])
+                SQL_VALUES + sql_list(
+                    sql_iso(sql_list([quote_value(r[k]) for k in keys]))
+                    for r in records
+                )
             )
             self.execute(command)
         except Exception as e:
@@ -447,14 +444,11 @@ class MySQL(object):
         """
         new_values = quote_param(new_values)
 
-        where_clause = SQL_AND.join([
-            quote_column(k) + "=" + quote_value(v) if v != None else quote_column(k) + SQL_IS_NULL
-            for k, v in where_slice.items()
-        ])
+        where_clause = sql_eq(**where_slice)
 
         command = (
-            "UPDATE " + quote_column(table_name) + "\n" +
-            "SET " +
+            SQL_UPDATE + quote_column(table_name) +
+            SQL_SET +
             sql_list([quote_column(k) + "=" + v for k, v in new_values.items()]) +
             SQL_WHERE +
             where_clause
@@ -631,6 +625,21 @@ def quote_param(param):
 def quote_list(values):
     return sql_iso(sql_list(map(quote_value, values)))
 
+
+def sql_eq(**item):
+    """
+    RETURN SQL FOR COMPARING VARIABLES TO VALUES (AND'ED TOGETHER)
+
+    :param item: keyword parameters representing variable and value
+    :return: SQL
+    """
+
+    return SQL_AND.join([
+        ConcatSQL((quote_column(k), SQL_EQ, quote_value(v)))
+        if v != None
+        else ConcatSQL((quote_column(k), SQL_IS_NULL))
+        for k, v in item.items()
+    ])
 
 
 def utf8_to_unicode(v):

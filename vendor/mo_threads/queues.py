@@ -145,14 +145,14 @@ class Queue(object):
 
         :param timeout:  IN SECONDS
         """
-        start = time()
-        timeout = coalesce(timeout, DEFAULT_WAIT_TIME)
         wait_time = 5
 
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
+        start = time()
+        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
+
         while not self.closed and len(self.queue) >= self.max:
-            stop_waiting = Till(till=start + timeout)
             if stop_waiting:
                 Log.error(THREAD_TIMEOUT)
 

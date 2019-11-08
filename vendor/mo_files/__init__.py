@@ -287,7 +287,7 @@ class File(object):
                 if not is_text(d):
                     Log.error(u"Expecting unicode data only")
                 if self.key:
-                    from mo_math.crypto import encrypt
+                    from mo_math.aes_crypto import encrypt
                     f.write(encrypt(d, self.key).encode("utf8"))
                 else:
                     f.write(d.encode("utf8"))

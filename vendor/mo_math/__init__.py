@@ -9,9 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import base64
 from math import pow as math_pow, exp as math_exp, log as math_log, isnan as math_isnan, ceil as math_ceil, log10 as math_log10, floor as math_floor
+
+from Crypto.Hash import SHA256
+
 from mo_dots import Null, coalesce, is_container
-from mo_future import round as _round, text_type, __builtin__
+from mo_future import round as _round, text_type, __builtin__, binary_type
 
 """
 MATH FUNCTIONS THAT ASSUME None IMPLY *NOT APPLICABLE* RATHER THAN *MISSING*
@@ -407,6 +411,42 @@ def almost_equal(first, second, digits=None, places=None, delta=None):
     except Exception as e:
         from mo_logs import Log
         Log.error("problem comparing", cause=e)
+
+
+def bytes2base64(value):
+    if isinstance(value, bytearray):
+        value = binary_type(value)
+    return base64.b64encode(value).decode("latin1")
+
+
+def bytes2base64URL(value):
+    """
+    RETURN URL-FRIENDLY VERSION OF BASE64
+    """
+    if isinstance(value, bytearray):
+        value = binary_type(value)
+    return base64.b64encode(value, b'-_').rstrip(b'=').decode('latin1')
+
+
+def base642bytes(value):
+    if value == None:
+        return b""
+    else:
+        return base64.b64decode(value)
+
+
+def int2base64(value):
+    return bytes2base64(value.to_bytes((value.bit_length()+7)//8, byteorder='big'))
+
+
+def base642int(value):
+    return int.from_bytes(base642bytes(value), byteorder='big')
+
+
+def sha256(bytes):
+    digest = SHA256.new()
+    digest.update(bytes)
+    return digest.digest()
 
 
 from mo_math import stats

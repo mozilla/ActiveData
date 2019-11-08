@@ -10,12 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
-import base64
-
 from mo_dots import Data, get_module
-from mo_future import PY2, binary_type, text_type
+from mo_future import PY2, binary_type
+from mo_future import is_text, is_binary
 from mo_logs import Log
+from mo_math import base642bytes
 from mo_math.randoms import Random
 from mo_math.vendor.aespython import aes_cipher, cbc_mode, key_expander
 
@@ -28,7 +27,7 @@ def encrypt(text, _key, salt=None):
     """
 
     if is_text(text):
-        encoding = 'utf8'
+        encoding = "utf8"
         data = bytearray(text.encode("utf8"))
     elif is_binary(text):
         encoding = None
@@ -61,7 +60,7 @@ def encrypt(text, _key, salt=None):
     for _, d in _groupby16(data):
         encrypted.extend(aes_cbc_256.encrypt_block(d))
     output.data = bytes2base64(encrypted)
-    json = get_module("mo_json").value2json(output, pretty=True).encode('utf8')
+    json = get_module("mo_json").value2json(output, pretty=True).encode("utf8")
 
     if DEBUG:
         test = decrypt(json, _key)
@@ -79,38 +78,26 @@ def decrypt(data, _key):
     if _key is None:
         Log.error("Expecting a key")
 
-    _input = get_module("mo_json").json2value(data.decode('utf8'), leaves=False, flexible=False)
+    _input = get_module("mo_json").json2value(
+        data.decode("utf8"), leaves=False, flexible=False
+    )
 
     # Initialize encryption using key and iv
     key_expander_256 = key_expander.KeyExpander(256)
     expanded_key = key_expander_256.expand(_key)
     aes_cipher_256 = aes_cipher.AESCipher(expanded_key)
     aes_cbc_256 = cbc_mode.CBCMode(aes_cipher_256, 16)
-    aes_cbc_256.set_iv(base642bytearray(_input.salt))
+    aes_cbc_256.set_iv(base642bytes(_input.salt))
 
-    raw = base642bytearray(_input.data)
+    raw = base642bytes(_input.data)
     out_data = bytearray()
     for _, e in _groupby16(raw):
         out_data.extend(aes_cbc_256.decrypt_block(e))
 
     if _input.encoding:
-        return binary_type(out_data[:_input.length:]).decode(_input.encoding)
+        return binary_type(out_data[: _input.length :]).decode(_input.encoding)
     else:
-        return binary_type(out_data[:_input.length:])
-
-
-
-def bytes2base64(value):
-    if isinstance(value, bytearray):
-        value = binary_type(value)
-    return base64.b64encode(value).decode("utf8")
-
-
-def base642bytearray(value):
-    if value == None:
-        return bytearray(b"")
-    else:
-        return bytearray(base64.b64decode(value))
+        return binary_type(out_data[: _input.length :])
 
 
 def _groupby16(bytes):
@@ -118,6 +105,6 @@ def _groupby16(bytes):
     index = 0
     length = len(bytes)
     while index < length:
-        yield count, bytes[index: index + 16]
+        yield count, bytes[index : index + 16]
         count += 1
         index += 16

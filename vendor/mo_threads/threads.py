@@ -384,6 +384,7 @@ class RegisterThread(object):
     This will ensure the thread has unregistered, or
     has completed before MAIN_THREAD is shutdown
     """
+    __slots__ = ["thread"]
 
     def __init__(self, thread=None):
         if thread is None:
@@ -406,6 +407,7 @@ class RegisterThread(object):
 def register_thread(func):
     """
     Call `with RegisterThread():`
+    Track this thread to ensure controlled shutdown
     """
 
     @decorate(func)

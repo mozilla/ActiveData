@@ -10,23 +10,34 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import is_many, is_container
+from mo_dots import is_container, is_sequence
 from mo_future import is_text, PY2
-from mo_future import text_type
 from mo_logs import Log
 
 DEBUG = True
 
 
-class _Base(object):
+class SQL(object):
     __slots__ = []
+
+    def __new__(cls, value=None, *args, **kwargs):
+        if not args and is_text(value):
+            return object.__new__(TextSQL)
+        else:
+            return object.__new__(cls)
 
     @property
     def sql(self):
         return "".join(self)
 
+    def __iter__(self):
+        raise Log.error("not implemented")
+
+    def __len__(self):
+        return len(self.sql)
+
     def __add__(self, other):
-        if not isinstance(other, _Base):
+        if not isinstance(other, SQL):
             if is_text(other) and DEBUG and all(c not in other for c in ('"', "'", "`")):
                 return ConcatSQL((self, SQL(other)))
             Log.error("Can only concat other SQL")
@@ -34,7 +45,7 @@ class _Base(object):
             return ConcatSQL((self, other))
 
     def __radd__(self, other):
-        if not isinstance(other, _Base):
+        if not isinstance(other, SQL):
             if is_text(other) and DEBUG and all(c not in other for c in ('"', "'", "`")):
                 return ConcatSQL((SQL(other), self))
             Log.error("Can only concat other SQL")
@@ -42,7 +53,7 @@ class _Base(object):
             return ConcatSQL((other, self))
 
     def join(self, list_):
-        return _Join(self, list_)
+        return JoinSQL(self, list_)
 
     def __data__(self):
         return self.sql
@@ -55,15 +66,15 @@ class _Base(object):
             return "".join(self)
 
 
-class SQL(_Base):
+class TextSQL(SQL):
     """
     ACTUAL SQL, DO NOT QUOTE THIS STRING
     """
     __slots__ = ["value"]
 
     def __init__(self, value):
-        _Base.__init__(self)
-        if DEBUG and isinstance(value, _Base):
+        SQL.__init__(self)
+        if DEBUG and isinstance(value, SQL):
             Log.error("Expecting text, not SQL")
         self.value = value
 
@@ -71,17 +82,17 @@ class SQL(_Base):
         yield self.value
 
 
-class _Join(_Base):
+class JoinSQL(SQL):
     __slots__ = ["sep", "concat"]
 
     def __init__(self, sep, concat):
-        _Base.__init__(self)
+        SQL.__init__(self)
         if not is_container(concat):
             concat = list(concat)
         if DEBUG:
-            if not isinstance(sep, _Base):
+            if not isinstance(sep, SQL):
                 Log.error("Expecting SQL, not text")
-            if any(not isinstance(s, _Base) for s in concat):
+            if any(not isinstance(s, SQL) for s in concat):
                 Log.error("Can only join other SQL")
         self.sep = sep
         self.concat = concat
@@ -90,26 +101,27 @@ class _Join(_Base):
         if not self.concat:
             return
         it = self.concat.__iter__()
-        vv = it.__next__()
-        yield vv
+        v = it.__next__()
+        for vv in v:
+            yield vv
         for v in it:
-            for vv in self.sep:
-                yield vv
+            for s in self.sep:
+                yield s
             for vv in v:
                 yield vv
 
 
-class ConcatSQL(_Base):
+class ConcatSQL(SQL):
     """
     ACTUAL SQL, DO NOT QUOTE THIS STRING
     """
     __slots__ = ["concat"]
 
     def __init__(self, concat):
-        _Base.__init__(self)
-        if not is_container(concat):
+        SQL.__init__(self)
+        if not is_sequence(concat):
             concat = list(concat)
-        if DEBUG and any(not isinstance(s, _Base) for s in concat):
+        if DEBUG and any(not isinstance(s, SQL) for s in concat):
             Log.error("Can only join other SQL")
         self.concat = concat
 
@@ -120,6 +132,7 @@ class ConcatSQL(_Base):
 
 
 SQL_STAR = SQL(" * ")
+SQL_PLUS = SQL(" + ")
 
 SQL_AND = SQL(" AND ")
 SQL_OR = SQL(" OR ")
@@ -132,21 +145,23 @@ SQL_THEN = SQL(" THEN ")
 SQL_ELSE = SQL(" ELSE ")
 SQL_END = SQL(" END ")
 
+SQL_SPACE = SQL(" ")
 SQL_COMMA = SQL(", ")
 SQL_UNION_ALL = SQL("\nUNION ALL\n")
 SQL_UNION = SQL("\nUNION\n")
 SQL_LEFT_JOIN = SQL("\nLEFT JOIN\n")
 SQL_INNER_JOIN = SQL("\nJOIN\n")
 SQL_EMPTY_STRING = SQL("''")
-SQL_TRUE = SQL(" 1 ")
-SQL_FALSE = SQL(" 0 ")
-SQL_ONE = SQL(" 1 ")
 SQL_ZERO = SQL(" 0 ")
+SQL_ONE = SQL(" 1 ")
+SQL_TRUE = SQL_ONE
+SQL_FALSE = SQL_ZERO
 SQL_NEG_ONE = SQL(" -1 ")
 SQL_NULL = SQL(" NULL ")
 SQL_IS_NULL = SQL(" IS NULL ")
 SQL_IS_NOT_NULL = SQL(" IS NOT NULL ")
 SQL_SELECT = SQL("\nSELECT\n")
+SQL_DELETE = SQL("\nDELETE\n")
 SQL_CREATE = SQL("\nCREATE TABLE\n")
 SQL_INSERT = SQL("\nINSERT INTO\n")
 SQL_FROM = SQL("\nFROM\n")
@@ -162,15 +177,18 @@ SQL_SET = SQL("\nSET\n")
 
 SQL_CONCAT = SQL(" || ")
 SQL_AS = SQL(" AS ")
-SQL_SPACE = SQL(" ")
+SQL_LIKE = SQL(" LIKE ")
+SQL_ESCAPE = SQL(" ESCAPE ")
 SQL_OP = SQL("(")
 SQL_CP = SQL(")")
 SQL_EQ = SQL(" = ")
+SQL_IN = SQL(" IN  ")
+SQL_LT = SQL(" < ")
 SQL_DOT = SQL(".")
 
 
 class DB(object):
-    def quote_column(self, column_name, table=None):
+    def quote_column(self, *path):
         raise NotImplementedError()
 
     def db_type_to_json_type(self, type):
@@ -178,7 +196,7 @@ class DB(object):
 
 
 def sql_list(list_):
-    return ConcatSQL((SQL_SPACE, _Join(SQL_COMMA, list_), SQL_SPACE))
+    return ConcatSQL((SQL_SPACE, JoinSQL(SQL_COMMA, list_), SQL_SPACE))
 
 
 def sql_iso(sql):
@@ -193,14 +211,10 @@ def sql_concat_text(list_):
     """
     TEXT CONCATENATION WITH "||"
     """
-    return _Join(SQL_CONCAT, [sql_iso(l) for l in list_])
-
-
-def sql_alias(value, alias):
-    return ConcatSQL((value, SQL_AS, alias))
+    return JoinSQL(SQL_CONCAT, [sql_iso(l) for l in list_])
 
 
 def sql_coalesce(list_):
-    return ConcatSQL((SQL("COALESCE("), _Join(SQL_COMMA, list_), SQL_CP))
+    return ConcatSQL((SQL("COALESCE("), JoinSQL(SQL_COMMA, list_), SQL_CP))
 
 

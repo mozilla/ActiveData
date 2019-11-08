@@ -3148,6 +3148,7 @@ class BasicSubstringOp(Expression):
     data_type = STRING
 
     def __init__(self, terms):
+        Expression.__init__(self, terms)
         self.value, self.start, self.end = terms
 
     def __data__(self):

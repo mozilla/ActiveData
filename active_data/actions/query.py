@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 import flask
 from flask import Response
 
+import mo_math
 from active_data import record_request
 from active_data.actions import QUERY_TOO_LARGE, find_container, save_query, send_error, test_mode_wait
 from jx_base.container import Container
@@ -19,14 +20,12 @@ from mo_files import File
 from mo_future import binary_type
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
-from mo_logs.strings import text2utf8, utf82unicode
-import mo_math
 from mo_threads.threads import register_thread
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
 DEBUG = False
-BLANK = text2utf8(File("active_data/public/error.html").read())
+BLANK = File("active_data/public/error.html").read().encode('utf8')
 QUERY_SIZE_LIMIT = 10*1024*1024
 
 
@@ -50,7 +49,7 @@ def jx_query(path):
                     Log.error(QUERY_TOO_LARGE)
 
                 request_body = flask.request.get_data().strip()
-                text = utf82unicode(request_body)
+                text = request_body.decode('utf8')
                 data = json2value(text)
                 record_request(flask.request, data, None, None)
                 if data.meta.testing:
@@ -82,7 +81,7 @@ def jx_query(path):
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
             with Timer("jsonification", silent=not DEBUG) as json_timer:
-                response_data = text2utf8(value2json(result))
+                response_data = value2json(result).encode('utf8')
 
         with Timer("post timer", silent=not DEBUG):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.

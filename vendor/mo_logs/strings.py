@@ -851,49 +851,8 @@ def apply_diff(text, diff, reverse=False, verify=True):
     return output
 
 
-def text2utf8(value):
-    return value.encode('utf8')
-
-
-def utf82unicode(value):
-    """
-    WITH EXPLANATION FOR FAILURE
-    """
-    try:
-        return value.decode("utf8")
-    except Exception as e:
-        if not _Log:
-            _late_import()
-
-        if not is_binary(value):
-            _Log.error("Can not convert {{type}} to unicode because it's not bytes",  type= type(value).__name__)
-
-        e = _Except.wrap(e)
-        for i, c in enumerate(value):
-            try:
-                c.decode("utf8")
-            except Exception as f:
-                _Log.error("Can not convert charcode {{c}} in string index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
-
-        try:
-            latin1 = text(value.decode("latin1"))
-            _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception:
-            pass
-
-        try:
-            a = text(value.decode("latin1"))
-            _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception:
-            pass
-
-        _Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
-
-
 def wordify(value):
     return [w for w in re.split(r"[\W_]", value) if strip(w)]
-
-
 
 
 def pairwise(values):

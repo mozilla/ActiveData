@@ -18,7 +18,6 @@ from mo_future import text
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
-from mo_logs.strings import text2utf8
 from mo_threads import Till
 from mo_times import Timer
 from pyLibrary import convert
@@ -53,7 +52,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
             "select": "a",
             "format": "list"
         })
-        bytes = text2utf8(json)
+        bytes = json.encode('utf8')
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
         wrap(test).expecting_list.meta.saved_as = expected_hash
@@ -92,7 +91,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         settings = self.utils.fill_container(test)
 
-        bytes = text2utf8(value2json(test.query))
+        bytes = value2json(test.query).encode('utf8')
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         test.expecting_list.meta.saved_as = expected_hash
 

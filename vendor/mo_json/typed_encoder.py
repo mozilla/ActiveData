@@ -9,20 +9,19 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import time
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from json.encoder import encode_basestring
-import time
 
 from mo_dots import CLASS, Data, DataObject, FlatList, NullType, SLOT, _get, is_data, join_field, split_field
 from mo_dots.objects import OBJ
 from mo_future import binary_type, generator_types, integer_types, is_binary, is_text, sort_using_key, text
-from mo_logs import Log
-from mo_logs.strings import quote, utf82unicode
-from mo_times import Date, Duration
-
 from mo_json import BOOLEAN, ESCAPE_DCT, EXISTS, INTEGER, NESTED, NUMBER, STRING, float2json, python_type_to_json_type
 from mo_json.encoder import COLON, COMMA, UnicodeBuilder, json_encoder, problem_serializing
+from mo_logs import Log
+from mo_logs.strings import quote
+from mo_times import Date, Duration
 
 
 def encode_property(name):
@@ -221,7 +220,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
             append(buffer, QUOTED_STRING_TYPE)
             append(buffer, '"')
             try:
-                v = utf82unicode(value)
+                v = value.decode('utf8')
             except Exception as e:
                 raise problem_serializing(value, e)
 
@@ -414,7 +413,7 @@ def _dict2json(value, sub_schema, path, net_new_properties, buffer):
         append(buffer, prefix)
         prefix = COMMA
         if is_binary(k):
-            k = utf82unicode(k)
+            k = k.decode('utf8')
         if not is_text(k):
             Log.error("Expecting property name to be a string")
         if k not in sub_schema:

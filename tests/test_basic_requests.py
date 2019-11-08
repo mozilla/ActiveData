@@ -10,17 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf
-
-from mo_logs import Log
-
 from active_data import OVERVIEW
 from mo_dots import wrap
 from mo_json_config import URL
-from mo_logs.strings import text2utf8
-from pyLibrary import convert
+from mo_logs import Log
 from pyLibrary.env import http
-from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
+from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestBasicRequests(BaseTestCase):
@@ -91,8 +86,8 @@ class TestBasicRequests(BaseTestCase):
         self.assertEqual(response.status_code, 200)
 
         # ORDER DOES NOT MATTER, TEST EITHER
-        expected1 = text2utf8(convert.value2json([{"a": 1, "b": 0}, {"a": 1, "b": 1}], pretty=True))
-        expected2 = text2utf8(convert.value2json([{"a": 1, "b": 1}, {"a": 1, "b": 0}], pretty=True))
+        expected1 = value2json([{"a": 1, "b": 0}, {"a": 1, "b": 1}], pretty=True).encode('utf8')
+        expected2 = value2json([{"a": 1, "b": 1}, {"a": 1, "b": 0}], pretty=True).encode('utf8')
 
         try:
             self.assertEqual(response.all_content, expected1)

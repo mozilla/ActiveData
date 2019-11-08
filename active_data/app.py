@@ -8,11 +8,11 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from _ssl import PROTOCOL_SSLv23
 import os
 from ssl import SSLContext
 
 import flask
+from _ssl import PROTOCOL_SSLv23
 from flask import Flask, Response
 
 import active_data
@@ -29,7 +29,6 @@ from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text
 from mo_logs import Log, constants, machine_metadata, startup
-from mo_logs.strings import text2utf8
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
 from pyLibrary.env import elasticsearch, http
@@ -88,7 +87,7 @@ def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
-        text2utf8(OVERVIEW),
+        OVERVIEW.encode('utf8'),
         status=200,
         headers={
             "Content-Type": "text/html"
@@ -205,7 +204,7 @@ def _exit():
     Log.note("Got request to shutdown")
     try:
         return Response(
-            text2utf8(OVERVIEW),
+            OVERVIEW.encode('utf8'),
             status=400,
             headers={
                 "Content-Type": "text/html"

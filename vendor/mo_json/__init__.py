@@ -167,7 +167,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
     elif type_ is Duration:
         return scrub_number(value.seconds)
     elif type_ is str:
-        return utf82unicode(value)
+        return value.decode('utf8')
     elif type_ is Decimal:
         return scrub_number(value)
     elif type_ is Data:
@@ -357,10 +357,6 @@ if PY2:
 else:
     def bytes2hex(value, separator=" "):
         return separator.join('{:02X}'.format(x) for x in value)
-
-
-def utf82unicode(value):
-    return value.decode('utf8')
 
 
 def datetime2unix(d):

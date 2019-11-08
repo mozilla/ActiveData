@@ -9,23 +9,22 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import json
+import math
+import time
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-import json
 from json.encoder import encode_basestring
-import math
 from math import floor
-import time
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list
 from mo_future import PYPY, binary_type, is_binary, is_text, long, sort_using_key, text, utf8_json_encoder, xrange
+from mo_json import ESCAPE_DCT, float2json, scrub
 from mo_logs import Except
-from mo_logs.strings import quote, utf82unicode
+from mo_logs.strings import quote
 from mo_times import Timer
 from mo_times.dates import Date
 from mo_times.durations import Duration
-
-from mo_json import ESCAPE_DCT, float2json, scrub
 
 json_decoder = json.JSONDecoder().decode
 _get = object.__getattribute__
@@ -156,7 +155,7 @@ def _value2json(value, _buffer):
         if type is binary_type:
             append(_buffer, QUOTE)
             try:
-                v = utf82unicode(value)
+                v = value.decode('utf8')
             except Exception as e:
                 problem_serializing(value, e)
 
@@ -252,7 +251,7 @@ def _dict2json(value, _buffer):
             append(_buffer, prefix)
             prefix = COMMA_QUOTE
             if is_binary(k):
-                k = utf82unicode(k)
+                k = k.decode('utf8')
             for c in k:
                 append(_buffer, ESCAPE_DCT.get(c, c))
             append(_buffer, QUOTE_COLON)
@@ -306,7 +305,7 @@ def pretty_json(value):
             return "null"
         elif value.__class__ in (binary_type, text):
             if is_binary(value):
-                value = utf82unicode(value)
+                value = value.decode('utf8')
             try:
                 if "\n" in value and value.strip():
                     return pretty_json({"$concat": value.split("\n"), "separator": "\n"})

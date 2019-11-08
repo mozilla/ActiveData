@@ -13,28 +13,28 @@ from __future__ import absolute_import, division, unicode_literals
 import itertools
 import os
 import signal
-from string import ascii_lowercase
 import subprocess
+from string import ascii_lowercase
 
+import jx_elasticsearch
+import mo_json_config
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
-import jx_elasticsearch
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
 from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
-import mo_json_config
 from mo_kwargs import override
 from mo_logs import Except, Log, constants
 from mo_logs.exceptions import extract_stack
-from mo_logs.strings import expand_template, text2utf8, utf82unicode
+from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Till
 from mo_times import Date, MINUTE
 from pyLibrary.env import http
-from pyLibrary.env.elasticsearch import Cluster, scrub
+from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.testing import elasticsearch
 from tests import test_jx
 
@@ -236,13 +236,13 @@ class ESUtils(object):
 
                 subtest.query.format = format
                 subtest.query.meta.testing = (num_expectations == 1)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
-                query = text2utf8(value2json(subtest.query))
+                query = value2json(subtest.query).encode('utf8')
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
 
                 if response.status_code != 200:
                     error(response)
-                result = json2value(utf82unicode(response.all_content))
+                result = json2value(response.all_content.decode('utf8'))
 
                 container = jx_elasticsearch.new_instance(self._es_test_settings)
                 query = QueryOp.wrap(subtest.query, container, container.namespace)
@@ -261,13 +261,13 @@ class ESUtils(object):
 
         try:
             query.meta.testing = True
-            query = text2utf8(value2json(query))
+            query = value2json(query).encode('utf8')
             # EXECUTE QUERY
             response = self.try_till_response(self.testing.query, data=query)
 
             if response.status_code != 200:
                 error(response)
-            result = json2value(utf82unicode(response.all_content))
+            result = json2value(response.all_content.decode('utf8'))
 
             return result
         except Exception as e:
@@ -396,7 +396,7 @@ def sort_table(result):
 
 
 def error(response):
-    response = utf82unicode(response.content)
+    response = response.content.decode('utf8')
 
     try:
         e = Except.new_instance(json2value(response))
@@ -439,10 +439,10 @@ class FakeHttp(object):
                 "status_code": 400
             })
 
-        text = utf82unicode(body)
+        text = body.decode('utf8')
         data = json2value(text)
         result = jx.run(data)
-        output_bytes = text2utf8(value2json(result))
+        output_bytes = value2json(result).encode('utf8')
         return wrap({
             "status_code": 200,
             "all_content": output_bytes,

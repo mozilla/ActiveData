@@ -19,7 +19,6 @@ from mo_files import File, TempFile, URL, mimetype
 from mo_future import decorate, text
 from mo_json import value2json
 from mo_logs import Log
-from mo_logs.strings import text2utf8
 from mo_threads.threads import register_thread
 from pyLibrary.env import git
 from pyLibrary.env.big_data import ibytes2icompressed
@@ -121,7 +120,7 @@ def dockerflow(flask_app, backend_check):
             except Exception as e:
                 Log.warning("heartbeat failure", cause=e)
                 return Response(
-                    text2utf8(value2json(e)),
+                    value2json(e).encode('utf8'),
                     status=500,
                     headers={"Content-Type": mimetype.JSON},
                 )
@@ -168,17 +167,14 @@ def add_version(flask_app):
         rev = coalesce(git.get_revision(), "")
         branch = "https://github.com/mozilla/ActiveData/tree/" + coalesce(git.get_branch())
 
-        version_info = text2utf8(
-            value2json(
-                {
-                    "source": "https://github.com/mozilla/ActiveData/tree/" + rev,
-                    "branch":  branch,
-                    "commit": rev,
-                },
-                pretty=True,
-            )
-            + text("\n")
-        )
+        version_info = value2json(
+            {
+                "source": "https://github.com/mozilla/ActiveData/tree/" + rev,
+                "branch": branch,
+                "commit": rev,
+            },
+            pretty=True,
+        ).encode('utf8') + text("\n")
 
         Log.note("Using github version\n{{version}}", version=version_info)
 

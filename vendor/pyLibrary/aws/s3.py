@@ -10,8 +10,8 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import gzip
-from tempfile import TemporaryFile
 import zipfile
+from tempfile import TemporaryFile
 
 import boto
 from boto.s3.connection import Location
@@ -22,7 +22,6 @@ from mo_files.url import value2url_param
 from mo_future import StringIO, is_binary, text
 from mo_kwargs import override
 from mo_logs import Except, Log
-from mo_logs.strings import text2utf8, utf82unicode
 from mo_times.dates import Date
 from mo_times.timer import Timer
 from pyLibrary import convert
@@ -262,7 +261,7 @@ class Bucket(object):
         elif source.key.endswith(".gz"):
             json = convert.zip2bytes(json)
 
-        return utf82unicode(json)
+        return json.decode('utf8')
 
     def read_bytes(self, key):
         source = self.get_meta(key)
@@ -276,7 +275,7 @@ class Bucket(object):
             if source.key.endswith(".gz"):
                 return LazyLines(ibytes2ilines(scompressed2ibytes(source)))
             else:
-                return utf82unicode(source.read()).split("\n")
+                return source.read().decode('utf8').split("\n")
 
         if source.key.endswith(".gz"):
             return LazyLines(ibytes2ilines(scompressed2ibytes(source)))
@@ -312,7 +311,7 @@ class Bucket(object):
                     value = convert.bytes2zip(value)
                     key += ".json.gz"
                 else:
-                    value = convert.bytes2zip(text2utf8(value))
+                    value = convert.bytes2zip(value).encode('utf8')
                     key += ".json.gz"
 
             else:

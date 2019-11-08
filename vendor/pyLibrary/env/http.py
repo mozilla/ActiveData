@@ -34,7 +34,6 @@ from mo_future import PY2, is_text, text
 from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import text2utf8, utf82unicode
 from mo_threads import Lock, Till
 from mo_times.durations import Duration
 from pyLibrary import convert
@@ -199,7 +198,7 @@ def get_json(url, **kwargs):
     response = get(url, **kwargs)
     try:
         c = response.all_content
-        return json2value(utf82unicode(c))
+        return json2value(c.decode('utf8'))
     except Exception as e:
         if mo_math.round(response.status_code, decimal=-2) in [400, 500]:
             Log.error(u"Bad GET response: {{code}}", code=response.status_code)
@@ -224,14 +223,14 @@ def post_json(url, **kwargs):
     ASSUME RESPONSE IN IN JSON
     """
     if 'json' in kwargs:
-        kwargs['data'] = text2utf8(value2json(kwargs['json']))
+        kwargs['data'] = value2json(kwargs['json']).encode('utf8')
         del kwargs['json']
     elif 'data' in kwargs:
-        kwargs['data'] = text2utf8(value2json(kwargs['data']))
+        kwargs['data'] = value2json(kwargs['data']).encode('utf8')
     else:
         Log.error(u"Expecting `json` parameter")
     response = post(url, **kwargs)
-    details = json2value(utf82unicode(response.content))
+    details = json2value(response.content.decode('utf8'))
     if response.status_code not in [200, 201, 202]:
 
         if "template" in details:

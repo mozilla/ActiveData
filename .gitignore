@@ -6,7 +6,6 @@ out
 .idea
 .svn
 *.iml
-.svn
 version.json
 /results
 /docs/Pulse Icon.png

@@ -21,8 +21,6 @@ import json
 import re
 from tempfile import TemporaryFile
 
-from qrcode import QRCode
-
 from mo_dots import concat_field, unwrap, unwraplist, wrap
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text_type
 import mo_json
@@ -614,10 +612,13 @@ def table2csv(table_data):
     text = "\n".join(expand_template(template, d) for d in text_data)
     return text
 
+
 ZeroMoment2dict = mo_math.stats.ZeroMoment2dict
 
 
 def text2QRCode(value):
+    from qrcode import QRCode
+
     qr = QRCode()
     qr.add_data(value)
     qr_code = StringIO()

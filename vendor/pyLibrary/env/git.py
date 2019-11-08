@@ -39,7 +39,7 @@ def get_remote_revision(url, branch):
     """
     GET REVISION OF A REMOTE BRANCH
     """
-    proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch])
+    proc = Process("git remote revision", ["git", "ls-remote", url, "refs/heads/" + branch], shell=True)
 
     try:
         while True:
@@ -62,7 +62,7 @@ def get_branch():
     """
     GET THE CURRENT GIT BRANCH
     """
-    proc = Process("git status", ["git", "status"])
+    proc = Process("git status", ["git", "status"], shell=True)
 
     try:
         while True:

@@ -89,7 +89,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
                     Till(seconds=PAUSE_AFTER_GOOD_INSERT).wait()
                     continue
 
-                for g, mm in jx.groupby(messages, size=self.batch_size):
+                for g, mm in jx.chunk(messages, size=self.batch_size):
                     scrubbed = []
                     for i, message in enumerate(mm):
                         if message is THREAD_STOP:

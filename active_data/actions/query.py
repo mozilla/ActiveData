@@ -56,10 +56,12 @@ def jx_query(path):
                 if data.meta.testing:
                     test_mode_wait(data)
 
+            find_table_timer = Timer("find container", silent=not DEBUG)
+            with find_table_timer:
+                frum = find_container(data['from'], after=None)
+
             translate_timer = Timer("translate", silent=not DEBUG)
             with translate_timer:
-                with Timer("find container", silent=not DEBUG):
-                    frum = find_container(data['from'], after=None)
                 result = jx.run(data, container=frum)
 
                 if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
@@ -73,6 +75,7 @@ def jx_query(path):
                     except Exception as e:
                         Log.warning("Unexpected save problem", cause=e)
 
+            result.meta.timing.find_table = mo_math.round(find_table_timer.duration.seconds, digits=4)
             result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
             result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
             result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)

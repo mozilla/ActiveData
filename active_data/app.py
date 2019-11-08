@@ -129,7 +129,7 @@ def setup():
             http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
         dockerflow(flask_app, backend_check)
     else:
-        # IF NOT USING DOCKERFLOW, THEN RESPOND WITH A SIMPLER __version__.json
+        # IF NOT USING DOCKERFLOW, THEN RESPOND WITH A SIMPLER __version__
         add_version(flask_app)
 
     # SETUP DEFAULT CONTAINER, SO THERE IS SOMETHING TO QUERY

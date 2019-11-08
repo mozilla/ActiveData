@@ -260,6 +260,7 @@ class Expression(BaseExpression):
         """
         return FALSE  # GOOD DEFAULT ASSUMPTION
 
+    @simplified
     def partial_eval(self):
         """
         ATTEMPT TO SIMPLIFY THE EXPRESSION:
@@ -642,6 +643,7 @@ class Literal(Expression):
     def type(self):
         return python_type_to_json_type[self._value.__class__]
 
+    @simplified
     def partial_eval(self):
         return self
 
@@ -904,6 +906,7 @@ class TupleOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
         if all(is_literal(t) for t in self.terms):
             return self.lang[Literal([t.value for t in self.terms])]
@@ -966,6 +969,7 @@ class BaseBinaryOp(Expression):
         else:
             return self.lang[OrOp([self.lhs.missing(), self.rhs.missing()])]
 
+    @simplified
     def partial_eval(self):
         lhs = self.lhs.partial_eval()
         rhs = self.rhs.partial_eval()
@@ -996,6 +1000,7 @@ class DivOp(BaseBinaryOp):
             OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])
         ])].partial_eval()
 
+    @simplified
     def partial_eval(self):
         default = self.default.partial_eval()
         rhs = self.rhs.partial_eval()
@@ -1557,6 +1562,8 @@ class BooleanOp(Expression):
             return FALSE
         elif term.type is BOOLEAN:
             return term
+        elif term is self.term:
+            return self
 
         exists = self.lang[term].exists().partial_eval()
         return exists
@@ -2191,6 +2198,7 @@ class PrefixOp(Expression):
     def missing(self):
         return FALSE
 
+    @simplified
     def partial_eval(self):
         return self.lang[CaseOp([
             WhenOp(self.prefix.missing(), then=TRUE),
@@ -2239,6 +2247,7 @@ class SuffixOp(Expression):
         else:
             return self.lang[SuffixOp([self.expr.map(map_), self.suffix.map(map_)])]
 
+    @simplified
     def partial_eval(self):
         if self.expr is None:
             return TRUE
@@ -3048,6 +3057,7 @@ class BasicIndexOfOp(Expression):
             start
         ])]
 
+
 class BasicEqOp(Expression):
     """
     PLACEHOLDER FOR BASIC `==` OPERATOR (CAN NOT DEAL WITH NULLS)
@@ -3055,6 +3065,7 @@ class BasicEqOp(Expression):
     data_type = BOOLEAN
 
     def __init__(self, terms):
+        Expression.__init__(self, terms)
         self.lhs, self.rhs = terms
 
     def __data__(self):

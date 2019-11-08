@@ -53,9 +53,10 @@ return output.toString()
 
 
 class EsScript(EsScript_):
-    __slots__ = ("miss", "data_type", "expr", "many")
+    __slots__ = ("simplified", "miss", "data_type", "expr", "many")
 
     def __init__(self, type, expr, frum, schema, miss=None, many=False):
+        self.simplified = True
         object.__init__(self)
         if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
             if frum.lang != miss.lang:

@@ -14,10 +14,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import types
 from collections import deque
 from datetime import datetime
 from time import time
-import types
 
 from mo_dots import Null, coalesce
 from mo_future import long
@@ -139,20 +139,20 @@ class Queue(object):
                         self.queue.append(v)
         return self
 
-    def _wait_for_queue_space(self, timeout=DEFAULT_WAIT_TIME):
+    def _wait_for_queue_space(self, timeout=None):
         """
         EXPECT THE self.lock TO BE HAD, WAITS FOR self.queue TO HAVE A LITTLE SPACE
 
         :param timeout:  IN SECONDS
         """
+        start = time()
+        timeout = coalesce(timeout, DEFAULT_WAIT_TIME)
         wait_time = 5
 
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
-        start = time()
-        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
-
         while not self.closed and len(self.queue) >= self.max:
+            stop_waiting = Till(till=start + timeout)
             if stop_waiting:
                 Log.error(THREAD_TIMEOUT)
 
@@ -192,10 +192,7 @@ class Queue(object):
         with self.lock:
             while True:
                 if self.queue:
-                    value = self.queue.popleft()
-                    return value
-                if self.closed:
-                    break
+                    return self.queue.popleft()
                 if not self.lock.wait(till=self.closed | till):
                     if self.closed:
                         break
@@ -208,7 +205,7 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
-            output = list(self.queue)
+            output = [l for l in list(self.queue) if l is not THREAD_STOP]
             self.queue.clear()
 
         return output
@@ -395,9 +392,9 @@ class ThreadedQueue(Queue):
     def __init__(
         self,
         name,
-        queue,  # THE SLOWER QUEUE
+        slow_queue,  # THE SLOWER QUEUE
         batch_size=None,  # THE MAX SIZE OF BATCHES SENT TO THE SLOW QUEUE
-        max_size=None,  # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
+        max_size=None,   # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
         period=None,  # MAX TIME (IN SECONDS) BETWEEN FLUSHES TO SLOWER QUEUE
         silent=False,  # WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
         error_target=None  # CALL THIS WITH ERROR **AND THE LIST OF OBJECTS ATTEMPTED**
@@ -413,7 +410,11 @@ class ThreadedQueue(Queue):
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 
-        def worker_bee(please_stop):
+        self.name = name
+        self.slow_queue = slow_queue
+        self.thread = Thread.run("threaded queue for " + name, self.worker_bee, batch_size, period, error_target) # parent_thread=self)
+
+    def worker_bee(self, batch_size, period, error_target, please_stop):
             please_stop.then(lambda: self.add(THREAD_STOP))
 
             _buffer = []
@@ -423,7 +424,7 @@ class ThreadedQueue(Queue):
             last_push = now - period
 
             def push_to_queue():
-                queue.extend(_buffer)
+                self.slow_queue.extend(_buffer)
                 del _buffer[:]
                 for ppf in _post_push_functions:
                     ppf()
@@ -435,7 +436,6 @@ class ThreadedQueue(Queue):
                         item = self.pop()
                         now = time()
                         if now > last_push + period:
-                            # Log.note("delay next push")
                             next_push = Till(till=now + period)
                     else:
                         item = self.pop(till=next_push)
@@ -449,7 +449,6 @@ class ThreadedQueue(Queue):
                         _post_push_functions.append(item)
                     elif item is not None:
                         _buffer.append(item)
-
                 except Exception as e:
                     e = Except.wrap(e)
                     if error_target:
@@ -458,13 +457,13 @@ class ThreadedQueue(Queue):
                         except Exception as f:
                             Log.warning(
                                 "`error_target` should not throw, just deal",
-                                name=name,
+                                name=self.name,
                                 cause=f
                             )
                     else:
                         Log.warning(
                             "Unexpected problem",
-                            name=name,
+                            name=self.name,
                             cause=e
                         )
 
@@ -474,7 +473,6 @@ class ThreadedQueue(Queue):
                             push_to_queue()
                             last_push = now = time()
                         next_push = Till(till=now + period)
-
                 except Exception as e:
                     e = Except.wrap(e)
                     if error_target:
@@ -483,13 +481,13 @@ class ThreadedQueue(Queue):
                         except Exception as f:
                             Log.warning(
                                 "`error_target` should not throw, just deal",
-                                name=name,
+                                name=self.name,
                                 cause=f
                             )
                     else:
                         Log.warning(
                             "Problem with {{name}} pushing {{num}} items to data sink",
-                            name=name,
+                            name=self.name,
                             num=len(_buffer),
                             cause=e
                         )
@@ -497,8 +495,7 @@ class ThreadedQueue(Queue):
             if _buffer:
                 # ONE LAST PUSH, DO NOT HAVE TIME TO DEAL WITH ERRORS
                 push_to_queue()
-
-        self.thread = Thread.run("threaded queue for " + name, worker_bee) # parent_thread=self)
+            self.slow_queue.add(THREAD_STOP)
 
     def add(self, value, timeout=None):
         with self.lock:

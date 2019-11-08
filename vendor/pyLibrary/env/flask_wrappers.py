@@ -166,12 +166,15 @@ def add_version(flask_app):
     :return:
     """
     try:
+        rev = coalesce(git.get_revision(), "")
+        branch = coalesce(git.get_branch(), "")
+
         version_info = unicode2utf8(
             value2json(
                 {
-                    "source": "https://github.com/mozilla/ActiveData/tree/" + git.get_revision(),
-                    "branch": "https://github.com/mozilla/ActiveData/tree/" + git.get_branch(),
-                    "commit": git.get_revision(),
+                    "source": "https://github.com/mozilla/ActiveData/tree/" + rev,
+                    "branch": "https://github.com/mozilla/ActiveData/tree/" + branch,
+                    "commit": rev,
                 },
                 pretty=True,
             )

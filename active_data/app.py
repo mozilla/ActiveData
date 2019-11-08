@@ -27,9 +27,9 @@ from active_data.actions.static import download, send_favicon
 from jx_base import container
 from mo_dots import is_data
 from mo_files import File, TempFile
-from mo_future import text_type
+from mo_future import text
 from mo_logs import Log, constants, machine_metadata, startup
-from mo_logs.strings import unicode2utf8
+from mo_logs.strings import text2utf8
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
 from pyLibrary.env import elasticsearch, http
@@ -88,7 +88,7 @@ def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
-        unicode2utf8(OVERVIEW),
+        text2utf8(OVERVIEW),
         status=200,
         headers={
             "Content-Type": "text/html"
@@ -116,7 +116,7 @@ def setup():
     constants.set(config.constants)
     Log.start(config.debug)
 
-    File.new_instance("activedata.pid").write(text_type(machine_metadata.pid))
+    File.new_instance("activedata.pid").write(text(machine_metadata.pid))
 
     # PIPE REQUEST LOGS TO ES DEBUG
     if config.request_logs:
@@ -126,7 +126,7 @@ def setup():
 
     if config.dockerflow:
         def backend_check():
-            http.get_json(config.elasticsearch.host + ":" + text_type(config.elasticsearch.port))
+            http.get_json(config.elasticsearch.host + ":" + text(config.elasticsearch.port))
         dockerflow(flask_app, backend_check)
     else:
         # IF NOT USING DOCKERFLOW, THEN RESPOND WITH A SIMPLER __version__
@@ -205,7 +205,7 @@ def _exit():
     Log.note("Got request to shutdown")
     try:
         return Response(
-            unicode2utf8(OVERVIEW),
+            text2utf8(OVERVIEW),
             status=400,
             headers={
                 "Content-Type": "text/html"

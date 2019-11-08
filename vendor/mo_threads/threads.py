@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 from mo_dots import Data, coalesce, unwraplist
-from mo_future import allocate_lock, get_function_name, get_ident, start_new_thread, text_type, decorate, PY3
+from mo_future import allocate_lock, get_function_name, get_ident, start_new_thread, text, decorate, PY3
 from mo_logs import Except, Log
 
 from mo_threads.lock import Lock
@@ -90,7 +90,7 @@ class BaseThread(object):
     def __init__(self, ident):
         self.id = ident
         if ident != -1:
-            self.name = "Unknown Thread " + text_type(ident)
+            self.name = "Unknown Thread " + text(ident)
         self.child_locker = allocate_lock()
         self.children = []
         self.cprofiler = None
@@ -218,7 +218,7 @@ class Thread(BaseThread):
 
     def __init__(self, name, target, *args, **kwargs):
         BaseThread.__init__(self, -1)
-        self.name = coalesce(name, "thread_" + text_type(object.__hash__(self)))
+        self.name = coalesce(name, "thread_" + text(object.__hash__(self)))
         self.target = target
         self.end_of_thread = Data()
         self.synch_lock = Lock("response synch lock")
@@ -291,7 +291,7 @@ class Thread(BaseThread):
                     try:
                         Log.error("Problem in thread {{name|quote}}", name=self.name, cause=e)
                     except Exception:
-                        sys.stderr.write(str("ERROR in thread: " + self.name + " " + text_type(e) + "\n"))
+                        sys.stderr.write(str("ERROR in thread: " + self.name + " " + text(e) + "\n"))
             finally:
                 try:
                     with self.child_locker:
@@ -383,6 +383,7 @@ class RegisterThread(object):
     This will ensure the thread has unregistered, or
     has completed before MAIN_THREAD is shutdown
     """
+    __slots__ = ["thread"]
 
     def __init__(self, thread=None):
         if thread is None:
@@ -405,6 +406,7 @@ class RegisterThread(object):
 def register_thread(func):
     """
     Call `with RegisterThread():`
+    Track this thread to ensure controlled shutdown
     """
 
     @decorate(func)

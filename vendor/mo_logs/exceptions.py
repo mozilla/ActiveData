@@ -15,7 +15,7 @@ from mo_future import is_text, is_binary
 import sys
 
 from mo_dots import Data, Null, is_data, listwrap, unwraplist
-from mo_future import PY3, text_type
+from mo_future import PY3, text
 from mo_logs.strings import CR, expand_template, indent
 
 FATAL = "FATAL"
@@ -95,9 +95,9 @@ class Except(Exception, LogItem):
 
             cause = Except.wrap(getattr(e, '__cause__', None))
             if hasattr(e, "message") and e.message:
-                output = Except(context=ERROR, template=text_type(e.message), trace=trace, cause=cause)
+                output = Except(context=ERROR, template=text(e.message), trace=trace, cause=cause)
             else:
-                output = Except(context=ERROR, template=text_type(e), trace=trace, cause=cause)
+                output = Except(context=ERROR, template=text(e), trace=trace, cause=cause)
 
             trace = extract_stack(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             output.trace.extend(trace)
@@ -131,9 +131,9 @@ class Except(Exception, LogItem):
             cause_strings = []
             for c in listwrap(self.cause):
                 try:
-                    cause_strings.append(text_type(c))
+                    cause_strings.append(text(c))
                 except Exception as e:
-                    sys.stderr("Problem serializing cause"+text_type(c))
+                    sys.stderr("Problem serializing cause"+text(c))
 
             output += "caused by\n\t" + "and caused by\n\t".join(cause_strings)
 

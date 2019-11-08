@@ -17,7 +17,7 @@ from collections import Mapping, namedtuple
 
 from mo_dots import Data, coalesce, unwraplist, listwrap, wrap
 from mo_files import File
-from mo_future import allocate_lock as _allocate_lock, text_type
+from mo_future import allocate_lock as _allocate_lock, text, first
 from mo_future import is_text
 from mo_future import zip_longest
 from mo_json import BOOLEAN, INTEGER, NESTED, NUMBER, OBJECT, STRING
@@ -29,15 +29,40 @@ from mo_math.stats import percentile
 from mo_threads import Lock, Queue, Thread, Till
 from mo_times import Date, Duration, Timer
 from pyLibrary import convert
-from pyLibrary.sql import DB, SQL, SQL_FALSE, SQL_NULL, SQL_SELECT, SQL_TRUE, sql_iso, sql_list, SQL_AND, ConcatSQL, \
-    SQL_EQ, SQL_IS_NULL, SQL_COMMA, _Join, SQL_FROM, SQL_WHERE, SQL_ORDERBY, SQL_STAR, SQL_CREATE, SQL_VALUES, \
-    SQL_INSERT, SQL_OP, SQL_CP, SQL_DOT
+from pyLibrary.sql import (
+    DB,
+    SQL,
+    SQL_FALSE,
+    SQL_NULL,
+    SQL_SELECT,
+    SQL_TRUE,
+    sql_iso,
+    sql_list,
+    SQL_AND,
+    ConcatSQL,
+    SQL_EQ,
+    SQL_IS_NULL,
+    SQL_COMMA,
+    JoinSQL,
+    SQL_FROM,
+    SQL_WHERE,
+    SQL_ORDERBY,
+    SQL_STAR,
+    SQL_CREATE,
+    SQL_VALUES,
+    SQL_INSERT,
+    SQL_OP,
+    SQL_CP,
+    SQL_DOT,
+    SQL_LT, SQL_SPACE, SQL_AS)
 
 DEBUG = False
 TRACE = True
 
 FORMAT_COMMAND = "Running command\n{{command|limit(1000)|indent}}"
-DOUBLE_TRANSACTION_ERROR = "You can not query outside a transaction you have open already"
+DOUBLE_TRANSACTION_ERROR = (
+    "You can not query outside a transaction you have open already"
+)
 TOO_LONG_TO_HOLD_TRANSACTION = 10
 
 _sqlite3 = None
@@ -76,7 +101,16 @@ class Sqlite(DB):
     """
 
     @override
-    def __init__(self, filename=None, db=None, get_trace=None, upgrade=True, load_functions=False, kwargs=None):
+    def __init__(
+        self,
+        filename=None,
+        db=None,
+        get_trace=None,
+        upgrade=True,
+        load_functions=False,
+        debug=False,
+        kwargs=None,
+    ):
         """
         :param filename:  FILE TO USE FOR DATABASE
         :param db: AN EXISTING sqlite3 DB YOU WOULD LIKE TO USE (INSTEAD OF USING filename)
@@ -94,54 +128,71 @@ class Sqlite(DB):
                 _upgrade()
             _upgraded = True
             import sqlite3 as _sqlite3
+
             _ = _sqlite3
 
         self.filename = File(filename).abspath if filename else None
         if known_databases.get(self.filename):
-            Log.error("Not allowed to create more than one Sqlite instance for {{file}}", file=self.filename)
+            Log.error(
+                "Not allowed to create more than one Sqlite instance for {{file}}",
+                file=self.filename,
+            )
+        self.debug = debug | DEBUG
 
         # SETUP DATABASE
-        DEBUG and Log.note("Sqlite version {{version}}", version=_sqlite3.sqlite_version)
+        self.debug and Log.note(
+            "Sqlite version {{version}}", version=_sqlite3.sqlite_version
+        )
         try:
             if db == None:
                 self.db = _sqlite3.connect(
                     database=coalesce(self.filename, ":memory:"),
                     check_same_thread=False,
-                    isolation_level=None
+                    isolation_level=None,
                 )
             else:
                 self.db = db
         except Exception as e:
-            Log.error("could not open file {{filename}}", filename=self.filename, cause=e)
+            Log.error(
+                "could not open file {{filename}}", filename=self.filename, cause=e
+            )
         self.upgrade = upgrade
         load_functions and self._load_functions()
 
         self.locker = Lock()
         self.available_transactions = []  # LIST OF ALL THE TRANSACTIONS BEING MANAGED
-        self.queue = Queue("sql commands")   # HOLD (command, result, signal, stacktrace) TUPLES
+        self.queue = Queue(
+            "sql commands"
+        )  # HOLD (command, result, signal, stacktrace) TUPLES
 
         self.get_trace = coalesce(get_trace, TRACE)
         self.closed = False
 
         # WORKER VARIABLES
         self.transaction_stack = []  # THE TRANSACTION OBJECT WE HAVE PARTIALLY RUN
-        self.last_command_item = None  # USE THIS TO HELP BLAME current_transaction FOR HANGING ON TOO LONG
+        self.last_command_item = (
+            None
+        )  # USE THIS TO HELP BLAME current_transaction FOR HANGING ON TOO LONG
         self.too_long = None
         self.delayed_queries = []
         self.delayed_transactions = []
         self.worker = Thread.run("sqlite db thread", self._worker)
 
-        DEBUG and Log.note("Sqlite version {{version}}", version=self.query("select sqlite_version()").data[0][0])
+        self.debug and Log.note(
+            "Sqlite version {{version}}",
+            version=self.query("select sqlite_version()").data[0][0],
+        )
 
     def _enhancements(self):
         def regex(pattern, value):
-            return 1 if re.match(pattern+"$", value) else 0
+            return 1 if re.match(pattern + "$", value) else 0
+
         con = self.db.create_function("regex", 2, regex)
 
         class Percentile(object):
             def __init__(self, percentile):
-                self.percentile=percentile
-                self.acc=[]
+                self.percentile = percentile
+                self.acc = []
 
             def step(self, value):
                 self.acc.append(value)
@@ -167,8 +218,9 @@ class Sqlite(DB):
         """
         :param table_name: TABLE IF INTEREST
         :return: SOME INFORMATION ABOUT THE TABLE
+            (cid, name, dtype, notnull, dfft_value, pk) tuples
         """
-        details = self.query("PRAGMA table_info" + sql_iso(quote_value(table_name)))
+        details = self.query("PRAGMA table_info" + sql_iso(quote_column(table_name)))
         return details.data
 
     def query(self, command):
@@ -222,22 +274,34 @@ class Sqlite(DB):
     def _load_functions(self):
         global _load_extension_warning_sent
         library_loc = File.new_instance(sys.modules[__name__].__file__, "../..")
-        full_path = File.new_instance(library_loc, "vendor/sqlite/libsqlitefunctions.so").abspath
+        full_path = File.new_instance(
+            library_loc, "vendor/sqlite/libsqlitefunctions.so"
+        ).abspath
         try:
             trace = extract_stack(0)[0]
             if self.upgrade:
-                if os.name == 'nt':
-                    file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions.so")
+                if os.name == "nt":
+                    file = File.new_instance(
+                        trace["file"], "../../vendor/sqlite/libsqlitefunctions.so"
+                    )
                 else:
-                    file = File.new_instance(trace["file"], "../../vendor/sqlite/libsqlitefunctions")
+                    file = File.new_instance(
+                        trace["file"], "../../vendor/sqlite/libsqlitefunctions"
+                    )
 
                 full_path = file.abspath
                 self.db.enable_load_extension(True)
-                self.db.execute(SQL_SELECT + "load_extension" + sql_iso(quote_value(full_path)))
+                self.db.execute(text(
+                    SQL_SELECT + "load_extension" + sql_iso(quote_value(full_path))
+                ))
         except Exception as e:
             if not _load_extension_warning_sent:
                 _load_extension_warning_sent = True
-                Log.warning("Could not load {{file}}, doing without. (no SQRT for you!)", file=full_path, cause=e)
+                Log.warning(
+                    "Could not load {{file}}, doing without. (no SQRT for you!)",
+                    file=full_path,
+                    cause=e,
+                )
 
     def create_new_functions(self):
         def regexp(pattern, item):
@@ -248,7 +312,7 @@ class Sqlite(DB):
 
     def show_transactions_blocked_warning(self):
         blocker = self.last_command_item
-        blocked = (self.delayed_queries+self.delayed_transactions)[0]
+        blocked = (self.delayed_queries + self.delayed_transactions)[0]
 
         Log.warning(
             "Query on thread {{blocked_thread|json}} at\n"
@@ -258,8 +322,12 @@ class Sqlite(DB):
             "this message brought to you by....",
             blocker_trace=format_trace(blocker.trace),
             blocked_trace=format_trace(blocked.trace),
-            blocker_thread=blocker.transaction.thread.name if blocker.transaction is not None else None,
-            blocked_thread=blocked.transaction.thread.name if blocked.transaction is not None else None
+            blocker_thread=blocker.transaction.thread.name
+            if blocker.transaction is not None
+            else None,
+            blocked_thread=blocked.transaction.thread.name
+            if blocked.transaction is not None
+            else None,
         )
 
     def _close_transaction(self, command_item):
@@ -279,7 +347,7 @@ class Sqlite(DB):
             assert old_trans not in self.transaction_stack
         if not self.transaction_stack:
             # NESTED TRANSACTIONS NOT ALLOWED IN sqlite3
-            DEBUG and Log.note(FORMAT_COMMAND, command=query)
+            self.debug and Log.note(FORMAT_COMMAND, command=query)
             self.db.execute(query)
 
         has_been_too_long = False
@@ -320,13 +388,13 @@ class Sqlite(DB):
                 Log.warning("Problem with sql", cause=e)
         finally:
             self.closed = True
-            DEBUG and Log.note("Database is closed")
+            self.debug and Log.note("Database is closed")
             self.db.close()
 
     def _process_command_item(self, command_item):
         query, result, signal, trace, transaction = command_item
 
-        with Timer("SQL Timing", silent=not DEBUG):
+        with Timer("SQL Timing", silent=not self.debug):
             if transaction is None:
                 # THIS IS A TRANSACTIONLESS QUERY, DELAY IT IF THERE IS A CURRENT TRANSACTION
                 if self.transaction_stack:
@@ -336,7 +404,10 @@ class Sqlite(DB):
                             self.too_long.then(self.show_transactions_blocked_warning)
                         self.delayed_queries.append(command_item)
                     return
-            elif self.transaction_stack and self.transaction_stack[-1] not in [transaction, transaction.parent]:
+            elif self.transaction_stack and self.transaction_stack[-1] not in [
+                transaction,
+                transaction.parent,
+            ]:
                 # THIS TRANSACTION IS NOT THE CURRENT TRANSACTION, DELAY IT
                 with self.locker:
                     if self.too_long is None:
@@ -348,7 +419,7 @@ class Sqlite(DB):
                 # ENSURE THE CURRENT TRANSACTION IS UP TO DATE FOR THIS query
                 if not self.transaction_stack:
                     # sqlite3 ALLOWS ONLY ONE TRANSACTION AT A TIME
-                    DEBUG and Log.note(FORMAT_COMMAND, command=BEGIN)
+                    self.debug and Log.note(FORMAT_COMMAND, command=BEGIN)
                     self.db.execute(BEGIN)
                     self.transaction_stack.append(transaction)
                 elif transaction is not self.transaction_stack[-1]:
@@ -358,7 +429,7 @@ class Sqlite(DB):
                         context=ERROR,
                         template="Not allowed to continue using a transaction that failed",
                         cause=transaction.exception,
-                        trace=trace
+                        trace=trace,
                     )
                     signal.release()
                     return
@@ -370,15 +441,17 @@ class Sqlite(DB):
                     # WE WILL UNWRAP THE OUTER EXCEPTION TO GET THE CAUSE
                     err = Except(
                         context=ERROR,
-                        template="Bad call to Sqlite3 while "+FORMAT_COMMAND,
+                        template="Bad call to Sqlite3 while " + FORMAT_COMMAND,
                         params={"command": e.params.current.command},
                         cause=e.cause,
-                        trace=e.params.current.trace
+                        trace=e.params.current.trace,
                     )
                     transaction.exception = result.exception = err
 
                     if query in [COMMIT, ROLLBACK]:
-                        self._close_transaction(CommandItem(ROLLBACK, result, signal, trace, transaction))
+                        self._close_transaction(
+                            CommandItem(ROLLBACK, result, signal, trace, transaction)
+                        )
 
                     signal.release()
                     return
@@ -391,12 +464,14 @@ class Sqlite(DB):
 
                 # EXECUTE QUERY
                 self.last_command_item = command_item
-                DEBUG and Log.note(FORMAT_COMMAND, command=query)
-                curr = self.db.execute(text_type(query))
+                self.debug and Log.note(FORMAT_COMMAND, command=query)
+                curr = self.db.execute(text(query))
                 result.meta.format = "table"
-                result.header = [d[0] for d in curr.description] if curr.description else None
+                result.header = (
+                    [d[0] for d in curr.description] if curr.description else None
+                )
                 result.data = curr.fetchall()
-                if DEBUG and result.data:
+                if self.debug and result.data:
                     text = convert.table2csv(list(result.data))
                     Log.note("Result:\n{{data|limit(100)|indent}}", data=text)
             except Exception as e:
@@ -406,7 +481,7 @@ class Sqlite(DB):
                     template="Bad call to Sqlite while " + FORMAT_COMMAND,
                     params={"command": query},
                     trace=trace,
-                    cause=e
+                    cause=e,
                 )
                 result.exception = err
                 if transaction:
@@ -416,10 +491,9 @@ class Sqlite(DB):
 
 
 class Transaction(object):
-
     def __init__(self, db, parent=None):
         self.db = db
-        self.locker = Lock("transaction " + text_type(id(self)) + " todo lock")
+        self.locker = Lock("transaction " + text(id(self)) + " todo lock")
         self.todo = []
         self.complete = 0
         self.end_of_life = False
@@ -465,13 +539,13 @@ class Transaction(object):
                 self.parent.do_all()
             # GET THE REMAINING COMMANDS
             with self.locker:
-                todo = self.todo[self.complete:]
+                todo = self.todo[self.complete :]
                 self.complete = len(self.todo)
 
             # RUN THEM
             for c in todo:
-                DEBUG and Log.note(FORMAT_COMMAND, command=c.command)
-                self.db.db.execute(text_type(c.command))
+                self.db.debug and Log.note(FORMAT_COMMAND, command=c.command)
+                self.db.db.execute(text(c.command))
         except Exception as e:
             Log.error("problem running commands", current=c, cause=e)
 
@@ -496,39 +570,37 @@ class Transaction(object):
         self.query(COMMIT)
 
 
-CommandItem = namedtuple("CommandItem", ("command", "result", "is_done", "trace", "transaction"))
+CommandItem = namedtuple(
+    "CommandItem", ("command", "result", "is_done", "trace", "transaction")
+)
 
 _simple_word = re.compile(r"^\w+$", re.UNICODE)
 
 
-def _no_need_to_quote(name):
-    if name == "table":
-        return False
-    else:
-        return _simple_word.match(name)
-
-
-def quote_column(column_name, table=None):
-    if isinstance(column_name, SQL):
-        return column_name
-
-    if not is_text(column_name):
+def quote_column(*path):
+    if not path:
         Log.error("expecting a name")
-    if table != None:
-        return SQL(" " + quote(table) + "." + quote(column_name) + " ")
-    else:
-        if _no_need_to_quote(column_name):
-            return SQL(" " + column_name + " ")
-        return SQL(" " + quote(column_name) + " ")
+    if any(not is_text(p) for p in path):
+        Log.error("expecting strings, not SQL")
+    try:
+        return ConcatSQL((SQL_SPACE, JoinSQL(SQL_DOT, [SQL(quote(p)) for p in path]), SQL_SPACE))
+    except Exception as e:
+        Log.error("Not expacted", cause=e)
+
+
+def sql_alias(value, alias):
+    if not isinstance(value, SQL) or not is_text(alias):
+        Log.error("Expecting (SQL, text) parameters")
+    return ConcatSQL((value, SQL_AS, quote_column(alias)))
 
 
 def quote_value(value):
     if isinstance(value, (Mapping, list)):
         return SQL(".")
     elif isinstance(value, Date):
-        return SQL(text_type(value.unix))
+        return SQL(text(value.unix))
     elif isinstance(value, Duration):
-        return SQL(text_type(value.seconds))
+        return SQL(text(value.seconds))
     elif is_text(value):
         return SQL("'" + value.replace("'", "''") + "'")
     elif value == None:
@@ -538,15 +610,11 @@ def quote_value(value):
     elif value is False:
         return SQL_FALSE
     else:
-        return SQL(text_type(value))
+        return SQL(text(value))
 
 
 def quote_list(values):
     return sql_iso(sql_list(map(quote_value, values)))
-
-
-def join_column(a, b):
-    return ConcatSQL(quote_column(a), SQL_DOT, quote_column(b))
 
 
 def sql_eq(**item):
@@ -556,12 +624,25 @@ def sql_eq(**item):
     :param item: keyword parameters representing variable and value
     :return: SQL
     """
-    return SQL_AND.join([
-        ConcatSQL((quote_column(k), SQL_EQ, quote_value(v)))
-        if v != None
-        else ConcatSQL((quote_column(k), SQL_IS_NULL))
-        for k, v in item.items()
-    ])
+    return SQL_AND.join(
+        [
+            ConcatSQL((quote_column(k), SQL_EQ, quote_value(v)))
+            if v != None
+            else ConcatSQL((quote_column(k), SQL_IS_NULL))
+            for k, v in item.items()
+        ]
+    )
+
+
+def sql_lt(**item):
+    """
+    RETURN SQL FOR LESS-THAN (<) COMPARISION BETWEEN VARIABLES TO VALUES
+
+    :param item: keyword parameters representing variable and value
+    :return: SQL
+    """
+    k, v = first(item.items())
+    return ConcatSQL((quote_column(k), SQL_LT, quote_value(v)))
 
 
 def sql_query(command):
@@ -573,19 +654,20 @@ def sql_query(command):
     command = wrap(command)
     acc = [SQL_SELECT]
     if command.select:
-        acc.append(_Join(SQL_COMMA, map(quote_column, listwrap(command.select))))
+        acc.append(JoinSQL(SQL_COMMA, map(quote_column, listwrap(command.select))))
     else:
         acc.append(SQL_STAR)
 
     acc.append(SQL_FROM)
-    acc.append(quote_column(command['from']))
+    acc.append(quote_column(command["from"]))
     if command.where.eq:
         acc.append(SQL_WHERE)
         acc.append(sql_eq(**command.where.eq))
     if command.orderby:
         acc.append(SQL_ORDERBY)
-        acc.append(_Join(SQL_COMMA, map(quote_column, listwrap(command.orderby))))
+        acc.append(JoinSQL(SQL_COMMA, map(quote_column, listwrap(command.orderby))))
     return ConcatSQL(acc)
+
 
 def sql_create(table, properties, primary_key=None, unique=None):
     """
@@ -595,23 +677,21 @@ def sql_create(table, properties, primary_key=None, unique=None):
     :param unique: COLUMNS THAT SHOULD BE UNIQUE
     :return:
     """
-    acc = [SQL_CREATE, quote_column(table), SQL_OP, sql_list([
-        quote_column(k) + SQL(v)
-        for k, v in properties.items()
-    ])]
+    acc = [
+        SQL_CREATE,
+        quote_column(table),
+        SQL_OP,
+        sql_list([quote_column(k) + SQL(v) for k, v in properties.items()]),
+    ]
 
     if primary_key:
         acc.append(SQL_COMMA),
         acc.append(SQL(" PRIMARY KEY ")),
-        acc.append(sql_iso(sql_list([
-            quote_column(c) for c in listwrap(primary_key)
-        ])))
+        acc.append(sql_iso(sql_list([quote_column(c) for c in listwrap(primary_key)])))
     if unique:
         acc.append(SQL_COMMA),
         acc.append(SQL(" UNIQUE ")),
-        acc.append(sql_iso(sql_list([
-            quote_column(c) for c in listwrap(unique)
-        ])))
+        acc.append(sql_iso(sql_list([quote_column(c) for c in listwrap(unique)])))
 
     acc.append(SQL_CP)
     return ConcatSQL(acc)
@@ -620,16 +700,17 @@ def sql_create(table, properties, primary_key=None, unique=None):
 def sql_insert(table, records):
     records = listwrap(records)
     keys = list({k for r in records for k in r.keys()})
-    return ConcatSQL([
-        SQL_INSERT,
-        quote_column(table),
-        sql_iso(sql_list(map(quote_column, keys))),
-        SQL_VALUES,
-        sql_list(
-            sql_iso(sql_list([quote_value(r[k]) for k in keys]))
-            for r in records
-        )
-    ])
+    return ConcatSQL(
+        [
+            SQL_INSERT,
+            quote_column(table),
+            sql_iso(sql_list(map(quote_column, keys))),
+            SQL_VALUES,
+            sql_list(
+                sql_iso(sql_list([quote_value(r[k]) for k in keys])) for r in records
+            ),
+        ]
+    )
 
 
 BEGIN = "BEGIN"
@@ -644,14 +725,20 @@ def _upgrade():
     try:
         import sys
         import platform
+
         if "windows" in platform.system().lower():
             original_dll = File.new_instance(sys.exec_prefix, "dlls/sqlite3.dll")
-            if platform.architecture()[0] == '32bit':
+            if platform.architecture()[0] == "32bit":
                 source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_32.dll")
             else:
                 source_dll = File("vendor/pyLibrary/vendor/sqlite/sqlite3_64.dll")
 
-            if not all(a == b for a, b in zip_longest(source_dll.read_bytes(), original_dll.read_bytes())):
+            if not all(
+                a == b
+                for a, b in zip_longest(
+                    source_dll.read_bytes(), original_dll.read_bytes()
+                )
+            ):
                 original_dll.backup()
                 File.copy(source_dll, original_dll)
         else:
@@ -660,6 +747,7 @@ def _upgrade():
         Log.warning("could not upgrade python's sqlite", cause=e)
 
     import sqlite3 as _sqlite3
+
     _ = _sqlite3
     _upgraded = True
 
@@ -670,6 +758,5 @@ json_type_to_sqlite_type = {
     NUMBER: "REAL",
     STRING: "TEXT",
     OBJECT: "TEXT",
-    NESTED: "TEXT"
+    NESTED: "TEXT",
 }
-

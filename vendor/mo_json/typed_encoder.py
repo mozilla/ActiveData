@@ -16,7 +16,7 @@ import time
 
 from mo_dots import CLASS, Data, DataObject, FlatList, NullType, SLOT, _get, is_data, join_field, split_field
 from mo_dots.objects import OBJ
-from mo_future import binary_type, generator_types, integer_types, is_binary, is_text, sort_using_key, text_type
+from mo_future import binary_type, generator_types, integer_types, is_binary, is_text, sort_using_key, text
 from mo_logs import Log
 from mo_logs.strings import quote, utf82unicode
 from mo_times import Date, Duration
@@ -190,7 +190,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
                     _dict2json(value, sub_schema[NESTED_TYPE], path + [NESTED_TYPE], net_new_properties, buffer)
                     append(buffer, ']' + COMMA)
                     append(buffer, QUOTED_EXISTS_TYPE)
-                    append(buffer, text_type(len(value)))
+                    append(buffer, text(len(value)))
                     append(buffer, '}')
                 else:
                     # SINGLETON LIST
@@ -228,7 +228,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
             for c in v:
                 append(buffer, ESCAPE_DCT.get(c, c))
             append(buffer, '"}')
-        elif _type is text_type:
+        elif _type is text:
             if STRING_TYPE not in sub_schema:
                 sub_schema[STRING_TYPE] = True
                 net_new_properties.append(path + [STRING_TYPE])
@@ -245,7 +245,7 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
 
             append(buffer, '{')
             append(buffer, QUOTED_NUMBER_TYPE)
-            append(buffer, text_type(value))
+            append(buffer, text(value))
             append(buffer, '}')
         elif _type in (float, Decimal):
             if NUMBER_TYPE not in sub_schema:
@@ -355,11 +355,11 @@ def typed_encode(value, sub_schema, path, net_new_properties, buffer):
         else:
             from mo_logs import Log
 
-            Log.error(text_type(repr(value)) + " is not JSON serializable")
+            Log.error(text(repr(value)) + " is not JSON serializable")
     except Exception as e:
         from mo_logs import Log
 
-        Log.error(text_type(repr(value)) + " is not JSON serializable", cause=e)
+        Log.error(text(repr(value)) + " is not JSON serializable", cause=e)
 
 
 def _list2json(value, sub_schema, path, net_new_properties, buffer):
@@ -374,7 +374,7 @@ def _list2json(value, sub_schema, path, net_new_properties, buffer):
         append(buffer, ']')
         append(buffer, COMMA)
         append(buffer, QUOTED_EXISTS_TYPE)
-        append(buffer, text_type(len(value)))
+        append(buffer, text(len(value)))
 
 
 def _multivalue2json(value, sub_schema, path, net_new_properties, buffer):
@@ -403,7 +403,7 @@ def _iter2json(value, sub_schema, path, net_new_properties, buffer):
     append(buffer, ']')
     append(buffer, COMMA)
     append(buffer, QUOTED_EXISTS_TYPE)
-    append(buffer, text_type(count))
+    append(buffer, text(count))
 
 
 def _dict2json(value, sub_schema, path, net_new_properties, buffer):

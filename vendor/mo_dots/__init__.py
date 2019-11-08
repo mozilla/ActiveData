@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import sys
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
-from mo_future import binary_type, generator_types, is_binary, is_text, text_type
+from mo_future import binary_type, generator_types, is_binary, is_text, text
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -312,7 +312,7 @@ def _getdefault(obj, key):
 
     # TODO: FIGURE OUT WHY THIS WAS EVER HERE (AND MAKE A TEST)
     # try:
-    #     return eval("obj."+text_type(key))
+    #     return eval("obj."+text(key))
     # except Exception as f:
     #     pass
     return NullType(obj, key)
@@ -485,7 +485,7 @@ def _wrap_leaves(value):
         return None
 
     class_ = _get(value, CLASS)
-    if class_ in (text_type, binary_type, int, float):
+    if class_ in (text, binary_type, int, float):
         return value
     if class_ in data_types:
         if class_ is Data:

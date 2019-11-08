@@ -488,7 +488,7 @@ THE columns DO NOT GET MARKED WITH NESTED (AS THEY SHOULD)
 type_to_name = {
     int: "long",
     str: "string",
-    text_type: "string",
+    text: "string",
     float: "double",
     Number: "double",
     Data: "object",

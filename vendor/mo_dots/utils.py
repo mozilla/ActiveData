@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 import importlib
 import sys
 
-from mo_future import PY2, text_type
+from mo_future import PY2, text
 
-OBJ = text_type("_obj")
-CLASS = text_type("__class__")
+OBJ = text("_obj")
+CLASS = text("__class__")
 
 _Log = None
 

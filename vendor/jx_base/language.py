@@ -14,7 +14,7 @@ from math import isnan
 
 from mo_dots import Data, data_types, listwrap
 from mo_dots.lists import list_types, is_many
-from mo_future import boolean_type, long, none_type, text_type, transpose
+from mo_future import boolean_type, long, none_type, text, transpose
 from mo_logs import Log
 from mo_times import Date
 
@@ -227,7 +227,7 @@ TYPE_ORDER = {
     float: 1,
     Date: 1,
     long: 1,
-    text_type: 2,
+    text: 2,
     list: 3,
     builtin_tuple: 3,
     dict: 4,

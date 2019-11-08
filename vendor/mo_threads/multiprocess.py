@@ -12,17 +12,15 @@ import os
 import platform
 import subprocess
 
-from mo_dots import NullType, set_default, wrap, Null
-from mo_future import none_type
+from mo_dots import set_default, wrap, Null
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
-from mo_times import Timer
-
 from mo_threads.lock import Lock
 from mo_threads.queues import Queue
 from mo_threads.signals import Signal
 from mo_threads.threads import THREAD_STOP, Thread
 from mo_threads.till import Till
+from mo_times import Timer
 
 DEBUG = True
 
@@ -36,6 +34,11 @@ class Process(object):
         self.stderr = Queue("stderr for process " + strings.quote(name), silent=True)
 
         try:
+            if cwd == None:
+                cwd = os.getcwd()
+            else:
+                cwd = str(cwd)
+
             self.debug = debug or DEBUG
             self.service = service = subprocess.Popen(
                 [str(p) for p in params],
@@ -43,7 +46,7 @@ class Process(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=bufsize,
-                cwd=cwd if isinstance(cwd, (str, NullType, none_type)) else cwd.abspath,
+                cwd=cwd,
                 env={str(k): str(v) for k, v in set_default(env, os.environ).items()},
                 shell=shell
             )

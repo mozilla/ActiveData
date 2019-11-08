@@ -20,7 +20,7 @@ from mo_dots import is_data, is_list, listwrap, unwraplist, wrap
 from mo_json import json2value, utf82unicode, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import unicode2utf8
+from mo_logs.strings import text2utf8
 import mo_math
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads.threads import register_thread
@@ -85,7 +85,7 @@ def sql_query(path):
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
             with Timer("jsonification", silent=True) as json_timer:
-                response_data = unicode2utf8(value2json(result))
+                response_data = text2utf8(value2json(result))
 
         with Timer("post timer", silent=True):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.

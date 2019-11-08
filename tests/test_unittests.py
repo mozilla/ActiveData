@@ -14,11 +14,11 @@ import os
 from unittest import skip
 
 from mo_dots import wrap
-from mo_future import text_type
+from mo_future import text
 from mo_json import json2value
 import mo_json_config
 from mo_logs import Except, Log
-from mo_logs.strings import unicode2utf8, utf82unicode
+from mo_logs.strings import text2utf8, utf82unicode
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY
 from mo_times.timer import Timer
@@ -43,7 +43,7 @@ class TestUnittests(BaseTestCase):
         global ES_CLUSTER_LOCATION
 
         app_config = mo_json_config.get("file://" + TESTS_CONFIG_FILE)
-        global_settings.testing.query = "http://localhost:"+text_type(app_config.flask.port)+"/query"
+        global_settings.testing.query = "http://localhost:"+text(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 
     @classmethod
@@ -56,7 +56,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        query = unicode2utf8(convert.value2json({"from": "unittest"}))
+        query = text2utf8(convert.value2json({"from": "unittest"}))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)
@@ -93,7 +93,7 @@ class TestUnittests(BaseTestCase):
             }
         }})
 
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = self.utils.try_till_response(self.testing.query, data=query)
@@ -130,7 +130,7 @@ class TestUnittests(BaseTestCase):
             ]
         }})
 
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)
@@ -171,7 +171,7 @@ class TestUnittests(BaseTestCase):
             }
         }})
 
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)
@@ -223,7 +223,7 @@ class TestUnittests(BaseTestCase):
             "format": "table"
         }})
 
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)
@@ -264,7 +264,7 @@ class TestUnittests(BaseTestCase):
             "format": "table"
         }})
 
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)
@@ -290,7 +290,7 @@ class TestUnittests(BaseTestCase):
             "limit": 100,
             "format": "list"
         }})
-        query = unicode2utf8(convert.value2json(test.query))
+        query = text2utf8(convert.value2json(test.query))
         # EXECUTE QUERY
         with Timer("query"):
             response = http.get(self.testing.query, data=query)

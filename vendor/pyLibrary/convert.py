@@ -22,7 +22,7 @@ import re
 from tempfile import TemporaryFile
 
 from mo_dots import concat_field, unwrap, unwraplist, wrap
-from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text_type
+from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -226,7 +226,7 @@ def value2string(value):
     # PROPER NULL HANDLING
     if value == None:
         return None
-    return text_type(value)
+    return text(value)
 
 
 def value2quote(value):
@@ -234,7 +234,7 @@ def value2quote(value):
     if is_text(value):
         return string2quote(value)
     else:
-        return text_type(repr(value))
+        return text(repr(value))
 
 
 def string2quote(value):
@@ -327,7 +327,7 @@ def quote2string(value):
 # RETURN PYTHON CODE FOR THE SAME
 
 def value2code(value):
-    return text_type(repr(value))
+    return text(repr(value))
 
 
 def DataFrame2string(df, columns=None):
@@ -432,7 +432,7 @@ def latin12unicode(value):
     if is_text(value):
         Log.error("can not convert unicode from latin1")
     try:
-        return text_type(value.decode('latin1'))
+        return text(value.decode('latin1'))
     except Exception as e:
         Log.error("Can not convert {{value|quote}} to unicode", value=value)
 
@@ -606,13 +606,22 @@ def table2csv(table_data):
 
     col_widths = [max(len(text) for text in cols) for cols in zip(*text_data)]
     template = ", ".join(
-        "{{" + text_type(i) + "|left_align(" + text_type(w) + ")}}"
+        "{{" + text(i) + "|left_align(" + text(w) + ")}}"
         for i, w in enumerate(col_widths)
     )
     text = "\n".join(expand_template(template, d) for d in text_data)
     return text
 
+
 ZeroMoment2dict = mo_math.stats.ZeroMoment2dict
 
 
+def text2QRCode(value):
+    from qrcode import QRCode
 
+    qr = QRCode()
+    qr.add_data(value)
+    qr_code = StringIO()
+    qr.print_ascii(out=qr_code)
+    ascii = qr_code.getvalue()
+    return ascii

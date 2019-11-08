@@ -19,6 +19,7 @@ from mo_future import text_type
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import unicode2utf8
+from mo_threads.threads import register_thread
 from pyLibrary.env import git
 from pyLibrary.env.big_data import ibytes2icompressed
 
@@ -126,26 +127,37 @@ def add_version(flask_app):
     :return:
     """
     try:
-        version_info = unicode2utf8(value2json(
-            {
-                "source": "https://github.com/mozilla/ActiveData/tree/" + git.get_branch(),
-                # "version": "",
-                "commit": git.get_revision(),
-            },
-            pretty=True
-        ) + text_type("\n"))
+        rev = coalesce(git.get_revision(), "")
+        branch = "https://github.com/mozilla/ActiveData/tree/" + coalesce(git.get_branch())
 
+        version_info = unicode2utf8(
+            value2json(
+            {
+                    "source": "https://github.com/mozilla/ActiveData/tree/" + rev,
+                    "branch":  branch,
+                    "commit": rev,
+            },
+                pretty=True,
+            )
+            + text_type("\n")
+        )
+
+        Log.note("Using github version\n{{version}}", version=version_info)
+
+        @register_thread
         @cors_wrapper
         def version():
             return Response(
-                version_info,
-                status=200,
-                headers={
-                    "Content-Type": "application/json"
-                }
+                version_info, status=200, headers={"Content-Type": "application/json"}
             )
 
-        flask_app.add_url_rule(str('/__version__'), None, version, defaults={}, methods=[str('GET'), str('POST')])
+        flask_app.add_url_rule(
+            str("/__version__"),
+            None,
+            version,
+            defaults={},
+            methods=[str("GET"), str("POST")],
+        )
     except Exception as e:
         Log.error("Problem setting up listeners for dockerflow", cause=e)
 

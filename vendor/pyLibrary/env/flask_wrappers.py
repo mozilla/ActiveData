@@ -169,9 +169,8 @@ def add_version(flask_app):
         version_info = unicode2utf8(
             value2json(
                 {
-                    "source": "https://github.com/mozilla/ActiveData/tree/"
-                    + git.get_branch(),
-                    # "version": "",
+                    "source": "https://github.com/mozilla/ActiveData/tree/" + git.get_revision(),
+                    "branch": "https://github.com/mozilla/ActiveData/tree/" + git.get_branch(),
                     "commit": git.get_revision(),
                 },
                 pretty=True,
@@ -181,6 +180,7 @@ def add_version(flask_app):
 
         Log.note("Using github version\n{{version}}", version=version_info)
 
+        @register_thread
         @cors_wrapper
         def version():
             return Response(

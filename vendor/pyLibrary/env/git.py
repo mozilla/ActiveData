@@ -20,7 +20,7 @@ def get_revision():
     """
     GET THE CURRENT GIT REVISION
     """
-    proc = Process("git log", ["git", "log", "-1"])
+    proc = Process("git log", ["git", "log", "-1"], shell=True)
 
     try:
         while True:

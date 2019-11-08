@@ -31,6 +31,7 @@ from mo_logs import Except, Log, constants
 from mo_logs.exceptions import extract_stack
 from mo_logs.strings import expand_template, text2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
+from mo_threads import Till
 from mo_times import Date, MINUTE
 from pyLibrary.env import http
 from pyLibrary.env.elasticsearch import Cluster, scrub
@@ -40,6 +41,7 @@ from tests import test_jx
 _ = test_jx  # REQUIRED TO SET test_jx.utils
 
 DEFAULT_TEST_CONFIG = "tests/config/test_config.json"
+WAIT_AFTER_PROBLEM = 2  # NUMBER OF SECONDS TO WAIT BEFORE RETRYING
 
 
 class ESUtils(object):
@@ -128,6 +130,7 @@ class ESUtils(object):
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
                     Log.alert("Problem connecting")
+                    Till(seconds=WAIT_AFTER_PROBLEM).wait()
                 else:
                     Log.error("Server raised exception", e)
 
@@ -279,6 +282,7 @@ class ESUtils(object):
                 e = Except.wrap(e)
                 if "No connection could be made because the target machine actively refused it" in e or "Connection refused" in e:
                     Log.alert("Problem connecting")
+                    Till(seconds=WAIT_AFTER_PROBLEM).wait()
                 else:
                     Log.error("Server raised exception", e)
 

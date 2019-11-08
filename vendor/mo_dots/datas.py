@@ -13,7 +13,7 @@ from collections import MutableMapping
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_future import PY2, generator_types, is_binary, iteritems, long, none_type, text_type
+from mo_future import PY2, generator_types, is_binary, iteritems, long, none_type, text
 
 from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
 from mo_dots.utils import CLASS
@@ -90,7 +90,7 @@ class Data(MutableMapping):
             else:
                 return output
 
-        key = text_type(key)
+        key = text(key)
         d = self._internal_dict
 
         if key.find(".") >= 0:
@@ -283,7 +283,7 @@ class Data(MutableMapping):
         d.pop(seq[-1], None)
 
     def __delattr__(self, key):
-        key = text_type(key)
+        key = text(key)
         d = self._internal_dict
         d.pop(key, None)
 

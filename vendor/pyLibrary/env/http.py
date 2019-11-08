@@ -29,11 +29,11 @@ from requests import Response, sessions
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap
 from mo_files.url import URL
-from mo_future import PY2, is_text, text_type
+from mo_future import PY2, is_text, text
 from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import unicode2utf8, utf82unicode
+from mo_logs.strings import text2utf8, utf82unicode
 import mo_math
 from mo_threads import Lock, Till
 from mo_times.durations import Duration
@@ -80,7 +80,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
     global request_count
 
     if not _warning_sent and not default_headers:
-        Log.warning(text_type(
+        Log.warning(text(
             "The pyLibrary.env.http module was meant to add extra " +
             "default headers to all requests, specifically the 'Referer' " +
             "header with a URL to the project. Use the `pyLibrary.debug.constants.set()` " +
@@ -154,7 +154,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
                 Till(seconds=retry.sleep).wait()
 
             try:
-                DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text_type(url))
+                DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text(url))
                 request_count += 1
                 return session.request(method=method, headers=headers, url=str(url), **kwargs)
             except Exception as e:
@@ -224,10 +224,10 @@ def post_json(url, **kwargs):
     ASSUME RESPONSE IN IN JSON
     """
     if 'json' in kwargs:
-        kwargs['data'] = unicode2utf8(value2json(kwargs['json']))
+        kwargs['data'] = text2utf8(value2json(kwargs['json']))
         del kwargs['json']
     elif 'data' in kwargs:
-        kwargs['data'] = unicode2utf8(value2json(kwargs['data']))
+        kwargs['data'] = text2utf8(value2json(kwargs['data']))
     else:
         Log.error(u"Expecting `json` parameter")
     response = post(url, **kwargs)

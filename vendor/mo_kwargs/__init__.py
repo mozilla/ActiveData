@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from functools import update_wrapper
 
 from mo_dots import get_logger, is_data, wrap, zip as dict_zip
-from mo_future import get_function_arguments, get_function_defaults, get_function_name, text_type
+from mo_future import get_function_arguments, get_function_defaults, get_function_name, text
 from mo_logs import Except
 
 KWARGS = str("kwargs")
@@ -40,7 +40,7 @@ def override(func):
         defaults = {k: v for k, v in zip(reversed(params), reversed(get_function_defaults(func)))}
 
     def raise_error(e, packed):
-        err = text_type(e)
+        err = text(e)
         e = Except.wrap(e)
         if err.startswith(func_name) and ("takes at least" in err or "required positional argument" in err):
             missing = [p for p in params if str(p) not in packed]

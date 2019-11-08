@@ -16,7 +16,7 @@ import re
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
 from mo_dots.objects import DataObject
-from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text_type
+from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text
 from mo_logs import Except, Log, strings
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
@@ -79,14 +79,14 @@ def float2json(value):
         digits, more_digits = _snap_to_base_10(mantissa)
         int_exp = int(str_exp) + more_digits
         if int_exp > 15:
-            return sign + digits[0] + '.' + (digits[1:].rstrip('0') or '0') + u"e" + text_type(int_exp)
+            return sign + digits[0] + '.' + (digits[1:].rstrip('0') or '0') + u"e" + text(int_exp)
         elif int_exp >= 0:
             return sign + (digits[:1 + int_exp] + '.' + digits[1 + int_exp:].rstrip('0')).rstrip('.')
         elif -4 < int_exp:
             digits = ("0" * (-int_exp)) + digits
             return sign + (digits[:1] + '.' + digits[1:].rstrip('0')).rstrip('.')
         else:
-            return sign + digits[0] + '.' + (digits[1:].rstrip('0') or '0') + u"e" + text_type(int_exp)
+            return sign + digits[0] + '.' + (digits[1:].rstrip('0') or '0') + u"e" + text(int_exp)
     except Exception as e:
         from mo_logs import Log
         Log.error("not expected", e)
@@ -101,7 +101,7 @@ def _snap_to_base_10(mantissa):
         if f9 == 0:
             return '1000000000000000', 1
         elif f9 < f0:
-            digits = text_type(int(digits[:f9]) + 1) + ('0' * (16 - f9))
+            digits = text(int(digits[:f9]) + 1) + ('0' * (16 - f9))
         else:
             digits = digits[:f0]+('0'*(16-f0))
     return digits, 0
@@ -148,7 +148,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
 
     if type_ in (none_type, NullType):
         return None
-    elif type_ is text_type:
+    elif type_ is text:
         return scrub_text(value)
     elif type_ is float:
         if math.isnan(value) or math.isinf(value):
@@ -186,7 +186,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
             elif is_binary(k):
                 k = k.decode('utf8')
             # elif hasattr(k, "__unicode__"):
-            #     k = text_type(k)
+            #     k = text(k)
             else:
                 Log.error("keys must be strings")
             v = _scrub(v, is_done, stack, scrub_text, scrub_number)
@@ -224,7 +224,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
             output.append(v)
         return output
     elif hasattr(value, '__call__'):
-        return text_type(repr(value))
+        return text(repr(value))
     else:
         return _scrub(DataObject(value), is_done, stack, scrub_text, scrub_number)
 
@@ -252,7 +252,7 @@ def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
             return json
         except Exception:
             pass
-        Log.error("Can not encode into JSON: {{value}}", value=text_type(repr(obj)), cause=e)
+        Log.error("Can not encode into JSON: {{value}}", value=text(repr(obj)), cause=e)
 
 
 def remove_line_comment(line):
@@ -308,7 +308,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
             json_string = expand_template(json_string, params)
 
         try:
-            value = wrap(json_decoder(text_type(json_string)))
+            value = wrap(json_decoder(text(json_string)))
         except Exception as e:
             Log.error("can not decode\n{{content}}", content=json_string, cause=e)
 
@@ -382,7 +382,7 @@ def datetime2unix(d):
 
 python_type_to_json_type = {
     int: NUMBER,
-    text_type: STRING,
+    text: STRING,
     float: NUMBER,
     bool: BOOLEAN,
     NullType: OBJECT,

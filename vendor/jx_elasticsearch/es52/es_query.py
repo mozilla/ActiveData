@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_elasticsearch.es52.expressions import ES52
 from jx_elasticsearch.es52.util import MATCH_ALL
 from mo_dots import is_data, is_list, startswith_field
-from mo_future import text_type
+from mo_future import text
 from mo_json import value2json
 from mo_logs import Log
 
@@ -30,7 +30,7 @@ class Aggs(object):
             return {"aggs": {
                 name: t.to_es(schema, query_path)
                 for i, t in enumerate(self.children)
-                for name in [t.name if t.name else "_" + text_type(i)]
+                for name in [t.name if t.name else "_" + text(i)]
             }}
         else:
             return {}

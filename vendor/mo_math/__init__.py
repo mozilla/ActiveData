@@ -24,7 +24,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.hashes import SHA256, Hash
 
 from mo_dots import Null, coalesce, is_container
-from mo_future import round as _round, text_type, __builtin__, binary_type
+from mo_future import round as _round, text, __builtin__, binary_type
 
 """
 MATH FUNCTIONS THAT ASSUME None IMPLY *NOT APPLICABLE* RATHER THAN *MISSING*
@@ -211,11 +211,11 @@ def mod(value, mod=1):
         return value % mod
 
 
-# RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(text_type(value))<len(text_type(value)):
+# RETURN A VALUE CLOSE TO value, BUT WITH SHORTER len(text(value))<len(text(value)):
 
 
 def approx_str(value):
-    v = text_type(value)
+    v = text(value)
     d = v.find(".")
     if d == -1:
         return value

@@ -17,7 +17,7 @@ from jx_python import jx
 from mo_dots import listwrap, unwraplist, wrap
 from mo_json import value2json
 from mo_logs import Except, Log
-from mo_logs.strings import unicode2utf8
+from mo_logs.strings import text2utf8
 from mo_math import is_integer, is_number
 from mo_threads.threads import register_thread
 from mo_times.timer import Timer
@@ -51,7 +51,7 @@ def get_raw_json(path):
 
         result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = unicode2utf8(convert.value2json(result.data, pretty=True))
+        response_data = text2utf8(convert.value2json(result.data, pretty=True))
         Log.note("Response is {{num}} bytes", num=len(response_data))
         return Response(
             response_data,

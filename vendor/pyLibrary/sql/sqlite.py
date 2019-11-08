@@ -17,7 +17,7 @@ from collections import Mapping, namedtuple
 
 from mo_dots import Data, coalesce, unwraplist, listwrap, wrap
 from mo_files import File
-from mo_future import allocate_lock as _allocate_lock, text_type, first
+from mo_future import allocate_lock as _allocate_lock, text, first
 from mo_future import is_text
 from mo_future import zip_longest
 from mo_json import BOOLEAN, INTEGER, NESTED, NUMBER, OBJECT, STRING
@@ -291,7 +291,7 @@ class Sqlite(DB):
 
                 full_path = file.abspath
                 self.db.enable_load_extension(True)
-                self.db.execute(text_type(
+                self.db.execute(text(
                     SQL_SELECT + "load_extension" + sql_iso(quote_value(full_path))
                 ))
         except Exception as e:
@@ -465,7 +465,7 @@ class Sqlite(DB):
                 # EXECUTE QUERY
                 self.last_command_item = command_item
                 self.debug and Log.note(FORMAT_COMMAND, command=query)
-                curr = self.db.execute(text_type(query))
+                curr = self.db.execute(text(query))
                 result.meta.format = "table"
                 result.header = (
                     [d[0] for d in curr.description] if curr.description else None
@@ -493,7 +493,7 @@ class Sqlite(DB):
 class Transaction(object):
     def __init__(self, db, parent=None):
         self.db = db
-        self.locker = Lock("transaction " + text_type(id(self)) + " todo lock")
+        self.locker = Lock("transaction " + text(id(self)) + " todo lock")
         self.todo = []
         self.complete = 0
         self.end_of_life = False
@@ -545,7 +545,7 @@ class Transaction(object):
             # RUN THEM
             for c in todo:
                 self.db.debug and Log.note(FORMAT_COMMAND, command=c.command)
-                self.db.db.execute(text_type(c.command))
+                self.db.db.execute(text(c.command))
         except Exception as e:
             Log.error("problem running commands", current=c, cause=e)
 
@@ -598,9 +598,9 @@ def quote_value(value):
     if isinstance(value, (Mapping, list)):
         return SQL(".")
     elif isinstance(value, Date):
-        return SQL(text_type(value.unix))
+        return SQL(text(value.unix))
     elif isinstance(value, Duration):
-        return SQL(text_type(value.seconds))
+        return SQL(text(value.seconds))
     elif is_text(value):
         return SQL("'" + value.replace("'", "''") + "'")
     elif value == None:
@@ -610,7 +610,7 @@ def quote_value(value):
     elif value is False:
         return SQL_FALSE
     else:
-        return SQL(text_type(value))
+        return SQL(text(value))
 
 
 def quote_list(values):

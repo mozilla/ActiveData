@@ -23,13 +23,13 @@ from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
 from mo_files.url import URL
-from mo_future import is_text, text_type, transpose
+from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
 import mo_json_config
 from mo_kwargs import override
 from mo_logs import Except, Log, constants
 from mo_logs.exceptions import extract_stack
-from mo_logs.strings import expand_template, unicode2utf8, utf82unicode
+from mo_logs.strings import expand_template, text2utf8, utf82unicode
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_times import Date, MINUTE
 from pyLibrary.env import http
@@ -74,7 +74,7 @@ class ESUtils(object):
         if backend_es.schema == None:
             Log.error("Expecting backed_es to have a schema defined")
 
-        letters = text_type(ascii_lowercase)
+        letters = text(ascii_lowercase)
         self.random_letter = letters[int(Date.now().unix / 30) % 26]
         self.testing = testing
         self.backend_es = backend_es
@@ -105,7 +105,7 @@ class ESUtils(object):
     def setUp(self):
         global NEXT
 
-        index_name = "testing_" + ("000" + text_type(NEXT))[-3:] + "_" + self.random_letter
+        index_name = "testing_" + ("000" + text(NEXT))[-3:] + "_" + self.random_letter
         NEXT += 1
 
         self._es_test_settings = self.backend_es.copy()
@@ -158,7 +158,7 @@ class ESUtils(object):
 
     def execute_tests(self, subtest, typed=True, places=6):
         subtest = wrap(subtest)
-        subtest.name = text_type(extract_stack()[1]['method'])
+        subtest.name = text(extract_stack()[1]['method'])
 
         self.fill_container(subtest, typed=typed)
         self.send_queries(subtest, places=places)
@@ -233,7 +233,7 @@ class ESUtils(object):
 
                 subtest.query.format = format
                 subtest.query.meta.testing = (num_expectations == 1)  # MARK FIRST QUERY FOR TESTING SO FULL METADATA IS AVAILABLE BEFORE QUERY EXECUTION
-                query = unicode2utf8(value2json(subtest.query))
+                query = text2utf8(value2json(subtest.query))
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
 
@@ -258,7 +258,7 @@ class ESUtils(object):
 
         try:
             query.meta.testing = True
-            query = unicode2utf8(value2json(query))
+            query = text2utf8(value2json(query))
             # EXECUTE QUERY
             response = self.try_till_response(self.testing.query, data=query)
 
@@ -385,10 +385,10 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = wrap([{text_type(i): v for i, v in enumerate(row) if v != None} for row in result.data])
+    data = wrap([{text(i): v for i, v in enumerate(row) if v != None} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
-    result.data = [tuple(row[text_type(i)] for i in range(len(result.header))) for row in data]
+    result.data = [tuple(row[text(i)] for i in range(len(result.header))) for row in data]
 
 
 def error(response):
@@ -438,7 +438,7 @@ class FakeHttp(object):
         text = utf82unicode(body)
         data = json2value(text)
         result = jx.run(data)
-        output_bytes = unicode2utf8(value2json(result))
+        output_bytes = text2utf8(value2json(result))
         return wrap({
             "status_code": 200,
             "all_content": output_bytes,

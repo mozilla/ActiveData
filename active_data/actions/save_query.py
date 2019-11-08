@@ -20,7 +20,7 @@ from mo_json import json2value
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_logs.strings import unicode2utf8
+from mo_logs.strings import text2utf8
 from mo_threads import Thread
 from mo_threads.threads import register_thread
 from mo_times.dates import Date
@@ -53,14 +53,14 @@ def find_query(hash):
             )
         else:
             return Response(
-                unicode2utf8(query),
+                text2utf8(query),
                 status=200
             )
     except Exception as e:
         e = Except.wrap(e)
         Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
         return Response(
-            unicode2utf8(convert.value2json(e)),
+            text2utf8(convert.value2json(e)),
             status=400
         )
 
@@ -113,7 +113,7 @@ class SaveQueries(object):
         """
         query.meta = None
         json = convert.value2json(query)
-        hash = unicode2utf8(json)
+        hash = text2utf8(json)
 
         # TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE

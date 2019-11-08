@@ -22,7 +22,7 @@ from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Data, FlatList, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
-from mo_future import first, long, none_type, text_type
+from mo_future import first, long, none_type, text
 from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NUMBER_TYPE, STRING_TYPE, unnest_path, untype_path
 from mo_kwargs import override
@@ -327,7 +327,7 @@ class ElasticsearchMetadata(Namespace):
                     if len(pending) > 10:
                         Log.note("waiting for {{num}} columns to update by {{timestamp}}", num=len(pending), timestamp=after)
                     else:
-                        Log.note("waiting for columns to update by {{timestamp}}; {{columns|json}}", timestamp=after, columns=[concat_field(c.es_index, c.es_column) + " id="+text_type(id(c)) for c in pending])
+                        Log.note("waiting for columns to update by {{timestamp}}; {{columns|json}}", timestamp=after, columns=[concat_field(c.es_index, c.es_column) + " id="+text(id(c)) for c in pending])
                 Till(seconds=1).wait()
             return columns
         except Exception as e:
@@ -929,7 +929,7 @@ python_type_to_es_type = {
     NullType: "undefined",
     bool: "boolean",
     str: "string",
-    text_type: "string",
+    text: "string",
     int: "integer",
     long: "integer",
     float: "double",

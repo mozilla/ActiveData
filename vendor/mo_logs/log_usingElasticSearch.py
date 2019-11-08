@@ -14,7 +14,7 @@ import sys
 
 from jx_python import jx
 from mo_dots import coalesce, listwrap, set_default, wrap, is_data, is_sequence
-from mo_future import number_types, text_type, is_text, is_binary
+from mo_future import number_types, text, is_text, is_binary
 from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, strings
@@ -83,7 +83,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
             params.format = None
             self.queue.add({"value": _deep_json_to_string(params, 3)}, timeout=3 * 60)
         except Exception as e:
-            sys.stdout.write(text_type(Except.wrap(e)))
+            sys.stdout.write(text(Except.wrap(e)))
         return self
 
     def _insert_loop(self, please_stop=None):

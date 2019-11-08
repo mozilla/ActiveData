@@ -21,7 +21,7 @@ from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import Data, FlatList, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
-from mo_future import first, text_type, transpose
+from mo_future import first, text, transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
@@ -178,7 +178,7 @@ def es_setop(es, query):
             split_scripts = split_expression_by_path(select.value, schema, lang=Painless)
             for p, script in split_scripts.items():
                 es_select = get_select(p)
-                es_select.scripts[select.name] = {"script": text_type(Painless[first(script)].partial_eval().to_es_script(schema))}
+                es_select.scripts[select.name] = {"script": text(Painless[first(script)].partial_eval().to_es_script(schema))}
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function("fields." + literal_field(select.name)),

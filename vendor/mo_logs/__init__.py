@@ -15,7 +15,7 @@ import sys
 from datetime import datetime
 
 from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, wrap
-from mo_future import PY3, is_text, text_type
+from mo_future import PY3, is_text, text
 from mo_logs import constants, exceptions, strings
 from mo_logs.exceptions import Except, LogItem, suppress_exception
 from mo_logs.strings import CR, indent
@@ -370,7 +370,7 @@ class Log(object):
 
         item.format = strings.limit(item.format, 10000)
         if item.format == None:
-            format = text_type(item)
+            format = text(item)
         else:
             format = item.format.replace("{{", "{{params.")
         if not format.startswith(CR) and format.find(CR) > -1:
@@ -381,8 +381,8 @@ class Log(object):
             f = sys._getframe(stack_depth + 1)
             item.location = {
                 "line": f.f_lineno,
-                "file": text_type(f.f_code.co_filename),
-                "method": text_type(f.f_code.co_name)
+                "file": text(f.f_code.co_filename),
+                "method": text(f.f_code.co_name)
             }
             thread = _Thread.current()
             item.thread = {"name": thread.name, "id": thread.id}
@@ -402,9 +402,9 @@ def _same_frame(frameA, frameB):
 # GET THE MACHINE METADATA
 machine_metadata = wrap({
     "pid":  os.getpid(),
-    "python": text_type(platform.python_implementation()),
-    "os": text_type(platform.system() + platform.release()).strip(),
-    "name": text_type(platform.node())
+    "python": text(platform.python_implementation()),
+    "os": text(platform.system() + platform.release()).strip(),
+    "name": text(platform.node())
 })
 
 

@@ -9,7 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_binary, text_type, none_type
+from mo_future import is_binary, text, none_type
 
 from mo_dots.utils import CLASS, OBJ
 
@@ -174,7 +174,7 @@ class NullType(object):
         return output
 
     def __getattr__(self, key):
-        key = text_type(key)
+        key = text(key)
 
         d = _get(self, "__dict__")
         o = wrap(d[OBJ])
@@ -193,7 +193,7 @@ class NullType(object):
             Log.error("not expected", cause=e)
 
     def __setattr__(self, key, value):
-        key = text_type(key)
+        key = text(key)
 
         d = _get(self, "__dict__")
         o = wrap(d[OBJ])

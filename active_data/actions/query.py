@@ -19,14 +19,14 @@ from mo_files import File
 from mo_future import binary_type
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
-from mo_logs.strings import unicode2utf8, utf82unicode
+from mo_logs.strings import text2utf8, utf82unicode
 import mo_math
 from mo_threads.threads import register_thread
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
 DEBUG = False
-BLANK = unicode2utf8(File("active_data/public/error.html").read())
+BLANK = text2utf8(File("active_data/public/error.html").read())
 QUERY_SIZE_LIMIT = 10*1024*1024
 
 
@@ -82,7 +82,7 @@ def jx_query(path):
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
             with Timer("jsonification", silent=not DEBUG) as json_timer:
-                response_data = unicode2utf8(value2json(result))
+                response_data = text2utf8(value2json(result))
 
         with Timer("post timer", silent=not DEBUG):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.

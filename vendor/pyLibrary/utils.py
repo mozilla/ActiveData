@@ -11,7 +11,7 @@ from __future__ import division, unicode_literals
 import datetime
 
 from mo_dots import DataObject, Null, unwrap
-from mo_future import text_type, zip_longest
+from mo_future import text, zip_longest
 
 
 class Version(object):
@@ -71,7 +71,7 @@ class Version(object):
         return self.version != other.version
 
     def __str__(self):
-        return text_type(".").join(map(text_type, self.version))
+        return text(".").join(map(text, self.version))
 
     def __add__(self, other):
         major, minor, mini = self.version

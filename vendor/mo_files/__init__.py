@@ -18,7 +18,7 @@ from tempfile import NamedTemporaryFile, mkdtemp
 
 from mo_dots import Null, coalesce, get_module, is_list
 from mo_files.url import URL
-from mo_future import PY3, binary_type, text_type, is_text
+from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till
@@ -48,7 +48,7 @@ class File(object):
 
         self._mime_type = mime_type
 
-        if isinstance(filename, (binary_type, text_type)):
+        if isinstance(filename, (binary_type, text)):
             try:
                 self.key = None
                 if filename==".":
@@ -278,7 +278,7 @@ class File(object):
 
             if is_list(data):
                 pass
-            elif isinstance(data, (binary_type, text_type)):
+            elif isinstance(data, (binary_type, text)):
                 data=[data]
             elif hasattr(data, "__iter__"):
                 pass

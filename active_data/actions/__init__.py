@@ -18,10 +18,10 @@ from jx_elasticsearch.meta import ElasticsearchMetadata, EXPECTING_SNOWFLAKE
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import coalesce, is_data, set_default, split_field
 from mo_dots import is_container
-from mo_future import is_text, text_type, first
+from mo_future import is_text, text, first
 from mo_json import STRUCT, value2json
 from mo_logs import Log, strings
-from mo_logs.strings import expand_template, unicode2utf8
+from mo_logs.strings import expand_template, text2utf8
 from mo_threads import Till
 from mo_times import Timer
 from mo_times.dates import Date
@@ -49,7 +49,7 @@ def send_error(active_data_timer, body, e):
     #         remove_trace(c)
     # remove_trace(e)
 
-    return Response(unicode2utf8(value2json(e)), status=status)
+    return Response(text2utf8(value2json(e)), status=status)
 
 
 def test_mode_wait(query):

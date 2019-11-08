@@ -18,7 +18,7 @@ import re
 from time import time as _time
 
 from mo_dots import Null, NullType
-from mo_future import long, none_type, text_type, unichr
+from mo_future import long, none_type, text, unichr
 from mo_logs import Except
 from mo_logs.strings import deformat
 import mo_math
@@ -86,7 +86,7 @@ class Date(object):
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
-            return text_type(unix2datetime(self.unix).strftime(format))
+            return text(unix2datetime(self.unix).strftime(format))
         except Exception as e:
             from mo_logs import Log
 

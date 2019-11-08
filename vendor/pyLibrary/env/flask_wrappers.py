@@ -17,10 +17,10 @@ from mo_threads.threads import register_thread
 
 from mo_dots import coalesce, is_data
 from mo_files import File, TempFile, URL
-from mo_future import text_type, decorate
+from mo_future import text, decorate
 from mo_json import value2json
 from mo_logs import Log
-from mo_logs.strings import unicode2utf8
+from mo_logs.strings import text2utf8
 from mo_threads import Thread
 from pyLibrary.env import git
 from pyLibrary.env.big_data import ibytes2icompressed
@@ -122,7 +122,7 @@ def dockerflow(flask_app, backend_check):
             except Exception as e:
                 Log.warning("heartbeat failure", cause=e)
                 return Response(
-                    unicode2utf8(value2json(e)),
+                    text2utf8(value2json(e)),
                     status=500,
                     headers={"Content-Type": "application/json"},
                 )
@@ -169,7 +169,7 @@ def add_version(flask_app):
         rev = coalesce(git.get_revision(), "")
         branch = coalesce(git.get_branch(), "")
 
-        version_info = unicode2utf8(
+        version_info = text2utf8(
             value2json(
                 {
                     "source": "https://github.com/mozilla/ActiveData/tree/" + rev,
@@ -178,7 +178,7 @@ def add_version(flask_app):
                 },
                 pretty=True,
             )
-            + text_type("\n")
+            + text("\n")
         )
 
         Log.note("Using github version\n{{version}}", version=version_info)

@@ -19,10 +19,10 @@ from bs4 import BeautifulSoup
 
 from mo_dots import Data, Null, coalesce, unwrap, wrap
 from mo_files.url import value2url_param
-from mo_future import StringIO, is_binary, text_type
+from mo_future import StringIO, is_binary, text
 from mo_kwargs import override
 from mo_logs import Except, Log
-from mo_logs.strings import unicode2utf8, utf82unicode
+from mo_logs.strings import text2utf8, utf82unicode
 from mo_times.dates import Date
 from mo_times.timer import Timer
 from pyLibrary import convert
@@ -312,7 +312,7 @@ class Bucket(object):
                     value = convert.bytes2zip(value)
                     key += ".json.gz"
                 else:
-                    value = convert.bytes2zip(unicode2utf8(value))
+                    value = convert.bytes2zip(text2utf8(value))
                     key += ".json.gz"
 
             else:
@@ -404,11 +404,11 @@ class SkeletonBucket(Bucket):
 
 
 content_keys={
-    "key": text_type,
+    "key": text,
     "lastmodified": Date,
-    "etag": text_type,
+    "etag": text,
     "size": int,
-    "storageclass": text_type
+    "storageclass": text
 }
 
 

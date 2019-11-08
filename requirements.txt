@@ -6,4 +6,4 @@ moz-sql-parser
 boto==2.48.0
 ujson
 beautifulsoup4
-
+cryptography

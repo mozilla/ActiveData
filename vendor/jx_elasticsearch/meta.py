@@ -347,7 +347,7 @@ class ElasticsearchMetadata(Namespace):
             Log.error("not supported")
         try:
             if column.es_index == META_TABLES_NAME:
-                partitions = jx.sort([g[column.es_column] for g, _ in jx.chunk(self.meta.tables, column.es_column) if g[column.es_column] != None])
+                partitions = jx.sort([g[column.es_column] for g, _ in jx.groupby(self.meta.tables, column.es_column) if g[column.es_column] != None])
                 self.meta.columns.update({
                     "set": {
                         "partitions": partitions,

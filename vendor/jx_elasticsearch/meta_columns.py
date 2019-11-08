@@ -369,7 +369,7 @@ class ColumnList(Table, jx_base.Container):
     def groupby(self, keys):
         with self.locker:
             self._update_meta()
-            return jx.chunk(self.__iter__(), keys)
+            return jx.groupby(self.__iter__(), keys)
 
     def window(self, window):
         raise NotImplemented()

@@ -9,8 +9,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from copy import deepcopy
 import re
+from copy import deepcopy
 
 from jx_base import Column
 from jx_python import jx
@@ -26,8 +26,8 @@ from mo_logs.exceptions import Except
 from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
-from mo_threads import Lock, ThreadedQueue, Till
-from mo_times import Date, MINUTE, Timer, HOUR
+from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP
+from mo_times import Date, Timer, HOUR
 from pyLibrary.convert import quote2string, value2number
 from pyLibrary.env import http
 
@@ -407,6 +407,8 @@ class Index(Features):
             Log.error("Index opened in read only mode, no changes allowed")
         if is_list(record):
             Log.error("add() has changed to only accept one record, no lists")
+        if record is THREAD_STOP:
+            return
         self.extend([record])
 
     def add_property(self, name, details):

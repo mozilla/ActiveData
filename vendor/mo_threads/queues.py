@@ -273,7 +273,6 @@ class PriorityQueue(Queue):
         with self.lock:
             if value is THREAD_STOP:
                 # INSIDE THE lock SO THAT EXITING WILL RELEASE wait()
-                self.queue[priority].queue.append(value)
                 self.closed.go()
                 return
 
@@ -513,10 +512,15 @@ class ThreadedQueue(Queue):
 
     def extend(self, values):
         with self.lock:
+            if self.closed:
+                return self
             # ONCE THE queue IS BELOW LIMIT, ALLOW ADDING MORE
             self._wait_for_queue_space()
-            if not self.closed:
-                self.queue.extend(values)
+            for v in values:
+                if v is THREAD_STOP:
+                    self.closed.go()
+                else:
+                    self.queue.append(v)
             if not self.silent:
                 Log.note("{{name}} has {{num}} items", name=self.name, num=len(self.queue))
         return self

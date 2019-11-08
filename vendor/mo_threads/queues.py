@@ -145,14 +145,14 @@ class Queue(object):
 
         :param timeout:  IN SECONDS
         """
-        start = time()
-        timeout = coalesce(timeout, DEFAULT_WAIT_TIME)
         wait_time = 5
 
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
+        start = time()
+        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
+
         while not self.closed and len(self.queue) >= self.max:
-            stop_waiting = Till(till=start + timeout)
             if stop_waiting:
                 Log.error(THREAD_TIMEOUT)
 
@@ -192,8 +192,7 @@ class Queue(object):
         with self.lock:
             while True:
                 if self.queue:
-                    value = self.queue.popleft()
-                    return value
+                    return self.queue.popleft()
                 if self.closed:
                     break
                 if not self.lock.wait(till=self.closed | till):
@@ -208,6 +207,9 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
+            chunk = list(self.queue)
+            if any(l is THREAD_STOP for l in chunk):
+                Log.error("not expected")
             output = [l for l in list(self.queue) if l is not THREAD_STOP]
             self.queue.clear()
 

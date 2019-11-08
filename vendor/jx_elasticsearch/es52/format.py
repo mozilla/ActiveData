@@ -16,6 +16,7 @@ from jx_elasticsearch.es52.aggs import aggs_iterator, count_dim, format_dispatch
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
+from mo_files import mimetype
 from mo_future import sort_using_key
 from mo_json import value2json
 from mo_logs import Log
@@ -271,13 +272,13 @@ def format_line(aggs, es_query, query, decoders, select):
 
 
 set_default(format_dispatch, {
-    None: (format_cube, format_table, format_cube, "application/json"),
-    "cube": (format_cube, format_cube, format_cube, "application/json"),
-    "table": (format_table, format_table, format_table,  "application/json"),
-    "list": (format_list, format_list_from_groupby, format_list, "application/json"),
+    None: (format_cube, format_table, format_cube, mimetype.JSON),
+    "cube": (format_cube, format_cube, format_cube, mimetype.JSON),
+    "table": (format_table, format_table, format_table,  mimetype.JSON),
+    "list": (format_list, format_list_from_groupby, format_list, mimetype.JSON),
     # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
     # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
-    # "line": (format_line, format_line_from_groupby,  "application/json")
+    # "line": (format_line, format_line_from_groupby,  mimetype.JSON)
 })
 
 

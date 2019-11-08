@@ -10,7 +10,6 @@
 import base64
 from datetime import datetime
 import io
-from mimetypes import MimeTypes
 import os
 import re
 import shutil
@@ -22,8 +21,6 @@ from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till
-
-mime = MimeTypes()
 
 
 class File(object):
@@ -145,15 +142,17 @@ class File(object):
             return ".".join(parts[0:-1])
 
     @property
-    def mime_type(self):
+    def mime_type(self, mimetype=None):
         if not self._mime_type:
             if self.abspath.endswith(".js"):
                 self._mime_type = "application/javascript"
             elif self.abspath.endswith(".css"):
                 self._mime_type = "text/css"
             elif self.abspath.endswith(".json"):
-                self._mime_type = "application/json"
+                self._mime_type = mimetype.JSON
             else:
+                from mimetype import MimeTypes
+                mime = MimeTypes()
                 self._mime_type, _ = mime.guess_type(self.abspath)
                 if not self._mime_type:
                     self._mime_type = "application/binary"

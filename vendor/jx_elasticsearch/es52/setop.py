@@ -21,6 +21,7 @@ from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
 from mo_collections.matrix import Matrix
 from mo_dots import Data, FlatList, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
+from mo_files import mimetype
 from mo_future import first, text, transpose
 from mo_json import NESTED
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
@@ -354,10 +355,10 @@ def format_cube(T, select, query=None):
 
 
 set_default(format_dispatch, {
-    None: (format_cube, None, "application/json"),
-    "cube": (format_cube, None, "application/json"),
-    "table": (format_table, None, "application/json"),
-    "list": (format_list, None, "application/json")
+    None: (format_cube, None, mimetype.JSON),
+    "cube": (format_cube, None, mimetype.JSON),
+    "table": (format_table, None, mimetype.JSON),
+    "list": (format_list, None, mimetype.JSON)
 })
 
 

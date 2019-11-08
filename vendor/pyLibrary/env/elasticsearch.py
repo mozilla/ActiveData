@@ -15,7 +15,7 @@ from copy import deepcopy
 from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
-from mo_files import File
+from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
@@ -815,7 +815,7 @@ class Cluster(object):
         self.put(
             "/" + index,
             data=schema,
-            headers={text("Content-Type"): text("application/json")},
+            headers={text("Content-Type"): mimetype.JSON},
             stream=False
         )
 
@@ -940,7 +940,7 @@ class Cluster(object):
         try:
             heads = wrap(kwargs).headers
             heads["Accept-Encoding"] = "gzip,deflate"
-            heads["Content-Type"] = "application/json"
+            heads["Content-Type"] = mimetype.JSON
 
             if self.debug:
                 if is_binary(data):
@@ -1031,7 +1031,7 @@ class Cluster(object):
 
         heads = wrap(kwargs).headers
         heads[text("Accept-Encoding")] = text("gzip,deflate")
-        heads[text("Content-Type")] = text("application/json")
+        heads[text("Content-Type")] = mimetype.JSON
 
         data = kwargs.get(DATA_KEY)
         if data == None:

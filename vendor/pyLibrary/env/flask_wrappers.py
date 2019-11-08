@@ -15,7 +15,7 @@ import flask
 from flask import Response
 
 from mo_dots import coalesce, is_data
-from mo_files import File, TempFile, URL
+from mo_files import File, TempFile, URL, mimetype
 from mo_future import decorate, text
 from mo_json import value2json
 from mo_logs import Log
@@ -82,7 +82,7 @@ def cors_wrapper(func):
             "Access-Control-Allow-Methods",
             flask.request.headers.get("Access-Control-Request-Methods"),
         )
-        _setdefault(headers, "Content-Type", "application/json")
+        _setdefault(headers, "Content-Type", mimetype.JSON)
         _setdefault(
             headers,
             "Strict-Transport-Security",
@@ -110,7 +110,7 @@ def dockerflow(flask_app, backend_check):
         @cors_wrapper
         def version():
             return Response(
-                VERSION_JSON, status=200, headers={"Content-Type": "application/json"}
+                VERSION_JSON, status=200, headers={"Content-Type": mimetype.JSON}
             )
 
         @cors_wrapper
@@ -123,7 +123,7 @@ def dockerflow(flask_app, backend_check):
                 return Response(
                     text2utf8(value2json(e)),
                     status=500,
-                    headers={"Content-Type": "application/json"},
+                    headers={"Content-Type": mimetype.JSON},
                 )
 
         @cors_wrapper
@@ -186,7 +186,7 @@ def add_version(flask_app):
         @cors_wrapper
         def version():
             return Response(
-                version_info, status=200, headers={"Content-Type": "application/json"}
+                version_info, status=200, headers={"Content-Type": mimetype.JSON}
             )
 
         flask_app.add_url_rule(

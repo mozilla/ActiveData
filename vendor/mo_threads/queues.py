@@ -14,17 +14,17 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import types
 from collections import deque
 from datetime import datetime
 from time import time
-import types
 
 from mo_dots import Null, coalesce
 from mo_future import long
 from mo_logs import Except, Log
 
 from mo_threads.lock import Lock
-from mo_threads.signal import Signal
+from mo_threads.signals import Signal
 from mo_threads.threads import THREAD_STOP, THREAD_TIMEOUT, Thread
 from mo_threads.till import Till
 
@@ -145,14 +145,14 @@ class Queue(object):
 
         :param timeout:  IN SECONDS
         """
+        start = time()
+        timeout = coalesce(timeout, DEFAULT_WAIT_TIME)
         wait_time = 5
 
         (DEBUG and len(self.queue) > 1 * 1000 * 1000) and Log.warning("Queue {{name}} has over a million items")
 
-        start = time()
-        stop_waiting = Till(till=start+coalesce(timeout, DEFAULT_WAIT_TIME))
-
         while not self.closed and len(self.queue) >= self.max:
+            stop_waiting = Till(till=start + timeout)
             if stop_waiting:
                 Log.error(THREAD_TIMEOUT)
 
@@ -207,7 +207,7 @@ class Queue(object):
         NON-BLOCKING POP ALL IN QUEUE, IF ANY
         """
         with self.lock:
-            output = list(self.queue)
+            output = [l for l in list(self.queue) if l is not THREAD_STOP]
             self.queue.clear()
 
         return output

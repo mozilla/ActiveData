@@ -148,7 +148,7 @@ def chunk(data, size=0):
                 if out:
                     # AT LEAST TRY TO RETURN WHAT HAS BEEN PROCESSED SO FAR
                     yield g, out
-                Log.error("Problem inside jx.groupby", e)
+                Log.error("Problem inside jx.chunk", e)
 
         return _iter()
     else:

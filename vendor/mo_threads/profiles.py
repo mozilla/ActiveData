@@ -10,8 +10,8 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import cProfile
-from datetime import datetime
 import pstats
+from datetime import datetime
 
 from mo_future import iteritems
 from mo_logs import Log

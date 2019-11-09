@@ -988,7 +988,7 @@ class Cluster(object):
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
             self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
-            details = wrap(json2value(response.all_content).decode('utf8'))
+            details = json2value(response.all_content.decode('utf8'))
             if details.error:
                 Log.error(details.error)
             return details
@@ -1003,7 +1003,7 @@ class Cluster(object):
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
             self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
-            details = wrap(json2value(response.all_content).decode('utf8'))
+            details = json2value(response.all_content.decode('utf8'))
             if details.error:
                 Log.error(details.error)
             return details
@@ -1018,7 +1018,7 @@ class Cluster(object):
                 Log.error(response.reason + ": " + response.all_content)
             self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
             if response.all_content:
-                details = wrap(json2value(response.all_content).decode('utf8'))
+                details = json2value(response.all_content.decode('utf8'))
                 if details.error:
                     Log.error(details.error)
                 return details

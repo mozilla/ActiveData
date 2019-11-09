@@ -14,7 +14,7 @@ import gc
 from types import FunctionType
 
 from mo_dots import Null, _get_attr, set_default
-from mo_future import get_function_arguments, get_function_name, is_text, text_type
+from mo_future import get_function_arguments, get_function_name, is_text, text
 import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -199,7 +199,7 @@ def value2quote(value):
     if is_text(value):
         return mo_json.quote(value)
     else:
-        return text_type(repr(value))
+        return text(repr(value))
 
 
 class extenstion_method(object):

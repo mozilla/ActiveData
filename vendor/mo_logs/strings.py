@@ -20,11 +20,11 @@ import re
 import string
 
 from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence
-from mo_future import PY3, get_function_name, is_binary, is_text, round as _round, text_type, transpose, xrange, zip_longest, binary_type
+from mo_future import PY3, get_function_name, is_binary, is_text, round as _round, text, transpose, xrange, zip_longest, binary_type
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
 
 FORMATTERS = {}
-CR = text_type("\n")
+CR = text("\n")
 
 _json_encoder = None
 _Log = None
@@ -86,7 +86,7 @@ def unicode(value):
     """
     if value == None:
         return ""
-    return text_type(value)
+    return text(value)
 
 
 @formatter
@@ -195,7 +195,7 @@ def tab(value):
             "\t".join(map(value2json, d))
         )
     else:
-        text_type(value)
+        text(value)
 
 
 @formatter
@@ -217,7 +217,7 @@ def indent(value, prefix=u"\t", indent=None):
         lines = content.splitlines()
         return prefix + (CR + prefix).join(lines) + suffix
     except Exception as e:
-        raise Exception(u"Problem with indent of value (" + e.message + u")\n" + text_type(toString(value)))
+        raise Exception(u"Problem with indent of value (" + e.message + u")\n" + text(toString(value)))
 
 
 @formatter
@@ -261,7 +261,7 @@ def round(value, decimal=None, digits=None, places=None):
         decimal = digits - left_of_decimal
 
     right_of_decimal = max(decimal, 0)
-    format = "{:." + text_type(right_of_decimal) + "f}"
+    format = "{:." + text(right_of_decimal) + "f}"
     return format.format(_round(value, decimal))
 
 
@@ -286,7 +286,7 @@ def percent(value, decimal=None, digits=None, places=None):
 
     decimal = coalesce(decimal, 0)
     right_of_decimal = max(decimal, 0)
-    format = "{:." + text_type(right_of_decimal) + "%}"
+    format = "{:." + text(right_of_decimal) + "%}"
     return format.format(_round(value, decimal + 2))
 
 
@@ -404,7 +404,7 @@ def right_align(value, length):
     if length <= 0:
         return u""
 
-    value = text_type(value)
+    value = text(value)
 
     if len(value) < length:
         return (" " * (length - len(value))) + value
@@ -417,7 +417,7 @@ def left_align(value, length):
     if length <= 0:
         return u""
 
-    value = text_type(value)
+    value = text(value)
 
     if len(value) < length:
         return value + (" " * (length - len(value)))
@@ -449,7 +449,7 @@ def comma(value):
         else:
             output = "{:,}".format(float(value))
     except Exception:
-        output = text_type(value)
+        output = text(value)
 
     return output
 
@@ -672,10 +672,10 @@ def toString(val):
     elif hasattr(val, "__json__"):
         return val.__json__()
     elif isinstance(val, _Duration):
-        return text_type(round(val.seconds, places=4)) + " seconds"
+        return text(round(val.seconds, places=4)) + " seconds"
     elif isinstance(val, timedelta):
         duration = val.total_seconds()
-        return text_type(round(duration, 3)) + " seconds"
+        return text(round(duration, 3)) + " seconds"
     elif is_text(val):
         return val
     elif isinstance(val, binary_type):
@@ -690,15 +690,15 @@ def toString(val):
             if not _Log:
                 _late_import()
 
-            _Log.error(text_type(type(val)) + " type can not be converted to unicode", cause=e)
+            _Log.error(text(type(val)) + " type can not be converted to unicode", cause=e)
     else:
         try:
-            return text_type(val)
+            return text(val)
         except Exception as e:
             if not _Log:
                 _late_import()
 
-            _Log.error(text_type(type(val)) + " type can not be converted to unicode", cause=e)
+            _Log.error(text(type(val)) + " type can not be converted to unicode", cause=e)
 
 
 def edit_distance(s1, s2):
@@ -851,49 +851,8 @@ def apply_diff(text, diff, reverse=False, verify=True):
     return output
 
 
-def unicode2utf8(value):
-    return value.encode('utf8')
-
-
-def utf82unicode(value):
-    """
-    WITH EXPLANATION FOR FAILURE
-    """
-    try:
-        return value.decode("utf8")
-    except Exception as e:
-        if not _Log:
-            _late_import()
-
-        if not is_binary(value):
-            _Log.error("Can not convert {{type}} to unicode because it's not bytes",  type= type(value).__name__)
-
-        e = _Except.wrap(e)
-        for i, c in enumerate(value):
-            try:
-                c.decode("utf8")
-            except Exception as f:
-                _Log.error("Can not convert charcode {{c}} in string index {{i}}", i=i, c=ord(c), cause=[e, _Except.wrap(f)])
-
-        try:
-            latin1 = text_type(value.decode("latin1"))
-            _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception:
-            pass
-
-        try:
-            a = text_type(value.decode("latin1"))
-            _Log.error("Can not explain conversion failure, but seems to be latin1", e)
-        except Exception:
-            pass
-
-        _Log.error("Can not explain conversion failure of " + type(value).__name__ + "!", e)
-
-
 def wordify(value):
     return [w for w in re.split(r"[\W_]", value) if strip(w)]
-
-
 
 
 def pairwise(values):

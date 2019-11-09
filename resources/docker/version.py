@@ -1,7 +1,7 @@
 import os
 
 from mo_files import File
-from mo_future import text_type
+from mo_future import text
 from mo_json import value2json
 from pyLibrary.env import git
 
@@ -15,4 +15,4 @@ File("version.json").write(value2json(
         "build": os.environ.get('BUILD_URL')
     },
     pretty=True
-) + text_type("\n"))
+) + text("\n"))

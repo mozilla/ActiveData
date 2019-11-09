@@ -14,7 +14,7 @@ from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
 from mo_dots import Data, wrap
 from mo_files.url import URL
-from mo_json import json2value, utf82unicode, value2json
+from mo_json import json2value, value2json
 from mo_logs import Log
 from tests import compare_to_expected
 from tests.test_jx import BaseTestCase, TEST_TABLE
@@ -182,7 +182,7 @@ class TestSQL(BaseTestCase):
         url = URL(self.utils.testing.sql)
         response = self.utils.post_till_response(str(url), json={"meta": {"testing": True}, "sql": sql})
         self.assertEqual(response.status_code, 200)
-        return json2value(utf82unicode(response.content))
+        return json2value(response.content.decode('utf8'))
 
 
 _ = value2json

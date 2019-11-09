@@ -11,6 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
+from mo_json import null
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -28,12 +29,12 @@ class TestGroupBy2(BaseTestCase):
                 "data": [
                     {"a": "x", "b": "m", "count": 2},
                     {"a": "x", "b": "n", "count": 1},
-                    {"a": "x", "b": NULL, "count": 1},
+                    {"a": "x", "b": null, "count": 1},
                     {"a": "y", "b": "m", "count": 1},
                     {"a": "y", "b": "n", "count": 2},
-                    {"a": "y", "b": NULL, "count": 1},
-                    {"a": NULL, "b": "m", "count": 1},
-                    {"a": NULL, "b": "n", "count": 1},
+                    {"a": "y", "b": null, "count": 1},
+                    {"a": null, "b": "m", "count": 1},
+                    {"a": null, "b": "n", "count": 1},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -106,12 +107,12 @@ class TestGroupBy2(BaseTestCase):
                 "data": [
                     {"a": "x", "b": "m", "v": 29},
                     {"a": "x", "b": "n", "v": 3},
-                    {"a": "x", "b": NULL, "v": 5},
+                    {"a": "x", "b": null, "v": 5},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 50},
-                    {"a": "y", "b": NULL, "v": 13},
-                    {"a": NULL, "b": "m", "v": 17},
-                    {"a": NULL, "b": "n", "v": 19},
+                    {"a": "y", "b": null, "v": 13},
+                    {"a": null, "b": "m", "v": 17},
+                    {"a": null, "b": "n", "v": 19},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -154,12 +155,12 @@ class TestGroupBy2(BaseTestCase):
 two_dim_test_data = [
     {"a": "x", "b": "m", "v": 2},
     {"a": "x", "b": "n", "v": 3},
-    {"a": "x", "b": None, "v": 5},
+    {"a": "x", "b": null, "v": 5},
     {"a": "y", "b": "m", "v": 7},
     {"a": "y", "b": "n", "v": 11},
-    {"a": "y", "b": None, "v": 13},
-    {"a": None, "b": "m", "v": 17},
-    {"a": None, "b": "n", "v": 19},
+    {"a": "y", "b": null, "v": 13},
+    {"a": null, "b": "m", "v": 17},
+    {"a": null, "b": "n", "v": 19},
     {"a": "x", "b": "m", "v": 27},
     {"a": "y", "b": "n", "v": 39}
 ]

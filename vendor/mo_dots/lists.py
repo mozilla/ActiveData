@@ -11,12 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 from copy import deepcopy
 
-from mo_future import generator_types, text_type
+from mo_future import generator_types, text
 
 from mo_dots import CLASS, coalesce, unwrap, wrap
 from mo_dots.nones import Null
 
-LIST = text_type("list")
+LIST = text("list")
 
 _get = object.__getattribute__
 _get_list = lambda self: _get(self, LIST)

@@ -8,7 +8,7 @@
 #
 
 from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
-from mo_future import PY2, is_text, text_type, unichr, urlparse, is_binary
+from mo_future import PY2, is_text, text, unichr, urlparse, is_binary
 from mo_json import json2value, value2json
 from mo_logs import Log
 
@@ -79,6 +79,9 @@ class URL(object):
         output.fragment = self.fragment
         return output
 
+    def decode(self, encoding=''):
+        return text(self).decode(encoding)
+
     def __data__(self):
         return str(self)
 
@@ -91,7 +94,7 @@ class URL(object):
         if self.port:
             url = url + ":" + str(self.port)
         if self.path:
-            if self.path[0] == text_type("/"):
+            if self.path[0] == text("/"):
                 url += str(self.path)
             else:
                 url += "/" + str(self.path)
@@ -163,7 +166,7 @@ def url_param2value(param):
                 output.append(c)
                 i += 1
 
-        output = text_type("".join(output))
+        output = text("".join(output))
         try:
             return json2value(output)
         except Exception:

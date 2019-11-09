@@ -9,28 +9,30 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from copy import deepcopy
 import re
+from copy import deepcopy
 
 from jx_base import Column
 from jx_python import jx
-from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, literal_field, set_default, split_field, wrap
-from mo_files import File
+from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
+    literal_field, set_default, split_field, wrap
+from mo_files import File, mimetype
 from mo_files.url import URL
-from mo_future import binary_type, generator_types, is_binary, is_text, items, text_type
+from mo_future import binary_type, generator_types, is_binary, is_text, items, text
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
-from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, json_type_to_inserter_type
+from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, \
+    json_type_to_inserter_type
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
-from mo_logs.strings import unicode2utf8, utf82unicode
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
-from mo_threads import Lock, ThreadedQueue, Till
-from mo_times import Date, MINUTE, Timer, HOUR
+from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP
+from mo_times import Date, Timer, HOUR
 from pyLibrary.convert import quote2string, value2number
 from pyLibrary.env import http
 
+DEBUG = True
 DEBUG_METADATA_UPDATE = False
 
 ES_STRUCT = ["object", "nested"]
@@ -43,7 +45,7 @@ ID = Data(field='_id')
 LF = "\n".encode('utf8')
 
 STALE_METADATA = HOUR
-DATA_KEY = text_type("data")
+DATA_KEY = text("data")
 
 
 class Features(object):
@@ -320,12 +322,16 @@ class Index(Features):
                 Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
             id, version, json_bytes = self.encode(r)
 
+            if DEBUG and not json_bytes.startswith('{'):
+                self.encode(r)
+                Log.error("string {{doc}} will not be accepted as a document", doc=json_bytes)
+
             if version:
-                yield unicode2utf8(value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}))
+                yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
             else:
-                yield unicode2utf8('{"index":{"_id": ' + value2json(id) + '}}')
+                yield '{"index":{"_id": ' + value2json(id) + '}}'.encode('utf8')
             yield LF
-            yield unicode2utf8(json_bytes)
+            yield json_bytes.encode('utf8')
             yield LF
 
     def extend(self, records):
@@ -340,7 +346,9 @@ class Index(Features):
         if not records:
             return
         if isinstance(records, generator_types):
-            Log.error("generators no longer accepted, use lambda to make generator")
+            Log.error("single use generators no longer accepted")
+        if not hasattr(records, "__iter__"):
+            Log.error("records must have __iter__")
 
         try:
             with Timer("Add {{num}} documents to {{index}}", {"num": "unknown", "index": self.settings.index}, silent=not self.debug):
@@ -397,7 +405,7 @@ class Index(Features):
             e = Except.wrap(e)
             lines = list(self._data_bytes(records))
             if e.message.startswith("sequence item "):
-                Log.error("problem with {{data}}", data=text_type(repr(lines[int(e.message[14:16].strip())])), cause=e)
+                Log.error("problem with {{data}}", data=text(repr(lines[int(e.message[14:16].strip())])), cause=e)
             Log.error("problem sending to ES", cause=e)
 
     # RECORDS MUST HAVE id AND json AS A STRING OR
@@ -407,6 +415,8 @@ class Index(Features):
             Log.error("Index opened in read only mode, no changes allowed")
         if is_list(record):
             Log.error("add() has changed to only accept one record, no lists")
+        if record is THREAD_STOP:
+            return
         self.extend([record])
 
     def add_property(self, name, details):
@@ -436,7 +446,7 @@ class Index(Features):
         if seconds <= 0:
             interval = -1
         else:
-            interval = text_type(seconds) + "s"
+            interval = text(seconds) + "s"
 
         if self.cluster.version.startswith("0.90."):
             response = self.cluster.put(
@@ -445,10 +455,10 @@ class Index(Features):
                 **kwargs
             )
 
-            result = json2value(utf82unicode(response.all_content))
+            result = json2value(response.all_content.decode('utf8'))
             if not result.ok:
                 Log.error("Can not set refresh interval ({{error}})", {
-                    "error": utf82unicode(response.all_content)
+                    "error": response.all_content.decode('utf8')
                 })
         elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
             result = self.cluster.put(
@@ -806,7 +816,7 @@ class Cluster(object):
         self.put(
             "/" + index,
             data=schema,
-            headers={text_type("Content-Type"): text_type("application/json")},
+            headers={text("Content-Type"): mimetype.JSON},
             stream=False
         )
 
@@ -838,12 +848,16 @@ class Cluster(object):
                 data={"actions": [{"remove": a} for a in aliases]}
             )
 
-        url = self.settings.host + ":" + text_type(self.settings.port) + "/" + index_name
+        url = self.settings.host + ":" + text(self.settings.port) + "/" + index_name
         try:
             response = http.delete(url)
             if response.status_code != 200:
                 Log.error("Expecting a 200, got {{code}}", code=response.status_code)
-            details = json2value(utf82unicode(response.content))
+            else:
+                # making the metadata stale after deletion of the index
+                self.metatdata_last_updated = self.metatdata_last_updated - STALE_METADATA
+
+            details = json2value(response.content.decode('utf8'))
             self.debug and Log.note("delete response {{response}}", response=details)
             return response
         except Exception as e:
@@ -910,15 +924,15 @@ class Cluster(object):
         return self._version
 
     def post(self, path, **kwargs):
-        url = self.url / path  # self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.url / path  # self.settings.host + ":" + text(self.settings.port) + path
 
         data = kwargs.get(DATA_KEY)
         if data == None:
             pass
         elif is_data(data):
-            data = kwargs[DATA_KEY] = unicode2utf8(value2json(data))
+            data = kwargs[DATA_KEY] = value2json(data).encode('utf8')
         elif is_text(data):
-            data = kwargs[DATA_KEY] = unicode2utf8(data)
+            data = kwargs[DATA_KEY] = data.encode('utf8')
         elif hasattr(data, str("__iter__")):
             pass  # ASSUME THIS IS AN ITERATOR OVER BYTES
         else:
@@ -927,7 +941,7 @@ class Cluster(object):
         try:
             heads = wrap(kwargs).headers
             heads["Accept-Encoding"] = "gzip,deflate"
-            heads["Content-Type"] = "application/json"
+            heads["Content-Type"] = mimetype.JSON
 
             if self.debug:
                 if is_binary(data):
@@ -939,9 +953,9 @@ class Cluster(object):
             self.debug and Log.note("POST {{url}}", url=url)
             response = http.post(url, **kwargs)
             if response.status_code not in [200, 201]:
-                Log.error(text_type(response.reason) + ": " + strings.limit(response.content.decode("latin1"), 1000 if self.debug else 10000))
-            self.debug and Log.note("response: {{response}}", response=utf82unicode(response.content)[:130])
-            details = json2value(utf82unicode(response.content))
+                Log.error(text(response.reason) + ": " + strings.limit(response.content.decode("latin1"), 1000 if self.debug else 10000))
+            self.debug and Log.note("response: {{response}}", response=(response.content.decode('utf8'))[:130])
+            details = json2value(response.content.decode('utf8'))
             if details.error:
                 Log.error(quote2string(details.error))
             if details._shards.failed > 0:
@@ -961,20 +975,20 @@ class Cluster(object):
                 Log.error(
                     "Problem with call to {{url}}" + suggestion + "\n{{body|left(10000)}}",
                     url=url,
-                    body=strings.limit(utf82unicode(kwargs[DATA_KEY]), 500 if self.debug else 10000),
+                    body=strings.limit(kwargs[DATA_KEY].decode('utf8'), 500 if self.debug else 10000),
                     cause=e
                 )
             else:
                 Log.error("Problem with call to {{url}}" + suggestion, url=url, cause=e)
 
     def delete(self, path, **kwargs):
-        url = self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.settings.host + ":" + text(self.settings.port) + path
         try:
             response = http.delete(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
-            details = wrap(json2value(utf82unicode(response.all_content)))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
+            details = json2value(response.all_content.decode('utf8'))
             if details.error:
                 Log.error(details.error)
             return details
@@ -982,14 +996,14 @@ class Cluster(object):
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
     def get(self, path, **kwargs):
-        url = self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.settings.host + ":" + text(self.settings.port) + path
         try:
             self.debug and Log.note("GET {{url}}", url=url)
             response = http.get(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
-            details = wrap(json2value(utf82unicode(response.all_content)))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
+            details = json2value(response.all_content.decode('utf8'))
             if details.error:
                 Log.error(details.error)
             return details
@@ -997,14 +1011,14 @@ class Cluster(object):
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
     def head(self, path, **kwargs):
-        url = self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.settings.host + ":" + text(self.settings.port) + path
         try:
             response = http.head(url, **kwargs)
             if response.status_code not in [200]:
                 Log.error(response.reason + ": " + response.all_content)
-            self.debug and Log.note("response: {{response}}", response=strings.limit(utf82unicode(response.all_content), 500))
+            self.debug and Log.note("response: {{response}}", response=strings.limit(response.all_content.decode('utf8'), 500))
             if response.all_content:
-                details = wrap(json2value(utf82unicode(response.all_content)))
+                details = json2value(response.all_content.decode('utf8'))
                 if details.error:
                     Log.error(details.error)
                 return details
@@ -1014,17 +1028,17 @@ class Cluster(object):
             Log.error("Problem with call to {{url}}", url=url, cause=e)
 
     def put(self, path, **kwargs):
-        url = self.settings.host + ":" + text_type(self.settings.port) + path
+        url = self.settings.host + ":" + text(self.settings.port) + path
 
         heads = wrap(kwargs).headers
-        heads[text_type("Accept-Encoding")] = text_type("gzip,deflate")
-        heads[text_type("Content-Type")] = text_type("application/json")
+        heads[text("Accept-Encoding")] = text("gzip,deflate")
+        heads[text("Content-Type")] = mimetype.JSON
 
         data = kwargs.get(DATA_KEY)
         if data == None:
             pass
         elif is_data(data):
-            kwargs[DATA_KEY] = unicode2utf8(value2json(data))
+            kwargs[DATA_KEY] = value2json(data).encode('utf8')
         elif is_text(kwargs[DATA_KEY]):
             pass
         else:
@@ -1036,13 +1050,13 @@ class Cluster(object):
         try:
             response = http.put(url, **kwargs)
             if response.status_code not in [200]:
-                Log.error(response.reason + ": " + utf82unicode(response.content))
+                Log.error(response.reason + ": " + response.content).decode('utf8')
             if not response.content:
                 return Null
 
-            self.debug and Log.note("response: {{response}}", response=utf82unicode(response.content)[0:300:])
+            self.debug and Log.note("response: {{response}}", response=(response.content.decode('utf8'))[0:300:])
 
-            details = json2value(utf82unicode(response.content))
+            details = json2value(response.content.decode('utf8'))
             if details.error:
                 Log.error(quote2string(details.error))
             if details._shards.failed > 0:
@@ -1065,7 +1079,7 @@ def export_schema(cluster, metadata):
         output.append(strings.indent(value2json(metadata.indices[i].mappings.values()[0].properties, pretty=True), "    "))
         output.append("\n")
 
-    File("temp" + text_type(cluster.url.port) + ".md").write(output)
+    File("temp" + text(cluster.url.port) + ".md").write(output)
 
 
 def proto_name(prefix, timestamp=None):
@@ -1099,7 +1113,7 @@ def _scrub(r):
     try:
         if r == None:
             return None
-        elif r.__class__ in (text_type, binary_type):
+        elif r.__class__ in (text, binary_type):
             if r == "":
                 return None
             return r

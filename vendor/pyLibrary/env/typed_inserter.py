@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_python import jx
 from mo_dots import Data, ROOT_PATH, is_data, unwrap
-from mo_future import text_type
+from mo_future import text
 from mo_json import NESTED, OBJECT, json2value, value2json
 from mo_json.encoder import UnicodeBuilder
 from mo_json.typed_encoder import typed_encode
@@ -56,7 +56,7 @@ class TypedInserter(object):
             path = []
             if is_data(value):
                 given_id = self.get_id(value)
-                if given_id != None and not isinstance(given_id, text_type):
+                if given_id != None and not isinstance(given_id, text):
                     given_id = value2json(given_id)
                 value['_id'] = None
                 version = self.get_version(value)

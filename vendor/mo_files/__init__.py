@@ -10,20 +10,18 @@
 import base64
 from datetime import datetime
 import io
-from mimetypes import MimeTypes
 import os
 import re
 import shutil
 from tempfile import NamedTemporaryFile, mkdtemp
 
 from mo_dots import Null, coalesce, get_module, is_list
+from mo_files import mimetype
 from mo_files.url import URL
-from mo_future import PY3, binary_type, text_type, is_text
+from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import extract_stack
 from mo_threads import Thread, Till
-
-mime = MimeTypes()
 
 
 class File(object):
@@ -48,7 +46,7 @@ class File(object):
 
         self._mime_type = mime_type
 
-        if isinstance(filename, (binary_type, text_type)):
+        if isinstance(filename, (binary_type, text)):
             try:
                 self.key = None
                 if filename==".":
@@ -152,8 +150,10 @@ class File(object):
             elif self.abspath.endswith(".css"):
                 self._mime_type = "text/css"
             elif self.abspath.endswith(".json"):
-                self._mime_type = "application/json"
+                self._mime_type = mimetype.JSON
             else:
+                from mimetype import MimeTypes
+                mime = MimeTypes()
                 self._mime_type, _ = mime.guess_type(self.abspath)
                 if not self._mime_type:
                     self._mime_type = "application/binary"
@@ -278,7 +278,7 @@ class File(object):
 
             if is_list(data):
                 pass
-            elif isinstance(data, (binary_type, text_type)):
+            elif isinstance(data, (binary_type, text)):
                 data=[data]
             elif hasattr(data, "__iter__"):
                 pass
@@ -287,7 +287,7 @@ class File(object):
                 if not is_text(d):
                     Log.error(u"Expecting unicode data only")
                 if self.key:
-                    from mo_math.crypto import encrypt
+                    from mo_math.aes_crypto import encrypt
                     f.write(encrypt(d, self.key).encode("utf8"))
                 else:
                     f.write(d.encode("utf8"))

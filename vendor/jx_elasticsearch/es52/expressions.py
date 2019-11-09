@@ -11,7 +11,16 @@ from __future__ import absolute_import, division, unicode_literals
 
 import re
 
-from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_, BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_, ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_, ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, FindOp as FindOp_, GtOp as GtOp_, GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_, LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_, NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_, ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE, TrueOp as TrueOp_, TupleOp, Variable as Variable_, WhenOp as WhenOp_, extend, is_literal)
+from jx_base.expressions import (AndOp as AndOp_, BasicEqOp as BasicEqOp_, BasicStartsWithOp as BasicStartsWithOp_,
+                                 BooleanOp as BooleanOp_, CaseOp as CaseOp_, CoalesceOp as CoalesceOp_,
+                                 ConcatOp as ConcatOp_, DivOp as DivOp_, EqOp as EqOp_, EsNestedOp as EsNestedOp_,
+                                 ExistsOp as ExistsOp_, FALSE, FalseOp as FalseOp_, FindOp as FindOp_, GtOp as GtOp_,
+                                 GteOp as GteOp_, InOp as InOp_, LengthOp as LengthOp_, Literal as Literal_,
+                                 LtOp as LtOp_, LteOp as LteOp_, MissingOp as MissingOp_, NULL, NeOp as NeOp_,
+                                 NotOp as NotOp_, NullOp, OrOp as OrOp_, PrefixOp as PrefixOp_, RegExpOp as RegExpOp_,
+                                 ScriptOp as ScriptOp_, StringOp as StringOp_, SuffixOp as SuffixOp_, TRUE,
+                                 TrueOp as TrueOp_, TupleOp, Variable as Variable_, WhenOp as WhenOp_, extend,
+                                 is_literal, simplified)
 from jx_base.language import Language, define_language, is_op
 from jx_elasticsearch.es52.util import (
     MATCH_ALL,
@@ -159,6 +168,7 @@ class DivOp(DivOp_):
 
 
 class EqOp(EqOp_):
+    @simplified
     def partial_eval(self):
         lhs = ES52[self.lhs].partial_eval()
         rhs = ES52[self.rhs].partial_eval()
@@ -235,6 +245,15 @@ class FindOp(FindOp_):
         # CONVERT TO SCRIPT, SIMPLIFY, AND THEN BACK TO FILTER
         self.simplified = False
         return ES52[Painless[self].partial_eval()].to_esfilter(schema)
+
+    @simplified
+    def partial_eval(self):
+        value = self.value.partial_eval()
+        find = self.find.partial_eval()
+        default = self.default.partial_eval()
+        start = self.start.partial_eval()
+
+        return FindOp([value, find], default=default, start=start)
 
     def missing(self):
         return NotOp(self)
@@ -382,9 +401,9 @@ class BooleanOp(BooleanOp_):
         if is_op(self.term, Variable_):
             return es_exists(self.term.var)
         elif is_op(self.term, FindOp):
-            return self.term.to_esfilter(schema)
+            return ES52[self.term].to_esfilter(schema)
         else:
-            return self.to_es_script(schema).to_esfilter(schema)
+            return Painless[self].to_es_script(schema).to_esfilter(schema)
 
 
 class LengthOp(LengthOp_):
@@ -439,6 +458,7 @@ class BasicStartsWithOp(BasicStartsWithOp_):
 
 
 class PrefixOp(PrefixOp_):
+    @simplified
     def partial_eval(self):
         expr = PainlessStringOp(self.expr).partial_eval()
         prefix = PainlessStringOp(self.prefix).partial_eval()

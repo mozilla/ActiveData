@@ -108,7 +108,7 @@ class SingleInstance:
     with SingleInstance(settings.args.filename):
         <your code here>
 
-    This option is very useful if you have scripts executed by crontab at small amounts of time.
+    This option is very useful if you have scripts executed by crontab at small intervals, causing multiple instances
 
     Remember that this works by creating a lock file with a filename based on the full path to the script file.
     """

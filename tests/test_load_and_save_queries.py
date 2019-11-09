@@ -14,11 +14,10 @@ import hashlib
 
 from active_data.actions import save_query
 from mo_dots import wrap
-from mo_future import text_type
+from mo_future import text
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
-from mo_logs.strings import unicode2utf8
 from mo_threads import Till
 from mo_times import Timer
 from pyLibrary import convert
@@ -53,7 +52,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
             "select": "a",
             "format": "list"
         })
-        bytes = unicode2utf8(json)
+        bytes = json.encode('utf8')
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
         wrap(test).expecting_list.meta.saved_as = expected_hash
@@ -67,7 +66,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
             Till(seconds=5).wait()
 
         url = URL(self.utils.testing.query)
-        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
+        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text(url.port) + "/find/" + expected_hash, data=b'')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
 
@@ -92,7 +91,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
 
         settings = self.utils.fill_container(test)
 
-        bytes = unicode2utf8(value2json(test.query))
+        bytes = value2json(test.query).encode('utf8')
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         test.expecting_list.meta.saved_as = expected_hash
 
@@ -107,7 +106,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
             Till(seconds=5).wait()
 
         url = URL(self.utils.testing.query)
-        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text_type(url.port) + "/find/" + expected_hash, data=b'')
+        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text(url.port) + "/find/" + expected_hash, data=b'')
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.all_content, bytes)
 

@@ -17,7 +17,7 @@ import time
 import zipfile
 import zlib
 
-from mo_future import PY3, long, text_type
+from mo_future import PY3, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 import mo_math
@@ -30,7 +30,7 @@ MIN_READ_SIZE = 8 * 1024
 MAX_STRING_SIZE = 1 * 1024 * 1024
 
 
-class FileString(text_type):
+class FileString(text):
     """
     ACTS LIKE A STRING, BUT IS A FILE
     """

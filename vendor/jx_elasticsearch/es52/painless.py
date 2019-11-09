@@ -14,7 +14,7 @@ from jx_base.expressions import (FindOp as FindOp_, AddOp as AddOp_, AndOp as An
 from jx_base.language import is_op
 from jx_elasticsearch.es52.util import es_script
 from mo_dots import FlatList, Null, coalesce, data_types
-from mo_future import PY2, integer_types, text_type
+from mo_future import PY2, integer_types, text
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
@@ -53,9 +53,10 @@ return output.toString()
 
 
 class EsScript(EsScript_):
-    __slots__ = ("miss", "data_type", "expr", "many")
+    __slots__ = ("simplified", "miss", "data_type", "expr", "many")
 
     def __init__(self, type, expr, frum, schema, miss=None, many=False):
+        self.simplified = True
         object.__init__(self)
         if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
             if frum.lang != miss.lang:
@@ -91,16 +92,16 @@ class EsScript(EsScript_):
         )
 
     def __add__(self, other):
-        return text_type(self) + text_type(other)
+        return text(self) + text(other)
 
     def __radd__(self, other):
-        return text_type(other) + text_type(self)
+        return text(other) + text(self)
 
     if PY2:
         __unicode__ = __str__
 
     def to_esfilter(self, schema):
-        return {"script": es_script(text_type(self))}
+        return {"script": es_script(text(self))}
 
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return self
@@ -109,7 +110,7 @@ class EsScript(EsScript_):
         return self.miss
 
     def __data__(self):
-        return {"script": text_type(self)}
+        return {"script": text(self)}
 
     def __eq__(self, other):
         if not isinstance(other, EsScript_):
@@ -126,11 +127,11 @@ def box(script):
     :return: TEXT EXPRESSION WITH NON OBJECTS BOXED
     """
     if script.type is BOOLEAN:
-        return "Boolean.valueOf(" + text_type(script.expr) + ")"
+        return "Boolean.valueOf(" + text(script.expr) + ")"
     elif script.type is INTEGER:
-        return "Integer.valueOf(" + text_type(script.expr) + ")"
+        return "Integer.valueOf(" + text(script.expr) + ")"
     elif script.type is NUMBER:
-        return "Double.valueOf(" + text_type(script.expr) + ")"
+        return "Double.valueOf(" + text(script.expr) + ")"
     else:
         return script.expr
 
@@ -298,21 +299,21 @@ class Literal(Literal_):
             if v is False:
                 return false_script
             class_ = v.__class__
-            if class_ is text_type:
+            if class_ is text:
                 return EsScript(type=STRING, expr=quote(v), frum=self, schema=schema)
             if class_ in integer_types:
                 if MIN_INT32 <= v <= MAX_INT32:
                     return EsScript(
-                        type=INTEGER, expr=text_type(v), frum=self, schema=schema
+                        type=INTEGER, expr=text(v), frum=self, schema=schema
                     )
                 else:
                     return EsScript(
-                        type=INTEGER, expr=text_type(v) + "L", frum=self, schema=schema
+                        type=INTEGER, expr=text(v) + "L", frum=self, schema=schema
                     )
 
             if class_ is float:
                 return EsScript(
-                    type=NUMBER, expr=text_type(v) + "D", frum=self, schema=schema
+                    type=NUMBER, expr=text(v) + "D", frum=self, schema=schema
                 )
             if class_ in data_types:
                 return EsScript(
@@ -332,7 +333,7 @@ class Literal(Literal_):
                 )
             if class_ is Date:
                 return EsScript(
-                    type=NUMBER, expr=text_type(v.unix), frum=self, schema=schema
+                    type=NUMBER, expr=text(v.unix), frum=self, schema=schema
                 )
 
         return _convert(self._value)
@@ -342,7 +343,7 @@ class DateOp(DateOp_):
     def to_es_script(self, schema):
         return EsScript(
             type=NUMBER,
-            expr=text_type(Date(self.value).unix),
+            expr=text(Date(self.value).unix),
             frum=self,
             schema=schema
         )
@@ -405,7 +406,7 @@ class TupleOp(TupleOp_):
         expr = (
             "new Object[]{"
             + ",".join(
-                text_type(FirstOp(t).partial_eval().to_es_script(schema))
+                text(FirstOp(t).partial_eval().to_es_script(schema))
                 for t in self.terms
             )
             + "}"

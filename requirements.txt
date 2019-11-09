@@ -1,3 +1,4 @@
+urllib3==1.24.3
 Flask
 pymysql
 requests
@@ -5,4 +6,4 @@ moz-sql-parser
 boto==2.48.0
 ujson
 beautifulsoup4
-
+cryptography

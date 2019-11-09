@@ -34,11 +34,12 @@ if PY3:
     from configparser import ConfigParser
     from itertools import zip_longest
     import builtins as __builtin__
+    from builtins import input
 
     izip = zip
     zip_longest = itertools.zip_longest
 
-    text_type = str
+    text = str
     string_types = str
     binary_type = bytes
     integer_types = (int, )
@@ -129,9 +130,10 @@ else:
     from itertools import izip_longest as zip_longest
     from __builtin__ import zip as transpose
     from itertools import izip
+    from __builtin__ import raw_input as input
 
     reduce = __builtin__.reduce
-    text_type = __builtin__.unicode
+    text = __builtin__.unicode
     string_types = (str, unicode)
     binary_type = str
     integer_types = (int, long)

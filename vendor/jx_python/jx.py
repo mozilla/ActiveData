@@ -116,6 +116,7 @@ def run(query, container=Null):
 
 
 groupby = group_by.groupby
+chunk = group_by.chunk
 
 
 def index(data, keys=None):
@@ -487,7 +488,7 @@ THE columns DO NOT GET MARKED WITH NESTED (AS THEY SHOULD)
 type_to_name = {
     int: "long",
     str: "string",
-    text_type: "string",
+    text: "string",
     float: "double",
     Number: "double",
     Data: "object",

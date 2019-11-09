@@ -18,7 +18,7 @@ import re
 from time import time as _time
 
 from mo_dots import Null, NullType
-from mo_future import long, none_type, text_type, unichr
+from mo_future import long, none_type, text, unichr
 from mo_logs import Except
 from mo_logs.strings import deformat
 import mo_math
@@ -33,6 +33,7 @@ except Exception:
     pass
 
 ISO8601 = '%Y-%m-%dT%H:%M:%SZ'
+RFC1123 = '%a, %d %b %Y %H:%M:%S GMT'
 
 
 class Date(object):
@@ -85,7 +86,7 @@ class Date(object):
 
     def format(self, format="%Y-%m-%d %H:%M:%S"):
         try:
-            return text_type(unix2datetime(self.unix).strftime(format))
+            return text(unix2datetime(self.unix).strftime(format))
         except Exception as e:
             from mo_logs import Log
 
@@ -442,6 +443,10 @@ def unicode2Date(value, format=None):
         "%d%b%y",
         "%d%B%Y",
         "%d%B%y",
+        "%B%d%Y",
+        "%b%d%Y",
+        "%B%d%",
+        "%b%d%y",
         "%Y%m%d%H%M%S",
         "%Y%m%dT%H%M%S",
         "%d%m%Y%H%M%S",

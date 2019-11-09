@@ -16,7 +16,7 @@ from math import sqrt
 import sys
 
 from mo_dots import Data, Null, coalesce
-from mo_future import text_type
+from mo_future import text
 from mo_logs import Log
 from mo_math import OR, almost_equal
 from mo_math.vendor import strangman
@@ -257,7 +257,7 @@ class ZeroMoment(object):
     @property
     def dict(self):
     # RETURN HASH OF SUMS
-        return {u"s" + text_type(i): m for i, m in enumerate(self.S)}
+        return {u"s" + text(i): m for i, m in enumerate(self.S)}
 
 
     @staticmethod
@@ -289,7 +289,7 @@ def sub(a, b):
 
 def ZeroMoment2dict(z):
     # RETURN HASH OF SUMS
-    return {u"s" + text_type(i): m for i, m in enumerate(z.S)}
+    return {u"s" + text(i): m for i, m in enumerate(z.S)}
 
 
 def median(values, simple=True, mean_weight=0.0):

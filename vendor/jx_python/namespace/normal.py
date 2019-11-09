@@ -19,7 +19,7 @@ from jx_python.containers import Container
 from jx_python.expressions import TRUE
 from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, listwrap, wrap
-from mo_future import text_type
+from mo_future import text
 from mo_logs import Log
 import mo_math
 

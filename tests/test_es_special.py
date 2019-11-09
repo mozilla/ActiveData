@@ -10,10 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.meta_columns import META_COLUMNS_NAME
 from mo_dots import wrap
 from mo_times import Date
-from pyLibrary.sql import quote_set
-from pyLibrary.sql.sqlite import Sqlite, quote_column
+from pyLibrary.sql.sqlite import Sqlite, sql_insert
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -163,45 +163,3 @@ class TestESSpecial(BaseTestCase):
         }
 
         self.utils.execute_tests(test)
-
-    def test_bad_exists_properties(self):
-        test = {
-            "data": [{"~e~": 1}, {"~e~": 1}],
-            "query": {
-                "from": TEST_TABLE,
-                "select": [{"name": "count", "aggregate": "count"}],
-            },
-            "expecting_list": {
-                "meta": {"format": "value"},
-                "data": {"count": 2}
-            }
-        }
-
-        subtest = wrap(test)
-
-        cont = self.utils.fill_container(subtest, typed=False)
-        db = Sqlite(filename="metadata.localhost.sqlite")
-        try:
-            with db.transaction() as t:
-                t.execute(
-                    "insert into " + quote_column(META_COLUMNS_NAME) +
-                    "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
-                    quote_set([
-                        ".", "object", "exists", '["."]', ".", cont.alias, Date.now()
-                    ])
-                )
-        except Exception as e:
-            pass
-        try:
-            with db.transaction() as t:
-                t.execute(
-                    "insert into " + quote_column(META_COLUMNS_NAME) +
-                    "(name, es_type, jx_type, nested_path, es_column, es_index, last_updated) VALUES " +
-                    quote_set([
-                        "~e~", "long", "exists", '["."]', "~e~", cont.alias, Date.now()
-                    ])
-                )
-        except Exception as e:
-            pass
-
-        self.utils.send_queries(subtest)

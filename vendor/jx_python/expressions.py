@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_dots import coalesce, is_data, is_list, split_field, unwrap, Null
-from mo_future import PY2, is_text, text_type
+from mo_future import PY2, is_text, text
 from mo_json import BOOLEAN, INTEGER, NUMBER, json2value
 from mo_logs import Log, strings
 from mo_logs.strings import quote
@@ -144,10 +144,10 @@ class PythonScript(PythonScript_):
         return "None if (" + missing.to_python().expr + ") else (" + self.expr + ")"
 
     def __add__(self, other):
-        return text_type(self) + text_type(other)
+        return text(self) + text(other)
 
     def __radd__(self, other):
-        return text_type(other) + text_type(self)
+        return text(other) + text(self)
 
     if PY2:
         __unicode__ = __str__
@@ -206,9 +206,9 @@ class OffsetOp(OffsetOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "row["
-            + text_type(self.var)
+            + text(self.var)
             + "] if 0<="
-            + text_type(self.var)
+            + text(self.var)
             + "<len(row) else None"
         )
 
@@ -272,7 +272,7 @@ class ScriptOp(ScriptOp_):
 
 class Literal(Literal_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return text_type(repr(unwrap(json2value(self.json))))
+        return text(repr(unwrap(json2value(self.json))))
 
 
 @extend(NullOp)
@@ -292,7 +292,7 @@ class FalseOp(FalseOp_):
 
 class DateOp(DateOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return text_type(Date(self.value).unix)
+        return text(Date(self.value).unix)
 
 
 class TupleOp(TupleOp_):
@@ -492,7 +492,7 @@ class StringOp(StringOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         missing = Python[self.term.missing()].to_python(boolean=True)
         value = Python[self.term].to_python(not_null=True)
-        return "null if (" + missing + ") else text_type(" + value + ")"
+        return "null if (" + missing + ") else text(" + value + ")"
 
 
 class CountOp(CountOp_):

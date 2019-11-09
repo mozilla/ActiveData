@@ -17,7 +17,7 @@ import mo_dots
 from mo_dots import is_data, is_list, set_default, unwrap, wrap
 from mo_files import File
 from mo_files.url import URL
-from mo_future import text_type
+from mo_future import text
 from mo_json import json2value
 from mo_json_config.convert import ini2value
 from mo_logs import Except, Log
@@ -37,7 +37,7 @@ def get(url):
     """
     USE json.net CONVENTIONS TO LINK TO INLINE OTHER JSON
     """
-    url = text_type(url)
+    url = text(url)
     if url.find("://") == -1:
         Log.error("{{url}} must have a prototcol (eg http://) declared", url=url)
 

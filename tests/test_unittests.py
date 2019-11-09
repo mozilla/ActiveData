@@ -40,7 +40,7 @@ class TestUnittests(BaseTestCase):
         # START DIRECT-TO-ACTIVEDATA-ES SERVICE
         global ES_CLUSTER_LOCATION
 
-        app_config = mo_json_config.get("file://" + TESTS_CONFIG_FILE)
+        app_config = mo_json_config.get("file://" + APP_CONFIG_FILE)
         global_settings.testing.query = "http://localhost:"+text(app_config.flask.port)+"/query"
         ES_CLUSTER_LOCATION = app_config.elasticsearch.host
 

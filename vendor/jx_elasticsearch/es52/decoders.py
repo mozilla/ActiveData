@@ -626,7 +626,8 @@ class DefaultDecoder(SetDecoder):
             )
             output.add(terms.add(es_query))
 
-        output.add(FilterAggs("_missing", self.missing, self).add(es_query))
+        if self.edge.allowNulls:
+            output.add(FilterAggs("_missing", self.missing, self).add(es_query))
         return output
 
     def count(self, row):
@@ -634,7 +635,10 @@ class DefaultDecoder(SetDecoder):
         if part['doc_count']:
             key = part.get('key')
             if key != None:
-                self.parts.append(self.pull(key))
+                try:
+                    self.parts.append(self.pull(key))
+                except Exception as e:
+                    pass
             else:
                 self.edge.allowNulls = True  # OK! WE WILL ALLOW NULLS
 

@@ -10,10 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_python import jx
 from mo_dots import set_default, wrap
 from mo_future import text
+from mo_logs import Log
 from mo_threads import Till
-from mo_times import MINUTE
+from mo_times import MINUTE, Timer
 from pyLibrary.env import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
@@ -184,14 +186,22 @@ class TestESSpecial(BaseTestCase):
         self.utils.execute_tests(test)
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"meta": {"big": True}, "limit": 100}, test.query),
+            json=set_default({"destination": "s3", "limit": 100}, test.query),
         )
 
         timeout = Till(seconds=MINUTE.seconds)
         while not timeout:
             try:
-                content = http.get(result.url)
-                self.assertEqual(content, expected)
+                content = http.get_json(result.url)
+                with Timer("compare results"):
+                    sorted_content = jx.sort(content, "a")
+                    sorted_expected = jx.sort(expected, "a")
+                    self.assertEqual(sorted_content, sorted_expected)
                 break
-            except Exception:
+            except Exception as e:
+                if "does not match expected" in e:
+                    Log.error("failed", cause=e)
+                Log.note("waiting for {{url}}", url=result.url)
                 Till(seconds=2).wait()
+
+        self.assertFalse(timeout)

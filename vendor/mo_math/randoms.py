@@ -27,8 +27,8 @@ class Random(object):
         return Random.string(length, string.digits + "ABCDEF")
 
     @staticmethod
-    def base64(length):
-        return Random.string(length, SIMPLE_ALPHABET + "+/")
+    def base64(length, extra="+/"):
+        return Random.string(length, SIMPLE_ALPHABET + extra)
 
     @staticmethod
     def int(*args):

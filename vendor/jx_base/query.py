@@ -46,15 +46,9 @@ def _late_import():
 
 
 class QueryOp(QueryOp_):
-    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean"]
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean", "destination"]
 
-    # def __new__(cls, op=None, frum=None, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
-    #     output = object.__new__(cls)
-    #     for s in QueryOp.__slots__:
-    #         setattr(output, s, None)
-    #     return output
-
-    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
+    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None, destination=None):
         if isinstance(frum, jx_base.Table):
             pass
         else:
@@ -68,6 +62,7 @@ class QueryOp(QueryOp_):
         self.sort = sort
         self.limit = limit
         self.format = format
+        self.destination = destination
 
     def __data__(self):
         def select___data__():
@@ -210,7 +205,8 @@ class QueryOp(QueryOp_):
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT))
+            limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT)),
+            destination=query.destination
         )
 
         if query.select or isinstance(query.select, (Mapping, list)):

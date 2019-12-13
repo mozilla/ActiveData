@@ -197,7 +197,7 @@ class ES52(Container):
                 return jx.run(q2)
 
             if is_bulkaggsop(self.es, query):
-                return es_bulkaggsop(self.es, frum, query)
+                return es_bulkaggsop(self, frum, query)
             if is_deepop(self.es, query):
                 return es_deepop(self.es, query)
             if is_aggsop(self.es, query):

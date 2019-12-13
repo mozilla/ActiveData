@@ -319,6 +319,9 @@ class List(WindowFunction):
         return copy(self.agg)
 
 
+def median(*args, **kwargs):
+    return Percentile(0.5, *args, **kwargs)
+
 name2accumulator = {
     "count": Count,
     "sum": Sum,
@@ -328,6 +331,7 @@ name2accumulator = {
     "list": List,
     "min": Min,
     "minimum": Min,
+    "median": median,
     "percentile": Percentile,
     "one": One
 }

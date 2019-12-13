@@ -60,9 +60,8 @@ def argparse(defs):
 def read_settings(defs=None, filename=None, default_filename=None):
     """
     :param filename: Force load a file
-    :param defs: arguments you want to accept
+    :param defs: more arguments you want to accept (see https://docs.python.org/3/library/argparse.html#argparse.ArgumentParser.add_argument)
     :param default_filename: A config file from an environment variable (a fallback config file, if no other provided)
-    :return:
     """
     # READ SETTINGS
     defs = listwrap(defs)

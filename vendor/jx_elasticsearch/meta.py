@@ -54,7 +54,7 @@ class ElasticsearchMetadata(Namespace):
 
     @override
     def __new__(cls, kwargs, *args, **_kwargs):
-        es_cluster = elasticsearch.Cluster(kwargs)
+        es_cluster = elasticsearch.Cluster(kwargs)  # NOTICE cls IS PASSED IN
         output = known_clusters.get(id(es_cluster))
         if output is None:
             output = object.__new__(cls)

@@ -239,7 +239,7 @@ class Data(MutableMapping):
 
     def keys(self):
         d = self._internal_dict
-        return set(d.keys())
+        return set(map(literal_field, d.keys()))
 
     def values(self):
         d = self._internal_dict

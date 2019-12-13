@@ -119,20 +119,8 @@ class Process(object):
                 if line:
                     receive.add(line)
                     self.debug and Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
-                    continue
-
-                # GRAB A FEW MORE LINES
-                for _ in range(100):
-                    try:
-                        line = to_text(pipe.readline().rstrip())
-                        if line:
-                            receive.add(line)
-                            self.debug and Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
-                            break
-                    except Exception:
-                        break
                 else:
-                    Till(seconds=5).wait()
+                    (Till(seconds=1) | please_stop).wait()
 
             # GRAB A FEW MORE LINES
             max = 100
@@ -142,7 +130,7 @@ class Process(object):
                     if line:
                         max = 100
                         receive.add(line)
-                        self.debug and Log.note("{{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
+                        self.debug and Log.note("RESIDUE: {{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
                     else:
                         max -= 1
                 except Exception:
@@ -225,6 +213,11 @@ else:
 
 
 class Command(object):
+    """
+    FASTER Process CLASS - OPENS A COMMAND_LINE APP (CMD on windows) AND KEEPS IT OPEN FOR MULTIPLE COMMANDS
+    EACH WORKING DIRECTORY WILL HAVE ITS OWN PROCESS, MULTIPLE PROCESSES WILL OPEN FOR THE SAME DIR IF MULTIPLE
+    THREADS ARE REQUESTING Commands
+    """
 
     available_locker = Lock("cmd lock")
     available_process = {}

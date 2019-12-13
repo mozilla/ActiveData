@@ -74,7 +74,7 @@ class File(object):
         self.buffering = buffering
 
         if suffix:
-            self._filename = File.add_suffix(self._filename, suffix)
+            self._filename = add_suffix(self._filename, suffix)
 
     @classmethod
     def new_instance(cls, *path):
@@ -114,17 +114,11 @@ class File(object):
             else:
                 return os.path.abspath(self._filename)
 
-    @staticmethod
-    def add_suffix(filename, suffix):
+    def add_suffix(self, suffix):
         """
         ADD suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
         """
-        path = filename.split("/")
-        parts = path[-1].split(".")
-        i = max(len(parts) - 2, 0)
-        parts[i] = parts[i] + suffix
-        path[-1] = ".".join(parts)
-        return "/".join(path)
+        return File(add_suffix(self._filename, suffix))
 
     @property
     def extension(self):
@@ -188,6 +182,12 @@ class File(object):
 
         path[-1] = ".".join(parts)
         return File("/".join(path))
+
+    def add_extension(self, ext):
+        """
+        RETURN NEW FILE WITH EXTENSION ADDED (OLD EXTENSION IS A SUFFIX)
+        """
+        return File(self._filename + "." + text_type(ext))
 
     def set_name(self, name):
         """
@@ -570,3 +570,16 @@ def delete_daemon(file, caller_stack, please_stop):
 
             Log.warning(u"problem deleting file {{file}}", file=file.abspath, cause=e)
             (Till(seconds=10)|please_stop).wait()
+
+
+def add_suffix(filename, suffix):
+    """
+    ADD suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
+    """
+    path = filename.split("/")
+    parts = path[-1].split(".")
+    i = max(len(parts) - 2, 0)
+    parts[i] = parts[i] + "." + text(suffix).strip(".")
+    path[-1] = ".".join(parts)
+    return File("/".join(path))
+

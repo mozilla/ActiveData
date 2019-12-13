@@ -50,5 +50,6 @@ class _UTF8Encoder(object):
     def write(self, v):
         try:
             self.stream.write(v.encode('utf8'))
+            self.stream.flush()
         except Exception:
             sys.stderr.write("can not handle")

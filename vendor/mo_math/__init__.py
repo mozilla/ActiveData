@@ -20,9 +20,6 @@ from math import (
     floor as math_floor,
 )
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.hashes import SHA256, Hash
-
 from mo_dots import Null, coalesce, is_container
 from mo_future import round as _round, text, __builtin__, binary_type
 
@@ -463,12 +460,6 @@ def int2base64(value):
 
 def base642int(value):
     return int.from_bytes(base642bytes(value), byteorder="big")
-
-
-def sha256(bytes):
-    digest = Hash(SHA256(), backend=default_backend())
-    digest.update(bytes)
-    return digest.finalize()
 
 
 from mo_math import stats

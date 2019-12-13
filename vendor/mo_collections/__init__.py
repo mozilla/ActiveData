@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from mo_collections.unique_index import UniqueIndex
 
 
@@ -22,3 +21,41 @@ def reverse(values):
     return output
 
 
+def right(values, num):
+    """
+    KEEP num ELEMENTS FROM THE RIGHT
+    """
+    if num <= 0:
+        return values[:0]
+    else:
+        return values[-num:]
+
+
+def not_right(values, num):
+    """
+    REMOVE num ELEMENTS FROM THE RIGHT
+    """
+    if num <= 0:
+        return values
+    else:
+        return values[:-num]
+
+
+def left(values, num):
+    """
+    KEEP num ELEMENTS FROM THE LEFT
+    """
+    if num <= 0:
+        return values[:0]
+    else:
+        return values[:num]
+
+
+def not_left(values, num):
+    """
+    REMOVE num ELEMENTS FROM THE LEFT
+    """
+    if num <= 0:
+        return values
+    else:
+        return values[num:]

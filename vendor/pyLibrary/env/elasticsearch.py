@@ -329,7 +329,7 @@ class Index(Features):
             if version:
                 yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
             else:
-                yield '{"index":{"_id": ' + value2json(id) + '}}'.encode('utf8')
+                yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
             yield LF
             yield json_bytes.encode('utf8')
             yield LF

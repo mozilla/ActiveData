@@ -101,7 +101,7 @@ def get_decoders_by_path(query):
     :return:
     """
     schema = query.frum.schema
-    output = Data()
+    output = {}
 
     if query.edges:
         if query.sort and query.format != "cube":
@@ -144,7 +144,7 @@ def get_decoders_by_path(query):
             Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
 
         decoder = AggsDecoder(edge, query, limit)
-        output[literal_field(first(depths))] += [decoder]
+        output.setdefault(first(depths), []).append(decoder)
     return output
 
 
@@ -411,11 +411,10 @@ def es_aggsop(es, frum, query):
 
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
-    paths = list(reversed(sorted(split_wheres.keys() | split_decoders.keys())))
+    paths = list(reversed(sorted(set(split_wheres.keys()) | set(split_decoders.keys()))))
     for path in paths:
-        literal_path = literal_field(path)
-        decoder = split_decoders[literal_path]
-        where = split_wheres[literal_path]
+        decoder = split_decoders.get(path)
+        where = split_wheres.get(path)
 
         for d in decoder:
             decoders[d.edge.dim] = d

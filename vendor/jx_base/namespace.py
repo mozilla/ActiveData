@@ -34,7 +34,6 @@ class Namespace(object):
         output.where = self.convert(query.where)
         output["from"] = self._convert_from(query["from"])
         output.edges = self._convert_clause(query.edges)
-        output.having = convert_list(self._convert_having, query.having)
         output.window = convert_list(self._convert_window, query.window)
         output.sort = self._convert_clause(query.sort)
         output.format = query.format
@@ -45,9 +44,6 @@ class Namespace(object):
         raise NotImplementedError()
 
     def _convert_clause(self, clause):
-        raise NotImplementedError()
-
-    def _convert_having(self, clause):
         raise NotImplementedError()
 
     def _convert_window(self, clause):

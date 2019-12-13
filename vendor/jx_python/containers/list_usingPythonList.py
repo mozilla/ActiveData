@@ -204,10 +204,6 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         jx.window(self.data, window)
         return self
 
-    def having(self, having):
-        _ = having
-        raise NotImplementedError()
-
     def format(self, format):
         if format == "table":
             frum = convert.list2table(self.data, self._schema.lookup.keys())

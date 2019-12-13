@@ -75,7 +75,6 @@ class Rename(Namespace):
         output.where = self.convert(query.where)
         output.frum = self._convert_from(query.frum)
         output.edges = convert_list(self._convert_edge, query.edges)
-        output.having = convert_list(self._convert_having, query.having)
         output.window = convert_list(self._convert_window, query.window)
         output.sort = self._convert_clause(query.sort)
         output.format = query.format

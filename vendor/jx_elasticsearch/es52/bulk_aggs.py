@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import gzip
 from contextlib import closing
 
+import mo_math
 from jx_base.expressions import Variable, value2json
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
@@ -23,12 +24,11 @@ from mo_future import first
 from mo_logs import Log
 from mo_math.randoms import Random
 from mo_threads import Till, Thread
-from mo_times import Date, DAY
-from mo_times.timer import Timer
+from mo_times import Date, DAY, Timer
 from pyLibrary.aws.s3 import Connection
 
 DEBUG = False
-CHUNK_SIZE = 5000
+MAX_CHUNK_SIZE = 5000
 URL_PREFIX = URL("http://activedata.allizom.org/results/")
 S3_CONFIG = Null
 
@@ -50,6 +50,8 @@ def is_bulkaggsop(es, query):
 
 def es_bulkaggsop(es, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
+
+    limit = query.limit = mo_math.MIN((query.limit, MAX_CHUNK_SIZE))
     schema = frum.schema
     query_path = schema.query_path[0]
     selects = listwrap(query.select)
@@ -68,9 +70,9 @@ def es_bulkaggsop(es, frum, query):
             timeout=Till(seconds=30),
         )
 
-        num_partitions = (first(columns).cardinality + CHUNK_SIZE) // CHUNK_SIZE
+        num_partitions = (first(columns).cardinality + limit) // limit
         acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
-        filename = Random.base64(32)+ ".json.gz"
+        filename = Random.base64(32) + ".json.gz"
         if len(columns) != 1:
             Log.error("too many columns to bulk groupby")
 
@@ -115,7 +117,7 @@ def extractor(
     curr._missing = None
     exists = curr._match
 
-    exists.size = CHUNK_SIZE
+    exists.size = query.limit
     exists.include.num_partitions = num_partitions
 
     with TempFile() as temp_file:
@@ -132,7 +134,7 @@ def extractor(
                         curr._missing = missing
                     exists.include.partition = i
 
-                    result = es_post(es, es_query, CHUNK_SIZE)
+                    result = es_post(es, es_query, query.limit)
                     aggs = unwrap(result.aggregations)
                     data = format_list_from_groupby(
                         aggs, acc, query, decoders, selects

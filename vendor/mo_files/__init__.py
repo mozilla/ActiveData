@@ -8,11 +8,12 @@
 # Author: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 import base64
-from datetime import datetime
 import io
 import os
 import re
 import shutil
+from datetime import datetime
+from mimetypes import MimeTypes
 from tempfile import NamedTemporaryFile, mkdtemp
 
 from mo_dots import Null, coalesce, get_module, is_list
@@ -146,7 +147,6 @@ class File(object):
             elif self.abspath.endswith(".json"):
                 self._mime_type = mimetype.JSON
             else:
-                from mimetype import MimeTypes
                 mime = MimeTypes()
                 self._mime_type, _ = mime.guess_type(self.abspath)
                 if not self._mime_type:
@@ -187,7 +187,7 @@ class File(object):
         """
         RETURN NEW FILE WITH EXTENSION ADDED (OLD EXTENSION IS A SUFFIX)
         """
-        return File(self._filename + "." + text_type(ext))
+        return File(self._filename + "." + text(ext))
 
     def set_name(self, name):
         """

@@ -25,6 +25,7 @@ from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
+from jx_elasticsearch.es52 import bulk_aggs
 from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text
@@ -114,6 +115,8 @@ def setup():
 
     constants.set(config.constants)
     Log.start(config.debug)
+
+    bulk_aggs.S3_CONFIG = config.bulk.s3
 
     File.new_instance("activedata.pid").write(text(machine_metadata.pid))
 

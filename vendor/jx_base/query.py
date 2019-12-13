@@ -46,7 +46,7 @@ def _late_import():
 
 
 class QueryOp(QueryOp_):
-    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "having", "format", "isLean"]
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean"]
 
     # def __new__(cls, op=None, frum=None, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None):
     #     output = object.__new__(cls)
@@ -235,7 +235,6 @@ class QueryOp(QueryOp_):
 
         output.where = _normalize_where({"and": listwrap(query.where)}, schema=schema)
         output.window = [_normalize_window(w) for w in listwrap(query.window)]
-        output.having = None
         output.sort = _normalize_sort(query.sort)
         if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")

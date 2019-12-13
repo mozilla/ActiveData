@@ -603,6 +603,7 @@ class DefaultDecoder(SetDecoder):
     def append_query(self, query_path, es_query):
         if is_op(self.edge.value, FirstOp) and is_op(self.edge.value.term, Variable):
             self.edge.value = self.edge.value.term  # ES USES THE FIRST TERM FOR {"terms": } AGGREGATION
+        output = Aggs()
         if not is_op(self.edge.value, Variable):
             terms = TermsAggs(
                 "_match",
@@ -613,6 +614,7 @@ class DefaultDecoder(SetDecoder):
                 },
                 self
             )
+            output.add(FilterAggs("_filter", self.exists, None).add(terms.add(es_query)))
         else:
             terms = TermsAggs(
                 "_match", {
@@ -622,8 +624,8 @@ class DefaultDecoder(SetDecoder):
                 },
                 self
             )
-        output = Aggs()
-        output.add(FilterAggs("_filter", self.exists, None).add(terms.add(es_query)))
+            output.add(terms.add(es_query))
+
         output.add(FilterAggs("_missing", self.missing, self).add(es_query))
         return output
 

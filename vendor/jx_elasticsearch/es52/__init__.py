@@ -16,6 +16,7 @@ from jx_base.expressions import jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
 from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
+from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop, es_bulkaggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
 from jx_elasticsearch.es52.setop import es_setop, is_setop
 from jx_elasticsearch.es52.util import aggregates
@@ -195,6 +196,8 @@ class ES52(Container):
                 q2.frum = result
                 return jx.run(q2)
 
+            if is_bulkaggsop(self.es, query):
+                return es_bulkaggsop(self.es, frum, query)
             if is_deepop(self.es, query):
                 return es_deepop(self.es, query)
             if is_aggsop(self.es, query):

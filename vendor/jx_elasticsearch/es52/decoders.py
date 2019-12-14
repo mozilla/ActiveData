@@ -13,7 +13,7 @@ from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
 from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT, temper_limit
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
 from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
@@ -512,7 +512,7 @@ class ObjectDecoder(AggsDecoder):
         ])
 
         self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
-        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = temper_limit(self.domain.limit, query)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -584,7 +584,7 @@ class DefaultDecoder(SetDecoder):
     def __init__(self, edge, query, limit):
         AggsDecoder.__init__(self, edge, query, limit)
         self.domain = edge.domain
-        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = temper_limit(self.domain.limit, query)
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
@@ -681,7 +681,7 @@ class DimFieldListDecoder(SetDecoder):
         edge.allowNulls = False
         self.fields = edge.domain.dimension.fields
         self.domain = self.edge.domain
-        self.domain.limit = mo_math.min(coalesce(self.domain.limit, query.limit, 10), MAX_LIMIT)
+        self.domain.limit = temper_limit(self.domain.limit, query)
         self.parts = list()
 
     def append_query(self, query_path, es_query):

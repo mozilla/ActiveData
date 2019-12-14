@@ -206,7 +206,7 @@ class QueryOp(QueryOp_):
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT)),
+            limit=temper_limit(query.limit, query),
             chunk_size=query.chunk_size,
             destination=query.destination,
         )
@@ -266,6 +266,16 @@ class QueryOp(QueryOp_):
     def __data__(self):
         output = wrap({s: getattr(self, s) for s in QueryOp.__slots__})
         return output
+
+
+def temper_limit(proposed_limit, query):
+    """
+    SUITABLE DEFAULTS AND LIMITS
+    """
+    if query.destination == "s3":
+        return coalesce(proposed_limit, query.limit)
+    else:
+        return mo_math.min(coalesce(proposed_limit, query.limit, DEFAULT_LIMIT), MAX_LIMIT)
 
 
 canonical_aggregates = wrap({

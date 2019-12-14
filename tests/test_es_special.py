@@ -10,6 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from unittest import skipIf
+
+from jx_elasticsearch.es52 import bulk_aggs
 from jx_python import jx
 from mo_dots import set_default, wrap
 from mo_future import text
@@ -168,6 +171,7 @@ class TestESSpecial(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    @skipIf(bulk_aggs.S3_CONFIG, "can not test S3")
     def test_bulk_query(self):
         data = wrap([{"a": "test" + text(i)} for i in range(1001)])
         expected = [{"a": r.a, "count": 1} for r in data]
@@ -178,6 +182,7 @@ class TestESSpecial(BaseTestCase):
                 "from": TEST_TABLE,
                 "groupby": "a",
                 "limit": len(data),
+                "chunk_size": 100,
                 "format": "list",
             },
             "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
@@ -186,7 +191,7 @@ class TestESSpecial(BaseTestCase):
         self.utils.execute_tests(test)
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "s3", "limit": 100}, test.query),
+            json=set_default({"destination": "s3"}, test.query),
         )
 
         timeout = Till(seconds=MINUTE.seconds)

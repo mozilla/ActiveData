@@ -46,9 +46,9 @@ def _late_import():
 
 
 class QueryOp(QueryOp_):
-    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "isLean", "destination"]
+    __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "chunk_size", "destination"]
 
-    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None, destination=None):
+    def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None, chunk_size=None, destination=None):
         if isinstance(frum, jx_base.Table):
             pass
         else:
@@ -62,6 +62,7 @@ class QueryOp(QueryOp_):
         self.sort = sort
         self.limit = limit
         self.format = format
+        self.chunk_size = chunk_size
         self.destination = destination
 
     def __data__(self):
@@ -206,7 +207,8 @@ class QueryOp(QueryOp_):
             frum=table,
             format=query.format,
             limit=mo_math.min(MAX_LIMIT, coalesce(query.limit, DEFAULT_LIMIT)),
-            destination=query.destination
+            chunk_size=query.chunk_size,
+            destination=query.destination,
         )
 
         if query.select or isinstance(query.select, (Mapping, list)):
@@ -234,8 +236,6 @@ class QueryOp(QueryOp_):
         output.sort = _normalize_sort(query.sort)
         if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")
-
-        output.isLean = query.isLean
 
         return output
 

@@ -77,8 +77,6 @@ class Normal(Namespace):
         if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")
 
-        output.isLean = query.isLean
-
         # DEPTH ANALYSIS - LOOK FOR COLUMN REFERENCES THAT MAY BE DEEPER THAN
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES

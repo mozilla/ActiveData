@@ -9,8 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-import gzip
-from contextlib import closing
 from copy import deepcopy
 
 import mo_math
@@ -19,7 +17,7 @@ from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
 from jx_elasticsearch.es52.format import format_list_from_groupby
-from mo_dots import listwrap, unwrap, Null, wrap
+from mo_dots import listwrap, unwrap, Null, wrap, coalesce
 from mo_files import TempFile, URL, mimetype
 from mo_future import first
 from mo_logs import Log
@@ -53,8 +51,7 @@ def is_bulkaggsop(esq, query):
 def es_bulkaggsop(esq, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
 
-    limit = mo_math.MIN((query.limit, MAX_CHUNK_SIZE))
-    query.limit = first(query.groupby.domain).limit = limit * 2
+    chunk_size = coalesce(query.chunk_size, MAX_CHUNK_SIZE)
     schema = frum.schema
     query_path = first(schema.query_path)
     selects = listwrap(query.select)
@@ -73,7 +70,7 @@ def es_bulkaggsop(esq, frum, query):
                 "too many columns to bulk groupby:\n{{columns|json}}", columns=columns
             )
         cardinality = first(columns).cardinality
-        num_partitions = (cardinality + limit - 1) // limit
+        num_partitions = (cardinality + chunk_size - 1) // chunk_size
 
         if num_partitions > MAX_PARTITIONS:
             Log.error("Requesting more than {{num}} partitions", num=num_partitions)
@@ -91,6 +88,7 @@ def es_bulkaggsop(esq, frum, query):
             selects,
             query_path,
             schema,
+            chunk_size
         )
 
     output = wrap(
@@ -109,8 +107,13 @@ def es_bulkaggsop(esq, frum, query):
 
 
 def extractor(
-    filename, num_partitions, esq, query, selects, query_path, schema, please_stop
+    filename, num_partitions, esq, query, selects, query_path, schema, chunk_size, please_stop
 ):
+    total = 0
+    abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
+    # WE MESS WITH THE QUERY LIMITS FOR CHUNKING
+    query.limit = first(query.groupby.domain).limit = chunk_size * 2
+
     try:
         with TempFile() as temp_file:
             with open(temp_file._filename, "wb") as output_file:
@@ -140,6 +143,12 @@ def extractor(
                         archive.write(comma)
                         comma = b",\n"
                         archive.write(value2json(r).encode("utf8"))
+                        total += 1
+                        if total >= abs_limit:
+                            break
+                    else:
+                        continue
+                    break
                 archive.write(b"\n]\n")
 
             with Timer("upload file to S3 {{file}}", param={"file": filename}):

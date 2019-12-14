@@ -137,15 +137,26 @@ class ElasticsearchMetadata(Namespace):
         for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
             diff = elasticsearch.diff_schema(p2, p1)
             if not self.settings.read_only:
-                for d in diff:
-                    dirty = True
-                    i1.add_property(*d)
+                for name, details in diff:
+                    for i, t, _ in props:
+                        if i is not i1:
+                            try:
+                                result = i.search({
+                                    "query": {"exists": {"field": name}},
+                                    "size": 0
+                                })
+                                if result.hits.total > 0:
+                                    dirty = True
+                                    i1.add_property(name, details)
+                                    break
+                            except Exception as e:
+                                Log.warning("problem adding field {{field}}", field=name, cause=e)
         if dirty:
             metadata = self.es_cluster.get_metadata(after=Date.now())
 
         now = self.es_cluster.metatdata_last_updated
         meta = metadata.indices[literal_field(canonical_index)]
-        data_type, mapping = _get_best_type_from_mapping(meta.mappings)
+        details, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
         table_desc.last_updated = now

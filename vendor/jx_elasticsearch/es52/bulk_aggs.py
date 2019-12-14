@@ -88,7 +88,8 @@ def es_bulkaggsop(esq, frum, query):
             selects,
             query_path,
             schema,
-            chunk_size
+            chunk_size,
+            parent_thread=Null
         )
 
     output = wrap(
@@ -107,7 +108,15 @@ def es_bulkaggsop(esq, frum, query):
 
 
 def extractor(
-    filename, num_partitions, esq, query, selects, query_path, schema, chunk_size, please_stop
+    filename,
+    num_partitions,
+    esq,
+    query,
+    selects,
+    query_path,
+    schema,
+    chunk_size,
+    please_stop,
 ):
     total = 0
     abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
@@ -115,11 +124,9 @@ def extractor(
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
 
     try:
-        with TempFile() as temp_file:
-            with open(temp_file._filename, "wb") as output_file:
-                archive = output_file
-                # with closing(gzip.GzipFile(filename=filename, fileobj=output_file, mode="wb")) as archive:
-                archive.write(b"[\n")
+        with TempFile() as output:
+            with open(output._filename, "wb") as output:
+                output.write(b"[\n")
                 comma = b""
                 for i in range(0, num_partitions):
                     if please_stop:
@@ -129,6 +136,7 @@ def extractor(
                     acc, decoders, es_query = build_es_query(
                         selects, query_path, schema, query
                     )
+                    # REACH INTO THE QUERY TO SET THE partitions
                     terms = es_query.aggs._filter.aggs._match.terms
                     terms.include.partition = i
                     terms.include.num_partitions = num_partitions
@@ -140,33 +148,41 @@ def extractor(
                     ).data
 
                     for r in data:
-                        archive.write(comma)
+                        output.write(comma)
                         comma = b",\n"
-                        archive.write(value2json(r).encode("utf8"))
+                        output.write(value2json(r).encode("utf8"))
                         total += 1
                         if total >= abs_limit:
                             break
                     else:
                         continue
                     break
-                archive.write(b"\n]\n")
+                output.write(b"\n]\n")
 
-            with Timer("upload file to S3 {{file}}", param={"file": filename}):
-                try:
-                    connection = Connection(S3_CONFIG).connection
-                    bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)
-                    storage = bucket.new_key(filename)
-                    storage.set_contents_from_filename(
-                        temp_file.abspath, headers={"Content-Type": mimetype.JSON}
-                    )
-                    if S3_CONFIG.public:
-                        storage.set_acl("public-read")
-
-                except Exception as e:
-                    Log.error(
-                        "Problem connecting to {{bucket}}",
-                        bucket=S3_CONFIG.bucket,
-                        cause=e,
-                    )
+            upload(filename, output)
     except Exception as e:
+        try:
+            with TempFile() as output:
+                output.write(value2json(e))
+                upload(filename, output)
+        except Exception as e:
+            pass  # WE TRIED
         Log.warning("Could not extract", cause=e)
+
+
+def upload(filename, temp_file):
+    with Timer("upload file to S3 {{file}}", param={"file": filename}):
+        try:
+            connection = Connection(S3_CONFIG).connection
+            bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)
+            storage = bucket.new_key(filename)
+            storage.set_contents_from_filename(
+                temp_file.abspath, headers={"Content-Type": mimetype.JSON}
+            )
+            if S3_CONFIG.public:
+                storage.set_acl("public-read")
+
+        except Exception as e:
+            Log.error(
+                "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
+            )

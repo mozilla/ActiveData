@@ -454,6 +454,13 @@ class RegisterThread(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.thread.cprofiler.__exit__(exc_type, exc_val, exc_tb)
+        with self.thread.child_locker:
+            with self.thread.child_locker:
+                if self.thread.children:
+                    Log.error(
+                        "This thread has not joined with child threads names={{names|json}}",
+                        names=[c.name for c in self.thread.children]
+                    )
         with ALL_LOCK:
             del ALL[self.thread.id]
 

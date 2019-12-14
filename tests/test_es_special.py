@@ -10,16 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf
-
-from jx_elasticsearch.es52 import bulk_aggs
-from jx_python import jx
-from mo_dots import set_default, wrap
-from mo_future import text
-from mo_logs import Log
-from mo_threads import Till
-from mo_times import MINUTE, Timer
-from pyLibrary.env import http
+from active_data.actions import find_container
+from jx_base.expressions import NULL
+from mo_dots import Data
+from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -171,42 +165,79 @@ class TestESSpecial(BaseTestCase):
 
         self.utils.execute_tests(test)
 
-    @skipIf(bulk_aggs.S3_CONFIG, "can not test S3")
-    def test_bulk_query(self):
-        data = wrap([{"a": "test" + text(i)} for i in range(1001)])
-        expected = [{"a": r.a, "count": 1} for r in data]
-
-        test = wrap({
-            "data": data,
-            "query": {
-                "from": TEST_TABLE,
-                "groupby": "a",
-                "limit": len(data),
-                "chunk_size": 100,
-                "format": "list",
-            },
-            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
-        })
-
-        self.utils.execute_tests(test)
-        result = http.post_json(
-            url=self.utils.testing.query,
-            json=set_default({"destination": "s3"}, test.query),
+    def test_column_not_added(self):
+        index1 = "test-merge-20191214_000000"
+        index2 = "test-merge-20191215_000000"
+        common = Data(
+            alias="test-merge",
+            limit_replicas=True,
+            limit_replicas_warning=False,
+            read_only=False,
+            typed=False
         )
 
-        timeout = Till(seconds=MINUTE.seconds)
-        while not timeout:
-            try:
-                content = http.get_json(result.url)
-                with Timer("compare results"):
-                    sorted_content = jx.sort(content, "a")
-                    sorted_expected = jx.sort(expected, "a")
-                    self.assertEqual(sorted_content, sorted_expected)
-                break
-            except Exception as e:
-                if "does not match expected" in e:
-                    Log.error("failed", cause=e)
-                Log.note("waiting for {{url}}", url=result.url)
-                Till(seconds=2).wait()
+        cluster = self.utils._es_cluster
+        try:
+            cluster.delete_index(index1)
+        except Exception:
+            pass
 
-        self.assertFalse(timeout)
+        try:
+            cluster.delete_index(index2)
+        except Exception:
+            pass
+
+        # COLUMN WITH ZERO RECORDS
+        index1 = cluster.create_index(
+            index=index1,
+            schema= {
+                "mappings": {
+                    "test": {
+                        "properties": {"missing_value": {"type": "keyword", "store": True}}
+                    }
+                }
+            },
+            kwargs=common
+        )
+        index1.add_alias(common.alias)
+
+        # INDEX WITH ONE RECORD
+        index2 = cluster.create_index(
+            index=index2,
+            schema= {
+                "mappings": {
+                    "test": {
+                        "properties": {"one_value": {"type": "keyword", "store": True}}
+                    }
+                }
+            },
+            kwargs=common
+        )
+        index2.add_alias(common.alias)
+        index2.add({"value": {"one_value": "a value!"}})
+        index2.flush(forced=True)
+
+        # FORCE metadata MERGE
+        c = find_container(common.alias, Date.now())
+
+        # TEST SCHEMAS
+        indices = cluster.get_metadata(after=Date.now()).indices
+        schema1 = indices[index1.settings.index]
+        schema2 = indices[index2.settings.index]
+
+        # THE one_value GOT PICKED UP
+        self.assertEqual(schema1,
+                         {"mappings": {"test": {"properties": {"one_value": {"type": "keyword", "store": True}}}}})
+        # THE missing_value DID NOT GET PICKED UP
+        self.assertEqual(schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}})
+
+
+        try:
+            cluster.delete_index(index1)
+        except Exception:
+            pass
+
+        try:
+            cluster.delete_index(index1)
+        except Exception:
+            pass

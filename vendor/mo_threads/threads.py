@@ -94,7 +94,7 @@ class AllThread(object):
 
 
 class BaseThread(object):
-    __slots__ = ["id", "name", "children", "child_locker", "cprofiler"]
+    __slots__ = ["id", "name", "children", "child_locker", "cprofiler", "trace_func"]
 
     def __init__(self, ident):
         self.id = ident
@@ -103,6 +103,7 @@ class BaseThread(object):
         self.child_locker = allocate_lock()
         self.children = []
         self.cprofiler = None
+        self.trace_func = None
 
     def add_child(self, child):
         with self.child_locker:
@@ -266,6 +267,7 @@ class Thread(BaseThread):
         else:
             self.parent = Thread.current()
             self.parent.add_child(self)
+        self.trace_func = sys.gettrace()
 
     def __enter__(self):
         return self
@@ -300,6 +302,10 @@ class Thread(BaseThread):
         DEBUG and Log.note("Thread {{name|quote}} got request to stop", name=self.name)
 
     def _run(self):
+        if self.trace_func and not sys.gettrace():
+            Log.note("set trace function")
+            sys.settrace(self.trace_func)
+            self.trace_func = None
         self.id = get_ident()
         with RegisterThread(self):
             try:

@@ -62,7 +62,7 @@ def get_raw_json(path):
 
 def scrub_args(args):
     output = {}
-    for k, v in list(unwrap(args).items()):
+    for k, v in list(args.items()):
         vs = []
         for v in listwrap(v):
             if is_integer(v):

@@ -120,7 +120,7 @@ class Python(object):
     def __getattr__(self, item):
         def output(*args, **kwargs):
             if len(args):
-                if len(kwargs.keys()):
+                if kwargs.keys():
                     Log.error("Not allowed to use both args and kwargs")
                 return self._execute({item: args})
             else:

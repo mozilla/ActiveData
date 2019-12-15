@@ -101,7 +101,7 @@ def _jx_expression(expr, lang):
     """
     if is_expression(expr):
         # CONVERT TO lang
-        new_op = lang[expr.get_id()]
+        new_op = lang[expr]
         if not new_op:
             # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
             return language[expr.get_id()].partial_eval()

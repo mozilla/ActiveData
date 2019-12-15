@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import deepcopy
 
 import mo_math
-from jx_base.expressions import Variable, value2json
+from jx_base.expressions import Variable, value2json, TRUE
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
@@ -70,10 +70,26 @@ def es_bulkaggsop(esq, frum, query):
                 "too many columns to bulk groupby:\n{{columns|json}}", columns=columns
             )
         column = first(columns)
-        cardinality = column.cardinality
-        if cardinality == None:
-            esq.namespace._update_cardinality(column)
+
+        if query.where is TRUE:
             cardinality = column.cardinality
+            if cardinality == None:
+                esq.namespace._update_cardinality(column)
+                cardinality = column.cardinality
+        else:
+            cardinality = esq.query(
+                {
+                    "select": {
+                        "name": "card",
+                        "value": variable,
+                        "aggregate": "cardinality",
+                    },
+                    "from": frum.name,
+                    "where": query.where,
+                    "format": "cube",
+                }
+            ).card
+
         num_partitions = (cardinality + chunk_size - 1) // chunk_size
 
         if num_partitions > MAX_PARTITIONS:
@@ -93,7 +109,7 @@ def es_bulkaggsop(esq, frum, query):
             query_path,
             schema,
             chunk_size,
-            parent_thread=Null
+            parent_thread=Null,
         )
 
     output = wrap(

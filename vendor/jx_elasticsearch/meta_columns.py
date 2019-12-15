@@ -25,6 +25,7 @@ from mo_times.dates import Date
 
 DEBUG = False
 singlton = None
+REPLICAS = 5
 COLUMN_LOAD_PERIOD = 10
 COLUMN_EXTRACT_PERIOD = 2 * 60
 ID = {"field": ["es_index", "es_column"], "version": "last_updated"}
@@ -62,7 +63,7 @@ class ColumnList(Table, jx_base.Container):
 
     def _db_create(self):
         schema = {
-            "settings": {"index.number_of_shards": 1, "index.number_of_replicas": 6},
+            "settings": {"index.number_of_shards": 1, "index.number_of_replicas": REPLICAS},
             "mappings": {META_COLUMNS_TYPE_NAME: {}},
         }
 

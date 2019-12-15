@@ -257,6 +257,7 @@ class Thread(BaseThread):
             )
 
         self.thread = None
+        self.join_attempt = Signal("joining with " + self.name)
         self.stopped = Signal("stopped signal for " + self.name)
 
         if PARENT_THREAD in kwargs:
@@ -305,9 +306,6 @@ class Thread(BaseThread):
                 if self.target is not None:
                     a, k, self.args, self.kwargs = self.args, self.kwargs, None, None
                     self.end_of_thread.response = self.target(*a, **k)
-                    self.parent.remove_child(
-                        self
-                    )  # IF THREAD ENDS OK, THEN FORGET ABOUT IT
             except Exception as e:
                 e = Except.wrap(e)
                 with self.synch_lock:
@@ -359,8 +357,30 @@ class Thread(BaseThread):
                         "problem with thread {{name|quote}}", cause=e, name=self.name
                     )
                 finally:
+                    (Till(seconds=60) | self.join_attempt).wait()
                     self.stopped.go()
-                    DEBUG and Log.note("thread {{name|quote}} is done", name=self.name)
+                    DEBUG and Log.note("thread {{name|quote}} is done, wait for join", name=self.name)
+
+                    if not self.join_attempt:
+                        if self.end_of_thread.exception:
+                            # THREAD FAILURES ARE A PROBLEM ONLY IF NO ONE WILL BE JOINING WITH IT
+                            try:
+                                Log.error(
+                                    "Problem in thread {{name|quote}}", name=self.name, cause=e
+                                )
+                            except Exception:
+                                sys.stderr.write(
+                                    str("ERROR in thread: " + self.name + " " + text(e) + "\n")
+                                )
+                        elif self.end_of_thread.response != None:
+                            Log.warning(
+                                "Thread {{thread}} returned a response, but was not joined with {{parent}} after 10min",
+                                thread=self.name,
+                                parent=self.parent.name
+                            )
+                        else:
+                            # IF THREAD ENDS OK, AND NOTHING RETURNED, THEN FORGET ABOUT IT
+                            self.parent.remove_child(self)
 
     def is_alive(self):
         return not self.stopped
@@ -382,6 +402,7 @@ class Thread(BaseThread):
             parent=Thread.current().name,
             child=self.name,
         )
+        self.join_attempt.go()
         (self.stopped | till).wait()
         if self.stopped:
             self.parent.remove_child(self)

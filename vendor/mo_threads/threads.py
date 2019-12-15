@@ -30,7 +30,6 @@ from mo_future import (
     PY3,
 )
 from mo_logs import Except, Log
-
 from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler, write_profiles
 from mo_threads.signals import AndSignals, Signal
@@ -103,7 +102,7 @@ class BaseThread(object):
         self.child_locker = allocate_lock()
         self.children = []
         self.cprofiler = None
-        self.trace_func = None
+        self.trace_func = sys.gettrace()
 
     def add_child(self, child):
         with self.child_locker:
@@ -267,7 +266,6 @@ class Thread(BaseThread):
         else:
             self.parent = Thread.current()
             self.parent.add_child(self)
-        self.trace_func = sys.gettrace()
 
     def __enter__(self):
         return self
@@ -302,8 +300,7 @@ class Thread(BaseThread):
         DEBUG and Log.note("Thread {{name|quote}} got request to stop", name=self.name)
 
     def _run(self):
-        if self.trace_func and not sys.gettrace():
-            Log.note("set trace function")
+        if self.trace_func:
             sys.settrace(self.trace_func)
             self.trace_func = None
         self.id = get_ident()

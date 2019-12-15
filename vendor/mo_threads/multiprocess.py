@@ -130,7 +130,7 @@ class Process(object):
                     if line:
                         max = 100
                         receive.add(line)
-                        self.debug and Log.note("RESIDUE: {{process}} ({{name}}): {{line}}", name=name, process=self.name, line=line)
+                        self.debug and Log.note("{{process}} RESIDUE: ({{name}}): {{line}}", name=name, process=self.name, line=line)
                     else:
                         max -= 1
                 except Exception:

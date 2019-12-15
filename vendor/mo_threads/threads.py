@@ -300,9 +300,9 @@ class Thread(BaseThread):
         DEBUG and Log.note("Thread {{name|quote}} got request to stop", name=self.name)
 
     def _run(self):
-        if self.trace_func:
-            sys.settrace(self.trace_func)
-            self.trace_func = None
+        # if self.trace_func:
+        #     sys.settrace(self.trace_func)
+        #     self.trace_func = None
         self.id = get_ident()
         with RegisterThread(self):
             try:
@@ -481,9 +481,10 @@ class RegisterThread(object):
         with self.thread.child_locker:
             if self.thread.children:
                 Log.error(
-                    "This thread has not joined with child threads names={{names|json}}",
-                    names=[c.name for c in self.thread.children]
-                    )
+                    "Thread {{thread|quote}} has not joined with child threads {{children|json}}",
+                    children=[c.name for c in self.thread.children],
+                    thread=self.thread.name
+                )
         with ALL_LOCK:
             del ALL[self.thread.id]
 

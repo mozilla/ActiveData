@@ -9,9 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+
+import mo_math
 from jx_base.expressions import Variable
 from jx_base.language import is_op
-from mo_dots import wrap
+from mo_dots import wrap, Null, coalesce
 from mo_future import is_text, first
 from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING
 from mo_logs import Log
@@ -159,3 +162,16 @@ pull_functions = {
     NUMBER: lambda x: float(x) if x !=None else None,
     BOOLEAN: value2boolean,
 }
+
+
+def temper_limit(proposed_limit, query):
+    """
+    SUITABLE DEFAULTS AND LIMITS
+    """
+    from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop
+    if is_bulkaggsop(Null, query):
+        return coalesce(proposed_limit, query.limit)
+    else:
+        return mo_math.min(coalesce(proposed_limit, query.limit, DEFAULT_LIMIT), MAX_LIMIT)
+
+

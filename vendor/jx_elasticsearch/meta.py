@@ -29,7 +29,7 @@ from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
-from mo_threads import Queue, THREAD_STOP, Thread, Till
+from mo_threads import Queue, THREAD_STOP, Thread, Till, MAIN_THREAD
 from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
@@ -101,9 +101,9 @@ class ElasticsearchMetadata(Namespace):
 
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
-            self.worker = Thread.run("refresh metadata", self.monitor)
+            self.worker = Thread.run("refresh metadata", self.monitor, parent_thread=MAIN_THREAD)
         else:
-            self.worker = Thread.run("not refresh metadata", self.not_monitor)
+            self.worker = Thread.run("not refresh metadata for " + host, self.not_monitor, parent_thread=MAIN_THREAD)
         return
 
     @property

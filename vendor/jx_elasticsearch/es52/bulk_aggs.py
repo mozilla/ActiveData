@@ -51,7 +51,7 @@ def is_bulkaggsop(esq, query):
 def es_bulkaggsop(esq, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
 
-    chunk_size = coalesce(query.chunk_size, MAX_CHUNK_SIZE)
+    chunk_size = min(coalesce(query.chunk_size, MAX_CHUNK_SIZE), MAX_CHUNK_SIZE)
     schema = frum.schema
     query_path = first(schema.query_path)
     selects = listwrap(query.select)
@@ -69,7 +69,11 @@ def es_bulkaggsop(esq, frum, query):
             Log.error(
                 "too many columns to bulk groupby:\n{{columns|json}}", columns=columns
             )
-        cardinality = first(columns).cardinality
+        column = first(columns)
+        cardinality = column.cardinality
+        if cardinality == None:
+            esq.namespace._update_cardinality(column)
+            cardinality = column.cardinality
         num_partitions = (cardinality + chunk_size - 1) // chunk_size
 
         if num_partitions > MAX_PARTITIONS:
@@ -124,8 +128,8 @@ def extractor(
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
 
     try:
-        with TempFile() as output:
-            with open(output._filename, "wb") as output:
+        with TempFile() as temp_file:
+            with open(temp_file.abspath, "wb") as output:
                 output.write(b"[\n")
                 comma = b""
                 for i in range(0, num_partitions):
@@ -159,7 +163,7 @@ def extractor(
                     break
                 output.write(b"\n]\n")
 
-            upload(filename, output)
+            upload(filename, temp_file)
     except Exception as e:
         try:
             with TempFile() as output:

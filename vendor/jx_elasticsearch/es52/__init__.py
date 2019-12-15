@@ -19,7 +19,7 @@ from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop, es_bulkaggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
 from jx_elasticsearch.es52.setop import es_setop, is_setop
-from jx_elasticsearch.es52.util import aggregates
+from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
@@ -196,6 +196,8 @@ class ES52(Container):
                 q2.frum = result
                 return jx.run(q2)
 
+            query.limit = temper_limit(query.limit, query)
+
             if is_bulkaggsop(self.es, query):
                 return es_bulkaggsop(self, frum, query)
             if is_deepop(self.es, query):
@@ -290,5 +292,4 @@ class ES52(Container):
             return
 
         es_index.flush()
-
 

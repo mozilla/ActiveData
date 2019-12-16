@@ -207,10 +207,11 @@ class QueryOp(QueryOp_):
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=query.limit,
             chunk_size=query.chunk_size,
             destination=query.destination,
         )
+        from jx_elasticsearch.es52 import temper_limit
+        output.limit=temper_limit(query.limit, query)
 
         if query.select or isinstance(query.select, (Mapping, list)):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)

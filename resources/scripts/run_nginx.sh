@@ -21,3 +21,6 @@ more /data1/logs/nginx.pid
 sudo kill -SIGINT `cat /data1/logs/nginx.pid`
 sleep 2
 sudo /etc/init.d/nginx start
+more /data1/logs/nginx.pid
+tail -f nginx_access.log
+

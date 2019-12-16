@@ -140,9 +140,7 @@ class ESUtils(object):
         for a in aliases:
             try:
                 if a.index.startswith("testing_"):
-                    create_time = Date(a.index[-15:], "%Y%m%d_%H%M%S")  # EXAMPLE testing_0ef53e45b320160118_180420
-                    if create_time < Date.now() - 10 * MINUTE:
-                        cluster.delete_index(a.index)
+                    cluster.delete_index(a.index)
             except Exception as e:
                 Log.warning("Problem removing {{index|quote}}", index=a.index, cause=e)
 

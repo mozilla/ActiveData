@@ -18,7 +18,7 @@ from jx_base import TableDesc
 from jx_base.meta_columns import META_COLUMNS_DESC, META_COLUMNS_NAME, META_TABLES_DESC, META_TABLES_NAME
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
-from jx_elasticsearch.meta_columns import ColumnList
+from jx_elasticsearch.meta_columns import ColumnList, mark_as_deleted
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Data, FlatList, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
@@ -34,7 +34,7 @@ from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
 
-DEBUG = False
+DEBUG = True
 ENABLE_META_SCAN = True
 TOO_OLD = 24*HOUR
 OLD_METADATA = MINUTE
@@ -166,9 +166,7 @@ class ElasticsearchMetadata(Namespace):
         for c in self.meta.columns.find(alias):
             if c.es_column not in column_names:
                 DEBUG and Log.note("delete {{col|quote}}", col=c.es_column)
-                c.cardinality = 0
-                c.multi = 0
-                c.last_updated = now
+                self.meta.column.remove(c)
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
         rescan = [

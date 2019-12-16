@@ -196,10 +196,11 @@ class ES52(Container):
                 q2.frum = result
                 return jx.run(q2)
 
-            query.limit = temper_limit(query.limit, query)
-
             if is_bulkaggsop(self.es, query):
                 return es_bulkaggsop(self, frum, query)
+
+            query.limit = temper_limit(query.limit, query)
+
             if is_deepop(self.es, query):
                 return es_deepop(self.es, query)
             if is_aggsop(self.es, query):

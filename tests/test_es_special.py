@@ -166,10 +166,10 @@ class TestESSpecial(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_column_not_added(self):
-        index1 = "test-merge-20191214_000000"
-        index2 = "test-merge-20191215_000000"
+        index1 = "testing_merge-20191214_000000"
+        index2 = "testing_merge-20191215_000000"
         common = Data(
-            alias="test-merge",
+            alias="testing_merge",
             limit_replicas=True,
             limit_replicas_warning=False,
             read_only=False,

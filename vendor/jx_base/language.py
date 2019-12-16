@@ -73,16 +73,13 @@ class Language(object):
         self.ops = None
 
     def __getitem__(self, item):
-        try:
-            if item == None:
-                Log.error("expecting operator")
-            class_ = self.ops[item.get_id()]
-            if class_.__name__ != item.__class__.__name__:
-                Log.error("programming error")
-            item.__class__ = class_
-            return item
-        except Exception as e:
-            raise e
+        if item == None:
+            Log.error("expecting operator")
+        class_ = self.ops[item.get_id()]
+        if class_.__name__ != item.__class__.__name__:
+            Log.error("programming error")
+        item.__class__ = class_
+        return item
 
     def __str__(self):
         return self.name

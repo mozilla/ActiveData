@@ -45,7 +45,7 @@ class ColumnList(Table, jx_base.Container):
         self.es_cluster = es_cluster
         self.es_index = None
         self.last_load = Null
-        self.todo = Queue(
+        self.for_es_update = Queue(
             "update columns to es"
         )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
@@ -146,7 +146,7 @@ class ColumnList(Table, jx_base.Container):
                                 self.last_load = MAX((self.last_load, c.last_updated))
 
                     while not please_stop:
-                        updates = self.todo.pop_all()
+                        updates = self.for_es_update.pop_all()
                         if not updates:
                             break
 
@@ -185,8 +185,16 @@ class ColumnList(Table, jx_base.Container):
             canonical = self._add(column)
         if canonical == None:
             return column  # ALREADY ADDED
-        self.todo.add(canonical)
+        self.for_es_update.add(canonical)
         return canonical
+
+    def remove(self, column):
+        with self.locker:
+            canonical = self._add(column)
+        if canonical:
+            Log.error("Expecting canonical column to be removed")
+        mark_as_deleted(column)
+        self.for_es_update.add(column)
 
     def remove_table(self, table_name):
         del self.data[table_name]
@@ -286,8 +294,7 @@ class ColumnList(Table, jx_base.Container):
                             del d[i]
 
                         for c in cols:
-                            mark_as_deleted(c)
-                            self.todo.add(c)
+                            self.remove(c)
                         return
 
                     # FASTEST
@@ -331,7 +338,7 @@ class ColumnList(Table, jx_base.Container):
                     for k in command["clear"]:
                         if k == ".":
                             mark_as_deleted(col)
-                            self.todo.add(col)
+                            self.for_es_update.add(col)
                             lst = self.data[col.es_index]
                             cols = lst[col.name]
                             cols.remove(col)
@@ -346,7 +353,7 @@ class ColumnList(Table, jx_base.Container):
                         # DID NOT DELETE COLUMNM ("."), CONTINUE TO SET PROPERTIES
                         for k, v in command.set.items():
                             col[k] = v
-                        self.todo.add(col)
+                        self.for_es_update.add(col)
 
         except Exception as e:
             Log.error("should not happen", cause=e)

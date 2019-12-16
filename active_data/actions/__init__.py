@@ -49,7 +49,7 @@ def send_error(active_data_timer, body, e):
     #         remove_trace(c)
     # remove_trace(e)
 
-    return Response(value2json(e).encode('utf8'), status=status)
+    return Response(value2json(e).encode("utf8"), status=status)
 
 
 def test_mode_wait(query):
@@ -68,7 +68,12 @@ def test_mode_wait(query):
 
         alias = split_field(query["from"])[0]
         after = Date.now()
-        with Timer("Get columns for {{table}} after {{after}}", {"table": alias, "after": after}, silent=not DEBUG):
+        require_cardinality = meta.ENABLE_META_SCAN
+        with Timer(
+            "Get columns for {{table}} after {{after}}",
+            {"table": alias, "after": after},
+            silent=not DEBUG,
+        ):
             metadata_manager = find_container(alias, after=after).namespace
 
             timeout = Till(seconds=MINUTE.seconds)
@@ -79,7 +84,11 @@ def test_mode_wait(query):
                     for c in metadata_manager.get_columns(
                         table_name=alias, after=after, timeout=timeout
                     )
-                    if c.jx_type not in STRUCT and (after >= c.last_updated or (meta.ENABLE_META_SCAN and c.cardinality == None))
+                    if c.jx_type not in STRUCT
+                    and (
+                        after >= c.last_updated
+                        or (require_cardinality and c.cardinality == None)
+                    )
                 ]
                 if cols:
                     Log.note(

@@ -18,13 +18,12 @@ from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, set_default
 from mo_json import STRUCT
 from mo_json.typed_encoder import unnest_path, untype_path, untyped
 from mo_logs import Log
-from mo_logs.exceptions import get_stacktrace
 from mo_math import MAX
 from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
 from mo_times import YEAR
 from mo_times.dates import Date
 
-DEBUG = True
+DEBUG = False
 singlton = None
 REPLICAS = 5
 COLUMN_LOAD_PERIOD = 10

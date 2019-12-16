@@ -2,10 +2,11 @@
 source =
     ./active_data
     ./vendor/jx_elasticsearch
-
+    ./tests
 [report]
 exclude_lines =
     pragma: no cover
     except Exception as
     except BaseException as
+    Log.error
     if DEBUG

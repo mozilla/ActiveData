@@ -17,9 +17,9 @@ from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
 from jx_elasticsearch.es52.format import format_list_from_groupby
-from mo_dots import listwrap, unwrap, Null, wrap, coalesce
+from mo_dots import listwrap, unwrap, Null, wrap, coalesce, unwraplist
 from mo_files import TempFile, URL, mimetype
-from mo_future import first
+from mo_future import first, is_text
 from mo_logs import Log
 from mo_math.randoms import Random
 from mo_threads import Thread
@@ -39,11 +39,13 @@ def is_bulkaggsop(esq, query):
         return False
     if query.destination != "s3":
         return False
+    if query.format != "list":
+        return False
     if len(listwrap(query.groupby)) != 1:
         return False
+    if is_text(unwraplist(query.groupby)):
+        return True
     if not is_op(first(query.groupby).value, Variable):
-        return False
-    if query.format != "list":
         return False
     return True
 

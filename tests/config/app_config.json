@@ -32,13 +32,13 @@
 			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
-//	"bulk": {
-//		"s3": {
-//			"bucket": "active-data-query-results",
-//			"public": true,
-//			"$ref": "file://~/private.json#aws_credentials"
-//		}
-//	},
+	"bulk": {
+		"s3": {
+			"bucket": "active-data-query-results",
+			"public": true,
+			"$ref": "file://~/private.json#aws_credentials"
+		}
+	},
 	"saved_queries": {
 		"host": "http://localhost",
 		"port": 9200,

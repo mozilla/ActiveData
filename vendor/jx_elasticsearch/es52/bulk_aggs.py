@@ -146,65 +146,69 @@ def extractor(
     abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
     # WE MESS WITH THE QUERY LIMITS FOR CHUNKING
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
-
-    write_status(
-        filename,
-        {
-            "status": "starting",
-            "chunks": num_partitions,
-            "rows": min(abs_limit, cardinality),
-            "timestamp": Date.now(),
-        },
-    )
+    total_time = Timer("Download {{filename}}", param={"filename": filename})
 
     try:
-        with TempFile() as temp_file:
-            with open(temp_file.abspath, "wb") as output:
-                output.write(b"[\n")
-                comma = b""
-                for i in range(0, num_partitions):
-                    if please_stop:
-                        Log.error("request to shutdown!")
-                    is_last = i == num_partitions - 1
-                    first(query.groupby).allowNulls = is_last
-                    acc, decoders, es_query = build_es_query(
-                        selects, query_path, schema, query
-                    )
-                    # REACH INTO THE QUERY TO SET THE partitions
-                    terms = es_query.aggs._filter.aggs._match.terms
-                    terms.include.partition = i
-                    terms.include.num_partitions = num_partitions
+        with total_time:
+            write_status(
+                filename,
+                {
+                    "status": "starting",
+                    "chunks": num_partitions,
+                    "rows": min(abs_limit, cardinality),
+                    "timestamp": Date.now(),
+                    "duration": total_time.duration.seconds,
+                },
+            )
 
-                    result = es_post(esq.es, deepcopy(es_query), query.limit)
-                    aggs = unwrap(result.aggregations)
-                    data = format_list_from_groupby(
-                        aggs, acc, query, decoders, selects
-                    ).data
-
-                    for r in data:
-                        output.write(comma)
-                        comma = b",\n"
-                        output.write(value2json(r).encode("utf8"))
-                        total += 1
-                        if total >= abs_limit:
-                            break
-                    else:
-                        write_status(
-                            filename,
-                            {
-                                "status": "working",
-                                "chunk": i,
-                                "chunks": num_partitions,
-                                "row": total,
-                                "rows": min(abs_limit, cardinality),
-                                "timestamp": Date.now(),
-                            },
+            with TempFile() as temp_file:
+                with open(temp_file.abspath, "wb") as output:
+                    output.write(b"[\n")
+                    comma = b""
+                    for i in range(0, num_partitions):
+                        if please_stop:
+                            Log.error("request to shutdown!")
+                        is_last = i == num_partitions - 1
+                        first(query.groupby).allowNulls = is_last
+                        acc, decoders, es_query = build_es_query(
+                            selects, query_path, schema, query
                         )
-                        continue
-                    break
-                output.write(b"\n]\n")
+                        # REACH INTO THE QUERY TO SET THE partitions
+                        terms = es_query.aggs._filter.aggs._match.terms
+                        terms.include.partition = i
+                        terms.include.num_partitions = num_partitions
 
-            upload(filename, temp_file)
+                        result = es_post(esq.es, deepcopy(es_query), query.limit)
+                        aggs = unwrap(result.aggregations)
+                        data = format_list_from_groupby(
+                            aggs, acc, query, decoders, selects
+                        ).data
+
+                        for r in data:
+                            output.write(comma)
+                            comma = b",\n"
+                            output.write(value2json(r).encode("utf8"))
+                            total += 1
+                            if total >= abs_limit:
+                                break
+                        else:
+                            write_status(
+                                filename,
+                                {
+                                    "status": "working",
+                                    "chunk": i,
+                                    "chunks": num_partitions,
+                                    "row": total,
+                                    "rows": min(abs_limit, cardinality),
+                                    "timestamp": Date.now(),
+                                    "duration": total_time.duration.seconds,
+                                },
+                            )
+                            continue
+                        break
+                    output.write(b"\n]\n")
+
+                upload(filename, temp_file)
             write_status(
                 filename,
                 {
@@ -213,13 +217,20 @@ def extractor(
                     "chunks": num_partitions,
                     "rows": min(abs_limit, cardinality),
                     "timestamp": Date.now(),
+                    "duration": total_time.duration.seconds,
                 },
             )
     except Exception as e:
         e = Except.wrap(e)
         write_status(
             filename,
-            {"ok": False, "status": "error", "error": e, "timestamp": Date.now()},
+            {
+                "ok": False,
+                "status": "error",
+                "error": e,
+                "timestamp": Date.now(),
+                "duration": total_time.duration.seconds,
+            },
         )
         Log.warning("Could not extract", cause=e)
 

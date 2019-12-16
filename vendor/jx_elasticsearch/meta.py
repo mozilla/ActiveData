@@ -163,10 +163,10 @@ class ElasticsearchMetadata(Namespace):
 
         column_names = {c.es_column for c in columns}
         # DELETE SOME COLUMNS
-        for c in self.meta.columns.find(alias):
+        current_columns = self.meta.columns.find(alias)
+        for c in current_columns:
             if c.es_column not in column_names:
-                DEBUG and Log.note("delete {{col|quote}}", col=c.es_column)
-                self.meta.column.remove(c)
+                self.meta.columns.remove(c, now)
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
         rescan = [

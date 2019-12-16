@@ -23,7 +23,7 @@ from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
 from mo_times import YEAR
 from mo_times.dates import Date
 
-DEBUG = False
+DEBUG = True
 singlton = None
 REPLICAS = 5
 COLUMN_LOAD_PERIOD = 10
@@ -188,12 +188,15 @@ class ColumnList(Table, jx_base.Container):
         self.for_es_update.add(canonical)
         return canonical
 
-    def remove(self, column):
+    def remove(self, column, after):
+        if column.last_updated>after:
+            return
         with self.locker:
             canonical = self._add(column)
         if canonical:
             Log.error("Expecting canonical column to be removed")
         mark_as_deleted(column)
+        DEBUG and Log.note("delete {{col|quote}}, at {{timestamp}}", col=column.es_column, timestamp=column.last_updated)
         self.for_es_update.add(column)
 
     def remove_table(self, table_name):

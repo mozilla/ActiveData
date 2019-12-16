@@ -10,6 +10,13 @@
 		"jx_elasticsearch.es52.setop.DEBUG": true,
 		"jx_elasticsearch.es52.aggs.DEBUG": true
 	},
+	"bulk": {
+		"s3": {
+			"bucket": "active-data-query-results",
+			"public": true,
+			"$ref": "file://~/private.json#aws_credentials"
+		}
+	},
 //	"request_logs": {
 //		"host": "http://localhost",
 //		"port": 9200,

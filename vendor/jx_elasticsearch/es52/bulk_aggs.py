@@ -18,12 +18,12 @@ from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
 from jx_elasticsearch.es52.format import format_list_from_groupby
 from mo_dots import listwrap, unwrap, Null, wrap, coalesce, unwraplist
-from mo_files import TempFile, URL, mimetype
+from mo_files import TempFile, URL, mimetype, File
 from mo_future import first, is_text
-from mo_logs import Log
+from mo_logs import Log, Except
 from mo_math.randoms import Random
 from mo_threads import Thread
-from mo_times import Timer
+from mo_times import Timer, Date
 from pyLibrary.aws.s3 import Connection
 
 DEBUG = False
@@ -111,6 +111,7 @@ def es_bulkaggsop(esq, frum, query):
             query_path,
             schema,
             chunk_size,
+            cardinality,
             parent_thread=Null,
         )
 
@@ -138,12 +139,23 @@ def extractor(
     query_path,
     schema,
     chunk_size,
+    cardinality,
     please_stop,
 ):
     total = 0
     abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
     # WE MESS WITH THE QUERY LIMITS FOR CHUNKING
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
+
+    write_status(
+        filename,
+        {
+            "status": "starting",
+            "chunks": num_partitions,
+            "rows": min(abs_limit, cardinality),
+            "timestamp": Date.now(),
+        },
+    )
 
     try:
         with TempFile() as temp_file:
@@ -177,18 +189,38 @@ def extractor(
                         if total >= abs_limit:
                             break
                     else:
+                        write_status(
+                            filename,
+                            {
+                                "status": "working",
+                                "chunk": i,
+                                "chunks": num_partitions,
+                                "row": total,
+                                "rows": min(abs_limit, cardinality),
+                                "timestamp": Date.now(),
+                            },
+                        )
                         continue
                     break
                 output.write(b"\n]\n")
 
             upload(filename, temp_file)
+            write_status(
+                filename,
+                {
+                    "ok": True,
+                    "status": "done",
+                    "chunks": num_partitions,
+                    "rows": min(abs_limit, cardinality),
+                    "timestamp": Date.now(),
+                },
+            )
     except Exception as e:
-        try:
-            with TempFile() as output:
-                output.write(value2json(e))
-                upload(filename, output)
-        except Exception as e:
-            pass  # WE TRIED
+        e = Except.wrap(e)
+        write_status(
+            filename,
+            {"ok": False, "status": "error", "error": e, "timestamp": Date.now()},
+        )
         Log.warning("Could not extract", cause=e)
 
 
@@ -208,3 +240,25 @@ def upload(filename, temp_file):
             Log.error(
                 "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
             )
+
+
+def write_status(filename, status):
+    try:
+        filename = File(filename).set_extension("status.json").filename
+        with Timer("upload status to S3 {{file}}", param={"file": filename}):
+            try:
+                connection = Connection(S3_CONFIG).connection
+                bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)
+                storage = bucket.new_key(filename)
+                storage.set_contents_from_string(
+                    value2json(status), headers={"Content-Type": mimetype.JSON}
+                )
+                if S3_CONFIG.public:
+                    storage.set_acl("public-read")
+
+            except Exception as e:
+                Log.error(
+                    "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
+                )
+    except Exception as e:
+        Log.warning("problem setting status", cause=e)

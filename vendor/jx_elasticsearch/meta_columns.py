@@ -18,6 +18,7 @@ from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, set_default
 from mo_json import STRUCT
 from mo_json.typed_encoder import unnest_path, untype_path, untyped
 from mo_logs import Log
+from mo_logs.exceptions import get_stacktrace
 from mo_math import MAX
 from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
 from mo_times import YEAR
@@ -33,6 +34,8 @@ ID = {"field": ["es_index", "es_column"], "version": "last_updated"}
 
 class ColumnList(Table, jx_base.Container):
     """
+    CENTRAL CONTAINER FOR ALL COLUMNS
+    SYNCHRONIZED WITH ELASTICSEARCH
     OPTIMIZED FOR THE PARTICULAR ACCESS PATTERNS USED
     """
 

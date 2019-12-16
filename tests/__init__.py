@@ -28,7 +28,7 @@ from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
 from mo_kwargs import override
 from mo_logs import Except, Log, constants
-from mo_logs.exceptions import extract_stack
+from mo_logs.exceptions import get_stacktrace
 from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Till
@@ -159,7 +159,7 @@ class ESUtils(object):
 
     def execute_tests(self, subtest, typed=True, places=6):
         subtest = wrap(subtest)
-        subtest.name = text(extract_stack()[1]['method'])
+        subtest.name = text(get_stacktrace()[1]['method'])
 
         self.fill_container(subtest, typed=typed)
         self.send_queries(subtest, places=places)

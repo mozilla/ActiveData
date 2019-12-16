@@ -21,7 +21,7 @@ from mo_files import mimetype
 from mo_files.url import URL
 from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
-from mo_logs.exceptions import extract_stack
+from mo_logs.exceptions import get_stacktrace
 from mo_threads import Thread, Till
 
 
@@ -450,7 +450,7 @@ class TempDirectory(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=extract_stack(1))
+        Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
 class TempFile(File):
@@ -472,7 +472,7 @@ class TempFile(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=extract_stack(1))
+        Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
 def _copy(from_, to_):

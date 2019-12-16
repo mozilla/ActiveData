@@ -36,7 +36,7 @@ def _late_import():
         return
 
     from mo_logs.exceptions import Except as _Except
-    from mo_logs.exceptions import extract_stack as _extract_stack
+    from mo_logs.exceptions import get_stacktrace as _extract_stack
     from mo_threads.threads import Thread as _Thread
     from mo_logs import Log as _Log
 

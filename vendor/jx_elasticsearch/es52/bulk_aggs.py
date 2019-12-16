@@ -164,7 +164,7 @@ def extractor(
                 comma = b""
                 for i in range(0, num_partitions):
                     if please_stop:
-                        return
+                        Log.error("request to shutdown!")
                     is_last = i == num_partitions - 1
                     first(query.groupby).allowNulls = is_last
                     acc, decoders, es_query = build_es_query(

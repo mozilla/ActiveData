@@ -13,17 +13,18 @@ from collections import Mapping
 from copy import copy
 
 import jx_base
+import mo_math
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, Domain, SetDomain
-from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, TRUE, Variable, jx_expression
-from jx_base.utils import is_variable_name
+from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, Variable, jx_expression
 from jx_base.language import is_expression, is_op
-from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, literal_field, relative_field, set_default, unwrap, unwraplist, wrap, is_many
+from jx_base.utils import is_variable_name
+from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
+    literal_field, relative_field, set_default, unwrap, unwraplist, wrap
 from mo_future import is_text, text
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
-import mo_math
 from mo_math import AND, UNION, is_number
 
 DEFAULT_LIMIT = 10
@@ -206,7 +207,7 @@ class QueryOp(QueryOp_):
         output = QueryOp(
             frum=table,
             format=query.format,
-            limit=temper_limit(query.limit, query),
+            limit=query.limit,
             chunk_size=query.chunk_size,
             destination=query.destination,
         )
@@ -234,7 +235,7 @@ class QueryOp(QueryOp_):
         output.where = _normalize_where({"and": listwrap(query.where)}, schema=schema)
         output.window = [_normalize_window(w) for w in listwrap(query.window)]
         output.sort = _normalize_sort(query.sort)
-        if not mo_math.is_integer(output.limit) or output.limit < 0:
+        if output.limit != None and (not mo_math.is_integer(output.limit) or output.limit < 0):
             Log.error("Expecting limit >= 0")
 
         return output
@@ -266,16 +267,6 @@ class QueryOp(QueryOp_):
     def __data__(self):
         output = wrap({s: getattr(self, s) for s in QueryOp.__slots__})
         return output
-
-
-def temper_limit(proposed_limit, query):
-    """
-    SUITABLE DEFAULTS AND LIMITS
-    """
-    if query.destination == "s3":
-        return coalesce(proposed_limit, query.limit)
-    else:
-        return mo_math.min(coalesce(proposed_limit, query.limit, DEFAULT_LIMIT), MAX_LIMIT)
 
 
 canonical_aggregates = wrap({

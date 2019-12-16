@@ -228,7 +228,7 @@ class FlatList(list):
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE RIGHT [-num:]
         """
         if num == None:
-            return FlatList([_get_list(self)[-1]])
+            return self
         if num <= 0:
             return Null
 
@@ -239,7 +239,7 @@ class FlatList(list):
         NOT REQUIRED, BUT EXISTS AS OPPOSITE OF right()
         """
         if num == None:
-            return FlatList([_get_list(self)[0]])
+            return self
         if num <= 0:
             return Null
 
@@ -250,7 +250,7 @@ class FlatList(list):
         WITH SLICES BEING FLAT, WE NEED A SIMPLE WAY TO SLICE FROM THE LEFT [:-num:]
         """
         if num == None:
-            return FlatList([_get_list(self)[:-1:]])
+            return self
         if num <= 0:
             return FlatList.EMPTY
 
@@ -261,7 +261,7 @@ class FlatList(list):
         NOT REQUIRED, EXISTS AS OPPOSITE OF not_right()
         """
         if num == None:
-            return FlatList([_get_list(self)[-1]])
+            return self
         if num <= 0:
             return self
 

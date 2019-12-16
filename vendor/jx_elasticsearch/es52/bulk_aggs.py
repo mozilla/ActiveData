@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import deepcopy
 
 import mo_math
-from jx_base.expressions import Variable, value2json
+from jx_base.expressions import Variable, value2json, TRUE
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
@@ -51,7 +51,7 @@ def is_bulkaggsop(esq, query):
 def es_bulkaggsop(esq, frum, query):
     query = query.copy()  # WE WILL MARK UP THIS QUERY
 
-    chunk_size = coalesce(query.chunk_size, MAX_CHUNK_SIZE)
+    chunk_size = min(coalesce(query.chunk_size, MAX_CHUNK_SIZE), MAX_CHUNK_SIZE)
     schema = frum.schema
     query_path = first(schema.query_path)
     selects = listwrap(query.select)
@@ -69,7 +69,27 @@ def es_bulkaggsop(esq, frum, query):
             Log.error(
                 "too many columns to bulk groupby:\n{{columns|json}}", columns=columns
             )
-        cardinality = first(columns).cardinality
+        column = first(columns)
+
+        if query.where is TRUE:
+            cardinality = column.cardinality
+            if cardinality == None:
+                esq.namespace._update_cardinality(column)
+                cardinality = column.cardinality
+        else:
+            cardinality = esq.query(
+                {
+                    "select": {
+                        "name": "card",
+                        "value": variable,
+                        "aggregate": "cardinality",
+                    },
+                    "from": frum.name,
+                    "where": query.where,
+                    "format": "cube",
+                }
+            ).card
+
         num_partitions = (cardinality + chunk_size - 1) // chunk_size
 
         if num_partitions > MAX_PARTITIONS:
@@ -89,7 +109,7 @@ def es_bulkaggsop(esq, frum, query):
             query_path,
             schema,
             chunk_size,
-            parent_thread=Null
+            parent_thread=Null,
         )
 
     output = wrap(
@@ -124,8 +144,8 @@ def extractor(
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
 
     try:
-        with TempFile() as output:
-            with open(output._filename, "wb") as output:
+        with TempFile() as temp_file:
+            with open(temp_file.abspath, "wb") as output:
                 output.write(b"[\n")
                 comma = b""
                 for i in range(0, num_partitions):
@@ -159,7 +179,7 @@ def extractor(
                     break
                 output.write(b"\n]\n")
 
-            upload(filename, output)
+            upload(filename, temp_file)
     except Exception as e:
         try:
             with TempFile() as output:

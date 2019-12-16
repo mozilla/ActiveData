@@ -66,7 +66,7 @@ class Except(Exception, LogItem):
         )
 
         if not trace:
-            self.trace = extract_stack(2)
+            self.trace = get_stacktrace(2)
         else:
             self.trace = trace
 
@@ -91,7 +91,7 @@ class Except(Exception, LogItem):
             if tb is not None:
                 trace = _parse_traceback(tb)
             else:
-                trace = _extract_traceback(0)
+                trace = get_traceback(0)
 
             cause = Except.wrap(getattr(e, '__cause__', None))
             if hasattr(e, "message") and e.message:
@@ -99,7 +99,7 @@ class Except(Exception, LogItem):
             else:
                 output = Except(context=ERROR, template=text(e), trace=trace, cause=cause)
 
-            trace = extract_stack(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
+            trace = get_stacktrace(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             output.trace.extend(trace)
             return output
 
@@ -152,7 +152,7 @@ class Except(Exception, LogItem):
         return output
 
 
-def extract_stack(start=0):
+def get_stacktrace(start=0):
     """
     SNAGGED FROM traceback.py
     Altered to return Data
@@ -183,7 +183,7 @@ def extract_stack(start=0):
     return stack
 
 
-def _extract_traceback(start):
+def get_traceback(start):
     """
     SNAGGED FROM traceback.py
 

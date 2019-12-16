@@ -218,7 +218,7 @@ class Log(object):
 
         params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         e = Except(exceptions.UNEXPECTED, template=template, params=params, cause=cause, trace=trace)
         Log._annotate(
@@ -291,7 +291,7 @@ class Log(object):
 
         params = Data(dict(default_params, **more_params))
         cause = unwraplist([Except.wrap(c) for c in listwrap(cause)])
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         e = Except(exceptions.WARNING, template=template, params=params, cause=cause, trace=trace)
         Log._annotate(
@@ -344,7 +344,7 @@ class Log(object):
             causes = None
             Log.error("can only accept Exception, or list of exceptions")
 
-        trace = exceptions.extract_stack(stack_depth + 1)
+        trace = exceptions.get_stacktrace(stack_depth + 1)
 
         if add_to_trace:
             cause[0].trace.extend(trace[1:])

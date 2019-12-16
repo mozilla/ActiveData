@@ -424,7 +424,7 @@ class Index(Features):
         for n in jx.reverse(split_field(name)):
             if n == NESTED_TYPE:
                 details = {"properties": {n: set_default(details, {"type": "nested", "dynamic": True})}}
-            elif n.startswith(TYPE_PREFIX) or details.type in ES_PRIMITIVE_TYPES:
+            elif n.startswith(TYPE_PREFIX) or details['type'] in ES_PRIMITIVE_TYPES:
                 details = {"properties": {n: details}}
             else:
                 details = {"properties": {n: set_default(details, {"type": "object", "dynamic": True})}}

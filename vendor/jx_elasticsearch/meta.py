@@ -18,7 +18,7 @@ from jx_base import TableDesc
 from jx_base.meta_columns import META_COLUMNS_DESC, META_COLUMNS_NAME, META_TABLES_DESC, META_TABLES_NAME
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
-from jx_elasticsearch.meta_columns import ColumnList
+from jx_elasticsearch.meta_columns import ColumnList, mark_as_deleted
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Data, FlatList, NullType, ROOT_PATH, coalesce, concat_field, is_list, literal_field, relative_field, set_default, split_field, startswith_field, tail_field, wrap
@@ -29,7 +29,7 @@ from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
-from mo_threads import Queue, THREAD_STOP, Thread, Till
+from mo_threads import Queue, THREAD_STOP, Thread, Till, MAIN_THREAD
 from mo_times import Date, HOUR, MINUTE, Timer, WEEK
 from pyLibrary.env import elasticsearch
 from pyLibrary.env.elasticsearch import _get_best_type_from_mapping, es_type_to_json_type
@@ -101,9 +101,9 @@ class ElasticsearchMetadata(Namespace):
 
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
-            self.worker = Thread.run("refresh metadata", self.monitor)
+            self.worker = Thread.run("refresh metadata", self.monitor, parent_thread=MAIN_THREAD)
         else:
-            self.worker = Thread.run("not refresh metadata", self.not_monitor)
+            self.worker = Thread.run("not refresh metadata for " + host, self.not_monitor, parent_thread=MAIN_THREAD)
         return
 
     @property
@@ -163,12 +163,10 @@ class ElasticsearchMetadata(Namespace):
 
         column_names = {c.es_column for c in columns}
         # DELETE SOME COLUMNS
-        for c in self.meta.columns.find(alias):
+        current_columns = self.meta.columns.find(alias)
+        for c in current_columns:
             if c.es_column not in column_names:
-                DEBUG and Log.note("delete {{col|quote}}", col=c.es_column)
-                c.cardinality = 0
-                c.multi = 0
-                c.last_updated = now
+                self.meta.columns.remove(c, now)
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
         rescan = [

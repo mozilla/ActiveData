@@ -101,7 +101,7 @@ def get_decoders_by_path(query):
     :return:
     """
     schema = query.frum.schema
-    output = Data()
+    output = {}
 
     if query.edges:
         if query.sort and query.format != "cube":
@@ -144,7 +144,7 @@ def get_decoders_by_path(query):
             Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
 
         decoder = AggsDecoder(edge, query, limit)
-        output[literal_field(first(depths))] += [decoder]
+        output.setdefault(first(depths), []).append(decoder)
     return output
 
 
@@ -170,11 +170,10 @@ def sort_edges(query, prop):
     return ordered_edges
 
 
-def es_aggsop(es, frum, query):
-    query = query.copy()  # WE WILL MARK UP THIS QUERY
-    schema = frum.schema
-    query_path = schema.query_path[0]
-    select = listwrap(query.select)
+def extract_aggs(select, query_path, schema):
+    """
+    RETURN ES AGGREGATIONS
+    """
 
     new_select = Data()  # MAP FROM canonical_name (USED FOR NAMES IN QUERY) TO SELECT MAPPING
     formula = []
@@ -194,14 +193,15 @@ def es_aggsop(es, frum, query):
                     s.query_path = si_key
             formula.append(s)
 
+
     acc = Aggs()
     for _, many in new_select.items():
         for s in many:
             canonical_name = s.name
             if s.aggregate in ("value_count", "count"):
-                columns = frum.schema.values(s.value.var, exclude_type=(OBJECT, NESTED))
+                columns = schema.values(s.value.var, exclude_type=(OBJECT, NESTED))
             else:
-                columns = frum.schema.values(s.value.var)
+                columns = schema.values(s.value.var)
 
             if s.aggregate == "count":
                 canonical_names = []
@@ -236,7 +236,8 @@ def es_aggsop(es, frum, query):
             elif s.aggregate == "percentile":
                 columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
                 if len(columns) != 1:
-                    Log.error("Do not know how to perform percentile on columns with more than one type (script probably)")
+                    Log.error(
+                        "Do not know how to perform percentile on columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
                 key = canonical_name + " percentile"
                 if is_text(s.percentile) or s.percetile < 0 or 1 < s.percentile:
@@ -264,7 +265,8 @@ def es_aggsop(es, frum, query):
 
                 # GET MEDIAN TOO!
                 select_median = s.copy()
-                select_median.pull = jx_expression_to_function({"select": [{"name": "median", "value": "values.50\\.0"}]})
+                select_median.pull = jx_expression_to_function(
+                    {"select": [{"name": "median", "value": "values.50\\.0"}]})
 
                 acc.add(ExprAggs(canonical_name + "_percentile", {"percentiles": {
                     "field": first(columns).es_column,
@@ -275,7 +277,8 @@ def es_aggsop(es, frum, query):
                 for column in columns:
                     script = {"scripted_metric": {
                         'init_script': 'params._agg.terms = new HashSet()',
-                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.add(v);',
+                        'map_script': 'for (v in doc[' + quote(
+                            column.es_column) + '].values) params._agg.terms.add(v);',
                         'combine_script': 'return params._agg.terms.toArray()',
                         'reduce_script': 'HashSet output = new HashSet(); for (a in params._aggs) { if (a!=null) for (v in a) {output.add(v)} } return output.toArray()',
                     }}
@@ -289,7 +292,8 @@ def es_aggsop(es, frum, query):
                     script = {"scripted_metric": {
                         'params': {"_agg": {}},
                         'init_script': 'params._agg.terms = new HashMap()',
-                        'map_script': 'for (v in doc['+quote(column.es_column)+'].values) params._agg.terms.put(v, Optional.ofNullable(params._agg.terms.get(v)).orElse(0)+1);',
+                        'map_script': 'for (v in doc[' + quote(
+                            column.es_column) + '].values) params._agg.terms.put(v, Optional.ofNullable(params._agg.terms.get(v)).orElse(0)+1);',
                         'combine_script': 'return params._agg.terms',
                         'reduce_script': '''
                             HashMap output = new HashMap(); 
@@ -317,6 +321,7 @@ def es_aggsop(es, frum, query):
                         ))
                     s.pull = jx_expression_to_function(aggregates[s.aggregate])
 
+    # DUPLICATED FOR SCRIPTS, MAYBE THIS CAN BE PUT INTO A LANGUAGE?
     for i, s in enumerate(formula):
         s_path = [k for k, v in split_expression_by_path(s.value, schema=schema, lang=Painless).items() if v]
         if len(s_path) == 0:
@@ -342,14 +347,18 @@ def es_aggsop(es, frum, query):
                     dir = -1
                     op = 'min'
 
-                nully = Painless[TupleOp([NULL]*len(s.value.terms))].partial_eval().to_es_script(schema)
+                nully = Painless[TupleOp([NULL] * len(s.value.terms))].partial_eval().to_es_script(schema)
                 selfy = text(Painless[s.value].partial_eval().to_es_script(schema))
 
                 script = {"scripted_metric": {
                     'init_script': 'params._agg.best = ' + nully + '.toArray();',
-                    'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE, {"expr1": "params._agg.best", "expr2": selfy, "dir": dir, "op": op}) + ";",
+                    'map_script': 'params._agg.best = ' + expand_template(MAX_OF_TUPLE,
+                                                                          {"expr1": "params._agg.best", "expr2": selfy,
+                                                                           "dir": dir, "op": op}) + ";",
                     'combine_script': 'return params._agg.best',
-                    'reduce_script': 'return params._aggs.stream().'+op+'(' + expand_template(COMPARE_TUPLE, {"dir": dir, "op": op}) + ').get()',
+                    'reduce_script': 'return params._aggs.stream().' + op + '(' + expand_template(COMPARE_TUPLE,
+                                                                                                  {"dir": dir,
+                                                                                                   "op": op}) + ').get()',
                 }}
                 nest.add(NestedAggs(query_path).add(
                     ExprAggs(canonical_name, script, s)
@@ -358,7 +367,9 @@ def es_aggsop(es, frum, query):
             else:
                 Log.error("{{agg}} is not a supported aggregate over a tuple", agg=s.aggregate)
         elif s.aggregate == "count":
-            nest.add(ExprAggs(canonical_name, {"value_count": {"script": text(Painless[s.value].partial_eval().to_es_script(schema))}}, s))
+            nest.add(ExprAggs(canonical_name,
+                              {"value_count": {"script": text(Painless[s.value].partial_eval().to_es_script(schema))}},
+                              s))
             s.pull = jx_expression_to_function("value")
         elif s.aggregate == "median":
             # ES USES DIFFERENT METHOD FOR PERCENTILES THAN FOR STATS AND COUNT
@@ -384,7 +395,9 @@ def es_aggsop(es, frum, query):
             s.pull = jx_expression_to_function("value")
         elif s.aggregate == "stats":
             # REGULAR STATS
-            nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": text(Painless[s.value].to_es_script(schema))}}, s))
+            nest.add(
+                ExprAggs(canonical_name, {"extended_stats": {"script": text(Painless[s.value].to_es_script(schema))}},
+                         s))
             s.pull = get_pull_stats()
 
             # GET MEDIAN TOO!
@@ -403,19 +416,22 @@ def es_aggsop(es, frum, query):
         else:
             # PULL VALUE OUT OF THE stats AGGREGATE
             s.pull = jx_expression_to_function(aggregates[s.aggregate])
-            nest.add(ExprAggs(canonical_name, {"extended_stats": {"script": text(NumberOp(s.value).partial_eval().to_es_script(schema))}}, s))
+            nest.add(ExprAggs(canonical_name, {
+                "extended_stats": {"script": text(NumberOp(s.value).partial_eval().to_es_script(schema))}}, s))
+    return acc
 
+
+def build_es_query(select, query_path, schema, query):
+    acc = extract_aggs(select, query_path, schema)
     acc = NestedAggs(query_path).add(acc)
     split_decoders = get_decoders_by_path(query)
-    split_wheres = split_expression_by_path(query.where, schema=frum.schema, lang=ES52)
-
+    split_wheres = split_expression_by_path(query.where, schema=schema, lang=ES52)
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
-    paths = list(reversed(sorted(split_wheres.keys() | split_decoders.keys())))
+    paths = list(reversed(sorted(set(split_wheres.keys()) | set(split_decoders.keys()))))
     for path in paths:
-        literal_path = literal_field(path)
-        decoder = split_decoders[literal_path]
-        where = split_wheres[literal_path]
+        decoder = split_decoders.get(path, Null)
+        where = split_wheres.get(path, Null)
 
         for d in decoder:
             decoders[d.edge.dim] = d
@@ -425,12 +441,20 @@ def es_aggsop(es, frum, query):
         if where:
             acc = FilterAggs("_filter", AndOp(where), None).add(acc)
         acc = NestedAggs(path).add(acc)
-
     acc = NestedAggs('.').add(acc)
     acc = simplify(acc)
     es_query = wrap(acc.to_es(schema))
-
     es_query.size = 0
+    return acc, decoders, es_query
+
+
+def es_aggsop(es, frum, query):
+    query = query.copy()  # WE WILL MARK UP THIS QUERY
+    schema = frum.schema
+    query_path = schema.query_path[0]
+    selects = listwrap(query.select)
+
+    acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
 
     with Timer("ES query time", silent=not DEBUG) as es_duration:
         result = es_post(es, es_query, query.limit)
@@ -438,16 +462,17 @@ def es_aggsop(es, frum, query):
     try:
         format_time = Timer("formatting", silent=not DEBUG)
         with format_time:
-            # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)  # IT APPEARS THE OLD doc_count IS GONE
+            # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)
+            # IT APPEARS THE OLD doc_count IS GONE
             aggs = unwrap(result.aggregations)
 
             formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
             if query.edges:
-                output = formatter(aggs, acc, query, decoders, select)
+                output = formatter(aggs, acc, query, decoders, selects)
             elif query.groupby:
-                output = groupby_formatter(aggs, acc, query, decoders, select)
+                output = groupby_formatter(aggs, acc, query, decoders, selects)
             else:
-                output = aggop_formatter(aggs, acc, query, decoders, select)
+                output = aggop_formatter(aggs, acc, query, decoders, selects)
 
         output.meta.timing.formatting = format_time.duration
         output.meta.timing.es_search = es_duration.duration

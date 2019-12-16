@@ -25,7 +25,7 @@ import re
 import mo_json
 from jx_base.language import BaseExpression, ID, TYPE_ORDER, define_language, is_expression, is_op, value_compare
 from jx_base.utils import get_property_name, is_variable_name
-from mo_dots import Null, coalesce, is_data, is_sequence, split_field, wrap, is_container, is_many
+from mo_dots import Null, coalesce, is_data, is_sequence, split_field, wrap, is_container, is_many, FlatList
 from mo_future import first, get_function_name, is_text, items as items_, text, utf8_json_encoder, zip_longest
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, python_type_to_json_type, scrub
 from mo_json.typed_encoder import inserter_type_to_json_type
@@ -53,7 +53,12 @@ def extend(cls):
 
 def last(values):
     if len(values):
-        return values[-1]
+        if isinstance(values, FlatList):
+            return values.last()
+        if is_sequence(values):
+            return values[-1]
+        else:
+            return first(values)
     else:
         return Null
 
@@ -96,7 +101,7 @@ def _jx_expression(expr, lang):
     """
     if is_expression(expr):
         # CONVERT TO lang
-        new_op = lang[expr.get_id()]
+        new_op = lang[expr]
         if not new_op:
             # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
             return language[expr.get_id()].partial_eval()
@@ -133,7 +138,7 @@ def _jx_expression(expr, lang):
         else:
             if not items:
                 return NULL
-            raise Log.error("{{instruction|json}} is not known", instruction=items)
+            raise Log.error("{{instruction|json}} is not known", instruction=expr)
 
     except Exception as e:
         Log.error("programmer error expr = {{value|quote}}", value=expr, cause=e)
@@ -1273,6 +1278,35 @@ class NotOp(Expression):
 
         output = inverse(self.lang[self.term].partial_eval())
         return output
+
+
+class AbsOp(Expression):
+    data_type = NUMBER
+
+    def __init__(self, term):
+        Expression.__init__(self, term)
+        self.term = term
+
+    def __data__(self):
+        return {"abs": self.term.__data__()}
+
+    def __eq__(self, other):
+        if not is_op(other, AbsOp):
+            return False
+        return self.term == other.term
+
+    def vars(self):
+        return self.term.vars()
+
+    def map(self, map_):
+        return self.lang[AbsOp(self.term.map(map_))]
+
+    def missing(self):
+        return self.term.missing()
+
+    @simplified
+    def partial_eval(self):
+        return AbsOp(self.term.partial_eval())
 
 
 class AndOp(Expression):
@@ -3166,6 +3200,7 @@ class SqlEqOp(Expression):
     data_type = BOOLEAN
 
     def __init__(self, terms):
+        Expression.__init__(self, terms)
         self.lhs, self.rhs = terms
 
     def __data__(self):
@@ -3250,6 +3285,7 @@ builtin_ops = {
 }
 
 operators = {
+    "abs": AbsOp,
     "add": AddOp,
     "and": AndOp,
     "basic.add": BasicAddOp,

@@ -114,10 +114,6 @@ class Container(object):
     def window(self, window):
         raise NotImplementedError()
 
-    def having(self, having):
-        _ = having
-        raise NotImplementedError()
-
     def format(self, format):
         _ = format
         raise NotImplementedError()

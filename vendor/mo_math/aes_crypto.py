@@ -5,8 +5,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
-#
 
 from __future__ import absolute_import, division, unicode_literals
 
@@ -14,8 +12,7 @@ from mo_dots import Data, get_module
 from mo_future import PY2, binary_type
 from mo_future import is_text, is_binary
 from mo_logs import Log
-from mo_math import base642bytes
-from mo_math.randoms import Random
+from mo_math import base642bytes, crypto, bytes2base64
 from mo_math.vendor.aespython import aes_cipher, cbc_mode, key_expander
 
 DEBUG = False
@@ -41,7 +38,7 @@ def encrypt(text, _key, salt=None):
     if is_binary(_key):
         _key = bytearray(_key)
     if salt is None:
-        salt = Random.bytes(16)
+        salt = crypto.bytes(16)
 
     # Initialize encryption using key and iv
     key_expander_256 = key_expander.KeyExpander(256)

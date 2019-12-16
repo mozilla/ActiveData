@@ -14,6 +14,7 @@ from flask import Response
 from active_data import record_request
 from active_data.actions import save_query
 from jx_base import container
+from jx_elasticsearch import meta
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import is_container
@@ -48,7 +49,7 @@ def send_error(active_data_timer, body, e):
     #         remove_trace(c)
     # remove_trace(e)
 
-    return Response(value2json(e).encode('utf8'), status=status)
+    return Response(value2json(e).encode("utf8"), status=status)
 
 
 def test_mode_wait(query):
@@ -67,7 +68,12 @@ def test_mode_wait(query):
 
         alias = split_field(query["from"])[0]
         after = Date.now()
-        with Timer("Get columns for {{table}} after {{after}}", {"table": alias, "after": after}, silent=not DEBUG):
+        require_cardinality = meta.ENABLE_META_SCAN
+        with Timer(
+            "Get columns for {{table}} after {{after}}",
+            {"table": alias, "after": after},
+            silent=not DEBUG,
+        ):
             metadata_manager = find_container(alias, after=after).namespace
 
             timeout = Till(seconds=MINUTE.seconds)
@@ -78,11 +84,15 @@ def test_mode_wait(query):
                     for c in metadata_manager.get_columns(
                         table_name=alias, after=after, timeout=timeout
                     )
-                    if c.jx_type not in STRUCT and (after >= c.last_updated or c.cardinality == None)
+                    if c.jx_type not in STRUCT
+                    and (
+                        after >= c.last_updated
+                        or (require_cardinality and c.cardinality == None)
+                    )
                 ]
                 if cols:
                     Log.note(
-                        "wait for column (table={{col.es_index}}, name={{col.es_column}}) metadata to arrive",
+                        "wait for column (table={{col.es_index}}, name={{col.es_column}}, cardinality={{col.cardinality|json}}, last_updated={{col.last_updated|datetime}}) metadata to arrive",
                         col=first(cols),
                     )
                 else:

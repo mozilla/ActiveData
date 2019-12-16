@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions import Variable
+from jx_base.language import is_op
 from mo_future import is_text, is_binary
 from copy import copy
 
@@ -75,16 +77,12 @@ class Normal(Namespace):
         if not mo_math.is_integer(output.limit) or output.limit < 0:
             Log.error("Expecting limit >= 0")
 
-        output.isLean = query.isLean
-
         # DEPTH ANALYSIS - LOOK FOR COLUMN REFERENCES THAT MAY BE DEEPER THAN
         # THE from SOURCE IS.
         vars = get_all_vars(output, exclude_where=True)  # WE WILL EXCLUDE where VARIABLES
         for c in query.columns:
             if c.name in vars and len(c.nested_path) != 1:
                 Log.error("This query, with variable {{var_name}} is too deep", var_name=c.name)
-
-        output.having = convert_list(self._convert_having, query.having)
 
         return output
 

@@ -20,20 +20,26 @@
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
 		"jx_elasticsearch.meta.DEBUG": true,
-		"jx_elasticsearch.es52.setop.DEBUG": true,
-		"jx_elasticsearch.es52.aggs.DEBUG": true
+		"pyLibrary.sql.sqlite.DEBUG": true
 	},
 	"request_logs": {
 		"host": "http://localhost",
 		"port": 9200,
-		"index": "activedata_requests",
+		"index": "activedata-requests",
 		"type": "request_log",
 		"typed": false,
 		"schema": {
 			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
-	"saved_queries":{
+	"bulk": {
+		"s3": {
+			"bucket": "active-data-query-results",
+			"public": true,
+			"$ref": "file://~/private.json#aws_credentials"
+		}
+	},
+	"saved_queries": {
 		"host": "http://localhost",
 		"port": 9200,
 		"index": "saved_queries",
@@ -58,38 +64,16 @@
 				"log_type": "console"
 			},
 			{
-				"log_type": "ses",
-				"from_address": "klahnakoski@mozilla.com",
-				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV] Problem in ActiveData Frontend6",
-				"$ref": "file://~/private.json#aws_credentials"
-			},
-			{
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
-				"port": 9200,
+				"port": 9201,
 				"index": "debug-activedata",
 				"type": "activedata",
-				"timeout": 600,
-				"schema": {
-					"settings": {
-						"index.number_of_replicas": 1,
-						"index.number_of_shards": 3
-					}
-				},
 				"rollover": {
 					"interval": "3month",
 					"max":"year"
 				}
-			},
-			{
-				"class": "logging.handlers.RotatingFileHandler",
-				"filename": "/data1/logs/activedata.log",
-				"maxBytes": 10000000,
-				"backupCount": 10,
-				"encoding": "utf8"
 			}
 		]
 	}
-
 }

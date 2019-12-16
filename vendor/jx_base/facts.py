@@ -9,6 +9,9 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_future import is_text
+from mo_logs import Log
+
 
 class Facts(object):
     """
@@ -16,14 +19,21 @@ class Facts(object):
     WITH THE RELATIONS THAT CONNECT THEM ALL, BUT LIMITED TO A TREE
     """
 
-    def __init__(self, container, snowflake):
+    def __init__(self, name, container):
+        if not is_text(name):
+            Log.error("parameter is wrong")
         self.container = container
-        self.snowflake = snowflake
+        self.name = name
 
     @property
     def namespace(self):
         return self.container.namespace
 
     @property
+    def snowflake(self):
+        return self.schema.snowflake
+
+    @property
     def schema(self):
-        return self.snowflake.schema
+        return self.container.ns.get_schema(self.name)
+

@@ -16,11 +16,9 @@ from mo_logs import Log, strings
 from mo_logs.strings import quote
 from mo_times.dates import Date
 
-
 from jx_base.expressions import (
     AddOp as AddOp_,
     AndOp as AndOp_,
-    BaseInequalityOp as BaseInequalityOp_,
     BasicEqOp as BasicEqOp_,
     BasicIndexOfOp as BasicIndexOfOp_,
     BetweenOp as BetweenOp_,
@@ -86,7 +84,7 @@ from jx_base.expressions import (
     define_language,
     extend,
     jx_expression,
-)
+    Expression)
 from jx_base.language import is_expression, is_op
 from jx_python.expression_compiler import compile_expression
 
@@ -117,7 +115,7 @@ class PythonScript(PythonScript_):
     __slots__ = ("miss", "data_type", "expr", "frum", "many")
 
     def __init__(self, type, expr, frum, miss=None, many=False):
-        object.__init__(self)
+        Expression.__init__(self, None)
         if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
             if frum.lang != miss.lang:
                 Log.error("logic error")

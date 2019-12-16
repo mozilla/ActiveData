@@ -37,7 +37,7 @@ DEBUG_METADATA_UPDATE = False
 
 ES_STRUCT = ["object", "nested"]
 ES_NUMERIC_TYPES = ["long", "integer", "double", "float"]
-ES_PRIMITIVE_TYPES = ["string", "boolean", "integer", "date", "long", "double"]
+ES_PRIMITIVE_TYPES = ("boolean", "float", "integer", "date", "long", "double", "string", "keyword")
 
 INDEX_DATE_FORMAT = "%Y%m%d_%H%M%S"
 SUFFIX_PATTERN = r'\d{8}_\d{6}'
@@ -329,7 +329,7 @@ class Index(Features):
             if version:
                 yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
             else:
-                yield '{"index":{"_id": ' + value2json(id) + '}}'.encode('utf8')
+                yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
             yield LF
             yield json_bytes.encode('utf8')
             yield LF
@@ -424,7 +424,7 @@ class Index(Features):
         for n in jx.reverse(split_field(name)):
             if n == NESTED_TYPE:
                 details = {"properties": {n: set_default(details, {"type": "nested", "dynamic": True})}}
-            elif n.startswith(TYPE_PREFIX):
+            elif n.startswith(TYPE_PREFIX) or details['type'] in ES_PRIMITIVE_TYPES:
                 details = {"properties": {n: details}}
             else:
                 details = {"properties": {n: set_default(details, {"type": "object", "dynamic": True})}}
@@ -766,7 +766,7 @@ class Cluster(object):
                 kwargs.alias = requested_name
 
         if not re.match('.*' + SUFFIX_PATTERN, index):
-            Log.error("Expecting index name to conform to pattern")
+            Log.error("Expecting index name to conform to pattern {{pattern}}", pattern=INDEX_DATE_FORMAT)
 
         if kwargs.schema_file:
             Log.error('schema_file attribute not supported.  Use {"$ref":<filename>} instead')
@@ -779,8 +779,6 @@ class Cluster(object):
             schema = wrap(schema)
 
         for k, m in items(schema.mappings):
-            m.date_detection = False  # DISABLE DATE DETECTION
-
             if typed:
                 m = schema.mappings[k] = wrap(add_typed_annotations(m))
 
@@ -816,7 +814,7 @@ class Cluster(object):
         self.put(
             "/" + index,
             data=schema,
-            headers={text("Content-Type"): mimetype.JSON},
+            headers={"Content-Type": mimetype.JSON},
             stream=False
         )
 

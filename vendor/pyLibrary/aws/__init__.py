@@ -105,8 +105,7 @@ class Queue(object):
         return message, payload
 
     def commit(self):
-        pending = self.pending
-        self.pending = []
+        pending, self.pending = self.pending, []
         for p in pending:
             self.queue.delete_message(p)
 
@@ -114,16 +113,19 @@ class Queue(object):
         if self.pending:
             pending, self.pending = self.pending, []
 
-            for p in pending:
-                m = Message()
-                m.set_body(p.get_body())
-                self.queue.write(m)
+            try:
+                for p in pending:
+                    m = Message()
+                    m.set_body(p.get_body())
+                    self.queue.write(m)
 
-            for p in pending:
-                self.queue.delete_message(p)
+                for p in pending:
+                    self.queue.delete_message(p)
 
-            if self.settings.debug:
-                Log.alert("{{num}} messages returned to queue", num=len(pending))
+                if self.settings.debug:
+                    Log.alert("{{num}} messages returned to queue", num=len(pending))
+            except Exception as e:
+                Log.warning("Failed to return {{num}} messages to the queue", num=len(pending), cause=e)
 
     def close(self):
         self.commit()

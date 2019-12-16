@@ -20,6 +20,9 @@ curl -XPOST localhost:9200/coverage20180617_000000/_close
 curl -XPUT  localhost:9200/coverage20180617_000000/_settings -d '{"index.translog.sync_interval": "60s"}'  -H "Content-Type: application/json"
 curl -XPOST localhost:9200/coverage20180617_000000/_open
 
+curl -XPUT localhost:9200/task/_settings -d '{"index.refresh_interval": "60s"}'  -H "Content-Type: application/json"
+
+
 
 curl -XPUT localhost:9200/_settings -d '{"index.refresh_interval": "60s"}'  -H "Content-Type: application/json"
 curl -XPUT localhost:9200/_settings -d '{"index.translog.durability": "async"}'  -H "Content-Type: application/json"

@@ -17,7 +17,7 @@ from decimal import Decimal
 from json.encoder import encode_basestring
 from math import floor
 
-from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list
+from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, is_list, unwrap
 from mo_future import PYPY, binary_type, is_binary, is_text, long, sort_using_key, text, utf8_json_encoder, xrange
 from mo_json import ESCAPE_DCT, float2json, scrub
 from mo_logs import Except
@@ -277,6 +277,7 @@ def pretty_json(value):
             return "true"
         elif is_data(value):
             try:
+                value = unwrap(value)
                 items = sort_using_key(value.items(), lambda r: r[0])
                 values = [encode_basestring(k) + PRETTY_COLON + pretty_json(v) for k, v in items if v != None]
                 if not values:

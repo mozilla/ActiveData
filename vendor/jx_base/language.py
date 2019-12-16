@@ -10,9 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
+from decimal import Decimal
 from math import isnan
 
-from mo_dots import Data, data_types, listwrap
+from mo_dots import Data, data_types, listwrap, NullType
 from mo_dots.lists import list_types, is_many
 from mo_future import boolean_type, long, none_type, text, transpose
 from mo_logs import Log
@@ -189,15 +190,14 @@ def value_compare(left, right, ordering=1):
             right = None
             rtype = none_type
 
-        null_order = ordering*10
-        ltype_num = TYPE_ORDER.get(ltype, null_order)
-        rtype_num = TYPE_ORDER.get(rtype, null_order)
+        ltype_num = type_order(ltype, ordering)
+        rtype_num = type_order(rtype, ordering)
 
         type_diff = ltype_num - rtype_num
         if type_diff != 0:
             return ordering if type_diff > 0 else -ordering
 
-        if ltype_num == null_order:
+        if ltype_num in (-10, 10):
             return 0
         elif ltype is builtin_tuple:
             for a, b in zip(left, right):
@@ -221,17 +221,33 @@ def value_compare(left, right, ordering=1):
         Log.error("Can not compare values {{left}} to {{right}}", left=left, right=right, cause=e)
 
 
+def type_order(dtype, ordering):
+    o = TYPE_ORDER.get(dtype)
+    if o is None:
+        if dtype in NULL_TYPES:
+            return ordering * 10
+        else:
+            Log.warning("type will be treated as its own type while sorting")
+            TYPE_ORDER[dtype] = 6
+            return 6
+    return o
+
+
+NULL_TYPES = (none_type, NullType)
+
+
 TYPE_ORDER = {
     boolean_type: 0,
     int: 1,
     float: 1,
+    Decimal: 1,
     Date: 1,
     long: 1,
-    text: 2,
-    list: 3,
-    builtin_tuple: 3,
-    dict: 4,
-    Data: 4
+    text: 3,
+    list: 4,
+    builtin_tuple: 4,
+    dict: 5,
+    Data: 5
 }
 
 

@@ -493,7 +493,11 @@ def datetime2unix(value):
 def unix2datetime(unix):
     if unix == None:
         return Null
-    return datetime.utcfromtimestamp(unix)
+    try:
+        return datetime.utcfromtimestamp(unix)
+    except Exception as e:
+        from mo_logs import Log
+        Log.error("Can not convert {{value}} to datetime", value=unix, cause=e)
 
 
 def unix2Date(unix):

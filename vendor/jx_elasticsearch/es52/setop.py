@@ -422,7 +422,7 @@ def es_query_proto(path, selects, wheres, schema):
     """
     output = None
     last_where = MATCH_ALL
-    for p in reversed(sorted( wheres.keys() | set(selects.keys()))):
+    for p in reversed(sorted(set(wheres.keys()) | set(selects.keys()))):
         where = wheres.get(p)
         select = selects.get(p)
 

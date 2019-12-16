@@ -13,7 +13,7 @@ from collections import MutableMapping
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_future import PY2, generator_types, is_binary, iteritems, long, none_type, text
+from mo_future import generator_types, iteritems, long, none_type, text
 
 from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field
 from mo_dots.utils import CLASS

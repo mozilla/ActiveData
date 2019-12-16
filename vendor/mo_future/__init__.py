@@ -40,6 +40,7 @@ if PY3:
     zip_longest = itertools.zip_longest
 
     text = str
+    text_type = str
     string_types = str
     binary_type = bytes
     integer_types = (int, )
@@ -134,6 +135,7 @@ else:
 
     reduce = __builtin__.reduce
     text = __builtin__.unicode
+    text_type = __builtin__.unicode
     string_types = (str, unicode)
     binary_type = str
     integer_types = (int, long)

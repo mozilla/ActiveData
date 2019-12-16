@@ -11,16 +11,18 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import cgi
-from collections import Mapping
-from datetime import date, datetime as builtin_datetime, timedelta
 import json as _json
-from json.encoder import encode_basestring
 import math
 import re
 import string
+from collections import Mapping
+from datetime import date, datetime as builtin_datetime, timedelta
+from json.encoder import encode_basestring
 
-from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence
-from mo_future import PY3, get_function_name, is_binary, is_text, round as _round, text, transpose, xrange, zip_longest, binary_type
+from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence, NullType
+from mo_future import PY3, get_function_name, is_text, round as _round, text, transpose, xrange, zip_longest, \
+    binary_type
+
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
 
 FORMATTERS = {}
@@ -44,7 +46,11 @@ def _late_import():
         _json_encoder = lambda value, pretty: _json.dumps(value)
     from mo_logs import Log as _Log
     from mo_logs.exceptions import Except as _Except
-    from mo_times.durations import Duration as _Duration
+    try:
+        from mo_times.durations import Duration as _Duration
+    except Exception as e:
+        _Duration = NullType
+        _Log.warning("It would be nice to pip install mo-times", cause=e)
 
     _ = _json_encoder
     _ = _Log
@@ -74,8 +80,13 @@ def datetime(value):
     else:
         value = milli2datetime(value)
 
-    return datetime2string(value, "%Y-%m-%d %H:%M:%S.%f").rstrip(".000000").rstrip("000")
-
+    output = datetime2string(value, "%Y-%m-%d %H:%M:%S.%f")
+    if output.endswith(".000000"):
+        return output[:-7]
+    elif output.endswith("000"):
+        return output[:-3]
+    else:
+        return output
 
 @formatter
 def unicode(value):
@@ -175,7 +186,7 @@ def json(value, pretty=True):
     :param pretty:
     :return:
     """
-    if not _Duration:
+    if _Duration is None:
         _late_import()
     return _json_encoder(value, pretty=pretty)
 
@@ -498,7 +509,7 @@ def limit(value, length):
             rhs = length - len(_SNIP) - lhs
             return value[:lhs] + _SNIP + value[-rhs:]
     except Exception as e:
-        if not _Duration:
+        if _Duration is None:
             _late_import()
         _Log.error("Not expected", cause=e)
 
@@ -527,11 +538,14 @@ def expand_template(template, value):
     :param value: Data HOLDING THE PARAMTER VALUES
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
-    value = wrap(value)
-    if is_text(template):
-        return _simple_expand(template, (value,))
+    try:
+        value = wrap(value)
+        if is_text(template):
+            return _simple_expand(template, (value,))
 
-    return _expand(template, (value,))
+        return _expand(template, (value,))
+    except Exception as e:
+        return "FAIL TO EXPAND: " + template
 
 
 def common_prefix(*args):
@@ -662,7 +676,7 @@ def _simple_expand(template, seq):
 
 
 def toString(val):
-    if not _Duration:
+    if _Duration is None:
         _late_import()
 
     if val == None:

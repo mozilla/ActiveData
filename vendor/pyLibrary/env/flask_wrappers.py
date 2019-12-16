@@ -19,7 +19,7 @@ from mo_files import File, TempFile, URL, mimetype
 from mo_future import decorate, text
 from mo_json import value2json
 from mo_logs import Log
-from mo_threads.threads import register_thread
+from mo_threads.threads import register_thread, Thread
 from pyLibrary.env import git
 from pyLibrary.env.big_data import ibytes2icompressed
 
@@ -78,8 +78,9 @@ def cors_wrapper(func):
         )
         _setdefault(
             headers,
-            "Access-Control-Allow-Methods",
-            flask.request.headers.get("Access-Control-Request-Methods"),
+            "Access-Control-Allow-Methods",                              # PLURAL "Methods"
+            flask.request.headers.get("Access-Control-Request-Method"),  # SINGULAR "Method"
+            # "GET, PUT, POST, DELETE, PATCH, OPTIONS"
         )
         _setdefault(headers, "Content-Type", mimetype.JSON)
         _setdefault(
@@ -259,9 +260,9 @@ def limit_body(size):
         @decorate(func)
         def output(*args, **kwargs):
             if flask.request.headers.get("content-length", "") in ["", "0"]:
-                Log.error("Expected known Content-Length")
+                Log.error("Expecting Content-Length in request headers")
             elif int(flask.request.headers["content-length"]) > size:
-                Log.error("Query is too large to parse")
+                Log.error("Body is limited to {{size}} bytes", size=size)
             return func(*args, **kwargs)
         return output
     return decorator

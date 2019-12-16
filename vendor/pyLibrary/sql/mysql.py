@@ -17,18 +17,18 @@ from pymysql import InterfaceError, connect, cursors
 
 import mo_json
 from jx_python import jx
-from mo_dots import coalesce, is_data, listwrap, unwrap, wrap
+from mo_dots import coalesce, is_data, listwrap, unwrap, wrap, Data
 from mo_files import File
 from mo_future import is_binary, is_text, text, transpose, utf8_json_encoder
 from mo_kwargs import override
-from mo_logs import Log
-from mo_logs.exceptions import Except, suppress_exception
+from mo_logs import Log, Except, suppress_exception
 from mo_logs.strings import expand_template, indent, outdent
 from mo_math import is_number
 from mo_times import Date
+from pyLibrary.env import http
 from pyLibrary.sql import SQL, SQL_AND, SQL_ASC, SQL_DESC, SQL_FROM, SQL_IS_NULL, SQL_LEFT_JOIN, SQL_LIMIT, SQL_NULL, \
     SQL_ONE, SQL_SELECT, SQL_TRUE, SQL_WHERE, sql_iso, sql_list, SQL_INSERT, SQL_VALUES, ConcatSQL, SQL_EQ, \
-    SQL_UPDATE, SQL_SET, JoinSQL, SQL_DOT
+    SQL_UPDATE, SQL_SET, JoinSQL, SQL_DOT, SQL_AS
 
 DEBUG = False
 MAX_BATCH_SIZE = 1
@@ -86,6 +86,12 @@ class MySQL(object):
 
     def _open(self):
         """ DO NOT USE THIS UNLESS YOU close() FIRST"""
+        if self.settings.ssl.ca.startswith("https://"):
+            self.pemfile_url = self.settings.ssl.ca
+            self.pemfile = File("./resources/pem")/self.settings.host
+            self.pemfile.write_bytes(http.get(self.pemfile_url).content)
+            self.settings.ssl.ca = self.pemfile.abspath
+
         try:
             self.db = connect(
                 host=self.settings.host,
@@ -249,7 +255,12 @@ class MySQL(object):
 
     def query(self, sql, param=None, stream=False, row_tuples=False):
         """
-        RETURN LIST OF dicts
+        RETURN A LIST OF dicts
+
+        :param sql:  SQL TEMPLATE TO SEND
+        :param param: PARAMETERS TO INJECT INTO SQL TEMPLATE
+        :param stream: STREAM OUTPUT
+        :param row_tuples: DO NOT RETURN dicts
         """
         if not self.cursor:  # ALLOW NON-TRANSACTIONAL READS
             Log.error("must perform all queries inside a transaction")
@@ -268,11 +279,18 @@ class MySQL(object):
                 else:
                     result = wrap(list(self.cursor))
             else:
-                columns = [utf8_to_unicode(d[0]) for d in coalesce(self.cursor.description, [])]
+                columns = tuple(utf8_to_unicode(d[0]) for d in coalesce(self.cursor.description, []))
+                def streamer():
+                    for row in self.cursor:
+                        output = Data()
+                        for c, v in zip(columns, row):
+                            output[c] = v
+                        yield output
+
                 if stream:
-                    result = (wrap({c: utf8_to_unicode(v) for c, v in zip(columns, row)}) for row in self.cursor)
+                    result = streamer()
                 else:
-                    result = wrap([{c: utf8_to_unicode(v) for c, v in zip(columns, row)} for row in self.cursor])
+                    result = wrap(streamer())
 
             return result
         except Exception as e:
@@ -562,12 +580,12 @@ def quote_value(value):
             return SQL("'" + "".join(ESCAPE_DCT.get(c, c) for c in value) + "'")
         elif is_data(value):
             return quote_value(json_encode(value))
-        elif is_number(value):
-            return SQL(text(value))
         elif isinstance(value, datetime):
             return SQL("str_to_date('" + value.strftime("%Y%m%d%H%M%S.%f") + "', '%Y%m%d%H%i%s.%f')")
         elif isinstance(value, Date):
             return SQL("str_to_date('" + value.format("%Y%m%d%H%M%S.%f") + "', '%Y%m%d%H%i%s.%f')")
+        elif is_number(value):
+            return SQL(text(value))
         elif hasattr(value, '__iter__'):
             return quote_value(json_encode(value))
         else:
@@ -579,6 +597,8 @@ def quote_value(value):
 def quote_column(*path):
     if not path:
         Log.error("missing column_name")
+    if len(path)==1:
+        return SQL("`" + path[0].replace('`', '``') + "`")
     return JoinSQL(SQL_DOT, map(quote_column, path))
 
 
@@ -602,6 +622,12 @@ def quote_sql(value, param=None):
             return text(value)
     except Exception as e:
         Log.error("problem quoting SQL", e)
+
+
+def sql_alias(value, alias):
+    if not isinstance(value, SQL) or not is_text(alias):
+        Log.error("Expecting (SQL, text) parameters")
+    return ConcatSQL((value, SQL_AS, quote_column(alias)))
 
 
 def quote_param(param):

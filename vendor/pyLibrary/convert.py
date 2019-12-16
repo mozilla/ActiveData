@@ -13,21 +13,21 @@ import ast
 import base64
 import cgi
 import datetime
-from decimal import Decimal
 import gzip
 import hashlib
-from io import BytesIO
 import json
 import re
+from decimal import Decimal
+from io import BytesIO
 from tempfile import TemporaryFile
 
+import mo_json
+import mo_math
 from mo_dots import concat_field, unwrap, unwraplist, wrap
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
-import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 from mo_logs.strings import expand_template, quote
-import mo_math
 from mo_times.dates import Date
 
 """
@@ -604,13 +604,13 @@ def table2csv(table_data):
     """
     text_data = [tuple(value2json(vals, pretty=True) for vals in rows) for rows in table_data]
 
-    col_widths = [max(len(text) for text in cols) for cols in zip(*text_data)]
+    col_widths = [max(len(t) for t in cols) for cols in zip(*text_data)]
     template = ", ".join(
         "{{" + text(i) + "|left_align(" + text(w) + ")}}"
         for i, w in enumerate(col_widths)
     )
-    text = "\n".join(expand_template(template, d) for d in text_data)
-    return text
+    output = "\n".join(expand_template(template, d) for d in text_data)
+    return output
 
 
 ZeroMoment2dict = mo_math.stats.ZeroMoment2dict

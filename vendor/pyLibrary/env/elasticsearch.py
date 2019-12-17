@@ -499,6 +499,9 @@ class Index(Features):
             )
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
+        """
+        USE THIS TO AVOID WAITING
+        """
 
         def errors(e, _buffer):  # HANDLE ERRORS FROM extend()
             if e.cause.cause:

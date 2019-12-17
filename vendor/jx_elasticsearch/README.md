@@ -1,6 +1,6 @@
 # `jx_elasticsearch`
 
-This library implements [JSON Query Expressions]() atop an Elasticsearch.
+This library implements [JSON Query Expressions]() atop an Elasticsearch instance.
 
 
 ## Contribution

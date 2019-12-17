@@ -101,7 +101,7 @@ def es_bulkaggsop(esq, frum, query):
         guid = Random.base64(32, extra="-_")
 
         Thread.run(
-            "extract to " + guid+".json",
+            "extract to " + guid + ".json",
             extractor,
             guid,
             num_partitions,
@@ -117,8 +117,8 @@ def es_bulkaggsop(esq, frum, query):
 
     output = wrap(
         {
-            "url": URL_PREFIX / guid+".json",
-            "status": URL_PREFIX / guid+".status.json",
+            "url": URL_PREFIX / (guid + ".json"),
+            "status": URL_PREFIX / (guid + ".status.json"),
             "meta": {
                 "format": "list",
                 "timing": {"cardinality_check": cardinality_check.duration},
@@ -208,7 +208,7 @@ def extractor(
                     break
                 output.write(b"\n]\n")
 
-            upload(guid+".json", temp_file)
+            upload(guid + ".json", temp_file)
         write_status(
             guid,
             {

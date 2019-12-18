@@ -19,6 +19,7 @@ from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop, es_bulkaggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
 from jx_elasticsearch.es52.setop import es_setop, is_setop
+from jx_elasticsearch.es52.stats import QueryStats
 from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
@@ -78,6 +79,7 @@ class ES52(Container):
 
         self._ensure_max_result_window_set(name)
         self.settings.type = self.es.settings.type
+        self.stats = QueryStats(self.es.cluster)
 
         columns = self.snowflake.columns  # ABSOLUTE COLUMNS
         is_typed = any(c.es_column == EXISTS_TYPE for c in columns)
@@ -180,6 +182,8 @@ class ES52(Container):
     def query(self, _query):
         try:
             query = QueryOp.wrap(_query, container=self, namespace=self.namespace)
+
+            self.stats.record(query)
 
             for s in listwrap(query.select):
                 if s.aggregate != None and not aggregates.get(s.aggregate):

@@ -72,10 +72,10 @@ class AndOp(Expression):
             if simple.type != BOOLEAN:
                 simple = simple.exists()
 
-            if simple is TRUE:
+            if simple is self.lang[TRUE]:
                 continue
             elif simple is FALSE:
-                return FALSE
+                return self.lang[FALSE]
             elif is_op(simple, AndOp):
                 for and_terms in or_terms:
                     and_terms.extend([tt for tt in simple.terms if tt not in and_terms])

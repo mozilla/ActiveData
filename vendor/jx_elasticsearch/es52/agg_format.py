@@ -10,12 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import TupleOp
-from jx_base.query import canonical_aggregates
 from jx_base.language import is_op
-from jx_elasticsearch.es52.agg_op import aggs_iterator, count_dim, agg_formatters
+from jx_base.query import canonical_aggregates
+from jx_elasticsearch.es52.agg_op import aggs_iterator, count_dim
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
+from mo_dots import Data, coalesce, is_list, split_field, wrap
 from mo_files import mimetype
 from mo_future import sort_using_key
 from mo_json import value2json
@@ -271,7 +271,7 @@ def format_line(aggs, es_query, query, decoders, select):
     return data()
 
 
-format_dispatch = {
+agg_formatters = {
     # EDGES FORMATTER, GROUPBY FORMATTER, VALUE_FORMATTER, mime_type
     None: (format_cube, format_table, format_cube, mimetype.JSON),
     "cube": (format_cube, format_cube, format_cube, mimetype.JSON),

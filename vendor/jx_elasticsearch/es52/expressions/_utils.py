@@ -12,14 +12,12 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import (
     AndOp as AndOp_,
     FALSE,
-    FalseOp as FalseOp_,
-    NullOp,
-    TrueOp as TrueOp_,
     Variable as Variable_,
-    extend,
 )
 from jx_base.expressions.literal import is_literal
 from jx_base.language import Language, is_op
+from jx_elasticsearch.es52.painless import Painless
+from jx_elasticsearch.es52.painless.es_script import es_script
 from mo_dots import Null, wrap
 from mo_future import first
 from mo_logs import Log
@@ -43,11 +41,6 @@ def _inequality_to_esfilter(self, schema):
         if script.miss is not FALSE:
             Log.error("inequality must be decisive")
         return {"script": es_script(script.expr)}
-
-
-@extend(TrueOp_)
-def to_esfilter(self, schema):
-    return MATCH_ALL
 
 
 def split_expression_by_depth(where, schema, output=None, var_to_depth=None):

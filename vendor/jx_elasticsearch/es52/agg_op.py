@@ -611,8 +611,7 @@ def count_dim(aggs, es_query, decoders):
     return [d.edge for d in decoders]
 
 
-agg_formatters = {}
+from jx_elasticsearch.es52.agg_format import format_cube, agg_formatters
 
-from jx_elasticsearch.es52.agg_format import format_cube
 _ = format_cube
 

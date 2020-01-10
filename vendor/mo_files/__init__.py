@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 import base64
 import io
@@ -335,7 +335,7 @@ class File(object):
                 self.parent.create()
             with open(self._filename, "ab") as output_file:
                 for c in content:
-                    if isinstance(c, str):
+                    if not isinstance(c, text):
                         Log.error(u"expecting to write unicode only")
 
                     output_file.write(c.encode("utf8"))

@@ -18,7 +18,8 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, CountAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
-from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
+from jx_elasticsearch.es52.expressions import AndOp, ES52
+from jx_elasticsearch.es52.expressions._utils import split_expression_by_path
 from jx_elasticsearch.es52.painless import NumberOp, Painless
 from jx_elasticsearch.es52.setop import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates

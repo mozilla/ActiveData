@@ -4,12 +4,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
 import sys
+from collections import OrderedDict
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 from mo_future import binary_type, generator_types, is_binary, is_text, text
@@ -233,7 +234,10 @@ def _all_default(d, default, seen=None):
 
     for k, default_value in default.items():
         default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
-        existing_value = _get_attr(d, [k])
+        if is_data(d):
+            existing_value = d.get(k)
+        else:
+            existing_value = _get_attr(d, [k])
 
         if existing_value == None:
             if default_value != None:
@@ -460,7 +464,7 @@ def wrap(v):
 
     type_ = _get(v, CLASS)
 
-    if type_ is dict:
+    if type_ in (dict, OrderedDict):
         m = object.__new__(Data)
         _set(m, SLOT, v)
         return m

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import deepcopy
 
 import mo_math
-from jx_base.expressions import Variable, value2json, TRUE
+from jx_base.expressions import Variable, TRUE
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.aggs import build_es_query
@@ -20,6 +20,7 @@ from jx_elasticsearch.es52.format import format_list_from_groupby
 from mo_dots import listwrap, unwrap, Null, wrap, coalesce, unwraplist
 from mo_files import TempFile, URL, mimetype
 from mo_future import first, is_text
+from mo_json import value2json
 from mo_logs import Log, Except
 from mo_math.randoms import Random
 from mo_threads import Thread

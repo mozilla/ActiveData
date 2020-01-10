@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import IDENTITY, LeavesOp, Variable
+from jx_base.expressions import LeavesOp, Variable, IDENTITY
 from jx_base.query import DEFAULT_LIMIT
 from jx_base.language import is_op
 from jx_elasticsearch import post as es_post

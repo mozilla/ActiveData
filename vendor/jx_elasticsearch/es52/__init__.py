@@ -30,7 +30,8 @@ from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Except, Log
 from mo_times import Date
-from pyLibrary.env import elasticsearch, http
+from pyLibrary.env import http
+from jx_elasticsearch import elasticsearch
 
 
 class ES52(Container):

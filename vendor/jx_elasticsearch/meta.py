@@ -58,8 +58,8 @@ from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till, MAIN_THREAD
 from mo_times import Date, HOUR, MINUTE, Timer, WEEK
-from pyLibrary.env import elasticsearch
-from pyLibrary.env.elasticsearch import (
+from jx_elasticsearch import elasticsearch
+from jx_elasticsearch.elasticsearch import (
     _get_best_type_from_mapping,
     es_type_to_json_type,
 )

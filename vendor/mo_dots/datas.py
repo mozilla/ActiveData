@@ -4,12 +4,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import MutableMapping
+from collections import MutableMapping, OrderedDict
 from copy import copy, deepcopy
 from decimal import Decimal
 
@@ -188,6 +188,32 @@ class Data(MutableMapping):
     def __iadd__(self, other):
         return _iadd(self, other)
 
+    def __or__(self, other):
+        if not _get(other, CLASS) in data_types:
+            get_logger().error("Expecting a Mapping")
+
+        output = object.__new__(Data)
+        output._internal_dict = {}
+        d = self._internal_dict
+        for ok, ov in other.items():
+            sv = d.get(ok)
+            output[ok] = sv | ov
+        return output
+
+    def __ror__(self, other):
+        if not _get(other, CLASS) in data_types:
+            get_logger().error("Expecting a Mapping")
+
+        return wrap(other).__or__(self)
+
+    def __ior__(self, other):
+        if not _get(other, CLASS) in data_types:
+            get_logger().error("Expecting a Mapping")
+        d = self._internal_dict
+        for ok, ov in other.items():
+            sv = d.get(ok)
+            d[ok] = sv | ov
+        return d
 
     def __hash__(self):
         d = self._internal_dict
@@ -395,7 +421,7 @@ def _iadd(self, other):
     return self
 
 
-data_types = (Data, dict)  # TYPES TO HOLD DATA
+data_types = (Data, dict, OrderedDict)  # TYPES TO HOLD DATA
 
 
 def register_data(type_):

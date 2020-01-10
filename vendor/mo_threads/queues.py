@@ -6,7 +6,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 # THIS THREADING MODULE IS PERMEATED BY THE please_stop SIGNAL.
 # THIS SIGNAL IS IMPORTANT FOR PROPER SIGNALLING WHICH ALLOWS
@@ -163,7 +163,7 @@ class Queue(object):
                 if not stop_waiting and len(self.queue) >= self.max:
                     now = time()
                     Log.alert(
-                        "Queue by name of {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
+                        "Queue with name {{name|quote}} is full with ({{num}} items), thread(s) have been waiting {{wait_time}} sec",
                         name=self.name,
                         num=len(self.queue),
                         wait_time=now-start

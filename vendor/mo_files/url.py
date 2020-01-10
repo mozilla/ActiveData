@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
@@ -20,7 +20,15 @@ class URL(object):
     [1] https://docs.python.org/3/library/urllib.parse.html
     """
 
+    def __new__(cls, value, *args, **kwargs):
+        if isinstance(value, URL):
+            return value
+        else:
+            return object.__new__(cls)
+
     def __init__(self, value, port=None, path=None, query=None, fragment=None):
+        if isinstance(value, URL):
+            return
         try:
             self.scheme = None
             self.host = None
@@ -110,8 +118,10 @@ def int2hex(value, size):
 
 
 def hex2chr(hex):
-    return unichr(int(hex, 16))
-
+    try:
+        return unichr(int(hex, 16))
+    except Exception as e:
+        raise e
 
 if PY2:
     _map2url = {chr(i): chr(i) for i in range(32, 128)}

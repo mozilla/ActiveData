@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -383,9 +383,12 @@ def between(value, prefix, suffix, start=0):
         return None
     s += len(prefix)
 
-    e = value.find(suffix, s)
-    if e == -1:
-        return None
+    if suffix is None:
+        e = len(value)
+    else:
+        e = value.find(suffix, s)
+        if e == -1:
+            return None
 
     s = value.rfind(prefix, start, e) + len(prefix)  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
 
@@ -535,7 +538,7 @@ THE REST OF THIS FILE IS TEMPLATE EXPANSION CODE USED BY mo-logs
 def expand_template(template, value):
     """
     :param template: A UNICODE STRING WITH VARIABLE NAMES IN MOUSTACHES `{{.}}`
-    :param value: Data HOLDING THE PARAMTER VALUES
+    :param value: Data HOLDING THE PARAMETER VALUES
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
     try:

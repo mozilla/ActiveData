@@ -62,15 +62,6 @@ def post(es, es_query, limit):
         if not es_query.sort:
             es_query.sort = None
         post_result = es.search(es_query)
-
-        for facetName, f in post_result.facets.items():
-            if f._type == "statistical":
-                continue
-            if not f.terms:
-                continue
-
-            if not DEBUG and not limit and len(f.terms) == limit:
-                Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")
     except Exception as e:
         Log.error("Error with FromES", e)
 

@@ -53,10 +53,8 @@ def is_setop(es, query):
     return False
 
 
-def es_setop(es, query):
+def get_selects(query):
     schema = query.frum.schema
-    query_path = schema.query_path[0]
-
     split_select = {".": ESSelect('.')}
 
     def get_select(path):
@@ -65,10 +63,8 @@ def es_setop(es, query):
             es_select = split_select[path] = ESSelect(path)
         return es_select
 
-
     selects = wrap([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
-
     put_index = 0
     for select in selects:
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
@@ -115,12 +111,14 @@ def es_setop(es, query):
                     # PULL WHOLE NESTED ARRAYS
                     get_select('.').use_source = True
                     for c in leaves:
-                        if len(c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRST LEVEL PROPERTIES
+                        if len(
+                            c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRST LEVEL PROPERTIES
                             pre_child = join_field(decode_property(n) for n in split_field(c.name))
                             new_select.append({
                                 "name": select.name,
                                 "value": Variable(c.es_column),
-                                "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
+                                "put": {"name": select.name, "index": put_index,
+                                        "child": untype_path(relative_field(pre_child, s_column))},
                                 "pull": get_pull_source(c.es_column)
                             })
                 else:
@@ -141,7 +139,8 @@ def es_setop(es, query):
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))},
+                                    "put": {"name": select.name, "index": put_index,
+                                            "child": untype_path(relative_field(pre_child, s_column))},
                                     "pull": get_pull_source(c.es_column)
                                 })
                             else:
@@ -150,14 +149,16 @@ def es_setop(es, query):
                                 new_select.append({
                                     "name": select.name,
                                     "value": Variable(c.es_column),
-                                    "put": {"name": select.name, "index": put_index, "child": untype_path(relative_field(pre_child, s_column))}
+                                    "put": {"name": select.name, "index": put_index,
+                                            "child": untype_path(relative_field(pre_child, s_column))}
                                 })
                         else:
                             es_select = get_select(c_nested_path)
                             es_select.fields.append(c.es_column)
 
                             child = relative_field(untype_path(relative_field(c.name, schema.query_path[0])), s_column)
-                            pull = accumulate_nested_doc(c_nested_path, Variable(relative_field(s_column, unnest_path(c_nested_path))))
+                            pull = accumulate_nested_doc(c_nested_path,
+                                                         Variable(relative_field(s_column, unnest_path(c_nested_path))))
                             new_select.append({
                                 "name": select.name,
                                 "value": select.value,
@@ -179,14 +180,14 @@ def es_setop(es, query):
             split_scripts = split_expression_by_path(select.value, schema, lang=Painless)
             for p, script in split_scripts.items():
                 es_select = get_select(p)
-                es_select.scripts[select.name] = {"script": text(Painless[first(script)].partial_eval().to_es_script(schema))}
+                es_select.scripts[select.name] = {
+                    "script": text(Painless[first(script)].partial_eval().to_es_script(schema))}
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function("fields." + literal_field(select.name)),
                     "put": {"name": select.name, "index": put_index, "child": "."}
                 })
                 put_index += 1
-
     for n in new_select:
         if n.pull:
             continue
@@ -199,6 +200,14 @@ def es_setop(es, query):
                 n.pull = jx_expression_to_function(concat_field("fields", literal_field(n.value.var)))
         else:
             Log.error("Do not know what to do")
+    return new_select, split_select
+
+
+def es_setop(es, query):
+    schema = query.frum.schema
+    query_path = schema.query_path[0]
+
+    new_select, split_select = get_selects(query)
 
     split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
     es_query = es_query_proto(query_path, split_select, split_wheres, schema)
@@ -209,8 +218,6 @@ def es_setop(es, query):
         data = es_post(es, es_query, query.limit)
 
     T = data.hits.hits
-
-    # Log.note("{{output}}", output=T)
 
     try:
         formatter, groupby_formatter, mime_type = format_dispatch[query.format]

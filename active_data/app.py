@@ -26,13 +26,14 @@ from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
 from jx_elasticsearch.es52 import bulk_aggs
+from jx_elasticsearch import elasticsearch
 from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text
 from mo_logs import Log, constants, machine_metadata, startup
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
-from pyLibrary.env import elasticsearch, http
+from pyLibrary.env import  http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow, add_version
 
 

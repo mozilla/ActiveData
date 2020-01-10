@@ -15,8 +15,9 @@ from jx_base.expressions import (
     is_literal,
 )
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
+from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from jx_elasticsearch.es52.painless import false_script
-from jx_elasticsearch.es52.util import MATCH_ALL, MATCH_NONE
 from mo_future import first
 from jx_elasticsearch.es52.painless import BasicStartsWithOp as PainlessBasicStartsWithOp
 

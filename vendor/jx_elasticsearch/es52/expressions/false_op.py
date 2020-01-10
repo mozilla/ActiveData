@@ -7,12 +7,15 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import ScriptOp as ScriptOp_
-from jx_elasticsearch.es52.painless.es_script import es_script
+from jx_base.expressions import FalseOp as FalseOp_
 
 
-class ScriptOp(ScriptOp_):
+class FalseOp(FalseOp_):
     def to_esfilter(self, schema):
-        return {"script": es_script(self.script)}
+        return MATCH_NONE
+
+
+MATCH_NONE = {"bool": {"must_not": {"match_all": {}}}}

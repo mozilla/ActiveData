@@ -20,22 +20,12 @@ from jx_base.expressions import (
 )
 from jx_base.expressions.literal import is_literal
 from jx_base.language import Language, is_op
-from jx_elasticsearch.es52.painless import Painless
-from jx_elasticsearch.es52.util import MATCH_ALL, MATCH_NONE, es_script
 from mo_dots import Null, wrap
 from mo_future import first
 from mo_logs import Log
 from mo_math import MAX
 
-
-@extend(NullOp)
-def to_esfilter(self, schema):
-    return MATCH_NONE
-
-
-@extend(FalseOp_)
-def to_esfilter(self, schema):
-    return MATCH_NONE
+MATCH_NONE, MATCH_ALL, Painlesss = [None] * 3
 
 
 def _inequality_to_esfilter(self, schema):

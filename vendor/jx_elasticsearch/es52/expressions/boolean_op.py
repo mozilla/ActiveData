@@ -11,11 +11,11 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BooleanOp as BooleanOp_, Variable as Variable_
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.expressions._utils import ES52
 from jx_elasticsearch.es52.expressions import find_op
 from jx_elasticsearch.es52.expressions.find_op import FindOp
-from jx_elasticsearch.es52.util import es_exists
 
 
 class BooleanOp(BooleanOp_):

@@ -7,12 +7,17 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import ScriptOp as ScriptOp_
-from jx_elasticsearch.es52.painless.es_script import es_script
+from jx_base.expressions import TrueOp as TrueOp_
+from mo_dots import wrap
 
 
-class ScriptOp(ScriptOp_):
+class TrueOp(TrueOp_):
+
     def to_esfilter(self, schema):
-        return {"script": es_script(self.script)}
+        return MATCH_ALL
+
+
+MATCH_ALL = wrap({"match_all": {}})

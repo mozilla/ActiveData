@@ -9,8 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.language import Language
-
 from jx_base.expressions import (
     FALSE,
     FalseOp as FalseOp_,
@@ -20,12 +18,12 @@ from jx_base.expressions import (
     TrueOp as TrueOp_,
     extend,
 )
+from jx_base.language import Language
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from mo_dots import Null
-from mo_future import text
-from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, STRING
+from mo_json import BOOLEAN, IS_NULL, NUMBER, STRING
 
-AndOp, Literal, NumberOp, OrOp, WhenOp = [None]*5
+AndOp, Literal, NumberOp, OrOp, WhenOp  = [None]*5
 
 
 MAX_INT32 = 2147483647
@@ -208,3 +206,4 @@ null_script = EsScript(miss=TRUE, type=IS_NULL, expr="null", frum=NULL, schema=N
 empty_string_script = EsScript(
     miss=TRUE, type=STRING, expr='""', frum=NULL, schema=Null
 )
+

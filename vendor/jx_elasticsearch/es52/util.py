@@ -9,11 +9,11 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-
 import mo_math
 from jx_base.expressions import Variable
 from jx_base.language import is_op
+from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_elasticsearch.es52.expressions.and_op import es_and
 from mo_dots import wrap, Null, coalesce
 from mo_future import is_text, first
 from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING
@@ -127,33 +127,6 @@ aggregates = {
 }
 
 NON_STATISTICAL_AGGS = {"none", "one"}
-
-def es_and(terms):
-    return wrap({"bool": {"filter": terms}})
-
-
-def es_or(terms):
-    return wrap({"bool": {"should": terms}})
-
-
-def es_not(term):
-    return wrap({"bool": {"must_not": term}})
-
-
-def es_script(term):
-    return wrap({"script": {"lang": "painless", "source": term}})
-
-
-def es_missing(term):
-    return {"bool": {"must_not": {"exists": {"field": term}}}}
-
-
-def es_exists(term):
-    return {"exists": {"field": term}}
-
-
-MATCH_ALL = wrap({"match_all": {}})
-MATCH_NONE = es_not({"match_all": {}})
 
 
 pull_functions = {

@@ -11,8 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NeOp as NeOp_, Variable as Variable_, is_literal
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions.not_op import es_not
 from jx_elasticsearch.es52.expressions.script_op import ScriptOp
-from jx_elasticsearch.es52.util import MATCH_ALL, es_not
+from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from mo_future import first
 from mo_logs import Log
 

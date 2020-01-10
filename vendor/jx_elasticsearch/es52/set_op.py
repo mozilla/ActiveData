@@ -14,10 +14,10 @@ from jx_base.expressions import LeavesOp, Variable, IDENTITY
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
+from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path, MATCH_ALL, es_and, es_or
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import format_dispatch
-from jx_elasticsearch.es52.util import MATCH_ALL, es_and, es_or, jx_sort_to_es_sort
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, FlatList, coalesce, concat_field, join_field, listwrap, literal_field, relative_field, \
     set_default, split_field, unwrap, unwraplist, wrap

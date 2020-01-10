@@ -9,6 +9,10 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_elasticsearch.es52.expressions import literal, or_op
+from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
+from mo_dots import wrap
+
 from jx_base.expressions import (
     MissingOp as MissingOp_,
     NotOp as NotOp_,
@@ -16,7 +20,7 @@ from jx_base.expressions import (
 )
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions._utils import ES52
-from jx_elasticsearch.es52.util import MATCH_NONE, es_not, es_or
+from jx_elasticsearch.es52.expressions.or_op import es_or
 from mo_future import first
 from mo_json import NESTED, OBJECT
 
@@ -36,3 +40,12 @@ class NotOp(NotOp_):
         else:
             operand = ES52[self.term].to_esfilter(schema)
             return es_not(operand)
+
+
+def es_not(term):
+    return wrap({"bool": {"must_not": term}})
+
+
+literal.es_not = es_not
+or_op.es_not = es_not
+or_op.NotOp = NotOp

@@ -9,20 +9,15 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from copy import deepcopy
-
-import mo_math
-from jx_base.expressions import TRUE
-from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.agg_op import build_es_query
-from jx_elasticsearch.es52.agg_format import format_list_from_groupby
-from mo_dots import listwrap, unwrap, Null, wrap, coalesce
-from mo_files import TempFile, URL, mimetype
-from mo_future import first
-from mo_logs import Log, Except
-from mo_math.randoms import Random
-from mo_threads import Thread
-from mo_times import Timer, Date
+from jx_base.query import DEFAULT_LIMIT
+from jx_elasticsearch.es52.expressions import split_expression_by_path, ES52
+from jx_elasticsearch.es52.set_format import set_formatters
+from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
+from jx_elasticsearch.es52.util import jx_sort_to_es_sort
+from mo_dots import Null, coalesce
+from mo_files import URL, mimetype
+from mo_logs import Log
+from mo_times import Timer
 from pyLibrary.aws.s3 import Connection
 
 DEBUG = False
@@ -45,190 +40,32 @@ def is_bulksetop(esq, query):
 
 
 def es_bulksetop(esq, frum, query):
-    query = query.copy()  # WE WILL MARK UP THIS QUERY
 
-    chunk_size = min(coalesce(query.chunk_size, MAX_CHUNK_SIZE), MAX_CHUNK_SIZE)
-    schema = frum.schema
-    query_path = first(schema.query_path)
-    selects = listwrap(query.select)
+    schema = query.frum.schema
+    query_path = schema.query_path[0]
+    new_select, split_select = get_selects(query)
+    split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
+    es_query = es_query_proto(query_path, split_select, split_wheres, schema)
+    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
+    es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
-    variable = first(query.groupby).value
-    # FIND CARDINALITY
+    formatter, groupby_formatter, mime_type = set_formatters[query.format]
 
-    cardinality_check = Timer(
-        "Get cardinality for {{column}}", param={"column": variable.var}
-    )
+    with Timer("call to ES", silent=DEBUG) as call_timer:
+        data = esq.es.search(es_query)
 
-    with cardinality_check:
-        columns = schema.leaves(variable.var)
-        if len(columns) != 1:
-            Log.error(
-                "too many columns to bulk groupby:\n{{columns|json}}", columns=columns
-            )
-        column = first(columns)
-
-        if query.where is TRUE:
-            cardinality = column.cardinality
-            if cardinality == None:
-                esq.namespace._update_cardinality(column)
-                cardinality = column.cardinality
-        else:
-            cardinality = esq.query(
-                {
-                    "select": {
-                        "name": "card",
-                        "value": variable,
-                        "aggregate": "cardinality",
-                    },
-                    "from": frum.name,
-                    "where": query.where,
-                    "format": "cube",
-                }
-            ).card
-
-        num_partitions = (cardinality + chunk_size - 1) // chunk_size
-
-        if num_partitions > MAX_PARTITIONS:
-            Log.error("Requesting more than {{num}} partitions", num=num_partitions)
-
-        acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
-        guid = Random.base64(32, extra="-_")
-
-        Thread.run(
-            "extract to " + guid + ".json",
-            extractor,
-            guid,
-            num_partitions,
-            esq,
-            query,
-            selects,
-            query_path,
-            schema,
-            chunk_size,
-            cardinality,
-            parent_thread=Null,
-        )
-
-    output = wrap(
-        {
-            "url": URL_PREFIX / (guid + ".json"),
-            "status": URL_PREFIX / (guid + ".status.json"),
-            "meta": {
-                "format": "list",
-                "timing": {"cardinality_check": cardinality_check.duration},
-                "es_query": es_query,
-                "num_partitions": num_partitions,
-                "cardinality": cardinality,
-            },
-        }
-    )
-    return output
-
-
-def extractor(
-    guid,
-    num_partitions,
-    esq,
-    query,
-    selects,
-    query_path,
-    schema,
-    chunk_size,
-    cardinality,
-    please_stop,
-):
-    total = 0
-    abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
-    # WE MESS WITH THE QUERY LIMITS FOR CHUNKING
-    query.limit = first(query.groupby.domain).limit = chunk_size * 2
-    start_time = Date.now()
+    T = data.hits.hits
 
     try:
-        write_status(
-            guid,
-            {
-                "status": "starting",
-                "chunks": num_partitions,
-                "rows": min(abs_limit, cardinality),
-                "start_time": start_time,
-                "timestamp": Date.now(),
-            },
-        )
 
-        with TempFile() as temp_file:
-            with open(temp_file.abspath, "wb") as output:
-                output.write(b"[\n")
-                comma = b""
-                for i in range(0, num_partitions):
-                    if please_stop:
-                        Log.error("request to shutdown!")
-                    is_last = i == num_partitions - 1
-                    first(query.groupby).allowNulls = is_last
-                    acc, decoders, es_query = build_es_query(
-                        selects, query_path, schema, query
-                    )
-                    # REACH INTO THE QUERY TO SET THE partitions
-                    terms = es_query.aggs._filter.aggs._match.terms
-                    terms.include.partition = i
-                    terms.include.num_partitions = num_partitions
-
-                    result = es_post(esq.es, deepcopy(es_query), query.limit)
-                    aggs = unwrap(result.aggregations)
-                    data = format_list_from_groupby(
-                        aggs, acc, query, decoders, selects
-                    ).data
-
-                    for r in data:
-                        output.write(comma)
-                        comma = b",\n"
-                        output.write(value2json(r).encode("utf8"))
-                        total += 1
-                        if total >= abs_limit:
-                            break
-                    else:
-                        write_status(
-                            guid,
-                            {
-                                "status": "working",
-                                "chunk": i,
-                                "chunks": num_partitions,
-                                "row": total,
-                                "rows": min(abs_limit, cardinality),
-                                "start_time": start_time,
-                                "timestamp": Date.now(),
-                            },
-                        )
-                        continue
-                    break
-                output.write(b"\n]\n")
-
-            upload(guid + ".json", temp_file)
-        write_status(
-            guid,
-            {
-                "ok": True,
-                "status": "done",
-                "chunks": num_partitions,
-                "rows": min(abs_limit, cardinality),
-                "start_time": start_time,
-                "end_time": Date.now(),
-                "timestamp": Date.now(),
-            },
-        )
+        with Timer("formatter", silent=True):
+            output = formatter(T, new_select, query)
+        output.meta.timing.es = call_timer.duration
+        output.meta.content_type = mime_type
+        output.meta.es_query = es_query
+        return output
     except Exception as e:
-        e = Except.wrap(e)
-        write_status(
-            guid,
-            {
-                "ok": False,
-                "status": "error",
-                "error": e,
-                "start_time": start_time,
-                "end_time": Date.now(),
-                "timestamp": Date.now(),
-            },
-        )
-        Log.warning("Could not extract", cause=e)
+        Log.error("problem formatting", e)
 
 
 def upload(filename, temp_file):

@@ -11,15 +11,14 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import deque
 
+import mo_math
 from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, TupleOp, Variable as Variable_
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, CountAggs, ExprAggs, FilterAggs, NestedAggs, TermsAggs, simplify
-from jx_elasticsearch.es52.expressions import AndOp, ES52
-from jx_elasticsearch.es52.expressions._utils import split_expression_by_path
+from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import NumberOp, Painless
 from jx_elasticsearch.es52.set_op import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
@@ -31,7 +30,6 @@ from mo_json import EXISTS, INTEGER, NESTED, NUMBER, OBJECT
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-import mo_math
 from mo_times.timer import Timer
 
 DEBUG = False
@@ -458,7 +456,7 @@ def es_aggsop(es, frum, query):
     acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
 
     with Timer("ES query time", silent=not DEBUG) as es_duration:
-        result = es_post(es, es_query, query.limit)
+        result = es.search(es_query)
 
     try:
         format_time = Timer("formatting", silent=not DEBUG)
@@ -467,13 +465,13 @@ def es_aggsop(es, frum, query):
             # IT APPEARS THE OLD doc_count IS GONE
             aggs = unwrap(result.aggregations)
 
-            formatter, groupby_formatter, aggop_formatter, mime_type = format_dispatch[query.format]
+            edges_formatter, groupby_formatter, value_fomratter, mime_type = agg_formatters[query.format]
             if query.edges:
-                output = formatter(aggs, acc, query, decoders, selects)
+                output = edges_formatter(aggs, acc, query, decoders, selects)
             elif query.groupby:
                 output = groupby_formatter(aggs, acc, query, decoders, selects)
             else:
-                output = aggop_formatter(aggs, acc, query, decoders, selects)
+                output = value_fomratter(aggs, acc, query, decoders, selects)
 
         output.meta.timing.formatting = format_time.duration
         output.meta.timing.es_search = es_duration.duration
@@ -481,7 +479,7 @@ def es_aggsop(es, frum, query):
         output.meta.es_query = es_query
         return output
     except Exception as e:
-        if query.format not in format_dispatch:
+        if query.format not in agg_formatters:
             Log.error("Format {{format|quote}} not supported yet", format=query.format, cause=e)
         Log.error("Some problem", cause=e)
 
@@ -613,7 +611,7 @@ def count_dim(aggs, es_query, decoders):
     return [d.edge for d in decoders]
 
 
-format_dispatch = {}
+agg_formatters = {}
 
 from jx_elasticsearch.es52.agg_format import format_cube
 _ = format_cube

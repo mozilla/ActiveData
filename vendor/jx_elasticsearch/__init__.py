@@ -54,16 +54,3 @@ def new_instance(
         Log.error("Can not make an interpreter for Elasticsearch", cause=e)
 
 
-# SCRUB THE QUERY SO IT IS VALID
-# REPORT ERROR IF OUTPUT APEARS TO HAVE HIT GIVEN limit
-def post(es, es_query, limit):
-    post_result = None
-    try:
-        if not es_query.sort:
-            es_query.sort = None
-        post_result = es.search(es_query)
-    except Exception as e:
-        Log.error("Error with FromES", e)
-
-    return post_result
-

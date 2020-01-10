@@ -14,9 +14,8 @@ from copy import deepcopy
 import mo_math
 from jx_base.expressions import Variable, TRUE
 from jx_base.language import is_op
-from jx_elasticsearch import post as es_post
-from jx_elasticsearch.es52.agg_op import build_es_query
 from jx_elasticsearch.es52.agg_format import format_list_from_groupby
+from jx_elasticsearch.es52.agg_op import build_es_query
 from mo_dots import listwrap, unwrap, Null, wrap, coalesce, unwraplist
 from mo_files import TempFile, URL, mimetype
 from mo_future import first, is_text
@@ -179,7 +178,7 @@ def extractor(
                     terms.include.partition = i
                     terms.include.num_partitions = num_partitions
 
-                    result = es_post(esq.es, deepcopy(es_query), query.limit)
+                    result = esq.es.search(deepcopy(es_query), query.limit)
                     aggs = unwrap(result.aggregations)
                     data = format_list_from_groupby(
                         aggs, acc, query, decoders, selects

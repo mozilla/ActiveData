@@ -13,20 +13,19 @@ from jx_base.expressions import LeavesOp
 from jx_base.language import is_op
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, is_data, is_list, set_default, unwrap, unwraplist, wrap
+from mo_dots import Data, is_data, is_list, unwrap, unwraplist, wrap
 from mo_files import mimetype
 from mo_future import transpose
 from mo_logs import Log
 from mo_math import MAX
 from mo_times.timer import Timer
 
-format_dispatch = {}
 
+def doc_formatter(select, query=None):
+    # RETURN A FUNCTION THAT RETURNS A FORMATTED ROW
 
-def format_list(T, select, query=None):
-    data = []
     if is_list(query.select):
-        for row in T:
+        def format_object(row):
             r = Data()
             for s in select:
                 v = unwraplist(s.pull(row))
@@ -34,16 +33,19 @@ def format_list(T, select, query=None):
                     try:
                         r[s.put.name][s.put.child] = v
                     except Exception as e:
-                        Log.error("what's happening here?")
-            data.append(r if r else None)
-    elif is_op(query.select.value, LeavesOp):
-        for row in T:
+                        Log.error("what's happening here?", cause=e)
+            return r if r else None
+        return format_object
+
+    if is_op(query.select.value, LeavesOp):
+        def format_deep(row):
             r = Data()
             for s in select:
                 r[s.put.name][s.put.child] = unwraplist(s.pull(row))
-            data.append(r if r else None)
+            return r if r else None
+        return format_deep
     else:
-        for row in T:
+        def format_value(row):
             r = None
             for s in select:
                 v = unwraplist(s.pull(row))
@@ -56,17 +58,20 @@ def format_list(T, select, query=None):
                         r = Data()
                     r[s.put.child] = v
 
-            data.append(r)
+            return r
+        return format_value
 
-    return Data(
-        meta={"format": "list"},
-        data=data
-    )
+
+def format_list(documents, select, query=None):
+    f = doc_formatter(select, query)
+    data = [f(row) for row in documents]
+
+    return Data(meta={"format": "list"}, data=data)
 
 
 def format_table(T, select, query=None):
     data = []
-    num_columns = (MAX(select.put.index) + 1)
+    num_columns = MAX(select.put.index) + 1
     for row in T:
         r = [None] * num_columns
         for s in select:
@@ -99,11 +104,7 @@ def format_table(T, select, query=None):
             else:
                 header[s.put.index] = s.name
 
-    return Data(
-        meta={"format": "table"},
-        header=header,
-        data=data
-    )
+    return Data(meta={"format": "table"}, header=header, data=data)
 
 
 def format_cube(T, select, query=None):
@@ -113,25 +114,42 @@ def format_cube(T, select, query=None):
     if len(table.data) == 0:
         return Cube(
             scrub_select(select),
-            edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1}}],
-            data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
+            edges=[
+                {
+                    "name": "rownum",
+                    "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1},
+                }
+            ],
+            data={h: Matrix(list=[]) for i, h in enumerate(table.header)},
         )
 
     cols = transpose(*unwrap(table.data))
     return Cube(
         scrub_select(select),
-        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
-        data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)}
+        edges=[
+            {
+                "name": "rownum",
+                "domain": {
+                    "type": "rownum",
+                    "min": 0,
+                    "max": len(table.data),
+                    "interval": 1,
+                },
+            }
+        ],
+        data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)},
     )
 
+
 def scrub_select(select):
-    return wrap([{k: v for k, v in s.items() if k not in ['pull', 'put']} for s in select])
+    return wrap(
+        [{k: v for k, v in s.items() if k not in ["pull", "put"]} for s in select]
+    )
 
 
-set_default(format_dispatch, {
+set_formatters = {
     None: (format_cube, None, mimetype.JSON),
     "cube": (format_cube, None, mimetype.JSON),
     "table": (format_table, None, mimetype.JSON),
-    "list": (format_list, None, mimetype.JSON)
-})
-
+    "list": (format_list, doc_formatter, mimetype.JSON),
+}

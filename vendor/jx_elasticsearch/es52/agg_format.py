@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import TupleOp
 from jx_base.query import canonical_aggregates
 from jx_base.language import is_op
-from jx_elasticsearch.es52.agg_op import aggs_iterator, count_dim, format_dispatch
+from jx_elasticsearch.es52.agg_op import aggs_iterator, count_dim, agg_formatters
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, set_default, split_field, wrap
@@ -271,15 +271,13 @@ def format_line(aggs, es_query, query, decoders, select):
     return data()
 
 
-set_default(format_dispatch, {
+format_dispatch = {
+    # EDGES FORMATTER, GROUPBY FORMATTER, VALUE_FORMATTER, mime_type
     None: (format_cube, format_table, format_cube, mimetype.JSON),
     "cube": (format_cube, format_cube, format_cube, mimetype.JSON),
     "table": (format_table, format_table, format_table,  mimetype.JSON),
     "list": (format_list, format_list_from_groupby, format_list, mimetype.JSON),
-    # "csv": (format_csv, format_csv_from_groupby,  "text/csv"),
-    # "tab": (format_tab, format_tab_from_groupby,  "text/tab-separated-values"),
-    # "line": (format_line, format_line_from_groupby,  mimetype.JSON)
-})
+}
 
 
 def _get(v, k, d):

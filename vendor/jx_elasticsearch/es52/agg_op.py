@@ -21,7 +21,7 @@ from jx_elasticsearch.es52.es_query import Aggs, CountAggs, ExprAggs, FilterAggs
 from jx_elasticsearch.es52.expressions import AndOp, ES52
 from jx_elasticsearch.es52.expressions._utils import split_expression_by_path
 from jx_elasticsearch.es52.painless import NumberOp, Painless
-from jx_elasticsearch.es52.setop import get_pull_stats
+from jx_elasticsearch.es52.set_op import get_pull_stats
 from jx_elasticsearch.es52.util import aggregates
 from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
@@ -615,6 +615,6 @@ def count_dim(aggs, es_query, decoders):
 
 format_dispatch = {}
 
-from jx_elasticsearch.es52.format import format_cube
+from jx_elasticsearch.es52.agg_format import format_cube
 _ = format_cube
 

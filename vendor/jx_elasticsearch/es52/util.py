@@ -168,7 +168,7 @@ def temper_limit(proposed_limit, query):
     """
     SUITABLE DEFAULTS AND LIMITS
     """
-    from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop
+    from jx_elasticsearch.es52.agg_bulk import is_bulkaggsop
     if is_bulkaggsop(Null, query):
         return coalesce(proposed_limit, query.limit)
     else:

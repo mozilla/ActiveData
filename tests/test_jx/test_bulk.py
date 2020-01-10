@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skipIf
 
-from jx_elasticsearch.es52 import bulk_aggs
+from jx_elasticsearch.es52 import agg_bulk
 from jx_python import jx
 from mo_dots import wrap, set_default
 from mo_future import text
@@ -23,7 +23,7 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 
 class TestBulk(BaseTestCase):
 
-    @skipIf(not bulk_aggs.S3_CONFIG, "can not test S3")
+    @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_bulk_query(self):
         data = wrap([{"a": "test" + text(i)} for i in range(1001)])
         expected = [{"a": r.a, "count": 1} for r in data]

@@ -15,10 +15,10 @@ from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
-from jx_elasticsearch.es52.aggs import es_aggsop, is_aggsop
-from jx_elasticsearch.es52.bulk_aggs import is_bulkaggsop, es_bulkaggsop
+from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
+from jx_elasticsearch.es52.agg_bulk import is_bulkaggsop, es_bulkaggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
-from jx_elasticsearch.es52.setop import es_setop, is_setop
+from jx_elasticsearch.es52.set_op import es_setop, is_setop
 from jx_elasticsearch.es52.stats import QueryStats
 from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table

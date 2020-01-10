@@ -11,28 +11,25 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import LeavesOp, Variable, IDENTITY
-from jx_base.query import DEFAULT_LIMIT
 from jx_base.language import is_op
+from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch import post as es_post
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import Painless
+from jx_elasticsearch.es52.set_format import format_dispatch
 from jx_elasticsearch.es52.util import MATCH_ALL, es_and, es_or, jx_sort_to_es_sort
-from jx_python.containers.cube import Cube
 from jx_python.expressions import jx_expression_to_function
-from mo_collections.matrix import Matrix
-from mo_dots import Data, FlatList, coalesce, concat_field, is_data, is_list, join_field, listwrap, literal_field, relative_field, set_default, split_field, unwrap, unwraplist, wrap
-from mo_files import mimetype
-from mo_future import first, text, transpose
+from mo_dots import Data, FlatList, coalesce, concat_field, join_field, listwrap, literal_field, relative_field, \
+    set_default, split_field, unwrap, unwraplist, wrap
+from mo_future import first, text
 from mo_json import NESTED
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
-from mo_math import AND, MAX
+from mo_math import AND
 from mo_times.timer import Timer
-
 
 DEBUG = False
 
-format_dispatch = {}
 
 
 def is_setop(es, query):
@@ -74,7 +71,7 @@ def get_selects(query):
             for c in leaves:
                 full_name = concat_field(select.name, relative_field(untype_path(c.name), term.var))
                 if c.jx_type == NESTED:
-                    get_select('.').use_source = True
+                    get_select('.').set_op = True
                     new_select.append({
                         "name": full_name,
                         "value": Variable(c.es_column),
@@ -95,7 +92,7 @@ def get_selects(query):
 
             if s_column == ".":
                 # PULL ALL SOURCE
-                get_select('.').use_source = True
+                get_select('.').set_op = True
                 new_select.append({
                     "name": select.name,
                     "value": select.value,
@@ -109,7 +106,7 @@ def get_selects(query):
             if leaves:
                 if any(c.jx_type == NESTED for c in leaves):
                     # PULL WHOLE NESTED ARRAYS
-                    get_select('.').use_source = True
+                    get_select('.').set_op = True
                     for c in leaves:
                         if len(
                             c.nested_path) == 1:  # NESTED PROPERTIES ARE IGNORED, CAPTURED BY THESE FIRST LEVEL PROPERTIES
@@ -134,7 +131,7 @@ def get_selects(query):
                                     "pull": lambda row: row._id
                                 })
                             elif c.jx_type == NESTED:
-                                get_select('.').use_source = True
+                                get_select('.').set_op = True
                                 pre_child = join_field(decode_property(n) for n in split_field(c.name))
                                 new_select.append({
                                     "name": select.name,
@@ -192,7 +189,7 @@ def get_selects(query):
         if n.pull:
             continue
         elif is_op(n.value, Variable):
-            if get_select('.').use_source:
+            if get_select('.').set_op:
                 n.pull = get_pull_source(n.value.var)
             elif n.value == "_id":
                 n.pull = jx_expression_to_function("_id")
@@ -255,119 +252,6 @@ def accumulate_nested_doc(nested_path, expr=IDENTITY):
     return output
 
 
-def format_list(T, select, query=None):
-    data = []
-    if is_list(query.select):
-        for row in T:
-            r = Data()
-            for s in select:
-                v = unwraplist(s.pull(row))
-                if v is not None:
-                    try:
-                        r[s.put.name][s.put.child] = v
-                    except Exception as e:
-                        Log.error("what's happening here?")
-            data.append(r if r else None)
-    elif is_op(query.select.value, LeavesOp):
-        for row in T:
-            r = Data()
-            for s in select:
-                r[s.put.name][s.put.child] = unwraplist(s.pull(row))
-            data.append(r if r else None)
-    else:
-        for row in T:
-            r = None
-            for s in select:
-                v = unwraplist(s.pull(row))
-                if v is None:
-                    continue
-                if s.put.child == ".":
-                    r = v
-                else:
-                    if r is None:
-                        r = Data()
-                    r[s.put.child] = v
-
-            data.append(r)
-
-    return Data(
-        meta={"format": "list"},
-        data=data
-    )
-
-
-def format_table(T, select, query=None):
-    data = []
-    num_columns = (MAX(select.put.index) + 1)
-    for row in T:
-        r = [None] * num_columns
-        for s in select:
-            value = unwraplist(s.pull(row))
-
-            if value == None:
-                continue
-
-            index, child = s.put.index, s.put.child
-            if child == ".":
-                r[index] = value
-            else:
-                if r[index] is None:
-                    r[index] = Data()
-                r[index][child] = value
-
-        data.append(r)
-
-    header = [None] * num_columns
-
-    if is_data(query.select) and not is_op(query.select.value, LeavesOp):
-        for s in select:
-            header[s.put.index] = s.name
-    else:
-        for s in select:
-            if header[s.put.index]:
-                continue
-            if s.name == ".":
-                header[s.put.index] = "."
-            else:
-                header[s.put.index] = s.name
-
-    return Data(
-        meta={"format": "table"},
-        header=header,
-        data=data
-    )
-
-
-def scrub_select(select):
-    return wrap([{k: v for k, v in s.items() if k not in ['pull', 'put']} for s in select])
-
-
-def format_cube(T, select, query=None):
-    with Timer("format table"):
-        table = format_table(T, select, query)
-
-    if len(table.data) == 0:
-        return Cube(
-            scrub_select(select),
-            edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": 0, "interval": 1}}],
-            data={h: Matrix(list=[]) for i, h in enumerate(table.header)}
-        )
-
-    cols = transpose(*unwrap(table.data))
-    return Cube(
-        scrub_select(select),
-        edges=[{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(table.data), "interval": 1}}],
-        data={h: Matrix(list=cols[i]) for i, h in enumerate(table.header)}
-    )
-
-
-set_default(format_dispatch, {
-    None: (format_cube, None, mimetype.JSON),
-    "cube": (format_cube, None, mimetype.JSON),
-    "table": (format_table, None, mimetype.JSON),
-    "list": (format_list, None, mimetype.JSON)
-})
-
 
 def get_pull(column):
     if column.nested_path[0] == ".":
@@ -405,17 +289,16 @@ class ESSelect(object):
     ACCUMULATE THE FIELDS WE ARE INTERESTED IN
     """
 
-
     def __init__(self, path):
         self.path = path
-        self.use_source = False
+        self.set_op = False
         self.fields = []
         self.scripts = {}
 
     def to_es(self):
         return {
-            "_source": self.use_source,
-            "stored_fields": self.fields if not self.use_source else None,
+            "_source": self.set_op,
+            "stored_fields": self.fields if not self.set_op else None,
             "script_fields": self.scripts if self.scripts else None
         }
 

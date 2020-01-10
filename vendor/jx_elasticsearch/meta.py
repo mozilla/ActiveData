@@ -246,7 +246,7 @@ class ElasticsearchMetadata(Namespace):
             )
 
         with Timer(
-            "upserting {{num}} columns", {"num": len(abs_columns)}, silent=not DEBUG
+            "upserting {{num}} columns", {"num": len(abs_columns)}, verbose=DEBUG
         ):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.es_type == "nested"]
@@ -786,7 +786,7 @@ class ElasticsearchMetadata(Namespace):
                     with Timer(
                         "review {{table}}.{{column}}",
                         param={"table": column.es_index, "column": column.es_column},
-                        silent=not DEBUG,
+                        verbose=DEBUG,
                     ):
                         if column.es_index in self.index_does_not_exist:
                             DEBUG and Log.note(
@@ -863,7 +863,7 @@ class ElasticsearchMetadata(Namespace):
             with Timer(
                 "Update {{col.es_index}}.{{col.es_column}}",
                 param={"col": column},
-                silent=not DEBUG,
+                verbose=DEBUG,
                 too_long=0.05,
             ):
                 if (

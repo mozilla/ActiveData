@@ -72,7 +72,7 @@ def test_mode_wait(query):
         with Timer(
             "Get columns for {{table}} after {{after}}",
             {"table": alias, "after": after},
-            silent=not DEBUG,
+            verbose=DEBUG,
         ):
             metadata_manager = find_container(alias, after=after).namespace
 

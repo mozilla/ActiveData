@@ -33,7 +33,7 @@ URL_PREFIX = URL("https://active-data-query-results.s3-us-west-2.amazonaws.com")
 S3_CONFIG = Null
 
 
-def is_bulkaggsop(esq, query):
+def is_bulk_agg(esq, query):
     # ONLY ACCEPTING ONE DIMENSION AT THIS TIME
     if not S3_CONFIG:
         return False
@@ -258,7 +258,7 @@ def upload(filename, temp_file):
 def write_status(guid, status):
     try:
         filename = guid + ".status.json"
-        with Timer("upload status to S3 {{file}}", param={"file": filename}):
+        with Timer("upload status to S3 {{file}}", param={"file": filename}, verbose=DEBUG):
             try:
                 connection = Connection(S3_CONFIG).connection
                 bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)

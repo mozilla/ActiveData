@@ -347,7 +347,7 @@ class Index(object):
             Log.error("records must have __iter__")
 
         try:
-            with Timer("Add {{num}} documents to {{index}}", {"num": "unknown", "index": self.settings.index}, silent=not self.debug):
+            with Timer("Add {{num}} documents to {{index}}", {"num": "unknown", "index": self.settings.index}, verbose=self.debug):
                 wait_for_active_shards = coalesce(
                     self.settings.wait_for_active_shards,
                     {"one": 1, None: None}[self.settings.consistency]
@@ -470,7 +470,7 @@ class Index(object):
         else:
             Log.error("Do not know how to handle ES version {{version}}", version=self.cluster.version)
 
-    def search(self, query, timeout=None, retry=None):
+    def search(self, query, timeout=None, retry=None, scroll=None):
         query = wrap(query)
         try:
             if self.debug:
@@ -480,8 +480,10 @@ class Index(object):
                 else:
                     show_query = query
                 Log.note("Query:\n{{query|indent}}", query=show_query)
+
+            suffix = "/_search?scroll=" + scroll if scroll else "/_search"
             return self.cluster.post(
-                self.path + "/_search",
+                self.path + suffix,
                 data=query,
                 timeout=coalesce(timeout, self.settings.timeout),
                 retry=retry
@@ -493,6 +495,7 @@ class Index(object):
                 query=query,
                 cause=e
             )
+
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
         """
@@ -1285,12 +1288,15 @@ class Alias(object):
                             message=status._shards.failures[0].reason
                         )
 
-    def search(self, query, timeout=None):
+    def search(self, query, timeout=None, scroll=None):
         query = wrap(query)
         try:
-            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=self.path + "/_search", query=query)
+            suffix = "/_search?scroll=" + scroll if scroll else "/_search"
+            path = self.path + suffix
+            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=path, query=query)
+
             return self.cluster.post(
-                self.path + "/_search",
+                path,
                 data=query,
                 timeout=coalesce(timeout, self.settings.timeout)
             )
@@ -1299,6 +1305,25 @@ class Alias(object):
                 "Problem with search (path={{path}}):\n{{query|indent}}",
                 path=self.path + "/_search",
                 query=query,
+                cause=e
+            )
+
+    def scroll(self, scroll_id):
+        try:
+            # POST /_search/scroll
+            # {
+            #     "scroll" : "1m",
+            #     "scroll_id" : "DXF1ZXJ5QW5kRmV0Y2gBAAAAAAAAAD4WYm9laVYtZndUQlNsdDcwakFMNjU1QQ=="
+            # }
+            return self.cluster.post(
+                "_search/scroll",
+                data={"scroll": "5m", "scroll_id": scroll_id}
+            )
+        except Exception as e:
+            Log.error(
+                "Problem with scroll (scroll_id={{scroll_id}})",
+                path= "_search/scroll",
+                scroll_id=scroll_id,
                 cause=e
             )
 

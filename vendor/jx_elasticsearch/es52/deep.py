@@ -209,7 +209,7 @@ def es_deepop(es, query):
     # </COMPLICATED>
 
     try:
-        formatter, groupby_formatter, mime_type = set_formatters[query.format]
+        formatter, row_formatter, mime_type = set_formatters[query.format]
 
         output = formatter(inners(), new_select, query)
         output.meta.timing.es = call_timer.duration

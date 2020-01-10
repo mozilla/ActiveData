@@ -43,7 +43,7 @@ class TestBulk(BaseTestCase):
         self.utils.execute_tests(test)
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "s3"}, test.query),
+            json=set_default({"destination": "url"}, test.query),
         )
 
         timeout = Till(seconds=MINUTE.seconds)
@@ -63,3 +63,41 @@ class TestBulk(BaseTestCase):
 
         self.assertFalse(timeout)
 
+    @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
+    def test_scroll_query(self):
+        data = wrap([{"a": "test" + text(i)} for i in range(1001)])
+        expected = data
+
+        test = wrap({
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "limit": len(data),
+                "chunk_size": 100,
+                "format": "list",
+            },
+            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
+        })
+
+        self.utils.execute_tests(test)
+        result = http.post_json(
+            url=self.utils.testing.query,
+            json=set_default({"destination": "url"}, test.query),
+        )
+
+        timeout = Till(seconds=MINUTE.seconds)
+        while not timeout:
+            try:
+                content = http.get_json(result.url)
+                with Timer("compare results"):
+                    sorted_content = jx.sort(content, "a")
+                    sorted_expected = jx.sort(expected, "a")
+                    self.assertEqual(sorted_content, sorted_expected)
+                break
+            except Exception as e:
+                if "does not match expected" in e:
+                    Log.error("failed", cause=e)
+                Log.note("waiting for {{url}}", url=result.url)
+                Till(seconds=2).wait()
+
+        self.assertFalse(timeout)

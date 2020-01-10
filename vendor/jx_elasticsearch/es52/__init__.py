@@ -16,8 +16,9 @@ from jx_base.expressions import jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
 from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
-from jx_elasticsearch.es52.agg_bulk import is_bulkaggsop, es_bulkaggsop
+from jx_elasticsearch.es52.agg_bulk import is_bulk_agg, es_bulkaggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
+from jx_elasticsearch.es52.set_bulk import is_bulk_set, es_bulksetop
 from jx_elasticsearch.es52.set_op import es_setop, is_setop
 from jx_elasticsearch.es52.stats import QueryStats
 from jx_elasticsearch.es52.util import aggregates, temper_limit
@@ -201,8 +202,10 @@ class ES52(Container):
                 q2.frum = result
                 return jx.run(q2)
 
-            if is_bulkaggsop(self.es, query):
+            if is_bulk_agg(self.es, query):
                 return es_bulkaggsop(self, frum, query)
+            if is_bulk_set(self.es, query):
+                return es_bulksetop(self, frum, query)
 
             query.limit = temper_limit(query.limit, query)
 

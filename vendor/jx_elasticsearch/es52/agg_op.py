@@ -455,11 +455,11 @@ def es_aggsop(es, frum, query):
 
     acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
 
-    with Timer("ES query time", silent=not DEBUG) as es_duration:
+    with Timer("ES query time", verbose=DEBUG) as es_duration:
         result = es.search(es_query)
 
     try:
-        format_time = Timer("formatting", silent=not DEBUG)
+        format_time = Timer("formatting", verbose=DEBUG)
         with format_time:
             # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)
             # IT APPEARS THE OLD doc_count IS GONE

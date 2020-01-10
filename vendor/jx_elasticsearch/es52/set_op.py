@@ -316,7 +316,7 @@ def es_setop(es, query):
     T = data.hits.hits
 
     try:
-        formatter, mime_type = set_formatters[query.format]
+        formatter, row_formatter, mime_type = set_formatters[query.format]
 
         with Timer("formatter", silent=True):
             output = formatter(T, new_select, query)

@@ -9,26 +9,28 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.query import DEFAULT_LIMIT
+from jx_elasticsearch.es52 import agg_bulk
+from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
 from jx_elasticsearch.es52.expressions import split_expression_by_path, ES52
 from jx_elasticsearch.es52.set_format import set_formatters
 from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from mo_dots import Null, coalesce
-from mo_files import URL, mimetype
-from mo_logs import Log
-from mo_times import Timer
-from pyLibrary.aws.s3 import Connection
+from mo_dots import wrap, Null
+from mo_files import TempFile
+from mo_json import value2json
+from mo_logs import Log, Except
+from mo_math import MIN
+from mo_math.randoms import Random
+from mo_threads import Thread
+from mo_times import Date
 
-DEBUG = False
-URL_PREFIX = URL("https://active-data-query-results.s3-us-west-2.amazonaws.com")
-S3_CONFIG = Null
-MAX_CHUNK_SIZE = 5000
+DEBUG = True
+MAX_CHUNK_SIZE = 2000
 
 
-def is_bulksetop(esq, query):
+def is_bulk_set(esq, query):
     # ONLY ACCEPTING ONE DIMENSION AT THIS TIME
-    if not S3_CONFIG:
+    if not agg_bulk.S3_CONFIG:
         return False
     if query.destination not in {"s3", "url"}:
         return False
@@ -40,69 +42,111 @@ def is_bulksetop(esq, query):
 
 
 def es_bulksetop(esq, frum, query):
+    abs_limit = query.limit
+    guid = Random.base64(32, extra="-_")
 
     schema = query.frum.schema
     query_path = schema.query_path[0]
     new_select, split_select = get_selects(query)
     split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
     es_query = es_query_proto(query_path, split_select, split_wheres, schema)
-    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
+    es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
+    formatter, setup_row_formatter, mime_type = set_formatters[query.format]
 
-    formatter, groupby_formatter, mime_type = set_formatters[query.format]
+    Thread.run(
+        "Download " + guid,
+        extractor,
+        guid,
+        abs_limit,
+        esq,
+        es_query,
+        setup_row_formatter(new_select, query),
+        parent_thread=Null,
+    )
 
-    with Timer("call to ES", silent=DEBUG) as call_timer:
-        data = esq.es.search(es_query)
+    output = wrap(
+        {
+            "url": URL_PREFIX / (guid + ".json"),
+            "status": URL_PREFIX / (guid + ".status.json"),
+            "meta": {"format": "list", "es_query": es_query, "limit": abs_limit},
+        }
+    )
+    return output
 
-    T = data.hits.hits
+
+def extractor(guid, abs_limit, esq, es_query, row_formatter, please_stop):
+    start_time = Date.now()
+    total = 0
+    write_status(
+        guid,
+        {
+            "status": "starting",
+            "limit": abs_limit,
+            "start_time": start_time,
+            "timestamp": Date.now(),
+        },
+    )
 
     try:
+        with TempFile() as temp_file:
+            with open(temp_file.abspath, "wb") as output:
+                output.write(b"[\n")
+                comma = b""
 
-        with Timer("formatter", silent=True):
-            output = formatter(T, new_select, query)
-        output.meta.timing.es = call_timer.duration
-        output.meta.content_type = mime_type
-        output.meta.es_query = es_query
-        return output
+                result = esq.es.search(es_query, scroll="5m")
+
+                while not please_stop:
+                    scroll_id = result._scroll_id
+                    hits = result.hits.hits
+                    if not hits:
+                        break
+                    for doc in hits:
+                        output.write(comma)
+                        comma = b"\n,"
+                        output.write(value2json(row_formatter(doc)).encode("utf8"))
+
+                    total += len(hits)
+                    DEBUG and Log.note("{{num}} of {{total}} downloaded", num=total, total=result.hits.total)
+                    write_status(
+                        guid,
+                        {
+                            "status": "working",
+                            "row": total,
+                            "rows": result.hits.total,
+                            "start_time": start_time,
+                            "timestamp": Date.now(),
+                        },
+                    )
+                    result = esq.es.scroll(scroll_id)
+
+                output.write(b"\n]")
+
+            upload(guid + ".json", temp_file)
+        if please_stop:
+            Log.error("shutdown requested, did not complete download")
+        write_status(
+            guid,
+            {
+                "ok": True,
+                "status": "done",
+                "rows": total,
+                "start_time": start_time,
+                "end_time": Date.now(),
+                "timestamp": Date.now(),
+            },
+        )
     except Exception as e:
-        Log.error("problem formatting", e)
-
-
-def upload(filename, temp_file):
-    with Timer("upload file to S3 {{file}}", param={"file": filename}):
-        try:
-            connection = Connection(S3_CONFIG).connection
-            bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)
-            storage = bucket.new_key(filename)
-            storage.set_contents_from_filename(
-                temp_file.abspath, headers={"Content-Type": mimetype.JSON}
-            )
-            if S3_CONFIG.public:
-                storage.set_acl("public-read")
-
-        except Exception as e:
-            Log.error(
-                "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
-            )
-
-
-def write_status(guid, status):
-    try:
-        filename = guid + ".status.json"
-        with Timer("upload status to S3 {{file}}", param={"file": filename}):
-            try:
-                connection = Connection(S3_CONFIG).connection
-                bucket = connection.get_bucket(S3_CONFIG.bucket, validate=False)
-                storage = bucket.new_key(filename)
-                storage.set_contents_from_string(
-                    value2json(status), headers={"Content-Type": mimetype.JSON}
-                )
-                if S3_CONFIG.public:
-                    storage.set_acl("public-read")
-
-            except Exception as e:
-                Log.error(
-                    "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
-                )
-    except Exception as e:
-        Log.warning("problem setting status", cause=e)
+        e = Except.wrap(e)
+        write_status(
+            guid,
+            {
+                "ok": False,
+                "status": "error",
+                "error": e,
+                "start_time": start_time,
+                "end_time": Date.now(),
+                "timestamp": Date.now(),
+            },
+        )
+        Log.warning("Could not extract", cause=e)

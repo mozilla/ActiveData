@@ -26,6 +26,7 @@ from mo_times import Date
 
 DEBUG = True
 MAX_CHUNK_SIZE = 2000
+MAX_DOCUMENTS = 1*1000*1000
 
 
 def is_bulk_set(esq, query):
@@ -42,7 +43,7 @@ def is_bulk_set(esq, query):
 
 
 def es_bulksetop(esq, frum, query):
-    abs_limit = query.limit
+    abs_limit = MIN([query.limit, MAX_DOCUMENTS])
     guid = Random.base64(32, extra="-_")
 
     schema = query.frum.schema
@@ -101,13 +102,18 @@ def extractor(guid, abs_limit, esq, es_query, row_formatter, please_stop):
                     hits = result.hits.hits
                     if not hits:
                         break
+
+                    chunk_limit = abs_limit - total
+                    hits = hits[:chunk_limit]
+
                     for doc in hits:
                         output.write(comma)
                         comma = b"\n,"
                         output.write(value2json(row_formatter(doc)).encode("utf8"))
-
-                    total += len(hits)
                     DEBUG and Log.note("{{num}} of {{total}} downloaded", num=total, total=result.hits.total)
+                    total += len(hits)
+                    if total >= abs_limit:
+                        break
                     write_status(
                         guid,
                         {

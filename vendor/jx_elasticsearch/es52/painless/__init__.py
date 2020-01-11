@@ -1,4 +1,4 @@
-from jx_elasticsearch.es52.painless._utils import Painless, false_script, LIST_TO_PIPE
+from jx_elasticsearch.es52.painless._utils import Painless, LIST_TO_PIPE
 from jx_elasticsearch.es52.painless.add_op import AddOp
 from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.basic_add_op import BasicAddOp
@@ -49,6 +49,9 @@ from jx_elasticsearch.es52.painless.tuple_op import TupleOp
 from jx_elasticsearch.es52.painless.union_op import UnionOp
 from jx_elasticsearch.es52.painless.variable import Variable
 from jx_elasticsearch.es52.painless.when_op import WhenOp
+from jx_elasticsearch.es52.painless.false_op import FalseOp, false_script
+from jx_elasticsearch.es52.painless.true_op import TrueOp, true_script
+from jx_elasticsearch.es52.painless.null_op import NullOp, null_script
 
 
 Painless.register_ops(vars())

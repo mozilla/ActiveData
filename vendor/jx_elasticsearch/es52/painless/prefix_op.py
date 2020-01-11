@@ -10,8 +10,8 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import PrefixOp as PrefixOp_
-from jx_elasticsearch.es52.painless._utils import true_script
 from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.true_op import true_script
 from mo_json import BOOLEAN
 
 

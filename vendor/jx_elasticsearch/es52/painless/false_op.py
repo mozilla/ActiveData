@@ -10,12 +10,16 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import FalseOp, extend
+from jx_base.expressions import FalseOp, extend, FALSE
+from jx_elasticsearch.es52.painless.es_script import EsScript
+from mo_dots import Null
+from mo_json import BOOLEAN
 
 
 @extend(FalseOp)
-def to_esfilter(self, schema):
-    return MATCH_NONE
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    return false_script
 
 
-MATCH_NONE = {"bool": {"must_not": {"match_all": {}}}}
+false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE, schema=Null)
+

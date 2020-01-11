@@ -75,7 +75,7 @@ class AndOp(Expression):
             if simple is self.lang[TRUE]:
                 continue
             elif simple is FALSE:
-                return self.lang[FALSE]
+                return FALSE
             elif is_op(simple, AndOp):
                 for and_terms in or_terms:
                     and_terms.extend([tt for tt in simple.terms if tt not in and_terms])

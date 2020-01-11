@@ -10,10 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import SuffixOp as SuffixOp_
-from jx_elasticsearch.es52.painless._utils import true_script
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.missing_op import MissingOp
 from jx_elasticsearch.es52.painless.or_op import OrOp
+from jx_elasticsearch.es52.painless.true_op import true_script
 
 
 class SuffixOp(SuffixOp_):

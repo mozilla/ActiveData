@@ -15,10 +15,10 @@ from jx_base.expressions import (
     Variable as Variable_,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.painless._utils import null_script
+from jx_elasticsearch.es52.painless.null_op import null_script
 from jx_elasticsearch.es52.painless.es_script import EsScript
 
-CoalesceOp = [None]*1
+CoalesceOp = None
 
 
 class FirstOp(FirstOp_):

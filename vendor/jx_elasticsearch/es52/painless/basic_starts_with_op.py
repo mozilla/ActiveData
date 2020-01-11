@@ -10,10 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BasicStartsWithOp as BasicStartsWithOp_, FALSE
+from jx_elasticsearch.es52.painless.false_op import false_script
 from jx_elasticsearch.es52.painless._utils import (
     Painless,
     empty_string_script,
-    false_script,
 )
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp

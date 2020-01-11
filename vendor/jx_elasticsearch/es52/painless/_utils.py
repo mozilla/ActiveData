@@ -78,16 +78,6 @@ def _binary_to_es_script(self, schema, not_null=False, boolean=False, many=True)
     )
 
 
-@extend(NullOp)
-def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-    return null_script
-
-
-@extend(FalseOp_)
-def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-    return false_script
-
-
 def _inequality_to_es_script(self, schema, not_null=False, boolean=False, many=True):
     op, identity = _painless_operators[self.op]
     lhs = NumberOp(self.lhs).partial_eval().to_es_script(schema).expr
@@ -171,10 +161,6 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
         )
 
 
-@extend(TrueOp_)
-def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-    return true_script
-
 
 Painless = Language("Painless")
 
@@ -200,9 +186,6 @@ _painless_operators = {
 }
 
 
-true_script = EsScript(type=BOOLEAN, expr="true", frum=TRUE, schema=Null)
-false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE, schema=Null)
-null_script = EsScript(miss=TRUE, type=IS_NULL, expr="null", frum=NULL, schema=Null)
 empty_string_script = EsScript(
     miss=TRUE, type=STRING, expr='""', frum=NULL, schema=Null
 )

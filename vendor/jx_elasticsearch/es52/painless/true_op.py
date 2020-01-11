@@ -10,13 +10,16 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import TrueOp, extend
-from mo_dots import wrap
+from jx_base.expressions import TrueOp, extend, TRUE
+from jx_elasticsearch.es52.painless.es_script import EsScript
+from mo_dots import Null
+from mo_json import BOOLEAN
 
 
 @extend(TrueOp)
-def to_esfilter(self, schema):
-    return MATCH_ALL
+def to_es_script(self, schema, not_null=False, boolean=False, many=True):
+    return true_script
 
 
-MATCH_ALL = wrap({"match_all": {}})
+true_script = EsScript(type=BOOLEAN, expr="true", frum=TRUE, schema=Null)
+

@@ -13,6 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 import hashlib
 
 from active_data.actions import save_query
+from jx_elasticsearch import elasticsearch
 from mo_dots import wrap
 from mo_future import text
 from mo_json import value2json
@@ -21,7 +22,6 @@ from mo_logs import Log
 from mo_threads import Till
 from mo_times import Timer
 from pyLibrary import convert
-from pyLibrary.env import elasticsearch
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 

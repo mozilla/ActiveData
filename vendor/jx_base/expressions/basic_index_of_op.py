@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.language import is_op
+
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
@@ -60,6 +62,6 @@ class BasicIndexOfOp(Expression):
         ]
 
     def __eq__(self, other):
-        if not isinstance(other, BasicIndexOfOp):
+        if not is_op(other, BasicIndexOfOp):
             return False
         return self.value == self.value and self.find == other.find and self.start == other.start

@@ -68,3 +68,8 @@ class StringOp(Expression):
             else:
                 return self.lang[Literal(mo_json.value2json(term.value))]
         return self
+
+    def __eq__(self, other):
+        if not is_op(other, StringOp):
+            return False
+        return self.term == other.term

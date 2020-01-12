@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import WhenOp as WhenOp_
+from jx_base.expressions import WhenOp as WhenOp_, FALSE, TRUE
 from jx_elasticsearch.es52.painless import _utils
 from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
@@ -30,7 +30,7 @@ class WhenOp(WhenOp_):
                 return then
             elif when is false_script:
                 return els_
-            elif then.miss is true_script:
+            elif then.miss is TRUE:
                 return EsScript(
                     miss=self.missing(),
                     type=els_.type,
@@ -38,7 +38,7 @@ class WhenOp(WhenOp_):
                     frum=self,
                     schema=schema,
                 )
-            elif els_.miss is true_script:
+            elif els_.miss is TRUE:
                 return EsScript(
                     miss=self.missing(),
                     type=then.type,
@@ -47,10 +47,10 @@ class WhenOp(WhenOp_):
                     schema=schema,
                 )
 
-            elif then.type == els_.type:
+            elif then.miss is TRUE or els_.miss is FALSE or then.type == els_.type:
                 return EsScript(
                     miss=self.missing(),
-                    type=then.type,
+                    type=then.type if els_.miss is TRUE else els_.type,
                     expr="("
                     + when.expr
                     + ") ? ("

@@ -11,17 +11,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
     FALSE,
-    FalseOp as FalseOp_,
     NULL,
-    NullOp,
     TRUE,
-    TrueOp as TrueOp_,
-    extend,
 )
 from jx_base.language import Language
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from mo_dots import Null
-from mo_json import BOOLEAN, IS_NULL, NUMBER, STRING
+from mo_json import BOOLEAN, NUMBER, STRING
 
 AndOp, Literal, NumberOp, OrOp, WhenOp  = [None]*5
 
@@ -65,16 +61,13 @@ def _binary_to_es_script(self, schema, not_null=False, boolean=False, many=True)
     script = "(" + lhs.expr + ") " + op + " (" + rhs.expr + ")"
     missing = OrOp([self.lhs.missing(), self.rhs.missing()])
 
-    return (
-        WhenOp(
-            missing,
-            **{
-                "then": self.default,
-                "else": EsScript(type=NUMBER, expr=script, frum=self, schema=schema),
-            }
-        )
-        .partial_eval()
-        .to_es_script(schema)
+    return EsScript(
+        type=NUMBER,
+        miss=missing,
+        frum=self,
+        expr=script,
+        schema=schema,
+        many=False
     )
 
 

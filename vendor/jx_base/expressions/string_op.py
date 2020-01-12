@@ -27,8 +27,9 @@ from jx_base.expressions.first_op import FirstOp
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.null_op import NULL
+from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
-from mo_json import IS_NULL, STRING
+from mo_json import STRING
 
 
 class StringOp(Expression):
@@ -53,7 +54,7 @@ class StringOp(Expression):
     @simplified
     def partial_eval(self):
         term = self.term
-        if term.type is IS_NULL:
+        if term.miss is TRUE:
             return NULL
         term = self.lang[FirstOp(term)].partial_eval()
         if is_op(term, StringOp):

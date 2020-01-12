@@ -15,7 +15,7 @@ from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
 from jx_elasticsearch.es52.painless.not_op import NotOp
-from mo_json import INTEGER, IS_NULL, NUMBER, OBJECT
+from mo_json import INTEGER, NUMBER, OBJECT
 
 
 class CoalesceOp(CoalesceOp_):
@@ -36,7 +36,7 @@ class CoalesceOp(CoalesceOp_):
             elif r.miss is FALSE:
                 acc = r
                 continue
-            elif acc.type == r.type or acc.type == IS_NULL:
+            elif acc.type == r.type or acc.miss is TRUE:
                 new_type = r.type
             elif acc.type == NUMBER and r.type == INTEGER:
                 new_type = NUMBER

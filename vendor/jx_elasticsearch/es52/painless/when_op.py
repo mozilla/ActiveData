@@ -9,10 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import FALSE, TRUE, WhenOp as WhenOp_
+from jx_base.expressions import WhenOp as WhenOp_
 from jx_elasticsearch.es52.painless import _utils
 from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.false_op import false_script
+from jx_elasticsearch.es52.painless.true_op import true_script
 from mo_json import INTEGER, NUMBER
 from mo_logs import Log
 
@@ -24,11 +26,11 @@ class WhenOp(WhenOp_):
             then = Painless[self.then].to_es_script(schema)
             els_ = Painless[self.els_].to_es_script(schema)
 
-            if when is TRUE:
+            if when is true_script:
                 return then
-            elif when is FALSE:
+            elif when is false_script:
                 return els_
-            elif then.miss is TRUE:
+            elif then.miss is true_script:
                 return EsScript(
                     miss=self.missing(),
                     type=els_.type,
@@ -36,7 +38,7 @@ class WhenOp(WhenOp_):
                     frum=self,
                     schema=schema,
                 )
-            elif els_.miss is TRUE:
+            elif els_.miss is true_script:
                 return EsScript(
                     miss=self.missing(),
                     type=then.type,

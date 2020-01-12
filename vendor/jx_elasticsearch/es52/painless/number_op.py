@@ -12,6 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import CoalesceOp as CoalesceOp_, NumberOp as NumberOp_
 from jx_base.language import is_op
 from jx_elasticsearch.es52.painless import _utils
+from jx_elasticsearch.es52.painless.literal import Literal
+from jx_elasticsearch.es52.painless.null_op import null_script
+from jx_elasticsearch.es52.painless.false_op import false_script
+from jx_elasticsearch.es52.painless.true_op import true_script
 from jx_elasticsearch.es52.painless.coalesce_op import CoalesceOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
@@ -32,7 +36,13 @@ class NumberOp(NumberOp_):
                 ]
             ).to_es_script(schema)
 
-        if value.type == BOOLEAN:
+        if value is null_script:
+            return Literal(0).to_es_script(schema)
+        if value is false_script:
+            return Literal(0).to_es_script(schema)
+        if value is true_script:
+            return Literal(1).to_es_script(schema)
+        elif value.type == BOOLEAN:
             return EsScript(
                 miss=term.missing().partial_eval(),
                 type=NUMBER,

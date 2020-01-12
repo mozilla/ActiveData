@@ -9,10 +9,11 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import BasicEqOp as BasicEqOp_, is_literal
+from jx_base.expressions import BasicEqOp as BasicEqOp_, is_literal, FALSE, TRUE
 from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.null_op import null_script
 from mo_json import BOOLEAN
 
 
@@ -72,7 +73,11 @@ class BasicEqOp(BasicEqOp_):
                 schema=schema,
             )
         else:
-            if lhs.type == BOOLEAN:
+            if lhs is null_script:
+                if rhs is null_script:
+                    return TRUE.to_es_script(schema)
+                return FALSE.to_es_script(schema)
+            elif lhs.type == BOOLEAN:
                 if is_literal(simple_rhs) and simple_rhs.value in ("F", False):
                     return EsScript(
                         type=BOOLEAN, expr="!" + lhs.expr, frum=self, schema=schema

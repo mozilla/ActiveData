@@ -605,7 +605,7 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    def test_script_on_missing_column(self):
+    def test_script_on_missing_column1(self):
         test = {
             "data": [
                 {"a": "skip"},
@@ -618,12 +618,12 @@ class TestgroupBy1(BaseTestCase):
                 "from": TEST_TABLE,
                 "select": {
                     "name": "skips",
-                    "value": {"when": {"eq": {"a", "skip"}}, "then": 1, "else": 0},
-                    "aggregate": "count"
+                    "value": {"when": {"eq": {"b": "skip"}}, "then": 1, "else": 0},
+                    "aggregate": "sum"
                 }
             },
             "expecting_list": {
-                "meta": {"format": "list"},
+                "meta": {"format": "value"},
                 "data": 0
             },
             "expecting_table": {
@@ -632,6 +632,64 @@ class TestgroupBy1(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_script_missing_column2(self):
+        test = {
+            "data": [
+                {"a": "skip"},
+                {"a": "ok"},
+                {"a": "error"},
+                {"a": "ok"},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "skips",
+                    "value": {"eq": {"b": "skip"}},
+                    "aggregate": "sum"
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": 0
+            },
+            "expecting_table": {
+                "header": ["skips"],
+                "data": [[0]]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_boolean_count(self):
+        test = {
+            "data": [
+                {"a": "skip"},
+                {"a": "ok"},
+                {"a": "error"},
+                {"a": "ok"},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "skips",
+                    "value": {"eq": {"a": "skip"}},
+                    "aggregate": "sum"
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": 1
+            },
+            "expecting_table": {
+                "header": ["skips"],
+                "data": [[1]]
+            }
+        }
+        self.utils.execute_tests(test)
+
+
 
 
 # TODO: GROUPBY NUMBER SHOULD NOT RESULT IN A STRING

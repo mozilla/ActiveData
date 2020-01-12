@@ -31,7 +31,7 @@ from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
 from mo_dots import is_sequence
 from mo_future import first
-from mo_json import OBJECT
+from mo_json import OBJECT, BOOLEAN
 from mo_logs import Log
 
 
@@ -80,6 +80,14 @@ class CaseOp(Expression):
 
     @simplified
     def partial_eval(self):
+        if self.type == BOOLEAN:
+            ors = [
+                AndOp([w.when, w.then])
+                for w in self.whens[:-1]
+            ]
+            ors.append(self.whens[-1])
+            return OrOp(ors).partial_eval()
+
         whens = []
         for w in self.whens[:-1]:
             when = self.lang[w.when].partial_eval()
@@ -95,6 +103,8 @@ class CaseOp(Expression):
 
         if len(whens) == 1:
             return whens[0]
+        elif len(whens) == 2:
+            return self.lang(WhenOp(whens[0].when, **{"then": whens[0].then, "else": whens[1]}))
         else:
             return self.lang[CaseOp(whens)]
 

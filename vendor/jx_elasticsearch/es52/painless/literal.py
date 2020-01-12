@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import Literal as Literal_
+from jx_base.expressions import Literal as Literal_, ONE
 from jx_elasticsearch.es52.painless import _utils
 from jx_elasticsearch.es52.painless.null_op import null_script
 from jx_elasticsearch.es52.painless.true_op import true_script

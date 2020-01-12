@@ -180,7 +180,7 @@ class ElasticsearchMetadata(Namespace):
             if not self.settings.read_only:
                 for name, details in diff:
                     col = first(self.meta.columns.find(alias, name))
-                    if col.last_updated > after and col.cardinality == 0:
+                    if col and col.last_updated > after and col.cardinality == 0:
                         continue
                     for i, t, _ in props:
                         if i is not i1:
@@ -205,7 +205,7 @@ class ElasticsearchMetadata(Namespace):
                         self.meta.columns.add(Column(
                             name=untype_path(name),
                             es_column=name,
-                            es_index=i2.alias,
+                            es_index=alias,
                             es_type="object",
                             jx_type=OBJECT,
                             nested_path=[

@@ -25,7 +25,7 @@ from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
-from jx_elasticsearch.es52 import agg_bulk
+from jx_elasticsearch.es52 import agg_bulk, QueryStats
 from jx_elasticsearch import elasticsearch
 from mo_dots import is_data
 from mo_files import File, TempFile
@@ -144,6 +144,9 @@ def setup():
     # TRIGGER FIRST INSTANCE
     if config.saved_queries:
         setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
+
+    # STARTUP QUERY STATS
+    QueryStats(elasticsearch.Cluster(config.elasticsearch))
 
     if config.flask.port and config.args.process_num:
         config.flask.port += config.args.process_num

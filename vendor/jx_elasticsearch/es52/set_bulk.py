@@ -22,11 +22,11 @@ from mo_logs import Log, Except
 from mo_math import MIN
 from mo_math.randoms import Random
 from mo_threads import Thread
-from mo_times import Date
+from mo_times import Date, Timer
 
 DEBUG = True
 MAX_CHUNK_SIZE = 2000
-MAX_DOCUMENTS = 1*1000*1000
+MAX_DOCUMENTS = 10 * 1000 * 1000
 
 
 def is_bulk_set(esq, query):
@@ -53,6 +53,10 @@ def es_bulksetop(esq, frum, query):
     es_query = es_query_proto(query_path, split_select, split_wheres, schema)
     es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
+    if not es_query.sort:
+        es_query.sort = ["_doc"]
+
+
     formatter, setup_row_formatter, mime_type = set_formatters[query.format]
 
     Thread.run(
@@ -108,10 +112,15 @@ def extractor(guid, abs_limit, esq, es_query, row_formatter, please_stop):
 
                     for doc in hits:
                         output.write(comma)
-                        comma = b"\n,"
+                        comma = b",\n"
                         output.write(value2json(row_formatter(doc)).encode("utf8"))
-                    DEBUG and Log.note("{{num}} of {{total}} downloaded", num=total, total=result.hits.total)
+
                     total += len(hits)
+                    DEBUG and Log.note(
+                        "{{num}} of {{total}} downloaded",
+                        num=total,
+                        total=result.hits.total,
+                    )
                     if total >= abs_limit:
                         break
                     write_status(
@@ -124,13 +133,24 @@ def extractor(guid, abs_limit, esq, es_query, row_formatter, please_stop):
                             "timestamp": Date.now(),
                         },
                     )
-                    result = esq.es.scroll(scroll_id)
+                    with Timer("get more", verbose=DEBUG):
+                        result = esq.es.scroll(scroll_id)
 
                 output.write(b"\n]")
 
+            write_status(
+                guid,
+                {
+                    "status": "uploading to s3",
+                    "rows": total,
+                    "start_time": start_time,
+                    "timestamp": Date.now(),
+                },
+            )
             upload(guid + ".json", temp_file)
         if please_stop:
             Log.error("shutdown requested, did not complete download")
+        DEBUG and Log.note("Done. {{total}} uploaded", total=total)
         write_status(
             guid,
             {

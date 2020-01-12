@@ -112,4 +112,6 @@ The response is almost identical; with `url` and `status`
 }
 ```
 
+## Additional Features
 
+* `chunk_size` - The number of records pulled from Elasticsearch at a time. This will make no difference to your result; as the chunk size has been set high enough to be efficient as possible. The default chunk size can be surmised by inspecting the `status`.  If your documents are very large (like in the case of `coverage`) setting the chunk size smaller (to `500`) will prevent download errors.

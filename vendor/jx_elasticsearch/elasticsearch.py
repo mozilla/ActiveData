@@ -473,17 +473,12 @@ class Index(object):
     def search(self, query, timeout=None, retry=None, scroll=None):
         query = wrap(query)
         try:
-            if self.debug:
-                if len(query.facets.keys()) > 20:
-                    show_query = query.copy()
-                    show_query.facets = {k: "..." for k in query.facets.keys()}
-                else:
-                    show_query = query
-                Log.note("Query:\n{{query|indent}}", query=show_query)
-
             suffix = "/_search?scroll=" + scroll if scroll else "/_search"
+            url = self.path + suffix
+
+            DEBUG and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=query)
             return self.cluster.post(
-                self.path + suffix,
+                url,
                 data=query,
                 timeout=coalesce(timeout, self.settings.timeout),
                 retry=retry

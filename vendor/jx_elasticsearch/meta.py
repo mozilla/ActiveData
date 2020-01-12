@@ -14,7 +14,7 @@ from datetime import date, datetime
 from decimal import Decimal
 
 import jx_base
-from jx_base import TableDesc
+from jx_base import TableDesc, Column
 from jx_base.meta_columns import (
     META_COLUMNS_DESC,
     META_COLUMNS_NAME,
@@ -26,6 +26,7 @@ from jx_base.query import QueryOp
 from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
 from jx_python.containers.list_usingPythonList import ListContainer
+from jx_python.jx import accumulate
 from mo_dots import (
     Data,
     FlatList,
@@ -51,7 +52,7 @@ from mo_json.typed_encoder import (
     STRING_TYPE,
     unnest_path,
     untype_path,
-)
+    NESTED_TYPE)
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -122,7 +123,7 @@ class ElasticsearchMetadata(Namespace):
                 name=alias,
                 url=None,
                 query_path=ROOT_PATH,
-                last_updated=Date.MIN,
+                last_updated=self.es_cluster.metatdata_last_updated,
                 columns=[],
             )
             self.meta.tables.add(desc)
@@ -178,9 +179,14 @@ class ElasticsearchMetadata(Namespace):
             diff = elasticsearch.diff_schema(p2, p1)
             if not self.settings.read_only:
                 for name, details in diff:
+                    col = first(self.meta.columns.find(alias, name))
+                    if col.last_updated > after and col.cardinality == 0:
+                        continue
                     for i, t, _ in props:
                         if i is not i1:
                             try:
+                                # TODO: THIS TAKES A LONG TIME, CACHE IN THE COLUMN METADATA?
+                                # MAY NOT WORK - COLUMN METADATA IS FOR ALIASES, NOT INDEXES
                                 result = i.search(
                                     {"query": {"exists": {"field": name}}, "size": 0}
                                 )
@@ -194,6 +200,25 @@ class ElasticsearchMetadata(Namespace):
                                     field=name,
                                     cause=e,
                                 )
+                    else:
+                        # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
+                        self.meta.columns.add(Column(
+                            name=untype_path(name),
+                            es_column=name,
+                            es_index=i2.alias,
+                            es_type="object",
+                            jx_type=OBJECT,
+                            nested_path=[
+                                ".".join(p[:i]) if i else "."
+                                for p in [name.split("."+NESTED_TYPE+".")]
+                                for i, p in list(reversed(list(enumerate(p))))
+                            ],
+                            count=0,
+                            cardinality=0,
+                            multi=0,
+                            partitions=None,
+                            last_updated=Date.now()
+                        ))
         if dirty:
             metadata = self.es_cluster.get_metadata(after=Date.now())
 

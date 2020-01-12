@@ -34,7 +34,7 @@ class Timer(object):
     def __init__(self, description, param=None, silent=None, verbose=None, too_long=0):
         self.template = description
         self.param = wrap(coalesce(param, {}))
-        self.silent = coalesce(silent, not verbose)
+        self.silent = coalesce(silent, True if verbose is False else False)
         self.agg = 0
         self.too_long = too_long  # ONLY SHOW TIMING FOR DURATIONS THAT ARE too_long
         self.start = 0

@@ -142,7 +142,8 @@ def temper_limit(proposed_limit, query):
     SUITABLE DEFAULTS AND LIMITS
     """
     from jx_elasticsearch.es52.agg_bulk import is_bulk_agg
-    if is_bulk_agg(Null, query):
+    from jx_elasticsearch.es52.set_bulk import is_bulk_set
+    if is_bulk_agg(Null, query) or is_bulk_set(Null, query):
         return coalesce(proposed_limit, query.limit)
     else:
         return mo_math.min(coalesce(proposed_limit, query.limit, DEFAULT_LIMIT), MAX_LIMIT)

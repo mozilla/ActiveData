@@ -605,6 +605,34 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_script_on_missing_column(self):
+        test = {
+            "data": [
+                {"a": "skip"},
+                {"a": "ok"},
+                {"a": "error"},
+                {"a": "ok"},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": {
+                    "name": "skips",
+                    "value": {"when": {"eq": {"a", "skip"}}, "then": 1, "else": 0},
+                    "aggregate": "count"
+                }
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": 0
+            },
+            "expecting_table": {
+                "header": ["skips"],
+                "data": [[0]]
+            }
+        }
+        self.utils.execute_tests(test)
+
 
 # TODO: GROUPBY NUMBER SHOULD NOT RESULT IN A STRING
 #         "groupby":[{

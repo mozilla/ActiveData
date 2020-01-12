@@ -22,6 +22,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import first_op, not_op, eq_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
+from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import NULL
@@ -81,11 +82,12 @@ class CaseOp(Expression):
     @simplified
     def partial_eval(self):
         if self.type == BOOLEAN:
-            ors = [
-                AndOp([w.when, w.then])
-                for w in self.whens[:-1]
-            ]
-            ors.append(self.whens[-1])
+            nots = []
+            ors = []
+            for w in self.whens[:-1]:
+                ors.append(AndOp(nots + [w.when, w.then]))
+                nots.append(NotOp(w.when))
+            ors.append(AndOp(nots + [self.whens[-1]]))
             return OrOp(ors).partial_eval()
 
         whens = []

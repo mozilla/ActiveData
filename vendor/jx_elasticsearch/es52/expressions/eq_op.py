@@ -98,7 +98,7 @@ class EqOp(EqOp_):
                             BasicEqOp([self.lhs, self.rhs]),
                         ]
                     )
+                    .partial_eval()
                 ]
-                .partial_eval()
                 .to_esfilter(schema)
             )

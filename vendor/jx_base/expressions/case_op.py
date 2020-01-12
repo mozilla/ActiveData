@@ -104,7 +104,7 @@ class CaseOp(Expression):
         if len(whens) == 1:
             return whens[0]
         elif len(whens) == 2:
-            return self.lang(WhenOp(whens[0].when, **{"then": whens[0].then, "else": whens[1]}))
+            return self.lang[WhenOp(whens[0].when, **{"then": whens[0].then, "else": whens[1]})]
         else:
             return self.lang[CaseOp(whens)]
 

@@ -62,4 +62,4 @@ class BasicIndexOfOp(Expression):
     def __eq__(self, other):
         if isinstance(other, BasicIndexOfOp):
             return False
-        return self.value == self.other and self.find == other.find and self.start == other.start
+        return self.value == self.value and self.find == other.find and self.start == other.start

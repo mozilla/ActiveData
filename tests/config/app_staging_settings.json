@@ -20,23 +20,26 @@
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": false,
 		"jx_elasticsearch.meta.DEBUG": true,
-		"jx_sqlite.sql.sqlite.DEBUG": true
-	},
-	"request_logs": {
-		"host": "http://localhost",
-		"port": 9200,
-		"index": "activedata-requests",
-		"type": "request_log",
-		"typed": false,
-		"schema": {
-			"$ref": "//.../resources/schema/request_log.schema.json"
-		}
+		"jx_elasticsearch.es52.set_op.DEBUG": true,
+		"jx_elasticsearch.es52.agg_op.DEBUG": true
 	},
 	"bulk": {
 		"s3": {
 			"bucket": "active-data-query-results",
 			"public": true,
 			"$ref": "file://~/private.json#aws_credentials"
+		}
+	},
+	"request_logs": {
+		"host": "http://localhost",
+		"port": 9201,
+		"index": "activedata-requests",
+		"type": "request_log",
+		"typed": false,
+		"read_only": false,
+		"refresh_interval": "1second",
+		"schema": {
+			"$ref": "//.../resources/schema/request_log.schema.json"
 		}
 	},
 	"saved_queries": {

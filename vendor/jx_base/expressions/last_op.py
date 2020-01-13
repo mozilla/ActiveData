@@ -19,14 +19,13 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import last
-
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.null_op import NULL
 from jx_base.language import is_op
 from mo_dots import is_many
+from mo_dots.lists import last
 from mo_json import OBJECT
 
 
@@ -58,8 +57,6 @@ class LastOp(Expression):
         elif term is NULL:
             return term
         elif is_literal(term):
-            if is_many(term):
-                return list(term)[-1]
-            return term
+            return last(term)
         else:
             return self.lang[LastOp(term)]

@@ -57,7 +57,9 @@ if PY3:
         type(filter(lambda x: True, [])),
         type({}.items()),
         type({}.values()),
-        type(map(lambda: 0, []))
+        type(map(lambda: 0, [])),
+        type(reversed([])),
+        type(sorted([]))
     )
     unichr = chr
 
@@ -144,7 +146,7 @@ else:
     unichr = __builtin__.unichr
 
     xrange = __builtin__.xrange
-    generator_types = (GeneratorType,)
+    generator_types = (GeneratorType, type(reversed([])))
     unichr = __builtin__.unichr
 
     round = __builtin__.round

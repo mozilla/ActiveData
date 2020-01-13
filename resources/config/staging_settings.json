@@ -17,16 +17,16 @@
 			"$ref": "file://~/private.json#aws_credentials"
 		}
 	},
-//	"request_logs": {
-//		"host": "http://localhost",
-//		"port": 9200,
-//		"index": "activedata_requests",
-//		"type": "request_log",
-//		"typed": false,
-//		"schema": {
-//			"$ref": "//../schema/request_log.schema.json"
-//		}
-//	},
+	"request_logs": {
+		"host": "http://localhost",
+		"port": 9200,
+		"index": "activedata-requests",
+		"type": "request_log",
+		"typed": false,
+		"schema": {
+			"$ref": "//../schema/request_log.schema.json"
+		}
+	},
 	"saved_queries":{
 		"host": "http://localhost",
 		"port": 9200,

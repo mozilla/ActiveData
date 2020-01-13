@@ -9,12 +9,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import collections
+import types
 from copy import deepcopy
-
-from mo_future import generator_types, text, first
 
 from mo_dots import CLASS, coalesce, unwrap, wrap
 from mo_dots.nones import Null
+from mo_future import generator_types, text, first
 
 LIST = text("list")
 
@@ -322,6 +323,8 @@ container_types = (list, FlatList, set)
 sequence_types = (list, FlatList, tuple) + generator_types
 many_types = tuple(set(list_types + container_types + sequence_types))
 
+not_many_names = ("str", "unicode", "binary", "NullType", "NoneType", "dict", "Data")  # ITERATORS THAT ARE CONSIDERED PRIMITIVE
+
 
 def is_list(l):
     # ORDERED, AND CAN CHANGE CONTENTS
@@ -340,4 +343,20 @@ def is_sequence(l):
 
 def is_many(l):
     # REPRESENTS MULTIPLE VALUES
-    return l.__class__ in many_types
+    global many_types
+    type_ = l.__class__
+    if type_ in many_types:
+        return True
+    if type_.__name__ in not_many_names:
+        return False
+
+    if issubclass(type_, types.GeneratorType):
+        if not Log:
+            _late_import()
+        many_types = many_types + (type_,)
+        Log.warning("is_many() can not detect generator {{type}}", type=type_.__name__)
+    elif issubclass(type_, collections.Iterable):
+        if not Log:
+            _late_import()
+        Log.warning("is_many() can not detect iterable {{type}}", type=type_.__name__)
+    return False

@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -33,7 +33,7 @@ QUERY_SIZE_LIMIT = 10*1024*1024
 @register_thread
 def jx_query(path):
     try:
-        with Timer("total duration", silent=not DEBUG) as query_timer:
+        with Timer("total duration", verbose=DEBUG) as query_timer:
             preamble_timer = Timer("preamble", silent=True)
             with preamble_timer:
                 if flask.request.headers.get("content-length", "") in ["", "0"]:
@@ -55,18 +55,18 @@ def jx_query(path):
                 if data.meta.testing:
                     test_mode_wait(data)
 
-            find_table_timer = Timer("find container", silent=not DEBUG)
+            find_table_timer = Timer("find container", verbose=DEBUG)
             with find_table_timer:
                 frum = find_container(data['from'], after=None)
 
-            translate_timer = Timer("translate", silent=not DEBUG)
+            translate_timer = Timer("translate", verbose=DEBUG)
             with translate_timer:
                 result = jx.run(data, container=frum)
 
                 if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                     result = result.format(data.format)
 
-            save_timer = Timer("save", silent=not DEBUG)
+            save_timer = Timer("save", verbose=DEBUG)
             with save_timer:
                 if data.meta.save:
                     try:
@@ -80,10 +80,10 @@ def jx_query(path):
             result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
-            with Timer("jsonification", silent=not DEBUG) as json_timer:
+            with Timer("jsonification", verbose=DEBUG) as json_timer:
                 response_data = value2json(result).encode('utf8')
 
-        with Timer("post timer", silent=not DEBUG):
+        with Timer("post timer", verbose=DEBUG):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
             timing_replacement = (

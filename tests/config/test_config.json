@@ -21,7 +21,7 @@
 		"pyLibrary.env.http.default_headers": {
 			"Referer": "ActiveDataTests"
 		},
-		"jx_elasticsearch.es52.bulk_aggs.S3_CONFIG": true
+		"jx_elasticsearch.es52.agg_bulk.S3_CONFIG": true
 	},
 	"flask": {
 		"host": "0.0.0.0",

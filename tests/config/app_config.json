@@ -20,7 +20,7 @@
 		"pyLibrary.env.big_data.MAX_STRING_SIZE": 100000000,
 		"jx_elasticsearch.meta.ENABLE_META_SCAN": true,
 		"jx_elasticsearch.meta.DEBUG": true,
-		"pyLibrary.sql.sqlite.DEBUG": true
+		"jx_sqlite.sql.sqlite.DEBUG": true
 	},
 	"request_logs": {
 		"host": "http://localhost",

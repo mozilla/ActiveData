@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -13,6 +13,7 @@ import hashlib
 from flask import Response
 
 import jx_elasticsearch
+from jx_elasticsearch.elasticsearch import Cluster
 from jx_python.containers.cube import Cube
 from mo_dots import wrap
 from mo_future import first
@@ -23,7 +24,6 @@ from mo_threads import Thread
 from mo_threads.threads import register_thread
 from mo_times.dates import Date
 from pyLibrary import convert
-from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
 HASH_BLOCK_SIZE = 100

@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 import math
 import re
+
+from pyLibrary.env.big_data import FileString
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
 from mo_dots.objects import DataObject
@@ -29,14 +31,16 @@ IS_NULL = '0'
 BOOLEAN = 'boolean'
 INTEGER = 'integer'
 NUMBER = 'number'
+TIME = 'time'
+INTERVAL = 'interval'
 STRING = 'string'
 OBJECT = 'object'
 NESTED = "nested"
 EXISTS = "exists"
 
-ALL_TYPES = {IS_NULL: IS_NULL, BOOLEAN: BOOLEAN, INTEGER: INTEGER, NUMBER: NUMBER, STRING: STRING, OBJECT: OBJECT, NESTED: NESTED, EXISTS: EXISTS}
+ALL_TYPES = {IS_NULL: IS_NULL, BOOLEAN: BOOLEAN, INTEGER: INTEGER, NUMBER: NUMBER, TIME:TIME, INTERVAL:INTERVAL, STRING: STRING, OBJECT: OBJECT, NESTED: NESTED, EXISTS: EXISTS}
 JSON_TYPES = [BOOLEAN, INTEGER, NUMBER, STRING, OBJECT]
-PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, STRING]
+PRIMITIVE = [EXISTS, BOOLEAN, INTEGER, NUMBER, TIME, INTERVAL, STRING]
 STRUCT = [EXISTS, OBJECT, NESTED]
 
 true, false, null = True, False, None
@@ -289,7 +293,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
     :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
-    if not is_text(json_string):
+    if not is_text(json_string) and not isinstance(json_string, FileString):
         Log.error("only unicode json accepted")
 
     try:
@@ -390,7 +394,9 @@ python_type_to_json_type = {
     set: NESTED,
     # tuple: NESTED,  # DO NOT INCLUDE, WILL HIDE LOGIC ERRORS
     FlatList: NESTED,
-    Date: NUMBER
+    Date: TIME,
+    datetime: TIME,
+    date: TIME,
 }
 
 if PY2:

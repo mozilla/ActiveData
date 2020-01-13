@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http:# mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -53,26 +53,4 @@ def new_instance(
     except Exception as e:
         Log.error("Can not make an interpreter for Elasticsearch", cause=e)
 
-
-# SCRUB THE QUERY SO IT IS VALID
-# REPORT ERROR IF OUTPUT APEARS TO HAVE HIT GIVEN limit
-def post(es, es_query, limit):
-    post_result = None
-    try:
-        if not es_query.sort:
-            es_query.sort = None
-        post_result = es.search(es_query)
-
-        for facetName, f in post_result.facets.items():
-            if f._type == "statistical":
-                continue
-            if not f.terms:
-                continue
-
-            if not DEBUG and not limit and len(f.terms) == limit:
-                Log.error("Not all data delivered (" + str(len(f.terms)) + "/" + str(f.total) + ") try smaller range")
-    except Exception as e:
-        Log.error("Error with FromES", e)
-
-    return post_result
 

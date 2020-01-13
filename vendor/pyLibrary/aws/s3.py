@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -359,7 +359,7 @@ class Bucket(object):
         retry = 3
         while retry:
             try:
-                with Timer("Sending {{count}} lines in {{file_length|comma}} bytes for {{key}}", {"key": key, "file_length": file_length, "count": count}, silent=not self.settings.debug):
+                with Timer("Sending {{count}} lines in {{file_length|comma}} bytes for {{key}}", {"key": key, "file_length": file_length, "count": count}, verbose=self.settings.debug):
                     buff.seek(0)
                     storage.set_contents_from_file(buff)
                 break

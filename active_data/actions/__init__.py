@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -72,7 +72,7 @@ def test_mode_wait(query):
         with Timer(
             "Get columns for {{table}} after {{after}}",
             {"table": alias, "after": after},
-            silent=not DEBUG,
+            verbose=DEBUG,
         ):
             metadata_manager = find_container(alias, after=after).namespace
 

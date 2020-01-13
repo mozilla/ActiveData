@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 from __future__ import absolute_import, division, unicode_literals
 
@@ -25,14 +25,15 @@ from active_data.actions.save_query import SaveQueries, find_query
 from active_data.actions.sql import sql_query
 from active_data.actions.static import download, send_favicon
 from jx_base import container
-from jx_elasticsearch.es52 import bulk_aggs
+from jx_elasticsearch.es52 import agg_bulk, QueryStats
+from jx_elasticsearch import elasticsearch
 from mo_dots import is_data
 from mo_files import File, TempFile
 from mo_future import text
 from mo_logs import Log, constants, machine_metadata, startup
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
-from pyLibrary.env import elasticsearch, http
+from pyLibrary.env import  http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow, add_version
 
 
@@ -116,7 +117,7 @@ def setup():
     constants.set(config.constants)
     Log.start(config.debug)
 
-    bulk_aggs.S3_CONFIG = config.bulk.s3
+    agg_bulk.S3_CONFIG = config.bulk.s3
 
     File.new_instance("activedata.pid").write(text(machine_metadata.pid))
 
@@ -143,6 +144,9 @@ def setup():
     # TRIGGER FIRST INSTANCE
     if config.saved_queries:
         setattr(save_query, "query_finder", SaveQueries(config.saved_queries))
+
+    # STARTUP QUERY STATS
+    QueryStats(elasticsearch.Cluster(config.elasticsearch))
 
     if config.flask.port and config.args.process_num:
         config.flask.port += config.args.process_num

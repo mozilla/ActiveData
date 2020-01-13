@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -31,10 +31,10 @@ class Timer(object):
     debug - SET TO False TO DISABLE THIS TIMER
     """
 
-    def __init__(self, description, param=None, silent=False, too_long=0):
+    def __init__(self, description, param=None, silent=None, verbose=None, too_long=0):
         self.template = description
         self.param = wrap(coalesce(param, {}))
-        self.silent = silent
+        self.silent = coalesce(silent, True if verbose is False else False)
         self.agg = 0
         self.too_long = too_long  # ONLY SHOW TIMING FOR DURATIONS THAT ARE too_long
         self.start = 0

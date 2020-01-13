@@ -5,7 +5,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this file,
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# Author: Kyle Lahnakoski (kyle@lahnakoski.com)
+# Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
 from __future__ import absolute_import, division, unicode_literals
@@ -20,6 +20,7 @@ import jx_elasticsearch
 import mo_json_config
 from jx_base import container as jx_containers
 from jx_base.query import QueryOp
+from jx_elasticsearch.elasticsearch import Cluster
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
@@ -32,9 +33,8 @@ from mo_logs.exceptions import get_stacktrace
 from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Till
-from mo_times import Date, MINUTE
+from mo_times import Date
 from pyLibrary.env import http
-from pyLibrary.env.elasticsearch import Cluster
 from pyLibrary.testing import elasticsearch
 from tests import test_jx
 

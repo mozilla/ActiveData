@@ -341,26 +341,28 @@ def is_sequence(l):
     return l.__class__ in sequence_types
 
 
-def is_many(l):
+def is_many(value):
     # REPRESENTS MULTIPLE VALUES
     # TODO: CLEAN UP THIS LOGIC
     # THIS IS COMPLICATED BECAUSE I AM UNSURE ABOUT ALL THE "PRIMITIVE TYPES"
     # I WOULD LIKE TO POSITIVELY CATCH many_types, BUT MAYBE IT IS EASIER TO DETECT: Iterable, BUT NOT PRIMITIVE
     # UNTIL WE HAVE A COMPLETE LIST, WE KEEP ALL THIS warning() CODE
-    global many_types
-    type_ = l.__class__
-    if type_ in many_types:
-        return True
-    if type_.__name__ in not_many_names:
-        return False
+    return value.__class__ in many_types
 
-    if issubclass(type_, types.GeneratorType):
-        if not Log:
-            _late_import()
-        many_types = many_types + (type_,)
-        Log.warning("is_many() can not detect generator {{type}}", type=type_.__name__)
-    elif issubclass(type_, collections.Iterable):
-        if not Log:
-            _late_import()
-        Log.warning("is_many() can not detect iterable {{type}}", type=type_.__name__)
-    return False
+    # global many_types
+    # type_ = value.__class__
+    # if type_ in many_types:
+    #     return True
+    # if type_.__name__ in not_many_names:
+    #     return False
+    #
+    # if issubclass(type_, types.GeneratorType):
+    #     if not Log:
+    #         _late_import()
+    #     many_types = many_types + (type_,)
+    #     Log.error("is_many() can not detect generator {{type}}", type=type_.__name__)
+    # elif issubclass(type_, collections.Iterable):
+    #     if not Log:
+    #         _late_import()
+    #     Log.error("is_many() can not detect iterable {{type}}", type=type_.__name__)
+    # return False

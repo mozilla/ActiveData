@@ -31,9 +31,10 @@ def record_request(request, query_, data, error):
             "timestamp": Date.now(),
             "http_user_agent": request.headers.get("user_agent"),
             "http_accept_encoding": request.headers.get("accept_encoding"),
+            "referer": request.headers.get("x-referer"),
             "path": request.headers.environ["werkzeug.request"].full_path,
             "content_length": request.headers.get("content_length"),
-            "remote_addr": request.remote_addr,
+            "remote_addr": request.headers.get("x-remote-addr"),
             "query_text": value2json(query_),
             "data": data,
             "error": value2json(error)

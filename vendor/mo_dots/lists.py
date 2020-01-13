@@ -343,6 +343,10 @@ def is_sequence(l):
 
 def is_many(l):
     # REPRESENTS MULTIPLE VALUES
+    # TODO: CLEAN UP THIS LOGIC
+    # THIS IS COMPLICATED BECAUSE I AM UNSURE ABOUT ALL THE "PRIMITIVE TYPES"
+    # I WOULD LIKE TO POSITIVELY CATCH many_types, BUT MAYBE IT IS EASIER TO DETECT: Iterable, BUT NOT PRIMITIVE
+    # UNTIL WE HAVE A COMPLETE LIST, WE KEEP ALL THIS warning() CODE
     global many_types
     type_ = l.__class__
     if type_ in many_types:

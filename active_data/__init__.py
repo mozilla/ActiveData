@@ -37,7 +37,7 @@ def record_request(request, query_, data, error):
             "remote_addr": coalesce(request.headers.get("x-remote-addr"), request.remote_addr),
             "query_text": value2json(query_),
             "data": data,
-            "error": value2json(error)
+            "error": value2json(error) if error else None
         })
         log["from"] = request.headers.get('from')
         request_log_queue.add({"value": log})

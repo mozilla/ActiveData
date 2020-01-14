@@ -27,7 +27,7 @@ from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
-from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP, Thread
+from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP, Thread, MAIN_THREAD
 from mo_times import Date, Timer, HOUR, dates
 from pyLibrary.convert import quote2string, value2number
 from pyLibrary.env import http
@@ -589,7 +589,7 @@ class Cluster(object):
         limit_replicas=None,
         read_only=False,
         typed=None,
-        refresh_interval="1hour",
+        refresh_interval=None,
         kwargs=None
     ):
         if kwargs.tjson != None:
@@ -635,7 +635,7 @@ class Cluster(object):
             except Exception as e:
                 Log.warning("could not set refresh interval for {{index}}", index=known_index.settings.index, cause=e)
         if kwargs.refresh_interval:
-            Thread.run("setting refresh interval", set_refresh)
+            Thread.run("setting refresh interval", set_refresh, parent_thread=MAIN_THREAD)
         else:
             pass
         return known_index

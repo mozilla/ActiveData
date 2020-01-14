@@ -125,7 +125,7 @@ def setup():
     if config.request_logs:
         cluster = elasticsearch.Cluster(config.request_logs)
         request_logger = cluster.get_or_create_index(config.request_logs)
-        active_data.request_log_queue = request_logger.threaded_queue(max_size=2000)
+        active_data.request_log_queue = request_logger.threaded_queue(max_size=2000, period=1)
 
     if config.dockerflow:
         def backend_check():

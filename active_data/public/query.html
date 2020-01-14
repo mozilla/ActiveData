@@ -250,8 +250,7 @@ var queryTool = {};
 				$("#cube").val(code);
 				var query = jsl.parser.parse(code);
 				//REQUEST A URL FOR SHARING
-				query.meta = {};
-				query.meta.save = true;
+                Map.set(query, "meta.save", true);
 
 				self.response = yield(ActiveDataQuery(query));
 				self[self.showMode]();

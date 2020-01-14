@@ -177,48 +177,47 @@ class ElasticsearchMetadata(Namespace):
         # NOTICE THE SAME (index, type, properties) TRIPLE FROM ABOVE
         for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
             diff = elasticsearch.diff_schema(p2, p1)
-            if not self.settings.read_only:
-                for name, details in diff:
-                    col = first(self.meta.columns.find(alias, name))
-                    if col and col.last_updated > after and col.cardinality == 0:
-                        continue
-                    for i, t, _ in props:
-                        if i is not i1:
-                            try:
-                                # TODO: THIS TAKES A LONG TIME, CACHE IN THE COLUMN METADATA?
-                                # MAY NOT WORK - COLUMN METADATA IS FOR ALIASES, NOT INDEXES
-                                result = i.search(
-                                    {"query": {"exists": {"field": name}}, "size": 0}
-                                )
-                                if result.hits.total > 0:
-                                    dirty = True
-                                    i1.add_property(name, details)
-                                    break
-                            except Exception as e:
-                                Log.warning(
-                                    "problem adding field {{field}}",
-                                    field=name,
-                                    cause=e,
-                                )
-                    else:
-                        # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
-                        self.meta.columns.add(Column(
-                            name=untype_path(name),
-                            es_column=name,
-                            es_index=alias,
-                            es_type="object",
-                            jx_type=OBJECT,
-                            nested_path=[
-                                ".".join(p[:i]) if i else "."
-                                for p in [name.split("."+NESTED_TYPE+".")]
-                                for i, p in list(reversed(list(enumerate(p))))
-                            ],
-                            count=0,
-                            cardinality=0,
-                            multi=0,
-                            partitions=None,
-                            last_updated=Date.now()
-                        ))
+            for name, details in diff:
+                col = first(self.meta.columns.find(alias, name))
+                if col and col.last_updated > after and col.cardinality == 0:
+                    continue
+                for i, t, _ in props:
+                    if i is not i1:
+                        try:
+                            # TODO: THIS TAKES A LONG TIME, CACHE IN THE COLUMN METADATA?
+                            # MAY NOT WORK - COLUMN METADATA IS FOR ALIASES, NOT INDEXES
+                            result = i.search(
+                                {"query": {"exists": {"field": name}}, "size": 0}
+                            )
+                            if result.hits.total > 0:
+                                dirty = True
+                                i1.add_property(name, details)
+                                break
+                        except Exception as e:
+                            Log.warning(
+                                "problem adding field {{field}}",
+                                field=name,
+                                cause=e,
+                            )
+                else:
+                    # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
+                    self.meta.columns.add(Column(
+                        name=untype_path(name),
+                        es_column=name,
+                        es_index=alias,
+                        es_type="object",
+                        jx_type=OBJECT,
+                        nested_path=[
+                            ".".join(p[:i]) if i else "."
+                            for p in [name.split("."+NESTED_TYPE+".")]
+                            for i, p in list(reversed(list(enumerate(p))))
+                        ],
+                        count=0,
+                        cardinality=0,
+                        multi=0,
+                        partitions=None,
+                        last_updated=Date.now()
+                    ))
         if dirty:
             metadata = self.es_cluster.get_metadata(after=Date.now())
 

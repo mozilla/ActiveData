@@ -8,7 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import wrap
+from mo_dots import wrap, coalesce
 from mo_files import File
 from mo_json import value2json
 from mo_logs import Log
@@ -34,10 +34,10 @@ def record_request(request, query_, data, error):
             "referer": request.headers.get("x-referer"),
             "path": request.headers.environ["werkzeug.request"].full_path,
             "content_length": request.headers.get("content_length"),
-            "remote_addr": request.headers.get("x-remote-addr"),
-            "query_text": value2json(query_),
-            "data": data,
-            "error": value2json(error)
+            "remote_addr": coalesce(request.headers.get("x-remote-addr"), request.remote_addr),
+            "query_text": value2json(query_) if query_ else None,
+            "data": data if data else None,
+            "error": value2json(error) if error else None
         })
         log["from"] = request.headers.get('from')
         request_log_queue.add({"value": log})

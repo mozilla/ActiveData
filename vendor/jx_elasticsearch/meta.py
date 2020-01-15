@@ -185,10 +185,10 @@ class ElasticsearchMetadata(Namespace):
                 col = first(self.meta.columns.find(alias, name))
                 if col and col.last_updated > after and col.cardinality == 0:
                     continue
-                if col and col.type in STRUCT:
+                if col and col.jx_type in STRUCT:
                     continue
                 for i, t, _ in props:
-                    if i is not i1:
+                    if i is not i1:  # WE KNOW IT IS NOT IN i1 BECAUSE diff SAYS SO
                         try:
                             # TODO: THIS TAKES A LONG TIME, CACHE IN THE COLUMN METADATA?
                             # MAY NOT WORK - COLUMN METADATA IS FOR ALIASES, NOT INDEXES
@@ -220,7 +220,7 @@ class ElasticsearchMetadata(Namespace):
                         ],
                         count=0,
                         cardinality=0,   # MARKED AS DELETED
-                        multi=0,
+                        multi=1001 if es_details.type == 'nested' else 0,
                         partitions=None,
                         last_updated=Date.now()
                     ))

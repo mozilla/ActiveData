@@ -20,7 +20,7 @@ from mo_future import first
 from mo_json import json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log, Except
-from mo_threads import Thread
+from mo_threads import Thread, Till
 from mo_threads.threads import register_thread
 from mo_times.dates import Date
 from pyLibrary import convert
@@ -45,27 +45,20 @@ def find_query(hash):
         query = query_finder.find(hash)
 
         if not query:
-            return Response(
-                b'{"type": "ERROR", "template": "not found"}',
-                status=404
-            )
+            return Response(b'{"type": "ERROR", "template": "not found"}', status=404)
         else:
-            return Response(
-                query.encode('utf8'),
-                status=200
-            )
+            return Response(query.encode("utf8"), status=200)
     except Exception as e:
         e = Except.wrap(e)
         Log.warning("problem finding query with hash={{hash}}", hash=hash, cause=e)
-        return Response(
-            value2json(e).encode('utf8'),
-            status=400
-        )
+        return Response(value2json(e).encode("utf8"), status=400)
 
 
 class SaveQueries(object):
     @override
-    def __init__(self, host, index, type=DATA_TYPE, max_size=10, batch_size=10, kwargs=None):
+    def __init__(
+        self, host, index, type=DATA_TYPE, max_size=10, batch_size=10, kwargs=None
+    ):
         """
         settings ARE FOR THE ELASTICSEARCH INDEX
         """
@@ -73,20 +66,22 @@ class SaveQueries(object):
             schema=json2value(convert.value2json(SCHEMA), leaves=True),
             limit_replicas=True,
             typed=False,
-            kwargs=kwargs
+            kwargs=kwargs,
         )
         es.add_alias(index)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
 
     def find(self, hash):
-        result = self.es.query({
-            "select": ["hash", "query"],
-            "from": "saved_queries",
-            "where": {"prefix": {"hash": hash}},
-            "limit": 100,
-            "format": "list"
-        })
+        result = self.es.query(
+            {
+                "select": ["hash", "query"],
+                "from": "saved_queries",
+                "where": {"prefix": {"hash": hash}},
+                "limit": 100,
+                "format": "list",
+            }
+        )
 
         try:
             hash = result.data[0].hash
@@ -96,11 +91,13 @@ class SaveQueries(object):
         except Exception:
             return None
 
-        self.es.update({
-            "update": self.es.name,
-            "set": {"last_used": Date.now()},
-            "where": {"eq": {"hash": hash}}
-        })
+        self.es.update(
+            {
+                "update": self.es.name,
+                "set": {"last_used": Date.now()},
+                "where": {"eq": {"hash": hash}},
+            }
+        )
 
         return query
 
@@ -112,7 +109,7 @@ class SaveQueries(object):
         """
         meta, query.meta = query.meta, None
         json = convert.value2json(query)
-        hash = json.encode('utf8')
+        hash = json.encode("utf8")
 
         # TRY MANY HASHES AT ONCE
         hashes = [None] * HASH_BLOCK_SIZE
@@ -123,13 +120,17 @@ class SaveQueries(object):
         short_hashes = [convert.bytes2base64(h[0:6]).replace("/", "_") for h in hashes]
         available = {h: True for h in short_hashes}
 
-        existing = self.es.query({
-            "from": "saved_queries",
-            "where": {"terms": {"hash": short_hashes}},
-            "meta": {"timeout": "2second"}
-        })
+        existing = self.es.query(
+            {
+                "from": "saved_queries",
+                "where": {"terms": {"hash": short_hashes}},
+                "meta": {"timeout": "2second"},
+            }
+        )
 
-        for e in Cube(select=existing.select, edges=existing.edges, data=existing.data).values():
+        for e in Cube(
+            select=existing.select, edges=existing.edges, data=existing.data
+        ).values():
             if e.query == json:
                 return e.hash
             available[e.hash] = False
@@ -137,18 +138,35 @@ class SaveQueries(object):
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
         best = first(h for h in short_hashes if available[h])
 
-        self.queue.add({
-            "id": best,
-            "value": {
-                "hash": best,
-                "create_time": Date.now(),
-                "last_used": Date.now(),
-                "query": json
+        self.queue.add(
+            {
+                "id": best,
+                "value": {
+                    "hash": best,
+                    "create_time": Date.now(),
+                    "last_used": Date.now(),
+                    "query": json,
+                },
             }
-        })
+        )
+
+        if meta.testing:
+            while True:
+                verify = self.es.query(
+                    {
+                        "from": "saved_queries",
+                        "where": {"terms": {"hash": best}},
+                        "meta": {"timeout": "2second"},
+                        "select": "query",
+                        "format": "list",
+                    }
+                )
+                if verify.data:
+                    break
+                Log.note("wait for saved query")
+                Till(seconds=1).wait()
 
         Log.note("Saved {{json}} query as {{hash}}", json=json, hash=best)
-
         return best
 
     def stop(self):
@@ -164,10 +182,7 @@ class SaveQueries(object):
 
 
 SCHEMA = {
-    "settings": {
-        "index.number_of_shards": 3,
-        "index.number_of_replicas": 2
-    },
+    "settings": {"index.number_of_shards": 3, "index.number_of_replicas": 2},
     "mappings": {
         "_default_": {
             "dynamic_templates": [
@@ -175,36 +190,18 @@ SCHEMA = {
                     "values_strings": {
                         "match": "*",
                         "match_mapping_type": "string",
-                        "mapping": {
-                            "type": "keyword"
-                        }
+                        "mapping": {"type": "keyword"},
                     }
                 }
             ],
-            "_all": {
-                "enabled": False
-            },
-            "_source": {
-                "enabled": True
-            },
+            "_all": {"enabled": False},
+            "_source": {"enabled": True},
             "properties": {
-                "create_time": {
-                    "type": "double",
-                    "store": True
-                },
-                "last_used": {
-                    "type": "double",
-                    "store": True
-                },
-                "hash": {
-                    "type": "keyword",
-                    "store": True
-                },
-                "query": {
-                    "type": "text",
-                    "store": True
-                }
-            }
+                "create_time": {"type": "double", "store": True},
+                "last_used": {"type": "double", "store": True},
+                "hash": {"type": "keyword", "store": True},
+                "query": {"type": "text", "store": True},
+            },
         }
-    }
+    },
 }

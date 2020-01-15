@@ -15,8 +15,9 @@ from jx_base.expressions import jx_expression
 from jx_python.expressions import Literal, Python
 from mo_dots import coalesce, listwrap, wrap
 from mo_dots.datas import register_data
+from mo_dots.lists import last
 from mo_future import is_text, text
-from mo_json import value2json
+from mo_json import value2json, true, false, null
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 
@@ -47,7 +48,7 @@ def _exec(code, name):
         Log.error("Can not make class\n{{code}}", code=code, cause=e)
 
 
-_ = listwrap
+_ = listwrap, last, true, false, null
 
 
 def DataClass(name, columns, constraint=None):
@@ -200,16 +201,8 @@ class {{class_name}}(Mapping):
 
 TableDesc = DataClass(
     "Table",
-    [
-        "name",
-        "url",
-        "query_path",
-        {"name": "last_updated", "nulls": False},
-        "columns"
-    ],
-    constraint={"and": [
-        {"eq": [{"last": "query_path"}, {"literal": "."}]}
-    ]}
+    ["name", "url", "query_path", {"name": "last_updated", "nulls": False}, "columns"],
+    constraint={"and": [{"eq": [{"last": "query_path"}, {"literal": "."}]}]},
 )
 
 
@@ -235,11 +228,14 @@ Column = DataClass(
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},
+            {
+                "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},
+                "then": {"gt": {"multi": 1}},
+                "else": True,
+            },
         ]
     },
 )
-
-
 from jx_base.container import Container
 from jx_base.namespace import Namespace
 from jx_base.facts import Facts

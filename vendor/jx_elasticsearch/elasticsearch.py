@@ -16,6 +16,7 @@ from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
     literal_field, set_default, split_field, wrap
+from mo_dots.lists import last
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
@@ -1371,6 +1372,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_column=column_name,
                 es_type="nested",
                 jx_type=NESTED,
+                multi=1001 if last(split_field(column_name)) == NESTED_TYPE else None,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))

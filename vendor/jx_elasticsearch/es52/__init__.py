@@ -100,14 +100,12 @@ class ES52(Container):
             all_paths = {'.': None}  # MAP FROM path TO parent TO MAKE A TREE
 
             def nested_path_of(v):
-                parent = all_paths[v]
-                if parent is None:
-                    return ['.']
-                else:
-                    return [parent] + nested_path_of(parent)
+                if v == '.':
+                    return ('.',)
+                return (v,) + nested_path_of(all_paths[v])
 
-            all = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
-            for step in sorted(all):
+            query_paths = sort_using_key(set(step for path in self.snowflake.query_paths for step in path), key=lambda p: len(split_field(p)))
+            for step in query_paths:
                 if step in all_paths:
                     continue
                 else:

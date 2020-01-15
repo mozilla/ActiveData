@@ -53,7 +53,7 @@ from mo_json.typed_encoder import (
     STRING_TYPE,
     unnest_path,
     untype_path,
-    NESTED_TYPE)
+    NESTED_TYPE, get_nested_path)
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -207,23 +207,22 @@ class ElasticsearchMetadata(Namespace):
                             )
                 else:
                     # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
-                    self.meta.columns.add(Column(
+                    zero_col = Column(
                         name=name,
                         es_column=name,
                         es_index=alias,
                         es_type=es_details.type,
                         jx_type=es_type_to_json_type[es_details.type],
-                        nested_path=[
-                            ".".join(p[:i]) if i else "."
-                            for p in [name.split("."+NESTED_TYPE+".")]
-                            for i, p in list(reversed(list(enumerate(p))))
-                        ],
+                        nested_path=get_nested_path(name),
                         count=0,
                         cardinality=0,   # MARKED AS DELETED
                         multi=1001 if es_details.type == 'nested' else 0,
                         partitions=None,
                         last_updated=Date.now()
-                    ))
+                    )
+                    if len(zero_col.nested_path) > 1:
+                        pass
+                    self.meta.columns.add(zero_col)
         if dirty:
             metadata = self.es_cluster.get_metadata(after=Date.now())
 

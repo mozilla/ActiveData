@@ -454,6 +454,6 @@ def doc_to_column(doc):
 def mark_as_deleted(col):
     col.count = 0
     col.cardinality = 0
-    col.multi = 0
+    col.multi = 1001 if col.es_type == "nested" else 0,
     col.partitions = None
     col.last_updated = Date.now()

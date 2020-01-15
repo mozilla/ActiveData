@@ -25,9 +25,10 @@ from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
 from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
+from mo_dots.lists import last
 from mo_future import sort_using_key
 from mo_json import OBJECT, value2json
-from mo_json.typed_encoder import EXISTS_TYPE
+from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_kwargs import override
 from mo_logs import Except, Log
 from mo_times import Date
@@ -118,15 +119,19 @@ class ES52(Container):
                     all_paths[step] = best
             for p in all_paths.keys():
                 nested_path = nested_path_of(p)
-                self.namespace.meta.columns.add(Column(
-                    name=p,
-                    es_column=p,
-                    es_index=self.name,
-                    es_type=OBJECT,
-                    jx_type=OBJECT,
-                    nested_path=nested_path,
-                    last_updated=Date.now()
-                ))
+                try:
+                    self.namespace.meta.columns.add(Column(
+                        name=p,
+                        es_column=p,
+                        es_index=self.name,
+                        es_type=OBJECT,
+                        jx_type=OBJECT,
+                        nested_path=nested_path,
+                        multi=1001 if last(split_field(p)) == NESTED_TYPE else None,
+                        last_updated=Date.now()
+                    ))
+                except Exception as e:
+                    raise e
 
     @property
     def snowflake(self):

@@ -25,9 +25,11 @@ curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"cancel\"
 
 
 
+curl -XPOST http://localhost:9201/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"coverage20200109_000000\",\"shard\": 17, \"node\":\"spot_54.213.171.5\", \"allow_primary\":false}}]}" -H "Content-Type: application/json"
+curl -XPOST http://localhost:9201/_cluster/reroute -d"{\"commands\":[{\"cancel\": {\"index\": \"unittest20191215_000000\",\"shard\": 8, \"node\":\"spot_34.209.88.90\", \"allow_primary\":false}}]}" -H "Content-Type: application/json"
 
-
-
+unittest20191215_000000
+spot_52.37.164.231
 
 
 curl -XPOST http://localhost:9200/_cluster/reroute -d"{\"commands\":[{\"move\": {\"index\": \".kibana\",\"shard\": 0,\"from_node\": \"secondary\",\"to_node\": \"spot_C4D2B23E\"}}]}"

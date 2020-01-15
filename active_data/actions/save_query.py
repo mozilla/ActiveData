@@ -76,7 +76,7 @@ class SaveQueries(object):
             kwargs=kwargs
         )
         es.add_alias(index)
-        self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size, period=1)
+        self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
 
     def find(self, hash):
@@ -110,7 +110,7 @@ class SaveQueries(object):
         :param query:
         :return: HAS TO USE FOR RECOVERY
         """
-        query.meta = None
+        meta, query.meta = query.meta, None
         json = convert.value2json(query)
         hash = json.encode('utf8')
 

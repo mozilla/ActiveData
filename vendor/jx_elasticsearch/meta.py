@@ -42,7 +42,8 @@ from mo_dots import (
     startswith_field,
     tail_field,
     wrap,
-)
+    listwrap, unwrap)
+from mo_dots.lists import last
 from mo_future import first, long, none_type, text
 from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT
 from mo_json.typed_encoder import (
@@ -180,6 +181,8 @@ class ElasticsearchMetadata(Namespace):
             for name, details in diff:
                 col = first(self.meta.columns.find(alias, name))
                 if col and col.last_updated > after and col.cardinality == 0:
+                    continue
+                if col and col.type in STRUCT:
                     continue
                 for i, t, _ in props:
                     if i is not i1:
@@ -828,6 +831,9 @@ class ElasticsearchMetadata(Namespace):
                             column.jx_type in STRUCT
                             or split_field(column.es_column)[-1] == EXISTS_TYPE
                         ):
+                            if (column.es_type=="nested" or last(split_field(column.es_column))==NESTED_TYPE) and (column.multi==None or column.multi<2):
+                                column.multi = 1001
+                                Log.warning("fixing multi on nested problem")
                             # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
                             column.last_updated = now
                             continue
@@ -1018,12 +1024,20 @@ class Schema(jx_base.Schema):
             else:
                 # LOOK INTO A SPECIFIC MULTI VALUED COLUMN
                 try:
-                    self.multi = [
+                    self.multi = first([
                         c
                         for c in self.snowflake.columns
-                        if untype_path(c.name) == query_path and c.multi > 1
-                    ][0]
-                    self.query_path = [self.multi.name] + self.multi.nested_path
+                        if (
+                            untype_path(c.name) == query_path
+                            and (
+                                c.multi > 1
+                                or last(split_field(c.es_column)) == NESTED_TYPE  # THIS IS TO COMPENSATE FOR BAD c.multi
+                            )
+                        )
+                    ])
+                    if not self.multi:
+                        Log.error("expecting a nested column")
+                    self.query_path = [self.multi.name] + unwrap(listwrap(self.multi.nested_path))
                 except Exception as e:
                     # PROBLEM WITH METADATA UPDATE
                     self.multi = None

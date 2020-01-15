@@ -44,7 +44,7 @@
 	},
 	"saved_queries": {
 		"host": "http://localhost",
-		"port": 9200,
+		"port": 9201,
 		"index": "saved_queries",
 		"type": "query",
 		"debug": true

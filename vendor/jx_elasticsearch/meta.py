@@ -1043,7 +1043,7 @@ class Schema(jx_base.Schema):
                 except Exception as e:
                     # PROBLEM WITH METADATA UPDATE
                     self.multi = None
-                    self.query_path = [query_path] + ["."]
+                    self.query_path = (query_path, ".")
 
                     Log.warning(
                         "Problem getting query path {{path|quote}} in snowflake {{sf|quote}}",

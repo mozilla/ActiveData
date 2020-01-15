@@ -17,7 +17,7 @@ from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, set_default, listwrap, unwrap, split_field
 from mo_dots.lists import last
 from mo_json import STRUCT, NESTED
-from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE
+from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path
 from mo_logs import Log
 from mo_math import MAX
 from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
@@ -456,12 +456,26 @@ def doc_to_column(doc):
         if not doc.last_updated:
             doc.last_updated = Date.now()-YEAR
         doc.multi = 1001 if doc.es_type == "nested" else doc.multi
-        doc.nested_path = unwrap(listwrap(doc.nested_path))
+        doc.nested_path = tuple(listwrap(doc.nested_path))
         if last(split_field(doc.es_column)) == NESTED_TYPE and doc.es_type != "nested":
             doc.es_type = "nested"
             doc.jx_type = NESTED
             doc.multi = 1001
             doc.last_updated = Date.now()
+
+        expected_nested_path = get_nested_path(doc.es_column)
+        if len(doc.nested_path) > 1 and doc.nested_path[-2] == '.':
+            doc.nested_path = doc.nested_path[:-1]
+        if untype_path(doc.es_column) == doc.es_column:
+            if doc.nested_path != (".",):
+                if doc.es_index in {"repo"}:
+                    pass
+                else:
+                    Log.note("not expected")
+                    doc.nested_path = expected_nested_path
+        else:
+            if doc.nested_path != expected_nested_path:
+                doc.nested_path = expected_nested_path
         return Column(**doc)
     except Exception:
         doc.nested_path = ["."]

@@ -16,7 +16,7 @@ from jx_base.schema import Schema
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, set_default, listwrap, unwrap, split_field
 from mo_dots.lists import last
-from mo_json import STRUCT
+from mo_json import STRUCT, NESTED
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
@@ -457,11 +457,16 @@ def doc_to_column(doc):
             doc.last_updated = Date.now()-YEAR
         doc.multi = 1001 if doc.es_type == "nested" else doc.multi
         doc.nested_path = unwrap(listwrap(doc.nested_path))
-        if (doc.es_type == "nested") != (last(split_field(doc.es_column)) == NESTED_TYPE):
-            Log.error("Expecteding nesting to match")
+        if last(split_field(doc.es_column)) == NESTED_TYPE and doc.es_type != "nested":
+            doc.es_type = "nested"
+            doc.jx_type = NESTED
+            doc.multi = 1001
+            doc.last_updated = Date.now()
+        return Column(**doc)
     except Exception:
+        doc.nested_path = ["."]
+        mark_as_deleted(Column(**doc))
         return None
-    return Column(**doc)
 
 
 def mark_as_deleted(col):

@@ -147,8 +147,9 @@ class ColumnList(Table, jx_base.Container):
                         with self.locker:
                             for r in result.hits.hits._source:
                                 c = doc_to_column(r)
-                                self._add(c)
-                                self.last_load = MAX((self.last_load, c.last_updated))
+                                if c:
+                                    self._add(c)
+                                    self.last_load = MAX((self.last_load, c.last_updated))
 
                     while not please_stop:
                         updates = self.for_es_update.pop_all()

@@ -212,7 +212,7 @@ class ElasticsearchMetadata(Namespace):
                         es_column=name,
                         es_index=alias,
                         es_type=es_details.type,
-                        jx_type=es_type_to_json_type[es_details.type],
+                        jx_type=es_type_to_json_type[coalesce(es_details.type, "object")],
                         nested_path=get_nested_path(name),
                         count=0,
                         cardinality=0,   # MARKED AS DELETED
@@ -1043,7 +1043,7 @@ class Schema(jx_base.Schema):
                 except Exception as e:
                     # PROBLEM WITH METADATA UPDATE
                     self.multi = None
-                    self.query_path = [query_path] + ["."]
+                    self.query_path = (query_path, ".")
 
                     Log.warning(
                         "Problem getting query path {{path|quote}} in snowflake {{sf|quote}}",

@@ -831,7 +831,7 @@ class ElasticsearchMetadata(Namespace):
                             column.jx_type in STRUCT
                             or split_field(column.es_column)[-1] == EXISTS_TYPE
                         ):
-                            if last(split_field(column.es_column))==NESTED_TYPE and (column.multi==None or column.multi<2):
+                            if (column.es_type=="nested" or last(split_field(column.es_column))==NESTED_TYPE) and (column.multi==None or column.multi<2):
                                 column.multi = 1001
                                 Log.warning("fixing multi on nested problem")
                             # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)

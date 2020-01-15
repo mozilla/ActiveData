@@ -22,6 +22,9 @@ from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 
 
+ENABLE_CONSTRAINTS = True
+
+
 def generateGuid():
     """Gets a random GUID.
     Note: python's UUID generation library is used here.
@@ -189,7 +192,7 @@ class {{class_name}}(Mapping):
             "types": "{"
             + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items()))
             + "}",
-            "constraint_expr": Python[jx_expression(constraint)].to_python(),
+            "constraint_expr": Python[jx_expression(ENABLE_CONSTRAINTS or constraint)].to_python(),
             "constraint": value2json(constraint),
         },
     )

@@ -1372,7 +1372,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_column=column_name,
                 es_type="nested",
                 jx_type=NESTED,
-                multi=1001 if last(split_field(column_name)) == NESTED_TYPE else None,
+                multi=1001,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))

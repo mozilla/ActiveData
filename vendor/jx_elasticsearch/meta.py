@@ -178,7 +178,10 @@ class ElasticsearchMetadata(Namespace):
         # NOTICE THE SAME (index, type, properties) TRIPLE FROM ABOVE
         for (i1, t1, p1), (i2, t2, p2) in all_comparisions:
             diff = elasticsearch.diff_schema(p2, p1)
-            for name, details in diff:
+            for name, es_details in diff:
+                if es_details.type in {"object", "nested"}:
+                    # QUERYING OBJECTS RETURNS NOTHING
+                    continue
                 col = first(self.meta.columns.find(alias, name))
                 if col and col.last_updated > after and col.cardinality == 0:
                     continue
@@ -194,7 +197,7 @@ class ElasticsearchMetadata(Namespace):
                             )
                             if result.hits.total > 0:
                                 dirty = True
-                                i1.add_property(name, details)
+                                i1.add_property(name, es_details)
                                 break
                         except Exception as e:
                             Log.warning(
@@ -205,18 +208,18 @@ class ElasticsearchMetadata(Namespace):
                 else:
                     # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
                     self.meta.columns.add(Column(
-                        name=untype_path(name),
+                        name=name,
                         es_column=name,
                         es_index=alias,
-                        es_type="object",
-                        jx_type=OBJECT,
+                        es_type=es_details.type,
+                        jx_type=es_type_to_json_type[es_details.type],
                         nested_path=[
                             ".".join(p[:i]) if i else "."
                             for p in [name.split("."+NESTED_TYPE+".")]
                             for i, p in list(reversed(list(enumerate(p))))
                         ],
                         count=0,
-                        cardinality=0,
+                        cardinality=0,   # MARKED AS DELETED
                         multi=0,
                         partitions=None,
                         last_updated=Date.now()
@@ -226,7 +229,7 @@ class ElasticsearchMetadata(Namespace):
 
         now = self.es_cluster.metatdata_last_updated
         meta = metadata.indices[literal_field(canonical_index)]
-        details, mapping = _get_best_type_from_mapping(meta.mappings)
+        es_details, mapping = _get_best_type_from_mapping(meta.mappings)
         mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
         columns = self._parse_properties(alias, mapping)
         table_desc.last_updated = now

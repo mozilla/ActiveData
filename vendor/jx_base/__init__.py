@@ -236,6 +236,11 @@ Column = DataClass(
                 "then": {"gt": {"multi": 1}},
                 "else": True,
             },
+            {
+                "when": {"gte": [{"count": "nested_path"}, 2]},
+                "then": {"ne": [{"first": {"right": {"nested_path", 2}}}, {"literal": "."}]},  # SECOND-LAST ELEMENT
+                "else": True
+            }
         ]
     },
 )

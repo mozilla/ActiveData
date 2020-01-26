@@ -676,19 +676,7 @@ Please notice `offset` is relative to `rownum`, not an absolute index into the `
 Reflective Operators
 --------------------
 
-### `with` Operator ###
-
-Effectively assigns expressions to variables so they can be used in subsequent expressions
-
-        {"with": [
-            {name1: expression1},
-            {name2: expression2},
-            ...
-            {nameN: expressionN},
-            expression
-        ]} 
-
-Each expression may use any of the names defined before it.
+These operators deal with expressions as first class; either composing, or decomposing them 
 
 ### `get` Operator ###
 

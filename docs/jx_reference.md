@@ -1,14 +1,11 @@
-JSON Query Expressions Reference
-================================
+# JSON Query Expressions Reference
 
-Intended Audience
------------------
+## Intended Audience
 
 This document is only a reference document. It is expected the reader already
 knows how to write JSON query expressions. For a tutorial, start [here](jx_tutorial.md)
 
-Nomenclature
-------------
+## Nomenclature
 
 The nomenclature closely follows that used in business intelligence.
 
@@ -38,34 +35,32 @@ The nomenclature closely follows that used in business intelligence.
   is one record for every cell: which is an object with many attributes
   - **column** – analogous to a database column, a dimension or atribute
 
-Order of Operations
--------------------
+## Order of Operations
 
 Each of the clauses are executed in a particular order, irrespective of their
 order in the JSON structure. This is most limiting in the case of the
 where clause. Use sub queries to get around this limitation for now.
 
-  - **from** – the array, or list, to operate on. Can also be the results of 
+  - `with` - an array of name/expression pairs to define intermediate values     
+  - `from` – the array, or list, to operate on. Can also be the results of 
   a query, or an in-lined sub-query.
-  - **edges** – definition of the edge names and their domains
-  - **groupby** - names of the attributes to group by
-  - **where** – early in the processing to limit rows and aggregation: has 
+  - `edges` – definition of the edge names and their domains
+  - `groupby` - names of the attributes to group by
+  - `where` – early in the processing to limit rows and aggregation: has 
   access to domain names
-  - **select** – additional aggregate columns added
-  - **window** – window columns added
-  - **having** - advanced filtering
-  - **sort** – run at end, but only if output to a list.
-  - **isLean** - used by ElasticSearch to use `_source` on all fields
+  - `select` – additional aggregate columns added
+  - `window` – window columns added
+  - `having` - advanced filtering
+  - `sort` – run at end, but only if output to a list.
+  - `isLean` - used by ElasticSearch to use `_source` on all fields
 
-Query Clauses
-=============
+# Query Clauses
 
 Queries are complex operators over sets, tables, and lists. Technically, 
 queries are `from` operators with a variety of optional clauses that 
 direct data transformation.
 
-`from` Clause
----------------
+## `from` Clause
 
 The `from` operator accepts one parameter: the table, an index, or relation that 
 is being processed by the query. In Javascript this can be an array of 
@@ -93,11 +88,11 @@ Example: Pull review requests from BZ:
 
 The `select` clause can be a single object, or an array of objects. The former will result in nameless value. The latter will result in an object, with given attributes, in each cell.
 
-  - **value** – Expression to calculate the result value
-  - **name** – The name given to the resulting attribute. Optional if `value` is a simple variable name.
-  - **aggregate** – one of many aggregate operations
-  - **default** to replace null in the event there is no data
-  - **sort** – one of `increasing`, `decreasing` or `none` (default). Only meaningful when the output of the query is a list, not a cube.
+  - `value` – Expression to calculate the result value
+  - `name` – The name given to the resulting attribute. Optional if `value` is a simple variable name.
+  - `aggregate` – one of many aggregate operations
+  - `default` to replace null in the event there is no data
+  - `sort` – one of `increasing`, `decreasing` or `none` (default). Only meaningful when the output of the query is a list, not a cube.
 
 [more documentation on `select`](jx_clause_select.md)
 
@@ -142,126 +137,121 @@ to rename the attribute, they can be replaced with simply the value:
     }
 
 
-`select.aggregate` Subclause
-----------------------------
+## `select.aggregate` Subclause
 
 The `aggregate` sub-clause directs the particular aggregation 
 
-  - **none** – when expecting only one value 
-  - **one** – when expecting all values to be identical
-  - **binary** – returns 1 if value found, 0 for no value
-  - **exists** – same as binary but returns Boolean
-  - **count** – count number of values
-  - **sum** – mathematical summation of values
-  - **average** – mathematical average of values
-  - **geomean** - geometric mean of values
-  - **minimum** – return minimum value observed
-  - **maximum** – return maximum value observed
-  - **first** - return first value observed (assuming ordered `from` clause)
-  - **any** - return one of any value observed
-  - **percentile** – return given percentile
-    - **select.percentile** defined from 0.0 to 1.0 (required)
-    - **select.default** to replace null in the event there is no data
-  - **median** – return median (percentile = 50%)
-  - **middle** - return middle percentile, a range min, max that ignores total 
+  - `none` – when expecting only one value 
+  - `one` – when expecting all values to be identical
+  - `binary` – returns 1 if value found, 0 for no value
+  - `exists` – same as binary but returns Boolean
+  - `count` – count number of values
+  - `sum` – mathematical summation of values
+  - `average` – mathematical average of values
+  - `geomean` - geometric mean of values
+  - `minimum` – return minimum value observed
+  - `maximum` – return maximum value observed
+  - `first` - return first value observed (assuming ordered `from` clause)
+  - `any` - return one of any value observed
+  - `percentile` – return given percentile
+    - `select.percentile` defined from 0.0 to 1.0 (required)
+    - `select.default` to replace null in the event there is no data
+  - `median` – return median (percentile = 50%)
+  - `middle` - return middle percentile, a range min, max that ignores total 
   and bottom (1-middle)/2 parts
-    - **select.percentile** defined from 0.0 to 1.0 (required)
-    - **select.default** to replace null in the event there is no data
-  - **join** – concatenate all values to a single string
-    - **select.separator** to put between each of the joined values
-  - **array** - return an array of values (which can have duplicates)
-    - **select.sort** - optional, to return the array sorted
-  - **list** - return an list of values (alternate name for array aggregate)
-    - **select.sort** - optional, to return the array sorted
-  - **union** - return an array of unique values. In the case of javascript, 
+    - `select.percentile` defined from 0.0 to 1.0 (required)
+    - `select.default` to replace null in the event there is no data
+  - `join` – concatenate all values to a single string
+    - `select.separator` to put between each of the joined values
+  - `array` - return an array of values (which can have duplicates)
+    - `select.sort` - optional, to return the array sorted
+  - `list` - return an list of values (alternate name for array aggregate)
+    - `select.sort` - optional, to return the array sorted
+  - `union` - return an array of unique values. In the case of javascript, 
   uniqueness is defined as the string the object can be coerced to 
   (`""+a == ""+b`).
-    - **select.limit** - limit on the size of the set
+    - `select.limit` - limit on the size of the set
 
 All aggregates ignore the null values; If all values are null, it is the same 
 as having no data.
 
-`where` Clause
-------------
+## `where` Clause
 
 The `where` clause is [an expression](jx_expressions.md) that returns a Boolean 
 indicating whether the document will be included in the aggregate. If the 
 query is returning a pivot-table, or data cube, the where clause does not 
 affect the dimensions' domains.
 
-`edges` Clause
---------------
+## `edges` Clause
 
 The edges clause is used to produce pivot tables and data cubes; each edge 
 defines a side. Each edge is a column which SQL group-by will be applied; with 
 the additional stipulation that all parts of all domains are represented, even 
 if null (count==0).
 
-  - **name** – The name given to the resulting edge (optional, if the value is 
+  - `name` – The name given to the resulting edge (optional, if the value is 
   a simple attribute name)
-  - **value** – The expression to generate the edge value before grouping
-  - **range** – Can be used instead of value, but only for algebraic fields: 
+  - `value` – The expression to generate the edge value before grouping
+  - `range` – Can be used instead of value, but only for algebraic fields: 
   In which case, if the minimum of a domain part is in the range, it will be 
   used in the aggregate.
-      - **min** – The expression that defines the minimum value
-      - **max** – The expression defining the supremum (of all values greater 
+      - `min` – The expression that defines the minimum value
+      - `max` – The expression defining the supremum (of all values greater 
       than the range, pick the smallest)
-      - **mode** – `inclusive` will ensure any domain part that intersects 
+      - `mode` – `inclusive` will ensure any domain part that intersects 
       with the range will be used in the aggregate. `snapshot` (default) will 
       only count ranges that contain the domain part key value.
-  - **test** – Expression to be used instead of value: It must return a 
+  - `test` – Expression to be used instead of value: It must return a 
   Boolean indicating if the data will match the domain parts. Use this to 
   simulate a SQL join.
-  - **domain** – The range of values to be part of the aggregation
-  - **allowNulls** – Set to `true` (default) if you want to aggregate all 
+  - `domain` – The range of values to be part of the aggregation
+  - `allowNulls` – Set to `true` (default) if you want to aggregate all 
   values outside the domain. 
 
-`edges.domain` Subclause
-------------------------
+## `edges.domain` Subclause
 
 The domain is defined as an attribute of every edge. Each domain defines a covering partition.
 
-  - **name** – Name given to this domain definition, for use in other code in 
+  - `name` – Name given to this domain definition, for use in other code in 
   the query (default to `type` value).
-  - **type** – One of a few predefined types (Default `{"type":"default"}`)
-  - **limit** - for `"type": "default"` domains; limit the number of parts that will be returned 
-  - **value** – Domain partitions are technically JSON objects with 
+  - `type` – One of a few predefined types (Default `{"type":"default"}`)
+  - `limit` - for `"type": "default"` domains; limit the number of parts that will be returned 
+  - `value` – Domain partitions are technically JSON objects with 
   descriptive attributes (name, value, max, min, etc). The value attribute is 
   code that will extract the value of the domain after aggregation is complete.
-  - **key** – Code to extract the unique key value from any part object in a 
+  - `key` – Code to extract the unique key value from any part object in a 
   partition. This is important so a 1-1 relationship can be established – 
   mapping fast string hashes to slow object comparisons.
 
 
-`edges.domain.type` Subclause
------------------------------
+## `edges.domain.type` Subclause
 
 Every edge must be limited to one of a few basic domain types. Which further 
 defines the other domain attributes which can be assigned.
 
-  - **default**- For when the type parameter is missing: Defines parts of 
+  - `default`- For when the type parameter is missing: Defines parts of 
   domain as an unlimited set of unique values. Useful for numbers and strings, 
   but can be used on objects in general.
-  - **time** – Defines parts of a time domain.
-      - **edge.domain.min** – Minimum value of domain (optional)
-      - **edge.domain.max** – Supremum of domain (optional)
-      - **edge.domain.interval** – The size of each time part. (max-min)/interval must be an integer
-  - **duration** – Defines an time interval
-      - **edge.domain.min** – Minimum value of domain (optional)
-      - **edge.domain.max** – Supremum of domain (optional)
-      - **edge.domain.interval** – The size of each time part. (max-min)/interval must be an integer
-  - **numeric** – Defines a unit-less range of values
-      - **edge.domain.min** – Minimum value of domain (optional)
-      - **edge.domain.max** – Supremum of domain (optional)
-      - **edge.domain.interval** – The size of each time part. (max-min)/interval must be an integer
-  - **count** – just like numeric, but limited to integers >= 0
-  - **set** – An explicit set of unique values
-      - **edge.domain.partitions** – the set of values allowed. These can be 
+  - `time` – Defines parts of a time domain.
+      - `edge.domain.min` – Minimum value of domain (optional)
+      - `edge.domain.max` – Supremum of domain (optional)
+      - `edge.domain.interval` – The size of each time part. (max-min)/interval must be an integer
+  - `duration` – Defines an time interval
+      - `edge.domain.min` – Minimum value of domain (optional)
+      - `edge.domain.max` – Supremum of domain (optional)
+      - `edge.domain.interval` – The size of each time part. (max-min)/interval must be an integer
+  - `numeric` – Defines a unit-less range of values
+      - `edge.domain.min` – Minimum value of domain (optional)
+      - `edge.domain.max` – Supremum of domain (optional)
+      - `edge.domain.interval` – The size of each time part. (max-min)/interval must be an integer
+  - `count` – just like numeric, but limited to integers >= 0
+  - `set` – An explicit set of unique values
+      - `edge.domain.partitions` – the set of values allowed. These can be 
       compound objects, but `edge.test` and `edge.domain.value` need to be defined.
-  - **range** - A list of ranges, probably not of the same interval, over some 
+  - `range` - A list of ranges, probably not of the same interval, over some 
   algebraic field. The ranges can have holes, but can not overlap.
-      - **edge.domain.partitions.N.min** - minimum value for this partition
-      - **edge.domain.partitions.N.max** - supremum value for this partition
+      - `edge.domain.partitions.N.min` - minimum value for this partition
+      - `edge.domain.partitions.N.max` - supremum value for this partition
 
 ## `window` Clause
 
@@ -271,25 +261,25 @@ does not affect the number of rows returned. For each window, the data is
 grouped, sorted and assigned a `rownum` attribute that can be used to 
 calculate the attribute value.
 
-  - **name** – name given to resulting attribute
-  - **value** – a JSON expression used to determine the attribute value. The 
+  - `name` – name given to resulting attribute
+  - `value` – a JSON expression used to determine the attribute value. The 
   functions is passed three special variables:
       - `row` – the row being processed
       - `rownum` – an integer, starting at zero for the first row
       - `rows` – an array of all data in the group.
-  - **edges** – an array of column names used to determine the groups
-  - **where** – code that returns true/false to indicate if a record is a 
+  - `edges` – an array of column names used to determine the groups
+  - `where` – code that returns true/false to indicate if a record is a 
   member of any group. This will not affect the number of rows returned, 
   only how the window is calculated. If where returns false then rownum and 
   rows will both be null: Be sure to properly handle those values in your code.
-  - **sort** – a single attribute name, or array of attribute names, used to 
+  - `sort` – a single attribute name, or array of attribute names, used to 
   sort the members of each group
-  - **range** - the interval which the window function will apply, outside the 
-  range the `row` is null. Only makes sense when **sort** is defined
-      - **min** - offset from `rownum` where window starts
-      - **max** - offset from `rownum` where window ends (`rows[rownum + max] == null`)
-  - **aggregate** - an aggregate function to apply on **value** over the 
-  **range**, (or whole group if range is not defined)
+  - `range` - the interval which the window function will apply, outside the 
+  range the `row` is null. Only makes sense when `sort` is defined
+      - `min` - offset from `rownum` where window starts
+      - `max` - offset from `rownum` where window ends (`rows[rownum + max] == null`)
+  - `aggregate` - an aggregate function to apply on **value** over the 
+  `range`, (or whole group if range is not defined)
 
 **Please note: The javascript JSON Expressions library uses "analytic" instead of "window".**
 
@@ -298,11 +288,11 @@ calculate the attribute value.
 The `having` clause is a filter that uses aggregates and partitions to 
 determine inclusion in the resultant cube.
 
-  - **edges** – an array of column names used to determine how the rows are 
+  - `edges` – an array of column names used to determine how the rows are 
   partitioned
-  - **sort** – a single attribute name, or array of attribute names, used to 
+  - `sort` – a single attribute name, or array of attribute names, used to 
   declare the rank of every row in the group
-  - **aggregate** - an aggregate function used to determine which row is selected
+  - `aggregate` - an aggregate function used to determine which row is selected
 
 ## `sort` Clause
 
@@ -312,19 +302,19 @@ determine inclusion in the resultant cube.
 
 Standard form is meant for automated composition
 
-  - **value** - expression to sort by
-  - **sort** - (optional) use `1` to sort in ascending order, `-1` in descending order. `asc` and `desc` have the same effect respectively. You can ignore this property, or set it to `null` or `0` for no sorting.  
+  - `value` - expression to sort by
+  - `sort` - (optional) use `1` to sort in ascending order, `-1` in descending order. `asc` and `desc` have the same effect respectively. You can ignore this property, or set it to `null` or `0` for no sorting.  
 
 **Example**
 
     {"sort": {"value": "build.date", "sort": 1}}
-
+    
 ### Short form
 
 Short form is more restrictive, but a bit more humane; it has `{field: ordering}` format
 
-  - **field** - the name of the attribute to sort by
-  - **ordering** - the direction of the sort: with the same options as standard form  
+  - `field` - the name of the attribute to sort by
+  - `ordering` - the direction of the sort: with the same options as standard form  
 
 **Example**
 
@@ -338,16 +328,35 @@ Short form is more restrictive, but a bit more humane; it has `{field: ordering}
 
     {"sort": "build.date"}
 
+## `with` Clause
 
+Effectively assigns expressions to names so they can be used in subsequent expressions
 
-Pre-Defined Dimensions
-----------------------
+    {"with": [
+        {"name": name1, "value": expression1},
+        {"name": name2, "value": expression2},
+        ...
+        {"name": nameN, "value": expressionN},
+    ]} 
+
+Each expression may use any of the names defined before it. Just like `sort`, each statement in the clause has a short form: 
+
+    {"with": {name: expression}}   
+
+**Example**
+
+    {
+        "select": {"mul": ["x", "x"]}, 
+        "with": {"x": {"some_long_expression":{}}}
+    }
+
+## Pre-Defined Dimensions
 
 Pre-defined dimensions simplify queries, and double as type information for 
 the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.com/klahnakoski/Qb/blob/master/html/es/js/Dimension-Bugzilla.js).
 [More documentation on dimension definitions here](jx_domains_and_dimensions.md).
 
-  - **select** - Any pre-defined dimension with a partition defined can be used in a select clause. Each record will be
+  - `select` - Any pre-defined dimension with a partition defined can be used in a select clause. Each record will be
   assigned it's part.
 
     <pre>var details=yield(ESQuery.run({
@@ -366,7 +375,7 @@ the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.
         ]}
     }));</pre>
 
-  - **edge.domain** - Pre-defined dimensions can be used as domain values
+  - `edge.domain` - Pre-defined dimensions can be used as domain values
 
     <pre>var chart=yield (ESQuery.run({
         "from":"bugs",
@@ -382,7 +391,7 @@ the dataset. In this project [`Mozilla.*` have been pre-defined](https://github.
     }));</pre>
 
 
-  - **esfilter** - most commonly used in esfilters so that simple names replace complex filtering logic
+  - `esfilter` - most commonly used in esfilters so that simple names replace complex filtering logic
 
     <pre>var q = yield(ESQuery.run({
         "name":"Product Breakdown",

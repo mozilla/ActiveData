@@ -9,7 +9,7 @@ This is not a good assumption for machine consumption: Machines can handle large
 
 ## Requesting large responses
 
-Add `destination: "s3"` to the query object:
+Add `destination: "url"` to the query object:
 
 ```json
 {

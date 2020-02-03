@@ -66,7 +66,7 @@ The result is ready when `ok: true`:
 
 ## Large aggregations
 
-Large aggregate results can also ba had, but they are limited to a single `groupby` column
+You may request large aggregate results, but they are limited to a single `groupby` column
  
 ```json
 {
@@ -83,7 +83,7 @@ Large aggregate results can also ba had, but they are limited to a single `group
 * `destination: "url"` - as mentioned before
 * `groupby` - is limited to one column, expressions are not allowed
 * `format: "list"` - is required at this time (Jan 2020)
-* no `edges` - cubes are not implemented
+* `edges` - not allowed: cubes are not implemented
 
 
 The response is almost identical; with `url` and `status`

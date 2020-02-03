@@ -93,6 +93,13 @@ class Date(object):
             Log.error("Can not format {{value}} with {{format}}", value=unix2datetime(self.unix), format=format, cause=e)
 
     @property
+    def datetime(self):
+        """
+        RETURN AS PYTHON DATETIME (GMT)
+        """
+        return datetime.utcfromtimestamp(self.unix)
+
+    @property
     def milli(self):
         return self.unix*1000
 

@@ -10,21 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NeOp as NeOp_
-from jx_python.expressions._utils import Python
+from jx_python.expressions._utils import Python, with_var
 
 
 class NeOp(NeOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         lhs = Python[self.lhs].to_python()
         rhs = Python[self.rhs].to_python()
-        return (
-            "(("
-            + lhs
-            + ") != None and ("
-            + rhs
-            + ") != None and ("
-            + lhs
-            + ") != ("
-            + rhs
-            + "))"
-        )
+
+        return with_var("r, l", "("+lhs+","+rhs+")", "l!=None and r!=None and l!=r")

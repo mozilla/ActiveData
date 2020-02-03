@@ -88,9 +88,10 @@ class Log(object):
         if settings.constants:
             constants.set(settings.constants)
 
-        if settings.log:
+        logs = coalesce(settings.log, settings.logs)
+        if logs:
             cls.logging_multi = StructuredLogger_usingMulti()
-            for log in listwrap(settings.log):
+            for log in listwrap(logs):
                 Log.add_log(Log.new_instance(log))
 
             from mo_logs.log_usingThread import StructuredLogger_usingThread

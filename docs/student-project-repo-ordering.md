@@ -15,16 +15,18 @@ Some code repositories are large, and it would be nice to extract a subset of ch
  
 **Tracking intermittent failures** - the same logic applies to changesets that introduce intermittent failures. The logic used to detect the intermittent failure is more complicated than in performance, but the need for tracing backward through multiple merges from multiple branches is the same.
 
-**Code Coverage** - Code coverage is expensive to run, so can't be run on every changeset.  Instead, we aggregate coverage over a number of changesets to get virtual coverage. This can be done, even on files hat have changed. This requires we track coverage diffs through merges, possibly over long periods of branch separation. 
+**Code Coverage** - Code coverage is expensive to run, so can't be run on every changeset.  Instead, we aggregate coverage over a number of changesets to get virtual coverage. This can be done, even on files that have changed. This requires we track coverage diffs through merges, possibly over long periods of branch separation. 
 
 ## Solution
 
 Define a function `N` that acts on every changeset to provide a floating point number `n = N(C)`, such that for all ancestors `Ai` and all descendants `Di` we have `N(Ai) < n < N(Di)`.  This can be done efficiently on repository graphs; a Dewey decimal like numbering system will work fine.
 
-For every changeset, `C`, find the "supremum",`sup(C)`, and "infimum", `inf(C)`, nodes. The supremum is [the dominator](https://en.wikipedia.org/wiki/Dominator_(graph_theory)) when edges point from parent to child.  The infimum is the dominator when edges point from child to parent.  Using these nodes, For every changeset `C`, we can define three regions of the repository graph:  
+For every changeset, `C`, find the "supremum",`sup(C)`, and "infimum", `inf(C)`, nodes. Using these nodes, For every changeset `C`, we can define three regions of the repository graph:  
 
-1. revisions where `C` has been applied (`all Di where N(Di) >= N(inf(c))`)
-2. Revisions where `C` has not been applied (`all Ai where N(Ai) <= N(sup(c))`)
-3. the revisions which graph analysis is required (`all Ri where N(sup(C)) < N(R) < N(inf(C))`)
+1. revisions where `C` has not been applied (`all Di where N(Di) <= N(inf(c))`)
+2. Revisions where `C` has been applied (`all Ai where N(sup(c)) <= N(Ai)`)
+3. the revisions which graph analysis is required (`all Ri where N(inf(C)) < N(R) < N(sup(C))`)
 
 With these features, we can put complex repository graphs into a regular database, and use then to pull subsets of the graph for detailed local graph anaylsis.
+
+> Maybe we can use algorithms for [the dominator](https://en.wikipedia.org/wiki/Dominator_(graph_theory)) to define supemum and infimum?

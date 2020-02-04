@@ -536,14 +536,16 @@ def _wrap_leaves(value):
 
 
 def unwrap(v):
+    if v is None:
+        return None
     _type = _get(v, CLASS)
-    if _type is Data:
+    if _type is NullType:
+        return None
+    elif _type is Data:
         d = _get(v, SLOT)
         return d
     elif _type is FlatList:
         return v.list
-    elif _type is NullType:
-        return None
     elif _type is DataObject:
         d = _get(v, OBJ)
         if _get(d, CLASS) in data_types:

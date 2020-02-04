@@ -14,7 +14,7 @@ from jx_base import Column, Table
 from jx_base.meta_columns import META_COLUMNS_NAME, META_COLUMNS_TYPE_NAME, SIMPLE_METADATA_COLUMNS, META_COLUMNS_DESC
 from jx_base.schema import Schema
 from jx_python import jx
-from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, set_default, listwrap, unwrap, split_field
+from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, listwrap, split_field
 from mo_dots.lists import last
 from mo_json import STRUCT, NESTED, OBJECT
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path
@@ -118,9 +118,11 @@ class ColumnList(Table, jx_base.Container):
                         self._add(col)
 
         except Exception as e:
-            Log.warning(
-                "no {{index}} exists, making one", index=META_COLUMNS_NAME, cause=e
-            )
+            metadata = self.es_cluster.get_metadata(after=Date.now())
+            if any(index.startswith(META_COLUMNS_NAME) for index in metadata.indices.keys()):
+                Log.error("metadata already exists!", cause=e)
+
+            Log.warning("no {{index}} exists, making one", index=META_COLUMNS_NAME, cause=e)
             self._db_create()
 
     def _update_from_es(self, please_stop):

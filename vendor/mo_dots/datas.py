@@ -23,7 +23,7 @@ SLOT = str("_internal_dict")
 DEBUG = False
 
 
-class Data(MutableMapping):
+class Data(object):
     """
     Please see README.md
     """
@@ -149,7 +149,7 @@ class Data(MutableMapping):
             Log.error("can not set key={{key}}", key=key, cause=e)
 
     def __getattr__(self, key):
-        d = _get(self, SLOT)
+        d = self._internal_dict
         v = d.get(key)
         t = _get(v, CLASS)
 
@@ -187,31 +187,47 @@ class Data(MutableMapping):
         return _iadd(self, other)
 
     def __or__(self, other):
+        """
+        RECURSIVE COALESCE OF DATA PROPERTIES
+        """
         if not _get(other, CLASS) in data_types:
             get_logger().error("Expecting a Mapping")
 
-        output = object.__new__(Data)
-        output._internal_dict = {}
         d = self._internal_dict
-        for ok, ov in other.items():
-            sv = d.get(ok)
-            output[ok] = sv | ov
+        output = Data(**d)
+        output.__ior__(other)
         return output
 
     def __ror__(self, other):
+        """
+        RECURSIVE COALESCE OF DATA PROPERTIES
+        """
         if not _get(other, CLASS) in data_types:
             get_logger().error("Expecting a Mapping")
 
         return wrap(other).__or__(self)
 
     def __ior__(self, other):
+        """
+        RECURSIVE COALESCE OF DATA PROPERTIES
+        """
         if not _get(other, CLASS) in data_types:
             get_logger().error("Expecting a Mapping")
         d = self._internal_dict
         for ok, ov in other.items():
+            if ov == None:
+                continue
+
             sv = d.get(ok)
-            d[ok] = sv | ov
-        return d
+            if sv == None:
+                d[ok] = ov
+            elif isinstance(sv, Data):
+                sv |= ov
+            elif is_data(sv):
+                wv = object.__new__(Data)
+                _set(wv, SLOT, sv)
+                wv |= ov
+        return self
 
     def __hash__(self):
         d = self._internal_dict
@@ -322,11 +338,18 @@ class Data(MutableMapping):
         except Exception:
             return "{}"
 
+    def __dir__(self):
+        d = self._internal_dict
+        return d.keys()
+
     def __repr__(self):
         try:
             return "Data("+dict.__repr__(self._internal_dict)+")"
         except Exception as e:
             return "Data()"
+
+
+MutableMapping.register(Data)
 
 
 def leaves(value, prefix=None):
@@ -376,6 +399,13 @@ def _str(value, depth):
 
 
 def _iadd(self, other):
+    """
+    RECURSIVE ADDITION OF DATA PROPERTIES
+    * LISTS ARE CONCATENATED
+    * SETS ARE UNIONED
+    * NUMBERS ARE ADDED
+    """
+
     if not _get(other, CLASS) in data_types:
         get_logger().error("Expecting a Mapping")
     d = unwrap(self)

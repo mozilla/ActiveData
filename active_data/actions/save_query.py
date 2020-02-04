@@ -69,6 +69,7 @@ class SaveQueries(object):
             kwargs=kwargs,
         )
         es.add_alias(index)
+        es.set_refresh_interval(seconds=1)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
 

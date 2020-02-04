@@ -15,7 +15,7 @@ from copy import deepcopy
 from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
-    literal_field, set_default, split_field, wrap
+    literal_field, set_default, split_field, wrap, lists
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
@@ -334,6 +334,7 @@ class Index(object):
                 response = self.cluster.post(
                     self.path + "/_bulk",
                     data=IterableBytes(self.encode, records),
+                    zip=True,
                     headers={"Content-Type": "application/x-ndjson"},
                     timeout=self.settings.timeout,
                     retry=self.settings.retry,
@@ -1829,3 +1830,6 @@ class IterableBytes(object):
             yield LF
             yield json_text.encode('utf8')
             yield LF
+
+
+lists.sequence_types = lists.sequence_types + (IterableBytes,)

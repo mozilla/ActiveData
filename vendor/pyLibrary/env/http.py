@@ -30,16 +30,17 @@ from requests import Response, sessions
 
 import mo_math
 from jx_python import jx
-from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap
+from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap, is_sequence
 from mo_files.url import URL
 from mo_future import PY2, is_text, text
 from mo_json import json2value, value2json
+from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_threads import Lock, Till
 from mo_times.durations import Duration
 from pyLibrary import convert
-from pyLibrary.env.big_data import ibytes2ilines, icompressed2ibytes, safe_size
+from pyLibrary.env.big_data import ibytes2ilines, icompressed2ibytes, safe_size, ibytes2icompressed
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -60,7 +61,8 @@ _warning_sent = False
 request_count = 0
 
 
-def request(method, url, headers=None, zip=None, retry=None, **kwargs):
+@override
+def request(method, url, headers=None, data=None, json=None, zip=None, retry=None, timeout=None, session=None, kwargs=None):
     """
     JUST LIKE requests.request() BUT WITH DEFAULT HEADERS AND FIXES
     DEMANDS data IS ONE OF:
@@ -68,14 +70,17 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
     * LIST OF JSON-SERIALIZABLE STRUCTURES, OR
     * None
 
-    Parameters
-     * zip - ZIP THE REQUEST BODY, IF BIG ENOUGH
-     * json - JSON-SERIALIZABLE STRUCTURE
-     * retry - {"times": x, "sleep": y} STRUCTURE
-
-    THE BYTE_STRINGS (b"") ARE NECESSARY TO PREVENT httplib.py FROM **FREAKING OUT**
-    IT APPEARS requests AND httplib.py SIMPLY CONCATENATE STRINGS BLINDLY, WHICH
-    INCLUDES url AND headers
+    :param method: GET, POST, etc
+    :param url: URL
+    :param headers: dict OF HTTP REQUEST HEADERS
+    :param data: BYTES (OR GENERATOR OF BYTES)
+    :param json: JSON-SERIALIZABLE STRUCTURE
+    :param zip: ZIP THE REQUEST BODY, IF BIG ENOUGH
+    :param retry: {"times": x, "sleep": y} STRUCTURE
+    :param timeout: SECONDS TO WAIT FOR RESPONSE
+    :param session: Session OBJECT, IF YOU HAVE ONE
+    :param kwargs: ALL PARAMETERS (DO NOT USE)
+    :return:
     """
     global _warning_sent
     global request_count
@@ -94,7 +99,7 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
         failures = []
         for remaining, u in jx.countdown(url):
             try:
-                response = request(method, u, retry=retry, **kwargs)
+                response = request(url=u, kwargs=kwargs)
                 if mo_math.round(response.status_code, decimal=-2) not in [400, 500]:
                     return response
                 if not remaining:
@@ -104,48 +109,49 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
                 failures.append(e)
         Log.error(u"Tried {{num}} urls", num=len(url), cause=failures)
 
-    if 'session' in kwargs:
-        session = kwargs['session']
-        del kwargs['session']
-        sess = Null
+    if session:
+        close_after_response = Null
     else:
-        sess = session = sessions.Session()
+        close_after_response = session = sessions.Session()
 
-    with closing(sess):
+    with closing(close_after_response):
         if PY2 and is_text(url):
             # httplib.py WILL **FREAK OUT** IF IT SEES ANY UNICODE
             url = url.encode('ascii')
 
         try:
-            set_default(kwargs, {"zip": zip, "retry": retry}, DEFAULTS)
-            _to_ascii_dict(kwargs)
+            set_default(kwargs, DEFAULTS)
 
             # HEADERS
-            headers = kwargs['headers'] = unwrap(set_default(headers, session.headers, default_headers))
+            headers = unwrap(set_default(headers, session.headers, default_headers))
             _to_ascii_dict(headers)
-            del kwargs['headers']
 
             # RETRY
-            retry = wrap(kwargs['retry'])
-            if isinstance(retry, Number):
-                retry = set_default({"times":retry}, DEFAULTS['retry'])
-            if isinstance(retry.sleep, Duration):
+            retry = wrap(retry)
+            if retry == None:
+                retry = set_default({}, DEFAULTS['retry'])
+            elif isinstance(retry, Number):
+                retry = set_default({"times": retry}, DEFAULTS['retry'])
+            elif isinstance(retry.sleep, Duration):
                 retry.sleep = retry.sleep.seconds
-            del kwargs['retry']
 
             # JSON
-            if 'json' in kwargs:
-                kwargs['data'] = value2json(kwargs['json']).encode('utf8')
-                del kwargs['json']
+            if json:
+                data = value2json(json).encode('utf8')
 
             # ZIP
+            zip = coalesce(zip, DEFAULTS['zip'])
             set_default(headers, {'Accept-Encoding': 'compress, gzip'})
 
-            if kwargs['zip'] and len(coalesce(kwargs.get('data'))) > 1000:
-                compressed = convert.bytes2zip(kwargs['data'])
-                headers['content-encoding'] = 'gzip'
-                kwargs['data'] = compressed
-            del kwargs['zip']
+            if zip:
+                if is_sequence(data):
+                    compressed = ibytes2icompressed(data)
+                    headers['content-encoding'] = 'gzip'
+                    data = compressed
+                elif len(coalesce(data)) > 1000:
+                    compressed = convert.bytes2zip(data)
+                    headers['content-encoding'] = 'gzip'
+                    data = compressed
         except Exception as e:
             Log.error(u"Request setup failure on {{url}}", url=url, cause=e)
 
@@ -157,7 +163,8 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
             try:
                 DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text(url))
                 request_count += 1
-                return session.request(method=method, headers=headers, url=str(url), **kwargs)
+                # return session.request(method=method, headers=headers, url=str(url), **kwargs)
+                return _session_request(session, url=str(url), headers=headers, data=data, json=None, kwargs=kwargs)
             except Exception as e:
                 e = Except.wrap(e)
                 if retry['http'] and str(url).startswith("https://") and "EOF occurred in violation of protocol" in e:
@@ -166,10 +173,12 @@ def request(method, url, headers=None, zip=None, retry=None, **kwargs):
                 errors.append(e)
 
         if " Read timed out." in errors[0]:
-            Log.error(u"Tried {{times}} times: Timeout failure (timeout was {{timeout}}", timeout=kwargs['timeout'], times=retry.times, cause=errors[0])
+            Log.error(u"Tried {{times}} times: Timeout failure (timeout was {{timeout}}", timeout=timeout, times=retry.times, cause=errors[0])
         else:
             Log.error(u"Tried {{times}} times: Request failure of {{url}}", url=url, times=retry.times, cause=errors[0])
 
+
+_session_request = override(sessions.Session.request)
 
 if PY2:
     def _to_ascii_dict(headers):

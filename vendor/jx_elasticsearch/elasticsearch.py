@@ -16,7 +16,6 @@ from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
     literal_field, set_default, split_field, wrap
-from mo_dots.lists import last
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
@@ -309,28 +308,6 @@ class Index(object):
         if result.failures:
             Log.error("Failure to delete fom {{index}}:\n{{data|pretty}}", index=self.settings.index, data=result)
 
-    def _data_bytes(self, records):
-        """
-        :param records: EXPECTING OBJECT WITH __iter__()
-        :return: GENERATOR OF BYTES FOR POSTING TO ES
-        """
-        for r in records:
-            if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
-                Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
-            id, version, json_text = self.encode(r)
-
-            if DEBUG and not json_text.startswith('{'):
-                self.encode(r)
-                Log.error("string {{doc}} will not be accepted as a document", doc=json_text)
-
-            if version:
-                yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
-            else:
-                yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
-            yield LF
-            yield json_text.encode('utf8')
-            yield LF
-
     def extend(self, records):
         """
         records - MUST HAVE FORM OF
@@ -356,7 +333,7 @@ class Index(object):
 
                 response = self.cluster.post(
                     self.path + "/_bulk",
-                    data=self._data_bytes(records),
+                    data=IterableBytes(self.encode, records),
                     headers={"Content-Type": "application/x-ndjson"},
                     timeout=self.settings.timeout,
                     retry=self.settings.retry,
@@ -380,7 +357,7 @@ class Index(object):
                     Log.error("version not supported {{version}}", version=self.cluster.version)
 
                 if fails:
-                    lines = list(self._data_bytes(records))
+                    lines = list(IterableBytes(self.encode, records))
                     cause = [
                         Except(
                             template="{{status}} {{error}} (and {{some}} others) while loading line id={{id}} into index {{index|quote}} (typed={{typed}}):\n{{line}}",
@@ -400,7 +377,7 @@ class Index(object):
             pass
         except Exception as e:
             e = Except.wrap(e)
-            lines = list(self._data_bytes(records))
+            lines = list(IterableBytes(self.encode, records))
             if e.message.startswith("sequence item "):
                 Log.error("problem with {{data}}", data=text(repr(lines[int(e.message[14:16].strip())])), cause=e)
             Log.error("problem sending to ES", cause=e)
@@ -1822,3 +1799,33 @@ _merge_type = {
         "nested": "nested"
     }
 }
+
+
+class IterableBytes(object):
+    def __init__(self, encode, records):
+        """
+        DO NOT SERIALIZE TO BYTES UNTIL REQUIRED
+
+        :param encode: FUNCTION TO ENCODE INTO JSON TEXT
+        :param records: EXPECTING OBJECT WITH __iter__()
+        """
+        self.encode = encode
+        self.records = records
+
+    def __iter__(self):
+        for r in self.records:
+            if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
+                Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
+            id, version, json_text = self.encode(r)
+
+            if DEBUG and not json_text.startswith('{'):
+                self.encode(r)
+                Log.error("string {{doc}} will not be accepted as a document", doc=json_text)
+
+            if version:
+                yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
+            else:
+                yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
+            yield LF
+            yield json_text.encode('utf8')
+            yield LF

@@ -186,6 +186,33 @@ def format_csv(aggs, es_query, query, decoders, select):
     return data()
 
 
+def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
+    new_edges = wrap(count_dim(aggs, es_query, decoders))
+
+    rank = len(new_edges)
+    header = tuple(new_edges.name + all_selects.name)
+    columns = rank+len(all_selects)
+
+    def data():
+        groupby = query.groupby
+
+        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders):
+            output = [None] * columns
+            for g, d, c in zip(groupby, decoders, coord):
+                output[g.put.index] = d.get_value(c)
+            for s in all_selects:
+                output[s.put.index] = s.default
+            for s in _selects:
+                union(output, s.put_index, s.pull(agg), s.aggregate)
+            yield output
+
+    return Data(
+        meta={"format": "table"},
+        header=header,
+        data=list(data())
+    )
+
+
 def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
     new_edges = wrap(count_dim(aggs, es_query, decoders))
 

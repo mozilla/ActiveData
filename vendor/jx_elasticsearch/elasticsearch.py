@@ -311,24 +311,24 @@ class Index(object):
 
     def _data_bytes(self, records):
         """
-        :param records:  EXPECTING METHOD THAT PRODUCES A GENERATOR
+        :param records: EXPECTING OBJECT WITH __iter__()
         :return: GENERATOR OF BYTES FOR POSTING TO ES
         """
         for r in records:
             if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
                 Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
-            id, version, json_bytes = self.encode(r)
+            id, version, json_text = self.encode(r)
 
-            if DEBUG and not json_bytes.startswith('{'):
+            if DEBUG and not json_text.startswith('{'):
                 self.encode(r)
-                Log.error("string {{doc}} will not be accepted as a document", doc=json_bytes)
+                Log.error("string {{doc}} will not be accepted as a document", doc=json_text)
 
             if version:
                 yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
             else:
                 yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
             yield LF
-            yield json_bytes.encode('utf8')
+            yield json_text.encode('utf8')
             yield LF
 
     def extend(self, records):

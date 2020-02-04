@@ -16,6 +16,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import types
 from collections import deque
+from copy import copy
 from datetime import datetime
 from time import time
 
@@ -399,7 +400,7 @@ class ThreadedQueue(Queue):
         max_size=None,   # SET THE MAXIMUM SIZE OF THE QUEUE, WRITERS WILL BLOCK IF QUEUE IS OVER THIS LIMIT
         period=None,  # MAX TIME (IN SECONDS) BETWEEN FLUSHES TO SLOWER QUEUE
         silent=False,  # WRITES WILL COMPLAIN IF THEY ARE WAITING TOO LONG
-        error_target=None  # CALL THIS WITH ERROR **AND THE LIST OF OBJECTS ATTEMPTED**
+        error_target=None  # CALL error_target(error, buffer) **buffer IS THE LIST OF OBJECTS ATTEMPTED**
                            # BE CAREFUL!  THE THREAD MAKING THE CALL WILL NOT BE YOUR OWN!
                            # DEFAULT BEHAVIOUR: THIS WILL KEEP RETRYING WITH WARNINGS
     ):
@@ -426,6 +427,9 @@ class ThreadedQueue(Queue):
         last_push = now - period
 
         def push_to_queue():
+            if self.slow_queue.__class__.__name__ == "Index":
+                if self.slow_queue.settings.index.startswith("saved"):
+                    Log.alert("INSERT SAVED QUERY {{data|json}}", data=copy(_buffer))
             self.slow_queue.extend(_buffer)
             del _buffer[:]
             for ppf in _post_push_functions:

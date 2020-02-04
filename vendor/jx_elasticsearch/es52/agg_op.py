@@ -26,7 +26,7 @@ from jx_python import jx
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, Null, coalesce, join_field, listwrap, literal_field, unwrap, unwraplist, wrap
 from mo_future import first, is_text, text
-from mo_json import EXISTS, INTEGER, NESTED, NUMBER, OBJECT
+from mo_json import EXISTS, INTEGER, NESTED, NUMBER, OBJECT, NUMBER_TYPES
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
@@ -222,7 +222,7 @@ def extract_aggs(select, query_path, schema):
                 else:
                     s.pull = jx_expression_to_function({"add": canonical_names})
             elif s.aggregate == "median":
-                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                columns = [c for c in columns if c.jx_type in NUMBER_TYPES]
                 if len(columns) != 1:
                     Log.error("Do not know how to perform median on columns with more than one type (script probably)")
                 # ES USES DIFFERENT METHOD FOR PERCENTILES
@@ -233,7 +233,7 @@ def extract_aggs(select, query_path, schema):
                 }}, s))
                 s.pull = jx_expression_to_function("values.50\\.0")
             elif s.aggregate == "percentile":
-                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                columns = [c for c in columns if c.jx_type in NUMBER_TYPES]
                 if len(columns) != 1:
                     Log.error(
                         "Do not know how to perform percentile on columns with more than one type (script probably)")
@@ -255,7 +255,7 @@ def extract_aggs(select, query_path, schema):
                     acc.add(ExprAggs(path, {"cardinality": {"field": column.es_column}}, s))
                 s.pull = jx_expression_to_function("value")
             elif s.aggregate == "stats":
-                columns = [c for c in columns if c.jx_type in (NUMBER, INTEGER)]
+                columns = [c for c in columns if c.jx_type in NUMBER_TYPES]
                 if len(columns) != 1:
                     Log.error("Do not know how to perform stats on columns with more than one type (script probably)")
                 # REGULAR STATS

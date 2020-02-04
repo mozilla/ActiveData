@@ -109,6 +109,7 @@ class SaveQueries(object):
         """
         meta, query.meta = query.meta, None
         json = convert.value2json(query)
+        query.meta = meta
         hash = json.encode("utf8")
 
         # TRY MANY HASHES AT ONCE
@@ -163,7 +164,7 @@ class SaveQueries(object):
                 )
                 if verify.data:
                     break
-                Log.note("wait for saved query")
+                Log.alert("wait for saved query")
                 Till(seconds=1).wait()
 
         Log.note("Saved {{json}} query as {{hash}}", json=json, hash=best)

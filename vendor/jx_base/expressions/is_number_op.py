@@ -24,7 +24,7 @@ from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.true_op import TRUE
-from mo_json import BOOLEAN, INTEGER, NUMBER, OBJECT
+from mo_json import BOOLEAN, INTEGER, NUMBER, OBJECT, NUMBER_TYPES
 
 
 class IsNumberOp(Expression):
@@ -52,7 +52,7 @@ class IsNumberOp(Expression):
 
         if term is NULL:
             return FALSE
-        elif term.type in (INTEGER, NUMBER):
+        elif term.type in NUMBER_TYPES:
             return TRUE
         elif term.type == OBJECT:
             return self

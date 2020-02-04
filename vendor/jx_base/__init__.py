@@ -108,16 +108,15 @@ class {{class_name}}(Mapping):
 
 
     def _constraint(row, rownum, rows):
-        try:
-            return {{constraint_expr}}
-        except Exception as e:
-            Log.error(
-                "constraint\\n{" + "{code}}\\nnot satisfied {" + "{expect}}\\n{" + "{value|indent}}",
-                code={{constraint_expr|quote}}, 
-                expect={{constraint}}, 
-                value=row,
-                cause=e
-            )
+        if {{constraint_expr}}:
+            return
+        Log.error(
+            "constraint\\n{" + "{code}}\\nnot satisfied {" + "{expect}}\\n{" + "{value|indent}}",
+            code={{constraint_expr|quote}}, 
+            expect={{constraint}}, 
+            value=row,
+            cause=e
+        )
 
     def __init__(self, **kwargs):
         if not kwargs:
@@ -146,6 +145,10 @@ class {{class_name}}(Mapping):
     def __setattr__(self, item, value):
         if item not in {{slots}}:
             Log.error("{"+"{item|quote}} not valid attribute", item=item)
+
+        if value==None and item in {{required}}:
+            Log.error("Expecting property {"+"{item}}", item=item)
+
         object.__setattr__(self, item, value)
         self._constraint(0, [self])
 
@@ -225,7 +228,7 @@ Column = DataClass(
         "nested_path",  # AN ARRAY OF PATHS (FROM DEEPEST TO SHALLOWEST) INDICATING THE JSON SUB-ARRAYS
         {"name": "count", "nulls": True},
         {"name": "cardinality", "nulls": True},
-        {"name": "multi", "nulls": True},
+        {"name": "multi", "nulls": False},
         {"name": "partitions", "nulls": True},
         "last_updated",
     ],

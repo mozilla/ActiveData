@@ -90,7 +90,7 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content, "a")
+                    sorted_content = jx.sort(content.data, "a")
                     sorted_expected = jx.sort(expected, "a")
                     self.assertEqual(sorted_content, sorted_expected)
                 break
@@ -143,24 +143,26 @@ class TestBulk(BaseTestCase):
 
         self.assertFalse(timeout)
 
-    @skip("not done")
-    # @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
+    @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_scroll_query_table(self):
         data = wrap([{"a": "test" + text(i)} for i in range(1001)])
-        expected = data
+        expected = jx.sort(data, "a")
 
         test = wrap({
             "data": data,
             "query": {
                 "from": TEST_TABLE,
+                "select": ["a"],
                 "limit": len(data),
                 "chunk_size": 100,
+                "sort": "a"
             },
-            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
+            "expecting_list": {"data": expected},  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
 
         test.query.format = "table"
+        test.query.sort = None
         result = http.post_json(
             url=self.utils.testing.query,
             json=set_default({"destination": "url"}, test.query),
@@ -171,11 +173,9 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content, "a")
-                    sorted_expected = {
-                        "header": ["a"],
-                        "data": [(row.a,) for row in jx.sort(expected, "a")]
-                    }
+                    self.assertEqual(content.header, ["a"])
+                    sorted_content = jx.sort(content.data, 0)
+                    sorted_expected = [(row.a,) for row in expected]
                     self.assertEqual(sorted_content, sorted_expected)
                 break
             except Exception as e:

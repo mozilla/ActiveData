@@ -38,7 +38,7 @@ class Python(object):
             cwd=os.getcwd(),
             shell=shell
         )
-        self.process.stdin.add(value2json(set_default({"debug": {"trace": True}}, config)))
+        self.process.stdin.add(value2json({"debug": {"trace": True}} | config))
         status = self.process.stdout.pop()
         if status != '{"out":"ok"}':
             Log.error("could not start python\n{{error|indent}}", error=self.process.stderr.pop_all()+[status]+self.process.stdin.pop_all())

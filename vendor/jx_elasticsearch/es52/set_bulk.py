@@ -35,7 +35,7 @@ def is_bulk_set(esq, query):
         return False
     if query.destination not in {"s3", "url"}:
         return False
-    if query.format not in {"list"}:
+    if query.format not in {"list", "table"}:
         return False
     if query.groupby or query.edges:
         return False

@@ -187,23 +187,18 @@ def format_csv(aggs, es_query, query, decoders, select):
 
 
 def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
+    groupby = query.groupby
     new_edges = wrap(count_dim(aggs, es_query, decoders))
-
     rank = len(new_edges)
     header = tuple(new_edges.name + all_selects.name)
-    columns = rank+len(all_selects)
 
     def data():
-        groupby = query.groupby
-
         for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders):
-            output = [None] * columns
+            output = ([None] * rank) + [s.default for s in all_selects]
             for g, d, c in zip(groupby, decoders, coord):
-                output[g.put.index] = d.get_value(c)
-            for s in all_selects:
-                output[s.put.index] = s.default
-            for s in _selects:
-                union(output, s.put_index, s.pull(agg), s.aggregate)
+                output[d.edge.dim] = d.get_value(c)
+            for i, s in enumerate(_selects):
+                union(output, rank+i, s.pull(agg), s.aggregate)
             yield output
 
     return Data(
@@ -302,7 +297,7 @@ agg_formatters = {
     # EDGES FORMATTER, GROUPBY FORMATTER, VALUE_FORMATTER, mime_type
     None: (format_cube, format_table, format_cube, mimetype.JSON),
     "cube": (format_cube, format_cube, format_cube, mimetype.JSON),
-    "table": (format_table, format_table, format_table,  mimetype.JSON),
+    "table": (format_table, format_table_from_groupby, format_table,  mimetype.JSON),
     "list": (format_list, format_list_from_groupby, format_list, mimetype.JSON),
 }
 

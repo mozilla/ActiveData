@@ -8,12 +8,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from unittest import skipIf
+from unittest import skipIf, skip
 
 from jx_elasticsearch.es52 import agg_bulk
 from jx_python import jx
 from mo_dots import wrap, set_default
-from mo_future import text
+from mo_future import text, sort_using_key
 from mo_logs import Log
 from mo_threads import Till
 from mo_times import MINUTE, Timer
@@ -24,7 +24,7 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
-    def test_bulk_query(self):
+    def test_bulk_query_list(self):
         data = wrap([{"a": "test" + text(i)} for i in range(1001)])
         expected = [{"a": r.a, "count": 1} for r in data]
 
@@ -35,12 +35,51 @@ class TestBulk(BaseTestCase):
                 "groupby": "a",
                 "limit": len(data),
                 "chunk_size": 100,
-                "format": "list",
             },
             "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
         })
-
         self.utils.execute_tests(test)
+
+        test.query.format = "list"
+        result = http.post_json(
+            url=self.utils.testing.query,
+            json=set_default({"destination": "url"}, test.query),
+        )
+
+        timeout = Till(seconds=MINUTE.seconds)
+        while not timeout:
+            try:
+                content = http.get_json(result.url)
+                with Timer("compare results"):
+                    sorted_content = jx.sort(content.data, "a")
+                    sorted_expected = jx.sort(expected, "a")
+                    self.assertEqual(sorted_content, sorted_expected)
+                break
+            except Exception as e:
+                if "does not match expected" in e:
+                    Log.error("failed", cause=e)
+                Log.note("waiting for {{url}}", url=result.url)
+                Till(seconds=2).wait()
+
+        self.assertFalse(timeout)
+
+    @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
+    def test_scroll_query_list(self):
+        data = wrap([{"a": "test" + text(i)} for i in range(1001)])
+        expected = data
+
+        test = wrap({
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "limit": len(data),
+                "chunk_size": 100,
+            },
+            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
+        })
+        self.utils.execute_tests(test)
+
+        test.query.format = "list"
         result = http.post_json(
             url=self.utils.testing.query,
             json=set_default({"destination": "url"}, test.query),
@@ -64,7 +103,49 @@ class TestBulk(BaseTestCase):
         self.assertFalse(timeout)
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
-    def test_scroll_query(self):
+    def test_bulk_query_table(self):
+        data = wrap([{"a": "test" + text(i)} for i in range(1001)])
+        expected = [{"a": r.a, "count": 1} for r in data]
+
+        test = wrap({
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": "a",
+                "limit": len(data),
+                "chunk_size": 100,
+            },
+            "expecting_list": {"data": expected},  # DUMMY, TO ENSURE LOADED
+        })
+        self.utils.execute_tests(test)
+
+        test.query.format = "table"
+        result = http.post_json(
+            url=self.utils.testing.query,
+            json=set_default({"destination": "url"}, test.query),
+        )
+
+        timeout = Till(seconds=MINUTE.seconds)
+        while not timeout:
+            try:
+                content = http.get_json(result.url)
+                with Timer("compare results"):
+                    self.assertEqual(content.header, ["a", "count"])
+                    sorted_content = jx.sort(content.data, 0)
+                    sorted_expected = [(row.a, row.c) for row in jx.sort(expected, "a")]
+                    self.assertEqual(sorted_content, sorted_expected)
+                break
+            except Exception as e:
+                if "does not match expected" in e:
+                    Log.error("failed", cause=e)
+                Log.note("waiting for {{url}}", url=result.url)
+                Till(seconds=2).wait()
+
+        self.assertFalse(timeout)
+
+    @skip("not done")
+    # @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
+    def test_scroll_query_table(self):
         data = wrap([{"a": "test" + text(i)} for i in range(1001)])
         expected = data
 
@@ -74,12 +155,12 @@ class TestBulk(BaseTestCase):
                 "from": TEST_TABLE,
                 "limit": len(data),
                 "chunk_size": 100,
-                "format": "list",
             },
             "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
         })
-
         self.utils.execute_tests(test)
+
+        test.query.format = "table"
         result = http.post_json(
             url=self.utils.testing.query,
             json=set_default({"destination": "url"}, test.query),
@@ -91,7 +172,10 @@ class TestBulk(BaseTestCase):
                 content = http.get_json(result.url)
                 with Timer("compare results"):
                     sorted_content = jx.sort(content, "a")
-                    sorted_expected = jx.sort(expected, "a")
+                    sorted_expected = {
+                        "header": ["a"],
+                        "data": [(row.a,) for row in jx.sort(expected, "a")]
+                    }
                     self.assertEqual(sorted_content, sorted_expected)
                 break
             except Exception as e:

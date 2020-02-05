@@ -136,7 +136,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
                 retry.sleep = retry.sleep.seconds
 
             # JSON
-            if json:
+            if json != None:
                 data = value2json(json).encode('utf8')
 
             # ZIP

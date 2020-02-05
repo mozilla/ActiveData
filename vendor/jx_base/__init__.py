@@ -108,6 +108,7 @@ class {{class_name}}(Mapping):
 
 
     def _constraint(row, rownum, rows):
+        code = {{constraint_expr|quote}}
         if {{constraint_expr}}:
             return
         Log.error(

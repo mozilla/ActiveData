@@ -34,7 +34,7 @@ from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
 from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
-from mo_dots import is_data, is_sequence, wrap
+from mo_dots import is_data, is_sequence, wrap, coalesce
 from mo_json import STRING
 from mo_logs import Log
 
@@ -45,10 +45,10 @@ class BetweenOp(Expression):
     def __init__(self, value, prefix, suffix, default=NULL, start=NULL):
         Expression.__init__(self, [])
         self.value = value
-        self.prefix = prefix
-        self.suffix = suffix
-        self.default = default
-        self.start = start
+        self.prefix = coalesce(prefix, NULL)
+        self.suffix = coalesce(suffix, NULL)
+        self.default = coalesce(default, NULL)
+        self.start = coalesce(start, NULL)
         if is_literal(self.prefix) and is_literal(self.suffix):
             pass
         else:

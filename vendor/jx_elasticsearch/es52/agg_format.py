@@ -187,19 +187,39 @@ def format_csv(aggs, es_query, query, decoders, select):
 
 
 def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
-    groupby = query.groupby
     new_edges = wrap(count_dim(aggs, es_query, decoders))
-    rank = len(new_edges)
     header = tuple(new_edges.name + all_selects.name)
+    name2index = {s.name: i for i, s in enumerate(all_selects)}
 
     def data():
-        for row, coord, agg, _selects in aggs_iterator(aggs, es_query, decoders):
-            output = ([None] * rank) + [s.default for s in all_selects]
-            for g, d, c in zip(groupby, decoders, coord):
-                output[d.edge.dim] = d.get_value(c)
-            for i, s in enumerate(_selects):
-                union(output, rank+i, s.pull(agg), s.aggregate)
-            yield output
+        last_coord = None   # HANG ONTO THE output FOR A BIT WHILE WE FILL THE ELEMENTS
+        coords = None
+        values = None
+        for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
+            if coord != last_coord:
+                if coords:
+                    # SET DEFAULTS
+                    for i, s in enumerate(all_selects):
+                        v = values[i]
+                        if v == None:
+                            values[i] = s.default
+                    yield coords + tuple(values)
+                coords = tuple(d.get_value(c) for c, d in zip(coord, decoders))
+                values = [None for _ in all_selects]
+                last_coord = coord
+            # THIS IS A TRICK!  WE WILL UPDATE A ROW THAT WAS ALREADY YIELDED
+            for select in ss:
+                v = select.pull(agg)
+                if v != None:
+                    union(values, name2index[select.name], v, select.aggregate)
+
+        if coords:
+            # SET DEFAULTS ON LAST ROW
+            for i, s in enumerate(all_selects):
+                v = values[i]
+                if v == None:
+                    values[i] = s.default
+            yield coords + tuple(values)
 
     return Data(
         meta={"format": "table"},

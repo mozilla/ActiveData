@@ -3,13 +3,13 @@
 
 ## Introduction
 
-ActiveData has a 50,000 record result set limit. The intent was to provide a humane amount of information; more information than a human can consume before the results of the next query are eady. It was expected the client would send more queries to drill down, or paginate, to give the illusion of large data.
+ActiveData has a 50,000 record result set limit. The intent was to provide a humane amount of information; more information than a human can consume before the results of the next query are ready. It was expected the client would send more queries to drill down, or paginate, to give the illusion of large data.
 
 This is not a good assumption for machine consumption: Machines can handle large result sets, and forcing the client to chunk requests is complicated, and less efficient.
 
 ## Requesting large responses
 
-Add `destination: "s3"` to the query object:
+Add `destination: "url"` to the query object:
 
 ```json
 {
@@ -61,12 +61,12 @@ The result is ready when `ok: true`:
 ### Some important notes:
 
 * `destination: "url"` - as mentioned before
-* `format: "list"` - is required at this time (Jan 2020). More formatting options may be available in the future, but cubes and edge queries will never happen
+* `format` - is limited to `list` or `table`. More formatting options may be available in the future, but cubes and edge queries will never happen
 * no `edges` - cubes of large data are too expensive at this time
 
 ## Large aggregations
 
-Large aggregate results can also ba had, but they are limited to a single `groupby` column
+You may request large aggregate results, but they are limited to a single `groupby` column
  
 ```json
 {
@@ -78,12 +78,12 @@ Large aggregate results can also ba had, but they are limited to a single `group
 }
 ```
 
-### Limit
+### Limits
 
 * `destination: "url"` - as mentioned before
 * `groupby` - is limited to one column, expressions are not allowed
-* `format: "list"` - is required at this time (Jan 2020)
-* no `edges` - cubes are not implemented
+* `format` - either `list` or `table`
+* `edges` - not allowed: cubes are not implemented
 
 
 The response is almost identical; with `url` and `status`
@@ -114,4 +114,4 @@ The response is almost identical; with `url` and `status`
 
 ## Additional Features
 
-* `chunk_size` - The number of records pulled from Elasticsearch at a time. This will make no difference to your result; as the chunk size has been set high enough to be efficient as possible. The default chunk size can be surmised by inspecting the `status`.  If your documents are very large (like in the case of `coverage`) setting the chunk size smaller (to `500`) will prevent download errors.
+* `chunk_size` - The number of records requested from Elasticsearch at a time. This will make no difference to your result; the chunk size has been set high enough to be efficient as possible. The default chunk size can be surmised by inspecting the `status` during a download.  If your documents are very large (like in the case of `coverage`) setting the chunk size smaller (to `500`) will prevent download errors.

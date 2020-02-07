@@ -11,6 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_dots import listwrap
+from mo_dots.lists import last
 from mo_json import INTEGER
 
 from jx_base import Column
@@ -97,7 +98,6 @@ class TestExpressions(FuzzyTestCase):
             last_updated=Date.now(),
         )
 
-
         self.assertRaises(
             Exception,
             Column,
@@ -164,3 +164,4 @@ class S(object):
 
 
 no_schema = S()
+

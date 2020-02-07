@@ -13,4 +13,3 @@ import secrets
 
 def bytes(count):
     return secrets.token_bytes(count)
-

@@ -93,7 +93,7 @@ def start():
     try:
         config = json2value(STDIN.readline().decode('utf8'))
         constants.set(config.constants)
-        Log.start(set_default(config.debug, {"logs": [{"type": "raw"}]}))
+        Log.start(config.debug + {"logs": [{"type": "raw"}]})
         command_loop({"config": config})
     except Exception as e:
         Log.error("problem staring worker", cause=e)

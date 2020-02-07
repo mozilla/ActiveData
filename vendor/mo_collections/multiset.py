@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 
-from mo_future import is_text, is_binary
 class Multiset(object):
     """
     Multiset IS ONE MEMBER IN A FAMILY OF USEFUL CONTAINERS
@@ -25,6 +24,7 @@ class Multiset(object):
     |     No     |   No    | Multiset |
     +------------+---------+----------+
     """
+
     def __new__(cls, list=None, key_field=None, count_field=None, allow_negative=False):
         try:
             if allow_negative:
@@ -47,10 +47,8 @@ class Multiset(object):
 
 
 class _Multiset(Multiset):
-
     def __new__(cls, *args):
         return object.__new__(cls)
-
 
     def __init__(self, list=None, key_field=None, count_field=None, **kwargs):
         if not key_field and not count_field:
@@ -61,7 +59,6 @@ class _Multiset(Multiset):
             return
         else:
             self.dic = {i[key_field]: i[count_field] for i in list}
-
 
     def __iter__(self):
         for k, m in self.dic.items():
@@ -89,14 +86,13 @@ class _Multiset(Multiset):
         if value not in self.dic:
             from mo_logs import Log
 
-            Log.error("{{value}} is not in multiset",  value= value)
+            Log.error("{{value}} is not in multiset", value=value)
         self._remove(value)
 
     def copy(self):
         output = _Multiset()
         output.dic = self.dic.copy()
         return output
-
 
     def _remove(self, value):
         count = self.dic.get(value)
@@ -105,7 +101,7 @@ class _Multiset(Multiset):
 
         count -= 1
         if count == 0:
-            del (self.dic[value])
+            del self.dic[value]
         else:
             self.dic[value] = count
 
@@ -137,7 +133,6 @@ class _Multiset(Multiset):
             return True
         return False
 
-
     def count(self, value):
         if value in self.dic:
             return self.dic[value]
@@ -147,7 +142,7 @@ class _Multiset(Multiset):
 
 class _NegMultiset(Multiset):
     def __new__(cls, *args, **kwargs):
-            return object.__new__(cls)
+        return object.__new__(cls)
 
     def __init__(self, list=None, key_field=None, count_field=None, **kwargs):
         if not key_field and not count_field:
@@ -159,12 +154,10 @@ class _NegMultiset(Multiset):
         else:
             self.dic = {i[key_field]: i[count_field] for i in list}
 
-
     # def __iter__(self):
     #     for k, m in self.dic.items():
     #         for i in range(m):
     #             yield k
-
 
     def items(self):
         return self.dic.items()
@@ -182,7 +175,7 @@ class _NegMultiset(Multiset):
         if not count:
             self.dic[value] = amount
         elif count == -amount:
-            del (self.dic[value])
+            del self.dic[value]
         else:
             self.dic[value] = count + amount
 
@@ -195,12 +188,10 @@ class _NegMultiset(Multiset):
     def remove(self, value):
         return self.add(value, -1)
 
-
     def copy(self):
         output = _NegMultiset()
         output.dic = self.dic.copy()
         return output
-
 
     def __add__(self, other):
         output = self.copy()
@@ -233,7 +224,6 @@ class _NegMultiset(Multiset):
         if self.dic:
             return True
         return False
-
 
     def count(self, value):
         if value in self.dic:

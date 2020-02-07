@@ -1295,3 +1295,42 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_eq_1_list(self):
+        test = {
+            "data": [
+                {"a": 1},
+                {"a": 2},
+                {"a": 3},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "select": [
+                    "a",
+                    {"name": "eq1", "value": {"eq": {"a": 1}}}
+                ],
+                "from": TEST_TABLE,
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": 1, "eq1": True},
+                    {"a": 2, "eq1": False},
+                    {"a": 3, "eq1": False},
+                    {"a": NULL, "eq1": False},
+                    {"a": NULL, "eq1": False},
+                ]
+            },
+            "expecting_table": {
+                "header": ["a", "eq1"],
+                "data": [
+                    [1, True],
+                    [2, False],
+                    [3, False],
+                    [NULL, False],
+                    [NULL, False]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)

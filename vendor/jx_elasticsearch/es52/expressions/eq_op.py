@@ -27,7 +27,7 @@ from jx_elasticsearch.es52.util import pull_functions
 from jx_python.jx import value_compare
 from mo_dots import Data, is_container
 from mo_future import first
-from mo_json import BOOLEAN, python_type_to_json_type
+from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES
 from mo_logs import Log
 
 
@@ -67,7 +67,7 @@ class EqOp(EqOp_):
                     if len(types) == 1:
                         jx_type, values = first(types.items())
                         for c in cols:
-                            if jx_type == c.jx_type:
+                            if jx_type == c.jx_type or (jx_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES):
                                 return {"terms": {c.es_column: values}}
                         return FALSE.to_esfilter(schema)
                     else:
@@ -85,7 +85,8 @@ class EqOp(EqOp_):
             for c in cols:
                 if c.jx_type == BOOLEAN:
                     rhs = pull_functions[c.jx_type](rhs)
-                if python_type_to_json_type[rhs.__class__] == c.jx_type:
+                rhs_type = python_type_to_json_type[rhs.__class__]
+                if rhs_type == c.jx_type or (rhs_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES):
                     return {"term": {c.es_column: rhs}}
             return FALSE.to_esfilter(schema)
         else:

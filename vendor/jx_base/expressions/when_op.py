@@ -32,7 +32,7 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-from mo_json import INTEGER, NUMBER, OBJECT
+from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES
 from mo_logs import Log
 
 
@@ -50,10 +50,7 @@ class WhenOp(Expression):
             self.data_type = self.then.type
         elif self.then.type == self.els_.type:
             self.data_type = self.then.type
-        elif self.then.type in (INTEGER, NUMBER) and self.els_.type in (
-            INTEGER,
-            NUMBER,
-        ):
+        elif self.then.type in NUMBER_TYPES and self.els_.type in NUMBER_TYPES:
             self.data_type = NUMBER
         else:
             self.data_type = OBJECT
@@ -61,8 +58,8 @@ class WhenOp(Expression):
     def __data__(self):
         return {
             "when": self.when.__data__(),
-            "then": self.then.__data__() if self.then else None,
-            "else": self.els_.__data__() if self.els_ else None,
+            "then": None if self.then is NULL else self.then.__data__(),
+            "else": None if self.els_ is NULL else self.els_.__data__()
         }
 
     def vars(self):

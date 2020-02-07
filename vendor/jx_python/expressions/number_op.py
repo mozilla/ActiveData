@@ -13,14 +13,14 @@ from jx_base.expressions.number_op import NumberOp as NumberOp_
 from jx_base.expressions.true_op import TRUE
 from jx_python.expressions import _utils
 from jx_python.expressions._utils import Python
-from mo_json import INTEGER, NUMBER
+from mo_json import NUMBER_TYPES
 
 
 class NumberOp(NumberOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         term = Python[self.term]
         if not_null:
-            if term.type in [NUMBER, INTEGER]:
+            if term.type in NUMBER_TYPES:
                 return term.to_python(not_null=True)
             else:
                 return "float(" + Python[self.term].to_python(not_null=True) + ")"

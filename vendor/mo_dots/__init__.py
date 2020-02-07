@@ -10,10 +10,10 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import sys
-from collections import OrderedDict
+
+from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
-from mo_future import binary_type, generator_types, is_binary, is_text, text
 
 none_type = type(None)
 ModuleType = type(sys.modules[__name__])
@@ -156,6 +156,8 @@ def startswith_field(field, prefix):
     """
     RETURN True IF field PATH STRING STARTS WITH prefix PATH STRING
     """
+    if prefix == None:
+        return False
     if prefix.startswith("."):
         return True
         # f_back = len(field) - len(field.strip("."))
@@ -534,14 +536,16 @@ def _wrap_leaves(value):
 
 
 def unwrap(v):
+    if v is None:
+        return None
     _type = _get(v, CLASS)
-    if _type is Data:
+    if _type is NullType:
+        return None
+    elif _type is Data:
         d = _get(v, SLOT)
         return d
     elif _type is FlatList:
         return v.list
-    elif _type is NullType:
-        return None
     elif _type is DataObject:
         d = _get(v, OBJ)
         if _get(d, CLASS) in data_types:

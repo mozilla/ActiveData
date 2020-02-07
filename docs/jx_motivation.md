@@ -1,6 +1,6 @@
 # JSON Query Expressions
 
-A solution to querying a data lake
+A solution to querying a [tidy](http://vita.had.co.nz/papers/tidy-data.pdf) data lake
 
 ## Problem
 

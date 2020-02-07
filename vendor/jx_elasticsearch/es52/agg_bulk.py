@@ -11,10 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 from copy import deepcopy
 
+from mo_testing.fuzzytestcase import assertAlmostEqual
+
 import mo_math
 from jx_base.expressions import Variable, TRUE
 from jx_base.language import is_op
-from jx_elasticsearch.es52.agg_format import format_list_from_groupby
+from jx_elasticsearch.es52.agg_format import format_list_from_groupby, format_table_from_groupby
 from jx_elasticsearch.es52.agg_op import build_es_query
 from mo_dots import listwrap, unwrap, Null, wrap, coalesce, unwraplist
 from mo_files import TempFile, URL, mimetype
@@ -39,7 +41,7 @@ def is_bulk_agg(esq, query):
         return False
     if query.destination not in {"s3", "url"}:
         return False
-    if query.format not in {"list"}:
+    if query.format not in {"list", "table"}:
         return False
     if len(listwrap(query.groupby)) != 1:
         return False
@@ -99,6 +101,8 @@ def es_bulkaggsop(esq, frum, query):
 
         acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
         guid = Random.base64(32, extra="-_")
+        abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
+        formatter = formatters[query.format](abs_limit)
 
         Thread.run(
             "extract to " + guid + ".json",
@@ -112,6 +116,8 @@ def es_bulkaggsop(esq, frum, query):
             schema,
             chunk_size,
             cardinality,
+            abs_limit,
+            formatter,
             parent_thread=Null,
         )
 
@@ -141,10 +147,11 @@ def extractor(
     schema,
     chunk_size,
     cardinality,
+    abs_limit,
+    formatter,
     please_stop,
 ):
     total = 0
-    abs_limit = mo_math.MIN((query.limit, first(query.groupby.domain).limit))
     # WE MESS WITH THE QUERY LIMITS FOR CHUNKING
     query.limit = first(query.groupby.domain).limit = chunk_size * 2
     start_time = Date.now()
@@ -163,8 +170,6 @@ def extractor(
 
         with TempFile() as temp_file:
             with open(temp_file.abspath, "wb") as output:
-                output.write(b"[\n")
-                comma = b""
                 for i in range(0, num_partitions):
                     if please_stop:
                         Log.error("request to shutdown!")
@@ -180,17 +185,12 @@ def extractor(
 
                     result = esq.es.search(deepcopy(es_query), query.limit)
                     aggs = unwrap(result.aggregations)
-                    data = format_list_from_groupby(
-                        aggs, acc, query, decoders, selects
-                    ).data
 
-                    for r in data:
-                        output.write(comma)
-                        comma = b",\n"
-                        output.write(value2json(r).encode("utf8"))
-                        total += 1
-                        if total >= abs_limit:
+                    formatter.add(aggs, acc, query, decoders, selects)
+                    for b in formatter.bytes():
+                        if b is DONE:
                             break
+                        output.write(b)
                     else:
                         write_status(
                             guid,
@@ -206,7 +206,8 @@ def extractor(
                         )
                         continue
                     break
-                output.write(b"\n]\n")
+                for b in formatter.footer():
+                    output.write(b)
 
             upload(guid + ".json", temp_file)
         write_status(
@@ -275,3 +276,78 @@ def write_status(guid, status):
                 )
     except Exception as e:
         Log.warning("problem setting status", cause=e)
+
+
+DONE = object()
+
+
+class ListFormatter(object):
+    def __init__(self, abs_limit):
+        self.header = b"{\"data\": [\n"
+        self.count = 0
+        self.abs_limit = abs_limit
+        self.result = None
+
+    def add(self, aggs, acc, query, decoders, selects):
+        self.result = format_list_from_groupby(aggs, acc, query, decoders, selects)
+
+    def bytes(self):
+        yield self.header
+        self.header = b",\n"
+
+        comma = b""
+        for r in self.result.data:
+            yield comma
+            comma = b",\n"
+            yield value2json(r).encode('utf8')
+            self.count += 1
+            if self.count >= self.abs_limit:
+                yield DONE
+
+    def footer(self):
+        yield b"\n]}"
+
+
+class TableFormatter(object):
+    def __init__(self, abs_limit):
+        self.header = None
+
+        self.count = 0
+        self.abs_limit = abs_limit
+        self.result = None
+        self.pre = ""
+
+    def add(self, aggs, acc, query, decoders, selects):
+        self.result = format_table_from_groupby(aggs, acc, query, decoders, selects)
+        # CONFIRM HEADER MATCH
+        if self.header:
+            assertAlmostEqual(self.header, self.result.header)
+        else:
+            self.header = self.result.header
+
+    def bytes(self):
+        if self.pre:
+            yield self.pre
+        else:
+            self.pre = b",\n"
+            yield b"{\n\"header\":"
+            yield value2json(self.header).encode('utf8')
+            yield b",\n\"data\":[\n"
+
+        comma = b""
+        for r in self.result.data:
+            yield comma
+            comma = b",\n"
+            yield value2json(r).encode('utf8')
+            self.count += 1
+            if self.count >= self.abs_limit:
+                yield DONE
+
+    def footer(self):
+        yield b"\n]}"
+
+
+formatters = {
+    "list": ListFormatter,
+    "table": TableFormatter
+}

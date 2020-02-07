@@ -1,63 +1,68 @@
 # Null-aware operators in JSON Expressions
 
-JSON expressions are null aware; which is important for dealing with JSON from an unclean data lake.
+JSON expressions are "null aware"; which is important when dealing with JSON from an unclean data lake.
 
+## Overview
+
+We want to clarify the behaviour of operators in the presence of `null`. We realise this depends on both the definition of `null` and definition of the operator; we will be specific when necessary.
+
+For example, Javascript has both `null`, and `undefined`; their slightly different definitions can be see in operator behaviour. For example, [here are two interesting observations on exponentiation in javascript](https://github.com/mozilla-frontend-infra/firefox-health-dashboard/blob/6d571309b927c0a2e02e36b8a7f594fc14e41a04/test/vendor/math.test.js#L210):  
+
+    Math.exp(null)      ⇒ 1
+    Math.exp(undefined) ⇒ NaN  
+
+In the case of `Math.exp` we see two different behaviours. 
 
 ## Definitions
 
-We will deliberately avoid the definition of `null`. Instead, we will categorize operator behaviour on `null`, realizing that the behaviour depends on the definition.
-
-The different operator variations can depend on the definition of `null` and the definition of the operator. For example, Javascript has both `null`, and `undefined`; Arguably, a single operator can have two different behaviours, depending on the type of null used in its operands.
-
-Although we define three clear categories, operators can overlap these categories, and be inconsistent.
-
-
 Let `●` represent an operator. For a given operator, we can classify its behaviour in one of three variations:
 
-### Strict
+* **Strict** - operators that raise an exception, or fail a compile-time type check, when either `a` or `b` are `null`.  For example,
 
-operators that raise an exception, or compile-time type check, if either `a` or `b` are `null`.  For example,
+        sum(42, null) ⇒ ¡ABORT!
+* **Conservative** - operators that define `a ● b ∉ Dom(●)`; if either `a` or `b` are `null` then the operator returns some value, like `null`, outside the domain. For example, 
 
-    sum(42, null) => ¡ABORT!
+        sum(42, null) ⇒ null
+* **Decisive** - operators that define `a ● b ∈ Dom(●)`; if either `a` or `b` are not `null` then the operator returns a value, not `null`. For example,
 
-### Conservative
+        sum(42, null) ⇒ 42
 
-operators that define `a ● b == null` if either `a` or `b` are `null`.  For example, 
+In the case of `Math.exp` we say it is "decisive" when operating on `null`, and "conservative" when operating on `undefined`.  
 
-    sum(42, null) => null
- 
-### Decisive
+    Math.exp(null)      ⇒ 1
+    Math.exp(undefined) ⇒ NaN  
 
-operators that `a ● b != null` if either `a` or `b` are not `null`.  For example,
+In the case of SQL: The `OR` operator is considered conservative, even though there are some decisive combinations:
 
-    sum(42, null) => 42
+    False OR NULL ⇒ NULL
+    True OR NULL ⇒ True
 
+## Environment for JSON Expressions
 
-for example, the SQL `OR` operator is considered conservative, even though there are some decisive combinations:
+JSON expressions are for munging unclean data. They are meant for environments where
 
-    True OR NULL => True
-
-
-## Strict Operators for JSON Expressions?
-
-Strict operators are common in most procedural languages. Conservative operators are used in SQL expressions. In both these cases we become well practised with the coding style required to operate on unclean JSON.
-
-The decisive operators are rare: Most applications have clear internal data structures; and a decisive operator will only hide coding mistakes. The value of decisive operators is only apparent in domains that have `nulls`, and this does not happen in most applications because the use of `nulls` can always be mitigated with a "better" set of type definitions.
-
-There are some situations where strict operators demand verbose code:
-
-* If you do not dictate the type system, or 
+* you do not dictate the type system, or 
 * the types are changing often, or 
 * you deal with types from many different systems, or
 * you are processing "unclean data"
 
-The null checks required makes code verbose. Decisive operators work better in these situations. For example, SQL aggregation operators are decisive: 
+## Strict Operators?
 
-```sql
-	AVG(42, 24, null) => (42+24)/2 => 33
+The null checks required by strict operators results in verbose code. For example, Python addition is strict; we must be careful to not add integers and `None` together:  
+
+```python
+if a is None:
+    return default_value
+if b is None:
+    return default_value
+return a + b
 ```
 
-On the other hand, SQL comparision (`=`) is conservative; comparing to `NULL` results in `NULL`; a falsey value.
+This code does not happen often in practice because most code has clear internal data structures; and a decisive operator will only hide coding mistakes. This can not be said for unclean data.
+
+## Conservative Operators? 
+
+Conservative operators have a similar problem. Consider SQL comparision (`=`), which is conservative: Comparing to `NULL` always results in `NULL`, which is a falsey value:
 
     CASE 
     WHEN NULL = NULL 
@@ -65,21 +70,29 @@ On the other hand, SQL comparision (`=`) is conservative; comparing to `NULL` re
     ELSE 'ok'
     END
 
-which makes comparing values complicated:
+Proper comparision is complicated:
+
+    CASE 
+    WHEN a.name=b.name OR (a.name IS NULL AND b.name IS NULL)
+    THEN 'same'
+    ELSE 'different'
+    END 
+
+## Decisive Operators!
+
+When data is not clean decisive operators show their benefit. For example, SQL aggregation operators are decisive: 
 
 ```sql
-    SELECT a.name=b.name or (a.name IS NULL AND b.name IS NULL) as is_same FROM my_table 
+	AVG(42, 24, null) ⇒ (42+24)/2 ⇒ 33
 ```
 
-### Strict operators are verbose
-
-*Strict* operators demand explicit null handling and demand verbose code:
+The decisiveness comes from assuming the `null` represents "out of class": `null` occupies a slot that should not even exist.
 
 Consider the decisive expression
 
     return (a + b) < 0
 
-the strict version is:
+which is defined as
 
     if (a == null) {
         if (b == null) return false;
@@ -88,6 +101,9 @@ the strict version is:
     if (b == null) return a < 0;
     return (a + b) < 0
 
+The above shows two things: It shows the underlying logic in the decisive operations, and contrasts the amount of code required to perform those operations.
+
+
 ## Summary
 
-Decisive operators
+JSON Expression are designed to be decisive because they are intended to be succinct while acting on unclean data.  

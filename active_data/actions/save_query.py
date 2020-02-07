@@ -69,6 +69,7 @@ class SaveQueries(object):
             kwargs=kwargs,
         )
         es.add_alias(index)
+        es.set_refresh_interval(seconds=1)
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
 
@@ -109,6 +110,7 @@ class SaveQueries(object):
         """
         meta, query.meta = query.meta, None
         json = convert.value2json(query)
+        query.meta = meta
         hash = json.encode("utf8")
 
         # TRY MANY HASHES AT ONCE
@@ -163,7 +165,7 @@ class SaveQueries(object):
                 )
                 if verify.data:
                     break
-                Log.note("wait for saved query")
+                Log.alert("wait for saved query")
                 Till(seconds=1).wait()
 
         Log.note("Saved {{json}} query as {{hash}}", json=json, hash=best)

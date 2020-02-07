@@ -311,12 +311,14 @@ def es_setop(es, query):
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
     with Timer("call to ES", silent=DEBUG) as call_timer:
-        data = es.search(es_query)
+        result = es.search(es_query)
 
-    T = data.hits.hits
+    # Log.note("{{result}}", result=result)
+
+    T = result.hits.hits
 
     try:
-        formatter, row_formatter, mime_type = set_formatters[query.format]
+        formatter, _, mime_type = set_formatters[query.format]
 
         with Timer("formatter", silent=True):
             output = formatter(T, new_select, query)

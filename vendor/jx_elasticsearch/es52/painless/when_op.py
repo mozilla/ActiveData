@@ -15,7 +15,7 @@ from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.false_op import false_script
 from jx_elasticsearch.es52.painless.true_op import true_script
-from mo_json import INTEGER, NUMBER
+from mo_json import INTEGER, NUMBER, NUMBER_TYPES
 from mo_logs import Log
 
 
@@ -61,7 +61,7 @@ class WhenOp(WhenOp_):
                     frum=self,
                     schema=schema,
                 )
-            elif then.type in (INTEGER, NUMBER) and els_.type in (INTEGER, NUMBER):
+            elif then.type in NUMBER_TYPES and els_.type in NUMBER_TYPES:
                 return EsScript(
                     miss=self.missing(),
                     type=NUMBER,

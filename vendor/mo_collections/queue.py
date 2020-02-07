@@ -13,6 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_future import is_text, is_binary
 from collections import deque
+from copy import copy
 
 
 class Queue(object):
@@ -48,6 +49,14 @@ class Queue(object):
         if isinstance(other, set):
             return other - self.set
         return set(o for o in other if o not in self.set)
+
+    def __add__(self, other):
+        output = Queue()
+        output.set = copy(self.set)
+        output.list = copy(self.list)
+        for v in other:
+            output.add(v)
+        return output
 
     def __data__(self):
         return list(self.list)

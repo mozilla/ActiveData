@@ -16,7 +16,7 @@ from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from jx_elasticsearch.es52.expressions.and_op import es_and
 from mo_dots import wrap, Null, coalesce
 from mo_future import is_text, first
-from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING
+from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING, NUMBER_TYPES
 from mo_logs import Log
 from pyLibrary.convert import value2boolean
 
@@ -74,7 +74,7 @@ def jx_sort_to_es_sort(sort, schema):
 
             for type in types:
                 for c in cols:
-                    if c.jx_type == type:
+                    if c.jx_type == type or (c.jx_type in NUMBER_TYPES and type in NUMBER_TYPES):
                         np = first(c.nested_path)
                         if np == '.':
                             if s.sort == -1:
@@ -107,6 +107,8 @@ aggregates = {
     "count_values": "count_values",
     "maximum": "max",
     "minimum": "min",
+    "and": "min",
+    "or": "max",
     "max": "max",
     "min": "min",
     "mean": "avg",

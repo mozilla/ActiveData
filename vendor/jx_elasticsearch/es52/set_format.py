@@ -13,7 +13,7 @@ from jx_base.expressions import LeavesOp
 from jx_base.language import is_op
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, is_data, is_list, unwrap, unwraplist, wrap
+from mo_dots import Data, is_data, is_list, unwrap, unwraplist, wrap, listwrap
 from mo_files import mimetype
 from mo_future import transpose
 from mo_logs import Log
@@ -25,10 +25,10 @@ def doc_formatter(select, query=None):
     # RETURN A FUNCTION THAT RETURNS A FORMATTED ROW
 
     if is_list(query.select):
-        def format_object(row):
+        def format_object(doc):
             r = Data()
             for s in select:
-                v = unwraplist(s.pull(row))
+                v = unwraplist(s.pull(doc))
                 if v is not None:
                     try:
                         r[s.put.name][s.put.child] = v
@@ -38,17 +38,17 @@ def doc_formatter(select, query=None):
         return format_object
 
     if is_op(query.select.value, LeavesOp):
-        def format_deep(row):
+        def format_deep(doc):
             r = Data()
             for s in select:
-                r[s.put.name][s.put.child] = unwraplist(s.pull(row))
+                r[s.put.name][s.put.child] = unwraplist(s.pull(doc))
             return r if r else None
         return format_deep
     else:
-        def format_value(row):
+        def format_value(doc):
             r = None
             for s in select:
-                v = unwraplist(s.pull(row))
+                v = unwraplist(s.pull(doc))
                 if v is None:
                     continue
                 if s.put.child == ".":
@@ -69,27 +69,43 @@ def format_list(documents, select, query=None):
     return Data(meta={"format": "list"}, data=data)
 
 
-def format_table(T, select, query=None):
-    data = []
+def row_formatter(select):
+    # RETURN A FUNCTION THAT RETURNS A FORMATTED ROW
+
+    select = listwrap(select)
     num_columns = MAX(select.put.index) + 1
-    for row in T:
-        r = [None] * num_columns
+
+    def format_row(doc):
+        row = [None] * num_columns
         for s in select:
-            value = unwraplist(s.pull(row))
+            value = unwraplist(s.pull(doc))
 
             if value == None:
                 continue
 
             index, child = s.put.index, s.put.child
             if child == ".":
-                r[index] = value
+                row[index] = value
             else:
-                if r[index] is None:
-                    r[index] = Data()
-                r[index][child] = value
+                if row[index] is None:
+                    row[index] = Data()
+                row[index][child] = value
+        return row
 
-        data.append(r)
+    return format_row
 
+
+def format_table(T, select, query=None):
+    form = row_formatter(select)
+
+    data = [form(row) for row in T]
+    header = format_table_header(select, query)
+
+    return Data(meta={"format": "table"}, header=header, data=data)
+
+
+def format_table_header(select, query):
+    num_columns = MAX(select.put.index) + 1
     header = [None] * num_columns
 
     if is_data(query.select) and not is_op(query.select.value, LeavesOp):
@@ -99,12 +115,9 @@ def format_table(T, select, query=None):
         for s in select:
             if header[s.put.index]:
                 continue
-            if s.name == ".":
-                header[s.put.index] = "."
-            else:
-                header[s.put.index] = s.name
+            header[s.put.index] = s.name
 
-    return Data(meta={"format": "table"}, header=header, data=data)
+    return header
 
 
 def format_cube(T, select, query=None):
@@ -146,10 +159,10 @@ def scrub_select(select):
         [{k: v for k, v in s.items() if k not in ["pull", "put"]} for s in select]
     )
 
-
 set_formatters = {
+    # RESPONSE FORMATTER, SETUP_ROW_FORMATTER, DATATYPE
     None: (format_cube, None, mimetype.JSON),
     "cube": (format_cube, None, mimetype.JSON),
-    "table": (format_table, None, mimetype.JSON),
+    "table": (format_table, row_formatter, mimetype.JSON),
     "list": (format_list, doc_formatter, mimetype.JSON),
 }

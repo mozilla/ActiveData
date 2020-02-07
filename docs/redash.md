@@ -40,9 +40,6 @@ date("today")
 ```
 
 
-
-
-
 ### Sort order
 
 ActiveData sorts according to data type first, and value second. Smallest type to largest type is
@@ -51,7 +48,7 @@ ActiveData sorts according to data type first, and value second. Smallest type t
 2. number
 3. string (case-insensitive alphabetical order) 
 
-`mull` (or missing) values are last no matter the order requested.       
+`null` (or missing) values are last no matter the order requested.       
 
 
 

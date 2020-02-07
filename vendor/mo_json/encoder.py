@@ -275,6 +275,8 @@ def pretty_json(value):
             return "false"
         elif value is True:
             return "true"
+        elif value == None:
+            return "null"
         elif is_data(value):
             try:
                 value = unwrap(value)
@@ -302,8 +304,6 @@ def pretty_json(value):
                     keys=[k for k in value.keys()],
                     cause=e
                 )
-        elif value in (None, Null):
-            return "null"
         elif value.__class__ in (binary_type, text):
             if is_binary(value):
                 value = value.decode('utf8')

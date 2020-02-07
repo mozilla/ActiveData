@@ -689,6 +689,131 @@ class TestgroupBy1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    def test_boolean_min_max(self):
+        test = {
+            "data": [
+                {"a": True},
+                {"a": False},
+                {"a": False},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {
+                        "name": "max",
+                        "value": "a",
+                        "aggregate": "max"
+                    },
+                    {
+                        "name": "min",
+                        "value": "a",
+                        "aggregate": "min"
+                    },
+                    {
+                        "name": "or",
+                        "value": "a",
+                        "aggregate": "or"
+                    },
+                    {
+                        "name": "and",
+                        "value": "a",
+                        "aggregate": "and"
+                    }
+                ],
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"and": False, "or": True, "min": 0, "max": 1}
+            },
+            "expecting_table": {
+                "header": ["max", "min", "or", "and"],
+                "data": [[1, 0, True, False]]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_boolean_and_or_on_expression(self):
+        test = {
+            "data": [
+                {"a": 1},
+                {"a": 2},
+                {"a": 3},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": [
+                    {
+                        "name": "max",
+                        "value": {"eq": {"a": 1}},
+                        "aggregate": "max"
+                    },
+                    {
+                        "name": "min",
+                        "value": {"eq": {"a": 1}},
+                        "aggregate": "min"
+                    },
+                    {
+                        "name": "or",
+                        "value": {"eq": {"a": 1}},
+                        "aggregate": "or"
+                    },
+                    {
+                        "name": "and",
+                        "value": {"eq": {"a": 1}},
+                        "aggregate": "and"
+                    }
+                ],
+            },
+            "expecting_list": {
+                "meta": {"format": "value"},
+                "data": {"and": False, "or": True, "min": 0, "max": 1}
+            },
+            "expecting_table": {
+                "header": ["max", "min", "or", "and"],
+                "data": [[1, 0, True, False]]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_eq_1(self):
+        test = {
+            "data": [
+                {"a": 1},
+                {"a": 2},
+                {"a": 3},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "groupby": {"name": "eq1", "value": {"eq": {"a": 1}}},
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"eq1": True, "count": 1},
+                    {"eq1": False, "count": 4}
+                ]
+            },
+            "expecting_table": {
+                "header": ["eq1", "count"],
+                "data": [
+                    [True, 1],
+                    [False, 4]
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+
+
+
+
+
 
 
 

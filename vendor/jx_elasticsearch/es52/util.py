@@ -107,6 +107,8 @@ aggregates = {
     "count_values": "count_values",
     "maximum": "max",
     "minimum": "min",
+    "and": "min",
+    "or": "max",
     "max": "max",
     "min": "min",
     "mean": "avg",

@@ -39,17 +39,15 @@ class Variable(Variable_):
                 varname = c.es_column
                 frum = Variable(c.es_column)
                 q = quote(varname)
-                if many:
+                if c.multi > 1:
                     acc.append(
                         EsScript(
                             miss=frum.missing(),
                             type=c.jx_type,
-                            expr="doc[" + q + "].values"
-                            if c.jx_type != BOOLEAN
-                            else "doc[" + q + "].value",
+                            expr="doc[" + q + "].values",
                             frum=frum,
                             schema=schema,
-                            many=c.jx_type != BOOLEAN,
+                            many=True
                         )
                     )
                 else:
@@ -57,12 +55,10 @@ class Variable(Variable_):
                         EsScript(
                             miss=frum.missing(),
                             type=c.jx_type,
-                            expr="doc[" + q + "].value"
-                            if c.jx_type != BOOLEAN
-                            else "doc[" + q + "].value",
+                            expr="doc[" + q + "].value",
                             frum=frum,
                             schema=schema,
-                            many=True,
+                            many=False
                         )
                     )
 

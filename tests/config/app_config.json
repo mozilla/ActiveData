@@ -64,13 +64,6 @@
 				"log_type": "console"
 			},
 			{
-				"log_type": "ses",
-				"from_address": "klahnakoski@mozilla.com",
-				"to_address": "klahnakoski@mozilla.com",
-				"subject": "[ALERT][DEV] Problem in ActiveData Frontend6",
-				"$ref": "file://~/private.json#aws_credentials"
-			},
-			{
 				"log_type": "elasticsearch",
 				"host": "http://localhost",
 				"port": 9200,

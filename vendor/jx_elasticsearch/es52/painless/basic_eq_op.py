@@ -14,7 +14,8 @@ from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.null_op import null_script
-from mo_json import BOOLEAN
+from mo_json import BOOLEAN, NUMBER, INTEGER
+from mo_logs import Log
 
 
 class BasicEqOp(BasicEqOp_):
@@ -58,13 +59,23 @@ class BasicEqOp(BasicEqOp_):
                             frum=self,
                             schema=schema,
                         )
-                else:
+                elif lhs.type == rhs.type:
                     return EsScript(
                         type=BOOLEAN,
                         expr="(" + lhs.expr + ").contains(" + rhs.expr + ")",
                         frum=self,
                         schema=schema,
                     )
+                elif lhs.type == NUMBER and rhs.type == INTEGER:
+                    return EsScript(
+                        type=BOOLEAN,
+                        expr="(" + lhs.expr + ").contains((double)" + rhs.expr + ")",
+                        frum=self,
+                        schema=schema,
+                    )
+                else:
+                    Log.error("type mismatch not expected while converting to painless")
+
         elif rhs.many:
             return EsScript(
                 type=BOOLEAN,

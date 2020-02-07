@@ -61,7 +61,7 @@ class TestBulk(BaseTestCase):
                 Log.note("waiting for {{url}}", url=result.url)
                 Till(seconds=2).wait()
 
-        self.assertFalse(timeout)
+        self.assertFalse(timeout, "timeout")
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_scroll_query_list(self):
@@ -100,7 +100,7 @@ class TestBulk(BaseTestCase):
                 Log.note("waiting for {{url}}", url=result.url)
                 Till(seconds=2).wait()
 
-        self.assertFalse(timeout)
+        self.assertFalse(timeout, "timeout")
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_bulk_query_table(self):
@@ -141,7 +141,7 @@ class TestBulk(BaseTestCase):
                 Log.note("waiting for {{url}}", url=result.url)
                 Till(seconds=2).wait()
 
-        self.assertFalse(timeout)
+        self.assertFalse(timeout, "timeout")
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_scroll_query_table(self):
@@ -184,4 +184,4 @@ class TestBulk(BaseTestCase):
                 Log.note("waiting for {{url}}", url=result.url)
                 Till(seconds=2).wait()
 
-        self.assertFalse(timeout)
+        self.assertFalse(timeout, "timeout")

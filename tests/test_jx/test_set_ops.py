@@ -1315,15 +1315,21 @@ class TestSetOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"eq1": True, "count": 1},
-                    {"eq1": False, "count": 3}
+                    {"a": 1, "eq1": True},
+                    {"a": 2, "eq1": False},
+                    {"a": 3, "eq1": False},
+                    {"a": NULL, "eq1": False},
+                    {"a": NULL, "eq1": False},
                 ]
             },
             "expecting_table": {
-                "header": ["eq1", "count"],
+                "header": ["a", "eq1"],
                 "data": [
-                    [True, 1],
-                    [False, 3]
+                    [1, True],
+                    [2, False],
+                    [3, False],
+                    [NULL, False],
+                    [NULL, False]
                 ]
             }
         }

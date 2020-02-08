@@ -11,20 +11,22 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base import Column, container
 from jx_base.container import Container
-from jx_base.dimensions import Dimension
 from jx_base.expressions import jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
-from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
+from jx_elasticsearch import elasticsearch
+from jx_elasticsearch.es52.expressions import ES52 as ES52Lang
 from jx_elasticsearch.es52.agg_bulk import is_bulk_agg, es_bulkaggsop
+from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
+from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_bulk import is_bulk_set, es_bulksetop
 from jx_elasticsearch.es52.set_op import es_setop, is_setop
 from jx_elasticsearch.es52.stats import QueryStats
 from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, coalesce, is_list, join_field, listwrap, split_field, startswith_field, unwrap, wrap
+from mo_dots import Data, coalesce, join_field, listwrap, split_field, startswith_field, unwrap, wrap
 from mo_dots.lists import last
 from mo_future import sort_using_key
 from mo_json import OBJECT, value2json
@@ -33,7 +35,6 @@ from mo_kwargs import override
 from mo_logs import Except, Log
 from mo_times import Date
 from pyLibrary.env import http
-from jx_elasticsearch import elasticsearch
 
 
 class ES52(Container):
@@ -150,24 +151,6 @@ class ES52(Container):
         settings.settings = None
         return settings
 
-    def __enter__(self):
-        Log.error("No longer used")
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if not self.worker:
-            return
-
-        if isinstance(value, Exception):
-            self.worker.stop()
-            self.worker.join()
-        else:
-            self.worker.join()
-
-    @property
-    def query_path(self):
-        return join_field(split_field(self.name)[1:])
-
     @property
     def url(self):
         return self.es.url
@@ -226,32 +209,6 @@ class ES52(Container):
                 Log.error("Problem (Tried to clear Elasticsearch cache)", e)
             Log.error("problem", e)
 
-    def addDimension(self, dim):
-        if is_list(dim):
-            Log.error("Expecting dimension to be a object, not a list:\n{{dim}}",  dim= dim)
-        self._addDimension(dim, [])
-
-    def _addDimension(self, dim, path):
-        dim.full_name = dim.name
-        for e in dim.edges:
-            d = Dimension(e, dim, self)
-            self.edges[d.full_name] = d
-
-    def __getitem__(self, item):
-        c = self.get_columns(table_name=self.name, column_name=item)
-        if c:
-            if len(c) > 1:
-                Log.error("Do not know how to handle multipole matches")
-            return c[0]
-
-        e = self.edges[item]
-        if not c:
-            Log.warning("Column with name {{column|quote}} can not be found in {{table}}", column=item, table=self.name)
-        return e
-
-    def __getattr__(self, item):
-        return self.edges[item]
-
     def update(self, command):
         """
         EXPECTING command == {"set":term, "where":where}
@@ -298,8 +255,8 @@ class ES52(Container):
                 Log.error("could not update: {{error}}", error=[e.error for i in response["items"] for e in i.values() if e.status not in (200, 201)])
 
         # DELETE BY QUERY, IF NEEDED
-        if "." in listwrap(command.clear):
-            es_filter = self.es.cluster.lang[jx_expression(command.where)].to_esfilter(schema)
+        if "." in listwrap(command['clear']):
+            es_filter = ES52Lang[jx_expression(command.where)].partial_eval().to_esfilter(schema)
             self.es.delete_record(es_filter)
             return
 

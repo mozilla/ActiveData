@@ -10,10 +10,14 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_python import jx
+from mo_future import text
+
 from active_data.actions import find_container
 from jx_base.expressions import NULL
-from mo_dots import Data
+from mo_dots import Data, wrap, set_default
 from mo_times import Date
+from pyLibrary.env import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -241,3 +245,27 @@ class TestESSpecial(BaseTestCase):
             cluster.delete_index(index1)
         except Exception:
             pass
+
+    def test_no_update(self):
+        data = jx.sort([{"a": "test" + text(i)} for i in range(10)], "a")
+
+        test = wrap({
+            "data": data,
+            "query": {
+                "from": TEST_TABLE,
+                "limit": len(data),
+                "sort": "a"
+            },
+            "expecting_list": {"data": data},  # DUMMY, TO ENSURE LOADED
+        })
+        self.utils.execute_tests(test)
+        test.query.clear = "."
+        test.query.update = test.query['from']
+        test.query['from'] = None
+
+        def result():
+            http.post_json(
+                url=self.utils.testing.query,
+                json=test.query,
+            )
+        self.assertRaises(Exception, result)

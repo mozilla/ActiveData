@@ -36,14 +36,15 @@ class TestBulk(BaseTestCase):
                 "limit": len(data),
                 "chunk_size": 100,
             },
-            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
+            "expecting_list": {"data": expected},  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
 
         test.query.format = "list"
+        test.query.destination = "url"
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "url"}, test.query),
+            json=test.query,
         )
 
         timeout = Till(seconds=MINUTE.seconds)
@@ -51,7 +52,7 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content.data, "a")
+                    sorted_content = jx.sort(content, "a")
                     sorted_expected = jx.sort(expected, "a")
                     self.assertEqual(sorted_content, sorted_expected)
                 break
@@ -75,14 +76,15 @@ class TestBulk(BaseTestCase):
                 "limit": len(data),
                 "chunk_size": 100,
             },
-            "expecting_list": {"data": expected},  # DUMMY< TO ENSURE LOADED
+            "expecting_list": {"data": expected},  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
 
         test.query.format = "list"
+        test.query.destination = "url"
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "url"}, test.query),
+            json=test.query,
         )
 
         timeout = Till(seconds=MINUTE.seconds)
@@ -90,7 +92,7 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content.data, "a")
+                    sorted_content = jx.sort(content, "a")
                     sorted_expected = jx.sort(expected, "a")
                     self.assertEqual(sorted_content, sorted_expected)
                 break
@@ -120,9 +122,10 @@ class TestBulk(BaseTestCase):
         self.utils.execute_tests(test)
 
         test.query.format = "table"
+        test.query.destination = "url"
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "url"}, test.query),
+            json=test.query,
         )
 
         timeout = Till(seconds=MINUTE.seconds)
@@ -163,9 +166,10 @@ class TestBulk(BaseTestCase):
 
         test.query.format = "table"
         test.query.sort = None
+        test.query.destination = "url"
         result = http.post_json(
             url=self.utils.testing.query,
-            json=set_default({"destination": "url"}, test.query),
+            json=test.query,
         )
 
         timeout = Till(seconds=MINUTE.seconds)

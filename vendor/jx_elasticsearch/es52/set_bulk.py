@@ -9,20 +9,17 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.language import is_op
-
 from jx_elasticsearch.es52 import agg_bulk
 from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
 from jx_elasticsearch.es52.expressions import split_expression_by_path, ES52
-from jx_elasticsearch.es52.painless import LeavesOp
-from jx_elasticsearch.es52.set_format import set_formatters, doc_formatter, row_formatter, format_table_header
+from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
 from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from mo_dots import wrap, Null, is_data
+from mo_dots import wrap, Null
 from mo_files import TempFile
 from mo_json import value2json
 from mo_logs import Log, Except
-from mo_math import MIN, MAX
+from mo_math import MIN
 from mo_math.randoms import Random
 from mo_threads import Thread
 from mo_times import Date, Timer
@@ -176,7 +173,7 @@ def extractor(guid, abs_limit, esq, es_query, formatter, please_stop):
 
 class ListFormatter(object):
     def __init__(self, abs_limit, select, query):
-        self.header = b"{\"data\": [\n"
+        self.header = b"[\n"
         self.count = 0
         self.abs_limit = abs_limit
         self.formatter = doc_formatter(select, query)
@@ -199,7 +196,7 @@ class ListFormatter(object):
                 yield DONE
 
     def footer(self):
-        yield b"\n]}"
+        yield b"\n]"
 
 
 DONE = object()

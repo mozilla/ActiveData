@@ -15,6 +15,8 @@ from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, Variable as Variable_
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
+from jx_elasticsearch.es52 import agg_format
+from jx_elasticsearch.es52.agg_format import agg_formatters
 from jx_elasticsearch.es52.agg_op_field import agg_field
 from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
@@ -336,7 +338,6 @@ def count_dim(aggs, es_query, decoders):
     return [d.edge for d in decoders]
 
 
-from jx_elasticsearch.es52.agg_format import format_cube, agg_formatters
-
-_ = format_cube
-
+# EXPORT
+agg_format.aggs_iterator = aggs_iterator
+agg_format.count_dim = count_dim

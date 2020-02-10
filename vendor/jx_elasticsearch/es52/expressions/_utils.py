@@ -34,7 +34,7 @@ def _inequality_to_esfilter(self, schema):
         elif len(cols) == 1:
             lhs = first(cols).es_column
         else:
-            Log.error("operator {{op|quote}} does not work on objects", op=self.op)
+            raise Log.error("operator {{op|quote}} does not work on objects", op=self.op)
         return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
         script = Painless[self].to_es_script(schema)

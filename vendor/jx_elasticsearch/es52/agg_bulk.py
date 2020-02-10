@@ -283,7 +283,7 @@ DONE = object()
 
 class ListFormatter(object):
     def __init__(self, abs_limit):
-        self.header = b"{\"data\": [\n"
+        self.header = b"[\n"
         self.count = 0
         self.abs_limit = abs_limit
         self.result = None
@@ -305,7 +305,7 @@ class ListFormatter(object):
                 yield DONE
 
     def footer(self):
-        yield b"\n]}"
+        yield b"\n]"
 
 
 class TableFormatter(object):

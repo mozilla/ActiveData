@@ -240,46 +240,11 @@ class Index(object):
 
         if self.settings.read_only:
             Log.error("Index opened in read only mode, no changes allowed")
-        self.cluster.get_metadata()
 
         self.debug and Log.note("Delete bugs:\n{{query}}", query=filter)
 
-        if self.cluster.info.version.number.startswith("0.90"):
-            query = {"filtered": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}
-
-            result = self.cluster.delete(
-                self.path + "/_query",
-                data=value2json(query),
-                timeout=600,
-                params={"consistency": self.settings.consistency}
-            )
-            for name, status in result._indices.items():
-                if status._shards.failed > 0:
-                    Log.error("Failure to delete from {{index}}", index=name)
-
-        elif self.cluster.info.version.number.startswith("1."):
-            query = {"query": {"filtered": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}}
-
-            result = self.cluster.delete(
-                self.path + "/_query",
-                data=value2json(query),
-                timeout=600,
-                params={"consistency": self.settings.consistency}
-            )
-            for name, status in result._indices.items():
-                if status._shards.failed > 0:
-                    Log.error("Failure to delete from {{index}}", index=name)
-
-        elif self.cluster.info.version.number.startswith(("5.", "6.")):
+        if self.cluster.info.version.number.startswith(("5.", "6.")):
             query = {"query": filter}
-            if filter.terms.bug_id['~n~'] != None:
-                Log.warning("filter is not typed")
 
             wait_for_active_shards = coalesce(  # EARLIER VERSIONS USED "consistency" AS A PARAMETER
                 self.settings.wait_for_active_shards,
@@ -343,11 +308,7 @@ class Index(object):
                 items = response["items"]
 
                 fails = []
-                if self.cluster.version.startswith("0.90."):
-                    for i, item in enumerate(items):
-                        if not item.index.ok:
-                            fails.append(i)
-                elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
+                if self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
                     for i, item in enumerate(items):
                         if item.index.status == 409:  # 409 ARE VERSION CONFLICTS
                             if "version conflict" not in item.index.error.reason:
@@ -423,19 +384,7 @@ class Index(object):
         else:
             interval = text(seconds) + "s"
 
-        if self.cluster.version.startswith("0.90."):
-            response = self.cluster.put(
-                "/" + self.settings.index + "/_settings",
-                data='{"index":{"refresh_interval":' + value2json(interval) + '}}',
-                **kwargs
-            )
-
-            result = json2value(response.all_content.decode('utf8'))
-            if not result.ok:
-                Log.error("Can not set refresh interval ({{error}})", {
-                    "error": response.all_content.decode('utf8')
-                })
-        elif self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
+        if self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
             result = self.cluster.put(
                 "/" + self.settings.index + "/_settings",
                 data={"index": {"refresh_interval": interval}},
@@ -1233,12 +1182,7 @@ class Alias(object):
     def delete(self, filter):
         self.cluster.get_metadata()
 
-        if self.cluster.info.version.number.startswith("0.90"):
-            query = {"filtered": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}
-        elif self.cluster.info.version.number.startswith("1."):
+        if self.cluster.info.version.number.startswith("1."):
             query = {"query": {"filtered": {
                 "query": {"match_all": {}},
                 "filter": filter

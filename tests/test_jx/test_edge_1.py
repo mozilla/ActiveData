@@ -569,7 +569,6 @@ class TestEdge1(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skipIf(global_settings.elasticsearch.version.startswith("1."), "ES14 does not support union on multivalues")
     def test_multiple_union2(self):
         data = [
             {"a": ["x", "z"]},

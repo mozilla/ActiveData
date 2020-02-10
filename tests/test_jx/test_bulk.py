@@ -52,7 +52,7 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content.data, "a")
+                    sorted_content = jx.sort(content, "a")
                     sorted_expected = jx.sort(expected, "a")
                     self.assertEqual(sorted_content, sorted_expected)
                 break
@@ -92,7 +92,7 @@ class TestBulk(BaseTestCase):
             try:
                 content = http.get_json(result.url)
                 with Timer("compare results"):
-                    sorted_content = jx.sort(content.data, "a")
+                    sorted_content = jx.sort(content, "a")
                     sorted_expected = jx.sort(expected, "a")
                     self.assertEqual(sorted_content, sorted_expected)
                 break

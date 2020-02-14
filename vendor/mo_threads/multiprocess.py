@@ -13,6 +13,7 @@ import platform
 import subprocess
 
 from mo_dots import set_default, wrap, Null
+from mo_future import text
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_threads.lock import Lock
@@ -22,12 +23,31 @@ from mo_threads.threads import THREAD_STOP, Thread
 from mo_threads.till import Till
 from mo_times import Timer
 
-DEBUG = True
+DEBUG = False
 
 
 class Process(object):
+    next_process_id = 0
+
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
-        self.name = name
+        """
+        Spawns multiple threads to manage the stdin/stdout/stderr of the child process; communication is done
+        via proper thread-safe queues of the same name.
+
+        Since the process is managed and monitored by threads, the main thread is not blocked when the child process
+        encounters problems
+
+        :param name: name given to this process
+        :param params: list of strings for program name and parameters
+        :param cwd: current working directory
+        :param env: enviroment variables
+        :param debug: true to be verbose about stdin/stdout
+        :param shell: true to run as command line
+        :param bufsize: if you want to screw stuff up
+        """
+        self.process_id = Process.next_process_id
+        Process.next_process_id += 1
+        self.name = name + " (" + text(self.process_id) + ")"
         self.service_stopped = Signal("stopped signal for " + strings.quote(name))
         self.stdin = Queue("stdin for process " + strings.quote(name), silent=True)
         self.stdout = Queue("stdout for process " + strings.quote(name), silent=True)
@@ -106,7 +126,7 @@ class Process(object):
         return self.service.returncode
 
     def _monitor(self, please_stop):
-        with Timer(self.name):
+        with Timer(self.name, verbose=self.debug):
             self.service.wait()
             self.debug and Log.note("{{process}} STOP: returncode={{returncode}}", process=self.name, returncode=self.service.returncode)
             self.service_stopped.go()
@@ -224,7 +244,7 @@ class Command(object):
 
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
         shell = True
-        self.name=name
+        self.name = name
         self.key = (cwd, wrap(env), debug, shell)
         self.stdout = Queue("stdout for "+name)
         self.stderr = Queue("stderr for "+name)

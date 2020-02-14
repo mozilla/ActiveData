@@ -563,7 +563,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                     "put": {"name": literal_field(untype_path(prefix))},
                     "value": LeavesOp(Variable(prefix)),
                     "allowNulls": True,
-                    "dim":dim_index,
+                    "dim": dim_index,
                     "domain": {"type": "default"}
                 }])
 
@@ -576,7 +576,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
         }])
     else:
         edge = wrap(edge)
-        if (edge.domain and edge.domain.type != "default") or edge.allowNulls != None:
+        if (edge.domain and edge.domain.type != "default"):
             Log.error("groupby does not accept complicated domains")
 
         if not edge.name and not is_text(edge.value):

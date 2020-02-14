@@ -640,6 +640,32 @@ def filter(data, where):
         )
 
 
+def drill(data, path):
+    """
+    ITERATE THROUGH ALL OBJECTS FOUND ALONG path
+    :param data: SOME DATA, OR ITERABLE
+    :param path: DOT-DELIMITED PATH TO REACH INTO
+    :return:
+    """
+    def _drill(d, p):
+        if p:
+            if is_many(d):
+                for dd in d:
+                    for v in _drill(dd, p):
+                        yield v
+            else:
+                for v in _drill(listwrap(d[p[0]]), p[1:]):
+                    yield v
+        elif is_many(d):
+            for dd in d:
+                for v in _drill(dd, p):
+                    yield v
+        else:
+            yield d
+
+    return _drill(data, split_field(path))
+
+
 def drill_filter(esfilter, data):
     """
     PARTIAL EVALUATE THE FILTER BASED ON DATA GIVEN

@@ -498,10 +498,12 @@ _SNIP = "...<snip>..."
 
 @formatter
 def limit(value, length):
+    """
+    LIMIT THE STRING value TO GIVEN LENGTH, CHOPPING OUT THE MIDDLE IF REQUIRED
+    """
     if value == None:
         return None
     try:
-        # LIMIT THE STRING value TO GIVEN LENGTH, CHOPPING OUT THE MIDDLE IF REQUIRED
         if len(value) <= length:
             return value
         elif length < len(_SNIP) * 2:

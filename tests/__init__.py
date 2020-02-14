@@ -244,6 +244,9 @@ class ESUtils(object):
 
                 container = jx_elasticsearch.new_instance(self._es_test_settings)
                 query = QueryOp.wrap(subtest.query, container, container.namespace)
+                if len(result.data) != len(expected.data):
+                    Log.error("expecting data to be same length")
+
                 compare_to_expected(query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)
             if num_expectations == 0:

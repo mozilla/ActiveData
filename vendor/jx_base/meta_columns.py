@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import datetime
 from collections import Mapping
 
 from jx_base import Column, TableDesc
@@ -272,6 +273,7 @@ _merge_order = {
     int: 3,
     long: 3,
     Date: 4,
+    datetime: 4,
     float: 5,
     text: 6,
     binary_type: 6,

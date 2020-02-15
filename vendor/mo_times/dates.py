@@ -17,7 +17,7 @@ import math
 import re
 from time import time as _time
 
-from mo_dots import Null, NullType
+from mo_dots import Null, NullType, coalesce
 from mo_future import long, none_type, text, unichr
 from mo_logs import Except
 from mo_logs.strings import deformat
@@ -424,7 +424,7 @@ def unicode2Date(value, format=None):
 
     try:  # 2.7 DOES NOT SUPPORT %z
         local_value = parse_date(value)  #eg 2014-07-16 10:57 +0200
-        return _unix2Date(datetime2unix((local_value - local_value.utcoffset()).replace(tzinfo=None)))
+        return _unix2Date(datetime2unix((local_value - coalesce(local_value.utcoffset(), 0)).replace(tzinfo=None)))
     except Exception as e:
         e = Except.wrap(e)  # FOR DEBUGGING
         pass
@@ -454,6 +454,7 @@ def unicode2Date(value, format=None):
         "%b%d%Y",
         "%B%d%",
         "%b%d%y",
+        "%Y%m%d%H%M%S%f",
         "%Y%m%d%H%M%S",
         "%Y%m%dT%H%M%S",
         "%d%m%Y%H%M%S",

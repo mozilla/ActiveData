@@ -5,7 +5,7 @@ from mo_future import text
 from mo_json import value2json
 from pyLibrary.env import git
 
-print("Uses *.dockerfile environment variables to write a verion.json file")
+print("Uses *.dockerfile environment variables to write a version.json file")
 
 File("version.json").write(value2json(
     {

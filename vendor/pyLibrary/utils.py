@@ -35,7 +35,7 @@ class Version(object):
             self.version = version.version
         else:
             try:
-            self.version = tuple(map(int, version.split('.')))
+                self.version = tuple(map(int, version.split('.')))
             except Exception as e:
                 self.version = [0, 0, 0]
 

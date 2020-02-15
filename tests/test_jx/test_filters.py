@@ -257,7 +257,11 @@ class TestFilters(BaseTestCase):
                 "where": {"prefix": {"v": ""}}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test", "count": 1},
+                    {"v": NULL, "count": 0}
+                ]
             }
         }
         self.utils.execute_tests(test)
@@ -271,7 +275,11 @@ class TestFilters(BaseTestCase):
                 "where": {"prefix": {"v": None}}
             },
             "expecting_list": {
-                "meta": {"format": "list"}, "data": [{"v": "test", "count": 1}]
+                "meta": {"format": "list"},
+                "data": [
+                    {"v": "test", "count": 1},
+                    {"v": NULL, "count": 0}
+                ]
             }
         }
         self.utils.execute_tests(test)

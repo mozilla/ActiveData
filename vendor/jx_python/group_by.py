@@ -16,7 +16,7 @@ from jx_base.container import Container
 from jx_base.expressions import jx_expression
 from jx_base.language import is_expression
 from mo_dots import Data, FlatList, Null, listwrap
-from mo_dots.lists import sequence_types
+from mo_dots.lists import sequence_types, list_types
 from mo_future import binary_type, text
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -120,10 +120,10 @@ def chunk(data, size=0):
     if not size:
         return [data]
 
-    if data.__class__ in sequence_types + (bytearray, text, binary_type):
+    if data.__class__ in list_types + (tuple, bytearray, text, binary_type):
         # USE SLICING
         def _iter():
-            num = int(math.ceil(len(data)/size))
+            num = int(math.ceil(len(data) / size))
             for i in range(num):
                 output = (i, data[i * size:i * size + size:])
                 yield output

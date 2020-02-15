@@ -386,6 +386,7 @@ python_type_to_json_type = {
     int: INTEGER,
     text: STRING,
     float: NUMBER,
+    Decimal: NUMBER,
     bool: BOOLEAN,
     NullType: OBJECT,
     none_type: OBJECT,

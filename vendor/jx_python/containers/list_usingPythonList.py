@@ -21,7 +21,8 @@ from jx_base.schema import Schema
 from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from mo_collections import UniqueIndex
-from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, wrap
+from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, wrap, coalesce, relative_field, \
+    split_field
 from mo_future import first, sort_using_key
 from mo_logs import Log
 from mo_threads import Lock
@@ -40,7 +41,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             self._schema = get_schema_from_list(name, data)
         else:
             self._schema = schema
-        self.name = name
+        self.name = coalesce(name, ".")
         self.data = data
         self.locker = Lock()  # JUST IN CASE YOU WANT TO DO MORE THAN ONE THING
 
@@ -70,7 +71,8 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         output = self
         if is_aggs(q):
             output = list_aggs(output.data, q)
-        else:  # SETOP
+        else:
+            # SETOP
             try:
                 if q.filter != None or q.esfilter != None:
                     Log.error("use 'where' clause")

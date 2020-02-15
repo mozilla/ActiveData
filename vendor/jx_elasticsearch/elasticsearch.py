@@ -250,9 +250,10 @@ class Index(object):
                 self.settings.wait_for_active_shards,
                 {"one": 1, None: None}[self.settings.consistency]
             )
-
+            path = self.path + "/_delete_by_query"
+            DEBUG and Log.note("Delete: {{path}}\n{{query}}", path=path, query=query)
             result = self.cluster.post(
-                self.path + "/_delete_by_query",
+                path,
                 json=query,
                 timeout=600,
                 params={"wait_for_active_shards": wait_for_active_shards}

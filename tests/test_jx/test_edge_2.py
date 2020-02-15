@@ -141,7 +141,8 @@ class TestEdge2(BaseTestCase):
                     {"a": "y", "b": "n", "v": 50},
                     {"a": "y", "b": NULL, "v": 13},
                     {"a": NULL, "b": "m", "v": 17},
-                    {"a": NULL, "b": "n", "v": 19}
+                    {"a": NULL, "b": "n", "v": 19},
+                    {"a": NULL, "b": NULL, "v": NULL},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -154,7 +155,8 @@ class TestEdge2(BaseTestCase):
                     ["y", "n", 50],
                     ["y", NULL, 13],
                     [NULL, "m", 17],
-                    [NULL, "n", 19]
+                    [NULL, "n", 19],
+                    [NULL, NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -222,9 +224,10 @@ class TestEdge2(BaseTestCase):
                     {"a": "x", "v": 0},
                     {"a": "y", "b": "m", "v": 7},
                     {"a": "y", "b": "n", "v": 0},
-                    {"a": "y", "v": 13},
-                    {"b": "m", "v": 17},
-                    {"b": "n", "v": 19}
+                    {"a": "y", "b": NULL, "v": 13},
+                    {"a": NULL, "b": "m", "v": 17},
+                    {"a": NULL, "b": "n", "v": 19},
+                    {"a": NULL, "b": NULL, "v": 0}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
@@ -237,7 +240,8 @@ class TestEdge2(BaseTestCase):
                     ["y", "m", 7],
                     ["y", "n", 0],
                     [NULL, "m", 17],
-                    [NULL, "n", 19]
+                    [NULL, "n", 19],
+                    [NULL, NULL, 0]
                 ]
             },
             "expecting_cube": {

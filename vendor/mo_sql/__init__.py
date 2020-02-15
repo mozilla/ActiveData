@@ -97,8 +97,8 @@ class JoinSQL(SQL):
 
     def __init__(self, sep, concat):
         SQL.__init__(self)
-        if not is_container(concat):
-            concat = list(concat)
+        if not isinstance(concat, (tuple, list)):
+            concat = tuple(concat)
         if DEBUG:
             if not isinstance(sep, SQL):
                 Log.error("Expecting SQL, not text")

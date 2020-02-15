@@ -173,7 +173,7 @@ def extractor(guid, abs_limit, esq, es_query, formatter, please_stop):
 
 class ListFormatter(object):
     def __init__(self, abs_limit, select, query):
-        self.header = b"[\n"
+        self.header = b"{\"meta\":{\"format\":\"list\"},\"data\":[\n"
         self.count = 0
         self.abs_limit = abs_limit
         self.formatter = doc_formatter(select, query)
@@ -196,7 +196,7 @@ class ListFormatter(object):
                 yield DONE
 
     def footer(self):
-        yield b"\n]"
+        yield b"\n]}"
 
 
 DONE = object()

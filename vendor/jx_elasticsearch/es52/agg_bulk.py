@@ -272,7 +272,9 @@ def write_status(guid, status):
 
             except Exception as e:
                 Log.error(
-                    "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
+                    "Problem connecting to {{bucket}}",
+                    bucket=S3_CONFIG.bucket,
+                    cause=e
                 )
     except Exception as e:
         Log.warning("problem setting status", cause=e)
@@ -283,7 +285,7 @@ DONE = object()
 
 class ListFormatter(object):
     def __init__(self, abs_limit):
-        self.header = b"[\n"
+        self.header = b"{\"meta\":{\"format\":\"list\"},\"data\":[\n"
         self.count = 0
         self.abs_limit = abs_limit
         self.result = None
@@ -305,7 +307,7 @@ class ListFormatter(object):
                 yield DONE
 
     def footer(self):
-        yield b"\n]"
+        yield b"\n]}"
 
 
 class TableFormatter(object):

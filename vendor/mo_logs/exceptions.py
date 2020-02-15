@@ -109,7 +109,7 @@ class Except(Exception, LogItem):
 
     def __contains__(self, value):
         if is_text(value):
-            if self.template.find(value) >= 0 or self.message.find(value) >= 0:
+            if value in self.template or value in self.message:
                 return True
 
         if self.context == value:

@@ -126,7 +126,7 @@ def es_bulkaggsop(esq, frum, query):
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),
             "meta": {
-                "format": "list",
+                "format": query.format,
                 "timing": {"cardinality_check": cardinality_check.duration},
                 "es_query": es_query,
                 "num_partitions": num_partitions,
@@ -330,7 +330,7 @@ class TableFormatter(object):
             yield self.pre
         else:
             self.pre = b",\n"
-            yield b"{\n\"header\":"
+            yield b"{\"meta\":{\"format\":\"table\"},\"header\":"
             yield value2json(self.header).encode('utf8')
             yield b",\n\"data\":[\n"
 

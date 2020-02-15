@@ -52,7 +52,8 @@ class Till(Signal):
 
     def __init__(self, till=None, seconds=None):
         """
-        ONE OF THESE PARAMETERS IS REQUIRED
+        Signal after some elapsed time:  Till(seconds=1).wait()
+
         :param till: UNIX TIMESTAMP OF WHEN TO SIGNAL
         :param seconds: PREFERRED OVER timeout
         """

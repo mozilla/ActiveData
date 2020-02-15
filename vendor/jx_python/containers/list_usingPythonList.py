@@ -73,10 +73,6 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             output = list_aggs(output.data, q)
         else:
             # SETOP
-            if q['from']:
-                path = split_field(relative_field(q['from'], self.name))
-                ListContainer(self.name)
-
             try:
                 if q.filter != None or q.esfilter != None:
                     Log.error("use 'where' clause")

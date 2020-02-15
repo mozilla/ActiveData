@@ -44,13 +44,15 @@ class TestDeepOps(BaseTestCase):
                 "data": [
                     {"_a": {"b": "x", "v": 14}},
                     {"_a": {"b": "y", "v": 3}},
+                    {"_a": {}},
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["_a.b", "_a.v"],
                 "data": [
                     ["x", 14],
-                    ["y", 3]
+                    ["y", 3],
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -67,7 +69,7 @@ class TestDeepOps(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "_a.v": [14, 3]
+                    "_a.v": [14, 3, NULL]
                 }
             }
         }
@@ -738,7 +740,8 @@ class TestDeepOps(BaseTestCase):
                     {"o": 1, "count": 1},
                     {"o": 2, "count": 1},
                     {"o": 3, "count": 2},
-                    {"o": 4, "count": 1}
+                    {"o": 4, "count": 1},
+                    {"o": NULL, "count": 0}
                 ]
             },
             "expecting_table": {
@@ -748,7 +751,8 @@ class TestDeepOps(BaseTestCase):
                     [1, 1],
                     [2, 1],
                     [3, 2],
-                    [4, 1]
+                    [4, 1],
+                    [NULL, 0]
                 ]
 
             },
@@ -799,7 +803,10 @@ class TestDeepOps(BaseTestCase):
                     {"o": 1, "v": NULL, "s": 0},
                     {"o": 2, "v": "b", "s": 1},
                     {"o": 2, "v": "c", "s": 0},
-                    {"o": 2, "v": NULL, "s": 1}
+                    {"o": 2, "v": NULL, "s": 1},
+                    {"o": NULL, "v": "b", "s": 0},
+                    {"o": NULL, "v": "c", "s": 0},
+                    {"o": NULL, "v": NULL, "s": 0},
                 ]
             },
             "expecting_table": {
@@ -811,7 +818,10 @@ class TestDeepOps(BaseTestCase):
                     [1, NULL, 0],
                     [2, "b", 1],
                     [2, "c", 0],
-                    [2, NULL, 1]
+                    [2, NULL, 1],
+                    [NULL, "b", 0],
+                    [NULL, "c", 0],
+                    [NULL, NULL, 0],
                 ]
             },
             "expecting_cube": {
@@ -941,7 +951,10 @@ class TestDeepOps(BaseTestCase):
                     {"o": 1, "v": NULL, "s": 0},
                     {"o": 2, "v": "b", "s": 1},
                     {"o": 2, "v": "c", "s": 0},
-                    {"o": 2, "v": NULL, "s": 0}
+                    {"o": 2, "v": NULL, "s": 0},
+                    {"o": NULL, "v": "b", "s": 0},
+                    {"o": NULL, "v": "c", "s": 0},
+                    {"o": NULL, "v": NULL, "s": 0}
                 ]
             },
             "expecting_table": {  # TODO: THIS MAY NOT BE CORRECT
@@ -953,7 +966,10 @@ class TestDeepOps(BaseTestCase):
                     [1, NULL, 0],
                     [2, "b", 1],
                     [2, "c", 0],
-                    [2, NULL, 0]
+                    [2, NULL, 0],
+                    [NULL, "b", 0],
+                    [NULL, "c", 0],
+                    [NULL, NULL, 0]
                 ]
             },
             "expecting_cube": {
@@ -1788,6 +1804,7 @@ class TestDeepOps(BaseTestCase):
                     {"b": "y", "v": {"k": "3"}},
                     {"b": "x", "v": {"k": 5}},
                     {"b": "x", "v": {"k": 7}},
+                    NULL,
                     NULL
                 ]
             }

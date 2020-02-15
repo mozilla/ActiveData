@@ -676,14 +676,16 @@ class TestEdge1(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": "b"},
-                    {"a": "c", "v": 13}
+                    {"a": "c", "v": 13},
+                    {"a": NULL, "v": NULL}
                 ]},
             "expecting_table": {
                 "meta": {"format": "table"},
                 "header": ["a", "v"],
                 "data": [
                     ["b", NULL],
-                    ["c", 13]
+                    ["c", 13],
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -937,8 +939,9 @@ class TestEdge1(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"a": "b"},
-                    {"a": "c"}
+                    {"a": "b", "v":NULL},
+                    {"a": "c", "v":NULL},
+                    {"a": NULL, "v":NULL}
                 ]
             },
             "expecting_table": {
@@ -946,7 +949,8 @@ class TestEdge1(BaseTestCase):
                 "header": ["a", "v"],
                 "data": [
                     ["b", NULL],
-                    ["c", NULL]
+                    ["c", NULL],
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -1120,7 +1124,8 @@ class TestEdge1(BaseTestCase):
                     {"k": "j", "v": 10},
                     {"k": "k", "v": 11},
                     {"k": "l", "v": 12},
-                    {"k": "m", "v": 13}
+                    {"k": "m", "v": 13},
+                    {"k": NULL, "v": NULL}
                 ]
             },
             "expecting_table": {
@@ -1139,7 +1144,8 @@ class TestEdge1(BaseTestCase):
                     ["j", 10],
                     ["k", 11],
                     ["l", 12],
-                    ["m", 13]
+                    ["m", 13],
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -1170,7 +1176,7 @@ class TestEdge1(BaseTestCase):
                     }
                 ],
                 "data": {
-                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+                    "v": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, NULL]
                 }
             }
         }
@@ -1313,7 +1319,8 @@ class TestEdge1(BaseTestCase):
                     {"start": 2, "count": 2},
                     {"start": 3, "count": 3},
                     {"start": 4, "count": 0},
-                    {"start": 5, "count": 1}
+                    {"start": 5, "count": 1},
+                    {"start": NULL, "count": 0}
                 ]
             },
             "expecting_table": {
@@ -1325,7 +1332,8 @@ class TestEdge1(BaseTestCase):
                     [2, 2],
                     [3, 3],
                     [4, 0],
-                    [5, 1]
+                    [5, 1],
+                    [NULL, 0]
                 ]
             },
             "expecting_cube": {
@@ -1649,7 +1657,8 @@ class TestEdge1(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"k": "a", "v": 9.5},
-                    {"k": "b", "v": 16.2}
+                    {"k": "b", "v": 16.2},
+                    {"k": NULL, "v": NULL}
                 ]
             },
             "expecting_table": {
@@ -1657,7 +1666,8 @@ class TestEdge1(BaseTestCase):
                 "header": ["k", "v"],
                 "data": [
                     ["a", 9.5],
-                    ["b", 16.2]
+                    ["b", 16.2],
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -1667,7 +1677,7 @@ class TestEdge1(BaseTestCase):
                     {"name": "k", "domain": {"type": "set", "partitions": [{"value": "a"}, {"value": "b"}]}}
                 ],
                 "data": {
-                    "v": [9.5, 16.2]
+                    "v": [9.5, 16.2, NULL]
                 }
             }
         }
@@ -1783,7 +1793,8 @@ class TestEdge1(BaseTestCase):
                     {"a": 6, "count": 3},
                     {"a": 7, "count": 3},
                     {"a": 8, "count": 3},
-                    {"a": 9, "count": 2}
+                    {"a": 9, "count": 2},
+                    {"a": NULL, "count": 0}
                 ]
             },
             "expecting_table": {
@@ -1799,7 +1810,8 @@ class TestEdge1(BaseTestCase):
                     [6, 3],
                     [7, 3],
                     [8, 3],
-                    [9, 2]
+                    [9, 2],
+                    [NULL, 0]
                 ]
             },
             "expecting_cube": {
@@ -1819,7 +1831,7 @@ class TestEdge1(BaseTestCase):
                          {"min": 9, "max": 10}
                      ]}}
                 ],
-                "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2]}  # NOT SURE HOW WE ARE COUNTING NULLS
+                "data": {"count": [1, 1, 2, 3, 3, 3, 3, 3, 3, 2, 0]}
             }
         }
         self.utils.execute_tests(test)
@@ -2077,7 +2089,8 @@ class TestEdge1(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"result": {"ok": True}, "count": 4},
-                    {"result": {"ok": False}, "count": 5}
+                    {"result": {"ok": False}, "count": 5},
+                    {"count": 0}
                 ]
             }
         }
@@ -2106,7 +2119,8 @@ class TestEdge1(BaseTestCase):
                 "data": [
                     {"k": "a", "avg": 22 / 4},
                     {"k": "b", "avg": 17 / 2},
-                    {"k": "c", "avg": 0}
+                    {"k": "c", "avg": 0},
+                    {"k": NULL, "avg": 0}
                 ]
             }
         }

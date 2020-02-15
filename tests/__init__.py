@@ -23,7 +23,7 @@ from jx_base.query import QueryOp
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
-from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap
+from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap, is_many
 from mo_files.url import URL
 from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
@@ -244,8 +244,12 @@ class ESUtils(object):
 
                 container = jx_elasticsearch.new_instance(self._es_test_settings)
                 query = QueryOp.wrap(subtest.query, container, container.namespace)
-                if len(result.data) != len(expected.data):
-                    Log.error("expecting data to be same length")
+                if is_many(expected.data) and len(result.data) != len(expected.data):
+                    Log.error(
+                        "expecting data (len={{rlen}}) to have length of {{elen}}",
+                        rlen=len(result.data),
+                        elen=len(expected.data)
+                    )
 
                 compare_to_expected(query, result, expected, places)
                 Log.note("PASS {{name|quote}} (format={{format}})", name=subtest.name, format=format)

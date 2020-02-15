@@ -55,6 +55,7 @@ expected2 = wrap([
     {"a": "x", "t": (TODAY - 2 * DAY).unix, "v": 3},
     {"a": "x", "t": (TODAY - 1 * DAY).unix, "v": 2},
     {"a": "x",                              "v": 29},
+
     {"a": "y", "t": (TODAY - WEEK).unix,    "v": NULL},
     {"a": "y", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 5 * DAY).unix, "v": 23},
@@ -62,7 +63,16 @@ expected2 = wrap([
     {"a": "y", "t": (TODAY - 3 * DAY).unix, "v": NULL},
     {"a": "y", "t": (TODAY - 2 * DAY).unix, "v": 17},
     {"a": "y", "t": (TODAY - 1 * DAY).unix, "v": 13},
-    {"a": "y",                              "v": NULL}
+    {"a": "y",                              "v": NULL},
+
+    {"a": NULL, "t": (TODAY - WEEK).unix,    "v": NULL},
+    {"a": NULL, "t": (TODAY - 6 * DAY).unix, "v": NULL},
+    {"a": NULL, "t": (TODAY - 5 * DAY).unix, "v": NULL},
+    {"a": NULL, "t": (TODAY - 4 * DAY).unix, "v": NULL},
+    {"a": NULL, "t": (TODAY - 3 * DAY).unix, "v": NULL},
+    {"a": NULL, "t": (TODAY - 2 * DAY).unix, "v": NULL},
+    {"a": NULL, "t": (TODAY - 1 * DAY).unix, "v": NULL},
+    {"a": NULL,                              "v": NULL}
 ])
 
 test_data_3 = [

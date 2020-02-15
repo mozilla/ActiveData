@@ -126,7 +126,7 @@ def es_bulkaggsop(esq, frum, query):
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),
             "meta": {
-                "format": "list",
+                "format": query.format,
                 "timing": {"cardinality_check": cardinality_check.duration},
                 "es_query": es_query,
                 "num_partitions": num_partitions,
@@ -272,7 +272,9 @@ def write_status(guid, status):
 
             except Exception as e:
                 Log.error(
-                    "Problem connecting to {{bucket}}", bucket=S3_CONFIG.bucket, cause=e
+                    "Problem connecting to {{bucket}}",
+                    bucket=S3_CONFIG.bucket,
+                    cause=e
                 )
     except Exception as e:
         Log.warning("problem setting status", cause=e)
@@ -283,7 +285,7 @@ DONE = object()
 
 class ListFormatter(object):
     def __init__(self, abs_limit):
-        self.header = b"[\n"
+        self.header = b"{\"meta\":{\"format\":\"list\"},\"data\":[\n"
         self.count = 0
         self.abs_limit = abs_limit
         self.result = None
@@ -305,7 +307,7 @@ class ListFormatter(object):
                 yield DONE
 
     def footer(self):
-        yield b"\n]"
+        yield b"\n]}"
 
 
 class TableFormatter(object):
@@ -330,7 +332,7 @@ class TableFormatter(object):
             yield self.pre
         else:
             self.pre = b",\n"
-            yield b"{\n\"header\":"
+            yield b"{\"meta\":{\"format\":\"table\"},\"header\":"
             yield value2json(self.header).encode('utf8')
             yield b",\n\"data\":[\n"
 

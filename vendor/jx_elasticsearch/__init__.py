@@ -13,7 +13,7 @@ from jx_base.container import type2container
 from mo_files.url import URL
 from mo_kwargs import override
 from mo_logs import Log
-from pyLibrary.env import http
+from mo_http import http
 
 DEBUG = False
 

@@ -21,7 +21,6 @@ from json.encoder import encode_basestring
 from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence, NullType
 from mo_future import PY3, get_function_name, is_text, round as _round, text, transpose, xrange, zip_longest, \
     binary_type, Mapping
-
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
 
 FORMATTERS = {}
@@ -291,7 +290,7 @@ def percent(value, decimal=None, digits=None, places=None):
 
     digits = coalesce(digits, places)
     if digits != None:
-        left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
+        left_of_decimal = int(mo_math.ceil(mo_math.log10(abs(value)))) + 2
         decimal = digits - left_of_decimal
 
     decimal = coalesce(decimal, 0)

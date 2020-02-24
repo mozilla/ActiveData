@@ -107,6 +107,19 @@ class Queue(object):
                 self.queue.appendleft(value)
         return self
 
+    def push_all(self, values):
+        """
+        SNEAK values TO FRONT OF THE QUEUE
+        """
+        if self.closed and not self.allow_add_after_close:
+            Log.error("Do not push to closed queue")
+
+        with self.lock:
+            self._wait_for_queue_space()
+            if not self.closed:
+                self.queue.extendleft(values)
+        return self
+
     def pop_message(self, till=None):
         """
         RETURN TUPLE (message, payload) CALLER IS RESPONSIBLE FOR CALLING message.delete() WHEN DONE

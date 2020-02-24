@@ -12,7 +12,7 @@
 # WITH ADDED default_headers THAT CAN BE SET USING mo_logs.settings
 # EG
 # {"debug.constants":{
-#     "pyLibrary.env.http.default_headers":{"From":"klahnakoski@mozilla.com"}
+#     "mo_http.http.default_headers":{"From":"klahnakoski@mozilla.com"}
 # }}
 
 
@@ -90,7 +90,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
             "The pyLibrary.env.http module was meant to add extra " +
             "default headers to all requests, specifically the 'Referer' " +
             "header with a URL to the project. Use the `pyLibrary.debug.constants.set()` " +
-            "function to set `pyLibrary.env.http.default_headers`"
+            "function to set `mo_http.http.default_headers`"
         ))
     _warning_sent = True
 

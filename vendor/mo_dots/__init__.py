@@ -96,6 +96,7 @@ def unliteral_field(field):
 def tail_field(field):
     """
     RETURN THE FIRST STEP IN PATH, ALONG WITH THE REMAINING TAIL
+    IN (first, rest) PAIR
     """
     if field == "." or field==None:
         return ".", "."
@@ -208,6 +209,8 @@ def set_default(*params):
     """
     UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
     FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
+
+    RECURSIVE VERSION OF params[0].update(*reversed(params));
 
     :param params:  dicts IN PRIORITY ORDER, FIRST IS HIGHES PRIORITY
     :return: FIRST dict OR NEW dict WITH PROPERTIES SET

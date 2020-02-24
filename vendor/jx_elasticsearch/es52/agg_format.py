@@ -16,7 +16,7 @@ from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, split_field, wrap
 from mo_files import mimetype
-from mo_future import sort_using_key
+from mo_future import sort_using_key, next
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -98,7 +98,7 @@ def format_table(aggs, es_query, query, decoders, all_selects):
         if give_me_zeros:
             # WE REQUIRE THE ZEROS FOR SORTING
             all_coord = is_sent._all_combos()  # TRACK THE EXPECTED COMBINATIONS
-            ordered_coord = all_coord.next()[::-1]
+            ordered_coord = next(all_coord)[::-1]
             output = None
             for row, coord, agg, ss in aggs_iterator(aggs, es_query, decoders):
                 if coord != ordered_coord:
@@ -109,13 +109,13 @@ def format_table(aggs, es_query, query, decoders, all_selects):
                             if output[i] is None:
                                 output[i] = s.default
                         # WE CAN GET THE SAME coord MANY TIMES, SO ONLY ADVANCE WHEN NOT
-                        ordered_coord = all_coord.next()[::-1]
+                        ordered_coord = next(all_coord)[::-1]
 
                 while coord != ordered_coord:
                     # HAPPENS WHEN THE coord IS AHEAD OF ordered_coord
                     record = [d.get_value(ordered_coord[i]) for i, d in enumerate(decoders)] + [s.default for s in all_selects]
                     yield record
-                    ordered_coord = all_coord.next()[::-1]
+                    ordered_coord = next(all_coord)[::-1]
                 # coord == missing_coord
                 output = [d.get_value(c) for c, d in zip(coord, decoders)] + [None for s in all_selects]
                 for select in ss:

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_dots import is_data, is_sequence, tuplewrap, unwrap, wrap
 from mo_dots.objects import datawrap
-from mo_future import PY2, iteritems, Set, Mapping, Iterable
+from mo_future import PY2, iteritems, Set, Mapping, Iterable, first
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
 
@@ -69,7 +69,7 @@ class UniqueIndex(Set, Mapping):
         return self._data.keys()
 
     def pop(self):
-        output = iteritems(self._data).next()[1]
+        output = first(iteritems(self._data))[1]
         self.remove(output)
         return wrap(output)
 

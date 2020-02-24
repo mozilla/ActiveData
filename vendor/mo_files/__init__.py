@@ -231,15 +231,16 @@ class File(object):
             for num, zip_name in enumerate(zipped.namelist()):
                 return zipped.open(zip_name).read().decode(encoding)
 
-
     def read_lines(self, encoding="utf8"):
         with open(self._filename, "rb") as f:
             for line in f:
                 yield line.decode(encoding).rstrip()
 
     def read_json(self, encoding="utf8", flexible=True, leaves=True):
+        from mo_json import json2value
+
         content = self.read(encoding=encoding)
-        value = get_module(u"mo_json").json2value(content, flexible=flexible, leaves=leaves)
+        value = json2value(content, flexible=flexible, leaves=leaves)
         abspath = self.abspath
         if os.sep == "\\":
             abspath = "/" + abspath.replace(os.sep, "/")

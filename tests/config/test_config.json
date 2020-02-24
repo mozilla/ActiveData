@@ -18,7 +18,7 @@
 		"debug": true
 	},
 	"constants": {
-		"pyLibrary.env.http.default_headers": {
+		"mo_http.http.default_headers": {
 			"Referer": "ActiveDataTests"
 		},
 		"jx_elasticsearch.es52.agg_bulk.S3_CONFIG": true

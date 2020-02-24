@@ -25,7 +25,7 @@ from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_p
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, wrap
-from mo_future import first
+from mo_future import first, next
 from mo_logs import Log
 from mo_times.timer import Timer
 
@@ -264,7 +264,7 @@ def aggs_iterator(aggs, es_query, decoders, give_me_zeros=False):
     gen = _children(aggs, es_query.children)
     while True:
         try:
-            index, c_agg, c_query, part = gen.next()
+            index, c_agg, c_query, part = next(gen)
         except StopIteration:
             try:
                 gen = stack.pop()

@@ -8,8 +8,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import is_container
-from mo_future import is_text, PY2
+from mo_future import is_text, PY2, next
 from mo_logs import Log
 
 DEBUG = True
@@ -111,10 +110,7 @@ class JoinSQL(SQL):
         if not self.concat:
             return
         it = self.concat.__iter__()
-        if PY2:
-            v = it.next()
-        else:
-            v = it.__next__()
+        v = next(it)
         for vv in v:
             yield vv
         for v in it:

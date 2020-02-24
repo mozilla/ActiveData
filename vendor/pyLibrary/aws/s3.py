@@ -25,8 +25,8 @@ from mo_logs import Except, Log
 from mo_times.dates import Date
 from mo_times.timer import Timer
 from pyLibrary import convert
-from pyLibrary.env import http
-from pyLibrary.env.big_data import LazyLines, MAX_STRING_SIZE, ibytes2ilines, safe_size, scompressed2ibytes
+from mo_http import http
+from mo_http.big_data import LazyLines, MAX_STRING_SIZE, ibytes2ilines, safe_size, scompressed2ibytes
 
 TOO_MANY_KEYS = 1000 * 1000 * 1000
 READ_ERROR = "S3 read error"

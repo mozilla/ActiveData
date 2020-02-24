@@ -41,7 +41,7 @@ class InOp(InOp_):
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: value2boolean(self.superset.value)}}
                     else:
-                        return {"terms": {var: map(value2boolean, self.superset.value)}}
+                        return {"terms": {var: list(map(value2boolean, self.superset.value))}}
                 else:
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: self.superset.value}}

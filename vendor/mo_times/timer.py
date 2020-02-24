@@ -34,7 +34,7 @@ class Timer(object):
     def __init__(self, description, param=None, silent=None, verbose=None, too_long=0):
         self.template = description
         self.param = wrap(coalesce(param, {}))
-        self.silent = coalesce(silent, True if verbose is False else False)
+        self.verbose = coalesce(verbose, False if silent is True else True)
         self.agg = 0
         self.too_long = too_long  # ONLY SHOW TIMING FOR DURATIONS THAT ARE too_long
         self.start = 0
@@ -42,7 +42,7 @@ class Timer(object):
         self.interval = None
 
     def __enter__(self):
-        if not self.silent and self.too_long == 0:
+        if self.verbose and self.too_long == 0:
             Log.note("Timer start: " + self.template, stack_depth=1, **self.param)
         self.start = time()
         return self
@@ -52,7 +52,7 @@ class Timer(object):
         self.interval = self.end - self.start
         self.agg += self.interval
         self.param.duration = timedelta(seconds=self.interval)
-        if not self.silent:
+        if self.verbose:
             if self.too_long == 0:
                 Log.note("Timer end  : " + self.template + " (took {{duration}})", default_params=self.param, stack_depth=1)
             elif self.interval >= self.too_long:

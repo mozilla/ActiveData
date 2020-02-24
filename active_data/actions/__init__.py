@@ -123,7 +123,11 @@ def find_container(frum, after):
                 "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
-    cs = namespace.get_columns(frum, after=after)  # FORCE A RELOAD
+    if not frum:
+        Log.error("expecting json query expression with from clause")
+
+    # FORCE A RELOAD
+    namespace.get_columns(frum, after=after)
 
     if is_text(frum):
         if frum in container_cache:

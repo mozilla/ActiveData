@@ -21,7 +21,7 @@ from mo_logs import Except, Log
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY
 from mo_times.timer import Timer
-from pyLibrary.env import http
+from mo_http import http
 from tests import error
 from tests.test_jx import BaseTestCase, global_settings
 

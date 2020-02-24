@@ -79,21 +79,24 @@ def test_mode_wait(query):
             timeout = Till(seconds=MINUTE.seconds)
             while not timeout:
                 # GET FRESH VERSIONS
-                cols = [
+                cols = metadata_manager.get_columns(
+                    table_name=alias,
+                    after=after,
+                    timeout=timeout
+                )
+                not_ready = [
                     c
-                    for c in metadata_manager.get_columns(
-                        table_name=alias, after=after, timeout=timeout
-                    )
+                    for c in cols
                     if c.jx_type not in STRUCT
                     and (
                         after >= c.last_updated
                         or (require_cardinality and c.cardinality == None)
                     )
                 ]
-                if cols:
+                if not_ready:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}, cardinality={{col.cardinality|json}}, last_updated={{col.last_updated|datetime}}) metadata to arrive",
-                        col=first(cols),
+                        col=first(not_ready),
                     )
                 else:
                     break

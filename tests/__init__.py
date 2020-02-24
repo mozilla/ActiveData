@@ -34,7 +34,7 @@ from mo_logs.strings import expand_template
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Till
 from mo_times import Date
-from pyLibrary.env import http
+from mo_http import http
 from pyLibrary.testing import elasticsearch
 from tests import test_jx
 

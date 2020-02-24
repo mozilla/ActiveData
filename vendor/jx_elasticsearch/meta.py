@@ -828,11 +828,11 @@ class ElasticsearchMetadata(Namespace):
 
                     META_COLUMNS_DESC.last_updated = now
 
-                pair = self.todo.pop(Till(seconds=(10 * MINUTE).seconds))
-                if pair:
-                    if pair is THREAD_STOP:
+                work_item = self.todo.pop(Till(seconds=(10 * MINUTE).seconds))
+                if work_item:
+                    if work_item is THREAD_STOP:
                         continue
-                    column, after = pair
+                    column, after = work_item
 
                     now = Date.now()
                     with Timer(
@@ -840,7 +840,8 @@ class ElasticsearchMetadata(Namespace):
                         param={"table": column.es_index, "column": column.es_column},
                         verbose=DEBUG,
                     ):
-                        if column.es_index not in (n for p in self.es_cluster.get_aliases(after=after) for n in p):
+                        all_tables = [n for p in self.es_cluster.get_aliases(after=after) for n in (p.index, p.alias)]
+                        if column.es_index not in all_tables:
                             DEBUG and Log.note(
                                 "{{column.es_column}} of {{column.es_index}} does not exist",
                                 column=column,

@@ -33,7 +33,7 @@ from mo_future import text
 from mo_logs import Log, constants, machine_metadata, startup
 from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
-from pyLibrary.env import  http
+from mo_http import http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow, add_version
 
 

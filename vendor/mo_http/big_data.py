@@ -458,3 +458,35 @@ def get_decoder(encoding, flexible=False):
         def do_decode2(v):
             return v.decode(encoding)
         return do_decode2
+
+
+def zip2bytes(compressed):
+    """
+    UNZIP DATA
+    """
+    if hasattr(compressed, "read"):
+        return gzip.GzipFile(fileobj=compressed, mode='r')
+
+    buff = BytesIO(compressed)
+    archive = gzip.GzipFile(fileobj=buff, mode='r')
+    return safe_size(archive)
+
+
+def bytes2zip(bytes):
+    """
+    RETURN COMPRESSED BYTES
+    """
+    if hasattr(bytes, "read"):
+        buff = TemporaryFile()
+        archive = gzip.GzipFile(fileobj=buff, mode='w')
+        for b in bytes:
+            archive.write(b)
+        archive.close()
+        buff.seek(0)
+        return FileString(buff)
+
+    buff = BytesIO()
+    archive = gzip.GzipFile(fileobj=buff, mode='w')
+    archive.write(bytes)
+    archive.close()
+    return buff.getvalue()

@@ -276,6 +276,16 @@ class Date(object):
                 output = v
         return output
 
+    @classmethod
+    def max(cls, *values):
+        output = Null
+        for v in values:
+            if output == None and v != None:
+                output = v
+            elif v < output:
+                output = v
+        return output
+
 
 def parse(*args):
     try:

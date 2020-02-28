@@ -17,7 +17,7 @@ from jx_base import container
 from jx_elasticsearch import meta
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import is_container
+from mo_dots import is_container, join_field
 from mo_dots import is_data, set_default, split_field
 from mo_future import is_text, first
 from mo_json import STRUCT, value2json
@@ -140,10 +140,11 @@ def find_container(frum, after):
             elif path[1] == "tables":
                 return namespace.meta.tables
             else:
-                Log.error("{{name}} not a recognized table", name=frum)
+                fact_table_name = join_field(path[:2])
+        else:
+            fact_table_name = path[0]
 
         type_ = container.config.default.type
-        fact_table_name = path[0]
 
         settings = set_default(
             {"alias": fact_table_name, "name": frum, "exists": True},

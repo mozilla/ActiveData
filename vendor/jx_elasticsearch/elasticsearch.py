@@ -288,6 +288,8 @@ class Index(object):
             return
         if isinstance(records, generator_types):
             Log.error("single use generators no longer accepted")
+        if is_text(records):
+            Log.error("records must have __iter__")
         if not hasattr(records, "__iter__"):
             Log.error("records must have __iter__")
 
@@ -1128,7 +1130,7 @@ class Alias(object):
                 settings = self.cluster.get("/" + full_name + "/_mapping")[full_name]
             else:
                 index = self.cluster.get_best_matching_index(alias).index
-                settings = self.cluster.get_metadata().indices[index]
+                settings = self.cluster.get_metadata().indices[literal_field(index)]
 
             # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
             type, props = _get_best_type_from_mapping(settings.mappings)

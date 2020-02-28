@@ -102,6 +102,12 @@ if PY3:
         except StopIteration:
             return None
 
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.__next__
+
     def next(_iter):
         return _iter.__next__()
 
@@ -123,7 +129,7 @@ if PY3:
     ).encode
 
 
-else:
+else:  # PY2
     from collections import Callable, Iterable, Mapping, Set, MutableMapping, OrderedDict
     from functools import cmp_to_key, reduce, update_wrapper
 
@@ -189,6 +195,12 @@ else:
             return iter(values).next()
         except StopIteration:
             return None
+
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.next
 
     def next(_iter):
         return _iter.next()

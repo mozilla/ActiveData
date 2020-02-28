@@ -135,7 +135,9 @@ class ElasticsearchMetadata(Namespace):
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
             self.worker = Thread.run(
-                "refresh metadata", self.monitor, parent_thread=MAIN_THREAD
+                "refresh metadata",
+                self.monitor,
+                parent_thread=MAIN_THREAD
             )
         else:
             self.worker = Thread.run(
@@ -549,6 +551,26 @@ class ElasticsearchMetadata(Namespace):
                     }
                 )
                 return
+            elif "_covered." in column.es_column or "_uncovered." in column.es_column:
+                # DO NOT EVEN LOOK AT THESE COLUMNS
+                self.meta.columns.update(
+                    {
+                        "set": {
+                            "count": 1000*1000,
+                            "cardinality": 10000,
+                            "multi": 10000,
+                            "last_updated": now,
+                        },
+                        "clear": ["partitions"],
+                        "where": {
+                            "eq": {
+                                "es_index": column.es_index,
+                                "es_column": column.es_column,
+                            }
+                        },
+                    }
+                )
+                return
             else:
                 es_query = {
                     "aggs": {
@@ -590,10 +612,9 @@ class ElasticsearchMetadata(Namespace):
                     "size": 0,
                 }
 
-                result = self.es_cluster.get_index(
-                    index=es_index,
-                    read_only=True
-                ).search(es_query)
+                result = self.es_cluster.post(
+                    "/" + es_index + "/_search", data=es_query
+                )
                 agg_results = result.aggregations
                 count = result.hits.total
                 cardinality = coalesce(

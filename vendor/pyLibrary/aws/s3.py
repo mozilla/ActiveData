@@ -17,7 +17,7 @@ import boto
 from boto.s3.connection import Location
 from bs4 import BeautifulSoup
 
-from mo_dots import Data, Null, coalesce, unwrap, wrap
+from mo_dots import Data, Null, coalesce, unwrap, wrap, is_many
 from mo_files.url import value2url_param
 from mo_future import StringIO, is_binary, text
 from mo_kwargs import override
@@ -343,7 +343,7 @@ class Bucket(object):
         archive = gzip.GzipFile(fileobj=buff, mode='w')
         count = 0
         for l in lines:
-            if hasattr(l, "__iter__"):
+            if is_many(l):
                 for ll in l:
                     archive.write(ll.encode("utf8"))
                     archive.write(b"\n")

@@ -86,7 +86,8 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
             if q.select:
                 output = output.select(q.select)
-        #TODO: ADD EXTRA COLUMN DESCRIPTIONS TO RESULTING SCHEMA
+
+        # TODO: ADD EXTRA COLUMN DESCRIPTIONS TO RESULTING SCHEMA
         for param in q.window:
             output.window(param)
 

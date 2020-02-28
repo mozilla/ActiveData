@@ -23,7 +23,7 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import concat_field, unwrap, unwraplist, wrap
+from mo_dots import concat_field, unwrap, unwraplist, wrap, is_many
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -398,7 +398,7 @@ def bytes2sha1(value):
 def value2intlist(value):
     if value == None:
         return []
-    elif hasattr(value, '__iter__'):
+    elif is_many(value):
         output = [int(d) for d in value if d != "" and d != None]
         return output
     elif isinstance(value, int):
@@ -407,6 +407,7 @@ def value2intlist(value):
         return []
     else:
         return [int(value)]
+
 
 def value2int(value):
     if value == None:

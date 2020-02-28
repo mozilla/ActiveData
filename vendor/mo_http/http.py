@@ -18,7 +18,6 @@
 
 from __future__ import absolute_import, division
 
-from mo_future import StringIO
 import zipfile
 from contextlib import closing
 from copy import copy
@@ -26,23 +25,20 @@ from mmap import mmap
 from numbers import Number
 from tempfile import TemporaryFile
 
-from requests import Response, sessions
-
 import mo_math
-from jx_python import jx
 from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap, is_sequence
 from mo_files.url import URL
 from mo_future import PY2, is_text, text
+from mo_future import StringIO
 from mo_json import json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_threads import Lock, Till
-from mo_times import Timer
-from mo_times.durations import Duration
-from pyLibrary import convert
-from mo_http.big_data import ibytes2ilines, icompressed2ibytes, safe_size, ibytes2icompressed
+from mo_times import Timer, Duration
+from requests import Response, sessions
 
+from mo_http.big_data import ibytes2ilines, icompressed2ibytes, safe_size, ibytes2icompressed, bytes2zip, zip2bytes
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -99,7 +95,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
     if is_list(url):
         # TRY MANY URLS
         failures = []
-        for remaining, u in jx.countdown(url):
+        for remaining, u in countdown(url):
             try:
                 response = request(url=u, kwargs=kwargs)
                 if mo_math.round(response.status_code, decimal=-2) not in [400, 500]:
@@ -151,7 +147,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
                     headers['content-encoding'] = 'gzip'
                     data = compressed
                 elif len(coalesce(data)) > 1000:
-                    compressed = convert.bytes2zip(data)
+                    compressed = bytes2zip(data)
                     headers['content-encoding'] = 'gzip'
                     data = compressed
         except Exception as e:
@@ -163,10 +159,12 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
                 Till(seconds=retry.sleep).wait()
 
             try:
-                DEBUG and Log.note(u"http {{method|upper}} to {{url}}", method=method, url=text(url))
                 request_count += 1
-                # return session.request(method=method, headers=headers, url=str(url), **kwargs)
-                with Timer("call {{url}}", param={"url":str(url)}, verbose=DEBUG):
+                with Timer(
+                    "http {{method|upper}} to {{url}}",
+                    param={"method": method, "url": text(url)},
+                    verbose=DEBUG
+                ):
                     return _session_request(session, url=str(url), headers=headers, data=data, json=None, kwargs=kwargs)
             except Exception as e:
                 e = Except.wrap(e)
@@ -218,7 +216,7 @@ def get_json(url, **kwargs):
             archive = zipfile.ZipFile(buff, mode='r')
             c = archive.read(archive.namelist()[0])
         elif path.endswith(".gz"):
-            c = convert.zip2bytes(c)
+            c = zip2bytes(c)
 
         return json2value(c.decode('utf8'))
     except Exception as e:
@@ -405,3 +403,8 @@ class Generator_usingStream(object):
 
     def __del__(self):
         self.close()
+
+def countdown(vals):
+    remaining = len(vals) - 1
+    return [(remaining - i, v) for i, v in enumerate(vals)]
+

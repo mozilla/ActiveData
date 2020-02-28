@@ -55,12 +55,12 @@ def get_schema_from_list(table_name, frum, native_type_to_json_type=python_type_
 
 
 def _get_schema_from_list(
-    frum, # The list
-    table_name, # Name of the table this list holds records for
-    parent, # parent path
-    nested_path, # each nested array, in reverse order
-    columns, # map from full name to column definition
-    native_type_to_json_type # dict from storage type name to json type name
+    frum,  # The list
+    table_name,  # Name of the table this list holds records for
+    parent,  # parent path
+    nested_path,  # each nested array, in reverse order
+    columns,  # map from full name to column definition
+    native_type_to_json_type  # dict from storage type name to json type name
 ):
     for d in frum:
         row_type = python_type_to_json_type[d.__class__]

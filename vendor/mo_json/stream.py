@@ -22,6 +22,7 @@ from mo_dots import (
     startswith_field,
     wrap,
 )
+from mo_future import NEXT
 from mo_logs import Log
 
 DEBUG = False
@@ -48,7 +49,7 @@ class Parser(object):
         elif hasattr(json, "__call__"):
             self.json = List_usingStream(json)
         elif isinstance(json, GeneratorType):
-            self.json = List_usingStream(json.next)
+            self.json = List_usingStream(NEXT(json))
         else:
             Log.error(
                 "Expecting json to be a stream, or a function that will return more bytes"

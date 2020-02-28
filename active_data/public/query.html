@@ -248,7 +248,8 @@ var queryTool = {};
 				//USE JSONLINT TO FORMAT AND TEST-COMPILE THE code
 				code = jsl.format.formatJson(code);
 				$("#cube").val(code);
-				var query = jsl.parser.parse(code);
+				jsl.parser.parse(code);
+				let query = convert.json2value(code);
 				//REQUEST A URL FOR SHARING
                 Map.set(query, "meta.save", true);
 

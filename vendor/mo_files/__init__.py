@@ -22,7 +22,6 @@ from mo_files.url import URL
 from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import get_stacktrace
-from mo_threads import Thread, Till
 
 
 class File(object):
@@ -451,6 +450,8 @@ class TempDirectory(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        from mo_threads import Thread
+
         Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
@@ -473,6 +474,8 @@ class TempFile(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        from mo_threads import Thread
+
         Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
@@ -561,6 +564,8 @@ def join_path(*path):
 
 def delete_daemon(file, caller_stack, please_stop):
     # WINDOWS WILL HANG ONTO A FILE FOR A BIT AFTER WE CLOSED IT
+    from mo_threads import Till
+
     while not please_stop:
         try:
             file.delete()

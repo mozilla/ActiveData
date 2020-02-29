@@ -284,13 +284,16 @@ def percent(value, decimal=None, digits=None, places=None):
     :param places:
     :return:
     """
+    if value == None:
+        return ""
+
     value = float(value)
     if value == 0.0:
         return "0%"
 
     digits = coalesce(digits, places)
     if digits != None:
-        left_of_decimal = int(mo_math.ceil(mo_math.log10(abs(value)))) + 2
+        left_of_decimal = int(math.ceil(math.log10(abs(value)))) + 2
         decimal = digits - left_of_decimal
 
     decimal = coalesce(decimal, 0)

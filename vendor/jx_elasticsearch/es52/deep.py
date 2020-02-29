@@ -33,7 +33,8 @@ def is_deepop(es, query):
         return False
     if all(s.aggregate not in (None, "none") for s in listwrap(query.select)):
         return False
-    if len(split_field(query.frum.name)) > 1:
+    # THE schema.name SHOWS THE REAL NESTED DEPTH
+    if len(split_field(query.frum.schema.name)) > 1:
         return True
 
     # ASSUME IT IS NESTED IF WE ARE ASKING FOR NESTED COLUMNS

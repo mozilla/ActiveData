@@ -81,7 +81,7 @@ class RolloverIndex(object):
         with self.locker:
             queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
-            candidates = sort_using_key(
+            candidates = wrap(sort_using_key(
                 filter(
                     lambda r: re.match(
                         re.escape(self.settings.index) + r"\d\d\d\d\d\d\d\d_\d\d\d\d\d\d$",
@@ -90,10 +90,9 @@ class RolloverIndex(object):
                     self.cluster.get_aliases()
                 ),
                 key=lambda r: r['index']
-            )
+            ))
             best = None
             for c in candidates:
-                c = wrap(c)
                 c.date = unicode2Date(c.index[-15:], elasticsearch.INDEX_DATE_FORMAT)
                 if timestamp > c.date:
                     best = c

@@ -77,8 +77,8 @@ class SelectOp(Expression):
     def __data__(self):
         return {
             "select": [
-                {"name": t.name.__data__(), "value": t.value.__data__()}
-                for t in self.terms
+                {"name": t.name, "value": t.value.__data__()}
+                for t in wrap(self.terms)
             ]
         }
 

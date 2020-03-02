@@ -50,22 +50,25 @@ def jx_expression_to_function(expr):
 
     expr = jx_expression(expr)
     func = compile_expression(Python[expr].to_python())
-    return JXExpression(func, expr.__data__())
+    return JXExpression(func, expr)
 
 
 class JXExpression(object):
-    def __init__(self, func, info):
+    def __init__(self, func, expr):
         self.func = func
-        self.info = info
+        self.expr = expr
 
     def __call__(self, *args, **kwargs):
         return self.func(*args)
 
     def __str__(self):
-        return self.info.__str__()
+        return str(self.expr.__data__())
 
     def __repr__(self):
-        return repr(self.info)
+        return repr(self.expr.__data__())
+
+    def __data__(self):
+        return self.expr.__data__()
 
 
 @extend(NullOp)

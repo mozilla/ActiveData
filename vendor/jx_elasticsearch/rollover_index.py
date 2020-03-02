@@ -13,6 +13,7 @@ import re
 from jx_elasticsearch import elasticsearch
 from jx_python import jx
 from mo_dots import Null, coalesce, wrap
+from mo_dots.lists import last
 from mo_future import items, sort_using_key
 from mo_json import CAN_NOT_DECODE_JSON, json2value, value2json
 from mo_kwargs import override
@@ -97,7 +98,7 @@ class RolloverIndex(object):
                 if timestamp > c.date:
                     best = c
             if not best or rounded_timestamp > best.date:
-                if rounded_timestamp < wrap(candidates[-1]).date:
+                if rounded_timestamp < wrap(last(candidates)).date:
                     es = self.cluster.get_or_create_index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
                 else:
                     try:

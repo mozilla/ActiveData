@@ -128,6 +128,8 @@ def extractor(guid, abs_limit, esq, es_query, formatter, please_stop):
                             result = esq.es.scroll(scroll_id)
                         continue
                     break
+                if please_stop:
+                    Log.error("Bulk download stopped for shutdown")
                 for b in formatter.footer():
                     output.write(b)
 

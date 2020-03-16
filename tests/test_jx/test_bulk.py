@@ -18,7 +18,7 @@ from mo_future import text
 from mo_logs import Log
 from mo_threads import Till
 from mo_times import MINUTE
-from pyLibrary.env import http
+from mo_http import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -52,6 +52,42 @@ class TestBulk(BaseTestCase):
                 "query": {
                     "from": TEST_TABLE,
                     "groupby": "a",
+                    "limit": len(data),
+                    "chunk_size": 1000,
+                    "sort": "a",
+                },
+                "expecting_list": {
+                    "data": expected[:MAX_LIMIT]
+                },  # DUMMY, TO ENSURE LOADED
+            }
+        )
+        self.utils.execute_tests(test)
+
+        test.query.format = "list"
+        test.query.destination = "url"
+        result = http.post_json(url=self.utils.testing.query, json=test.query,)
+        self.assertEqual(result.meta.format, "list")
+
+        @self.retry(result.url)
+        def get_content():
+            content = http.get_json(result.url)
+            self.assertEqual(content.meta.format, "list")
+            sorted_content = jx.sort(content.data, "a")
+            sorted_expected = jx.sort(expected, "a")
+            self.assertEqual(sorted_content, sorted_expected)
+
+    @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
+    def test_bulk_aggs_list_no_records(self):
+        data = wrap([{"a": "test" + text(i)} for i in range(10111)])
+        expected = []
+
+        test = wrap(
+            {
+                "data": data,
+                "query": {
+                    "from": TEST_TABLE,
+                    "groupby": "a",
+                    "where": {"eq":{"a":"not exists"}},
                     "limit": len(data),
                     "chunk_size": 1000,
                     "sort": "a",

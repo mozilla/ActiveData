@@ -93,7 +93,7 @@ default Elasticsearch index. You can find a few sample config files in
              "processes":1
          },
         "constants":{
-            "pyLibrary.env.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
+            "mo_http.http.default_headers":{"From":"https://wiki.mozilla.org/Auto-tools/Projects/ActiveData"}
         },
         "elasticsearch":{
             "host":"http://localhost",

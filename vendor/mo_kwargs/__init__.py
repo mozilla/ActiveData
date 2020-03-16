@@ -141,11 +141,18 @@ def params_pack(params, *args):
             settings[str(k)] = v
     settings[KWARGS] = wrap(settings)
 
-    if params[0] in ("self", "cls"):
-        return (
-            [settings[params[0]]],
-            {k: settings[k] for k in params[1:] if k in settings},
-        )
+    if params and params[0] in ("self", "cls"):
+        s = settings.get(params[0])
+        if s is None:
+            return (
+                [],
+                {k: settings[k] for k in params[1:] if k in settings},
+            )
+        else:
+            return (
+                [s],
+                {k: settings[k] for k in params[1:] if k in settings},
+            )
     else:
         return (
             [],

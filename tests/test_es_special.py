@@ -17,7 +17,7 @@ from active_data.actions import find_container
 from jx_base.expressions import NULL
 from mo_dots import Data, wrap, set_default
 from mo_times import Date
-from pyLibrary.env import http
+from mo_http import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 

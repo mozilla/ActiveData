@@ -86,12 +86,12 @@ class Rename(Namespace):
 
     def _convert_bop(self, op, term):
         if is_list(term):
-            return {op: map(self.convert, term)}
+            return {op: list(map(self.convert, term))}
 
         return {op: {self.convert(var): val for var, val in term.items()}}
 
     def _convert_many(self, k, v):
-        return {k: map(self.convert, v)}
+        return {k: list(map(self.convert, v))}
 
     def _convert_from(self, frum):
         if is_data(frum):

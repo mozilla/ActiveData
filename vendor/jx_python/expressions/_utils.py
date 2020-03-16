@@ -34,18 +34,41 @@ def jx_expression_to_function(expr):
         return Null
 
     if is_expression(expr):
+        # ALREADY AN EXPRESSION OBJECT
         if is_op(expr, ScriptOp) and not is_text(expr.script):
             return expr.script
         else:
-            return compile_expression(Python[expr].to_python())
+            func = compile_expression(Python[expr].to_python())
+            return JXExpression(func, expr.__data__())
     if (
-        expr != None
-        and not is_data(expr)
+        not is_data(expr)
         and not is_list(expr)
         and hasattr(expr, "__call__")
     ):
+        # THIS APPEARS TO BE A FUNCTION ALREADY
         return expr
-    return compile_expression(Python[jx_expression(expr)].to_python())
+
+    expr = jx_expression(expr)
+    func = compile_expression(Python[expr].to_python())
+    return JXExpression(func, expr)
+
+
+class JXExpression(object):
+    def __init__(self, func, expr):
+        self.func = func
+        self.expr = expr
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args)
+
+    def __str__(self):
+        return str(self.expr.__data__())
+
+    def __repr__(self):
+        return repr(self.expr.__data__())
+
+    def __data__(self):
+        return self.expr.__data__()
 
 
 @extend(NullOp)

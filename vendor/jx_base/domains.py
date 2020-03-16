@@ -397,7 +397,7 @@ class SetDomain(Domain):
         elif desc.partitions and is_data(desc.partitions[0][desc.key]):
             self.key = desc.key
             self.map = UniqueIndex(keys=desc.key)
-            # self.key = UNION(set(d[desc.key].keys()) for d in desc.partitions)
+            # self.key = UNION(*set(d[desc.key].keys()) for d in desc.partitions)
             # self.map = UniqueIndex(keys=self.key)
         elif desc.key == None:
             Log.error("Domains must have keys")

@@ -22,7 +22,6 @@ from mo_files.url import URL
 from mo_future import PY3, binary_type, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import get_stacktrace
-from mo_threads import Thread, Till
 
 
 class File(object):
@@ -231,15 +230,16 @@ class File(object):
             for num, zip_name in enumerate(zipped.namelist()):
                 return zipped.open(zip_name).read().decode(encoding)
 
-
     def read_lines(self, encoding="utf8"):
         with open(self._filename, "rb") as f:
             for line in f:
                 yield line.decode(encoding).rstrip()
 
     def read_json(self, encoding="utf8", flexible=True, leaves=True):
+        from mo_json import json2value
+
         content = self.read(encoding=encoding)
-        value = get_module(u"mo_json").json2value(content, flexible=flexible, leaves=leaves)
+        value = json2value(content, flexible=flexible, leaves=leaves)
         abspath = self.abspath
         if os.sep == "\\":
             abspath = "/" + abspath.replace(os.sep, "/")
@@ -450,6 +450,8 @@ class TempDirectory(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        from mo_threads import Thread
+
         Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
@@ -472,6 +474,8 @@ class TempFile(File):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        from mo_threads import Thread
+
         Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
 
 
@@ -560,6 +564,8 @@ def join_path(*path):
 
 def delete_daemon(file, caller_stack, please_stop):
     # WINDOWS WILL HANG ONTO A FILE FOR A BIT AFTER WE CLOSED IT
+    from mo_threads import Till
+
     while not please_stop:
         try:
             file.delete()

@@ -40,7 +40,7 @@ if PY3:
     zip_longest = itertools.zip_longest
 
     text = str
-    text_type = str
+    text = str
     string_types = str
     binary_type = bytes
     integer_types = (int, )
@@ -102,6 +102,12 @@ if PY3:
         except StopIteration:
             return None
 
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.__next__
+
     def next(_iter):
         return _iter.__next__()
 
@@ -123,7 +129,7 @@ if PY3:
     ).encode
 
 
-else:
+else:  # PY2
     from collections import Callable, Iterable, Mapping, Set, MutableMapping, OrderedDict
     from functools import cmp_to_key, reduce, update_wrapper
 
@@ -137,7 +143,7 @@ else:
 
     reduce = __builtin__.reduce
     text = __builtin__.unicode
-    text_type = __builtin__.unicode
+    text = __builtin__.unicode
     string_types = (str, unicode)
     binary_type = str
     integer_types = (int, long)
@@ -189,6 +195,12 @@ else:
             return iter(values).next()
         except StopIteration:
             return None
+
+    def NEXT(_iter):
+        """
+        RETURN next() FUNCTION, DO NOT CALL
+        """
+        return _iter.next
 
     def next(_iter):
         return _iter.next()

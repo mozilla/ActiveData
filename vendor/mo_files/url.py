@@ -9,7 +9,6 @@
 
 from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
 from mo_future import PY2, is_text, text, unichr, urlparse, is_binary
-from mo_json import json2value, value2json
 from mo_logs import Log
 
 
@@ -178,6 +177,8 @@ def url_param2value(param):
 
         output = text("".join(output))
         try:
+            from mo_json import json2value
+
             return json2value(output)
         except Exception:
             pass
@@ -214,6 +215,8 @@ def value2url_param(value):
         Log.error("Can not encode None into a URL")
 
     if is_data(value):
+        from mo_json import value2json
+
         value_ = wrap(value)
         output = "&".join([
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))

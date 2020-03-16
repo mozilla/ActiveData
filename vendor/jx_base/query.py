@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import Mapping
 from copy import copy
 from importlib import import_module
 
@@ -21,7 +20,7 @@ from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_
 from jx_base.language import is_expression, is_op
 from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
-    literal_field, relative_field, set_default, unwrap, unwraplist, wrap
+    literal_field, relative_field, set_default, unwrap, unwraplist, wrap, is_many
 from mo_future import is_text, text
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
@@ -215,7 +214,7 @@ class QueryOp(QueryOp_):
         _import_temper_limit()
         output.limit = temper_limit(query.limit, query)
 
-        if query.select or isinstance(query.select, (Mapping, list)):
+        if query.select or is_many(query.select) or is_data(query.select):
             output.select = _normalize_selects(query.select, query.frum, schema=schema)
         else:
             if query.edges or query.groupby:

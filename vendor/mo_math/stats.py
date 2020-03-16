@@ -10,14 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import math
 import sys
 from math import sqrt
 
 from mo_dots import Data, Null, coalesce
-from mo_future import text
+from mo_future import text, zip_longest
 from mo_logs import Log
-
 from mo_math import OR, almost_equal
 from mo_math.vendor import strangman
 
@@ -93,6 +91,8 @@ def Stats2ZeroMoment(stats):
 
 def ZeroMoment2Stats(z_moment):
     Z = z_moment.S
+    if not Z:
+        return Stats()
     N = Z[0]
     if N == 0:
         return Stats()
@@ -215,19 +215,23 @@ class ZeroMoment(object):
     """
 
     def __init__(self, *args):
-        self.S = tuple(args)
+        self.S = args
 
     def __add__(self, other):
+        output = ZeroMoment()
+        output += other
+        return output
+
+    def __iadd__(self, other):
         if isinstance(other, ZeroMoment):
-            return ZeroMoment(*map(add, self.S, other.S))
+            return ZeroMoment(*array_add(self.S, other.S))
         elif hasattr(other, "__iter__"):
-            return ZeroMoment(*map(add, self.S, ZeroMoment.new_instance(other)))
+            return ZeroMoment(*array_add(self.S, ZeroMoment.new_instance(other)))
         elif other == None:
             return self
         else:
             return ZeroMoment(
-                *map(
-                    add,
+                *array_add(
                     self.S,
                     (
                         1,
@@ -240,27 +244,13 @@ class ZeroMoment(object):
                 )
             )
 
-    def __sub__(self, other):
-        if isinstance(other, ZeroMoment):
-            return ZeroMoment(*map(sub, self.S, other.S))
-        elif hasattr(other, "__iter__"):
-            return ZeroMoment(*map(sub, self.S, ZeroMoment.new_instance(other)))
-        elif other == None:
-            return self
-        else:
-            return ZeroMoment(
-                *map(
-                    sub, self.S, (1, other, pow(other, 2), pow(other, 3), pow(other, 4))
-                )
-            )
 
     @property
     def tuple(self):
         # RETURN AS ORDERED TUPLE
         return self.S
 
-    @property
-    def dict(self):
+    def __data__(self):
         # RETURN HASH OF SUMS
         return {"s" + text(i): m for i, m in enumerate(self.S)}
 
@@ -269,7 +259,7 @@ class ZeroMoment(object):
         if values == None:
             return ZeroMoment()
 
-        vals = [v for v in values if v != None]
+        vals = tuple(values)
         return ZeroMoment(
             len(vals),
             sum(vals),
@@ -279,12 +269,12 @@ class ZeroMoment(object):
         )
 
     @property
-    def stats(self, *args, **kwargs):
-        return ZeroMoment2Stats(self, *args, **kwargs)
+    def stats(self):
+        return ZeroMoment2Stats(self)
 
 
-def add(a, b):
-    return coalesce(a, 0) + coalesce(b, 0)
+def array_add(A, B):
+    return tuple(coalesce(a, 0) + coalesce(b, 0) for a, b in zip_longest(A, B))
 
 
 def sub(a, b):
@@ -367,8 +357,8 @@ def percentile(values, percent):
     if not N:
         return None
     k = (len(N) - 1) * percent
-    f = int(math.floor(k))
-    c = int(math.ceil(k))
+    f = int(mo_math.floor(k))
+    c = int(mo_math.ceil(k))
     if f == c:
         return N[int(k)]
     d0 = N[f] * (c - k)

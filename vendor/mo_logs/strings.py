@@ -21,7 +21,6 @@ from json.encoder import encode_basestring
 from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence, NullType
 from mo_future import PY3, get_function_name, is_text, round as _round, text, transpose, xrange, zip_longest, \
     binary_type, Mapping
-
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
 
 FORMATTERS = {}
@@ -285,6 +284,9 @@ def percent(value, decimal=None, digits=None, places=None):
     :param places:
     :return:
     """
+    if value == None:
+        return ""
+
     value = float(value)
     if value == 0.0:
         return "0%"

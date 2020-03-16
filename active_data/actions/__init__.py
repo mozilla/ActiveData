@@ -17,7 +17,7 @@ from jx_base import container
 from jx_elasticsearch import meta
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python.containers.list_usingPythonList import ListContainer
-from mo_dots import is_container
+from mo_dots import is_container, join_field
 from mo_dots import is_data, set_default, split_field
 from mo_future import is_text, first
 from mo_json import STRUCT, value2json
@@ -79,21 +79,24 @@ def test_mode_wait(query):
             timeout = Till(seconds=MINUTE.seconds)
             while not timeout:
                 # GET FRESH VERSIONS
-                cols = [
+                cols = metadata_manager.get_columns(
+                    table_name=alias,
+                    after=after,
+                    timeout=timeout
+                )
+                not_ready = [
                     c
-                    for c in metadata_manager.get_columns(
-                        table_name=alias, after=after, timeout=timeout
-                    )
+                    for c in cols
                     if c.jx_type not in STRUCT
                     and (
                         after >= c.last_updated
                         or (require_cardinality and c.cardinality == None)
                     )
                 ]
-                if cols:
+                if not_ready:
                     Log.note(
                         "wait for column (table={{col.es_index}}, name={{col.es_column}}, cardinality={{col.cardinality|json}}, last_updated={{col.last_updated|datetime}}) metadata to arrive",
-                        col=first(cols),
+                        col=first(not_ready),
                     )
                 else:
                     break
@@ -120,7 +123,11 @@ def find_container(frum, after):
                 "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
-    cs = namespace.get_columns(frum, after=after)  # FORCE A RELOAD
+    if not frum:
+        Log.error("expecting json query expression with from clause")
+
+    # FORCE A RELOAD
+    namespace.get_columns(frum, after=after)
 
     if is_text(frum):
         if frum in container_cache:
@@ -133,10 +140,11 @@ def find_container(frum, after):
             elif path[1] == "tables":
                 return namespace.meta.tables
             else:
-                Log.error("{{name}} not a recognized table", name=frum)
+                fact_table_name = join_field(path[:2])
+        else:
+            fact_table_name = path[0]
 
         type_ = container.config.default.type
-        fact_table_name = path[0]
 
         settings = set_default(
             {"alias": fact_table_name, "name": frum, "exists": True},

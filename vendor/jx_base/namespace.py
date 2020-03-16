@@ -56,6 +56,6 @@ def convert_list(operator, operand):
     elif is_data(operand):
         return operator(operand)
     else:
-        return map(operator, operand)
+        return list(map(operator, operand))
 
 

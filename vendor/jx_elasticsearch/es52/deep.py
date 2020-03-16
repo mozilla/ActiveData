@@ -33,6 +33,7 @@ def is_deepop(es, query):
         return False
     if all(s.aggregate not in (None, "none") for s in listwrap(query.select)):
         return False
+    # THE schema.name SHOWS THE REAL NESTED DEPTH
     if len(split_field(query.frum.schema.name)) > 1:
         return True
 
@@ -79,7 +80,9 @@ def es_deepop(es, query):
 
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
 
+    # es_query.sort = jx_sort_to_es_sort(query.sort)
     map_to_es_columns = schema.map_to_es()
+    # {c.name: c.es_column for c in schema.leaves(".")}
     query_for_es = query.map(map_to_es_columns)
     es_query.sort = jx_sort_to_es_sort(query_for_es.sort, schema)
 
@@ -126,24 +129,24 @@ def es_deepop(es, query):
                 })
             else:
                 for n in net_columns:
-                    pull = get_pull_function(n)
                     if n.nested_path[0] == ".":
                         if n.jx_type == NESTED:
                             continue
                         es_query.stored_fields += [n.es_column]
-                    else:
-                        pull = _untyper(pull)
 
-                    # WE MUST FIGURE OUT WHICH NAMESSPACE s.value.var IS USING SO WE CAN EXTRACT THE child
+                    if len(n.nested_path[0]) > len(query_path):
+                        # SELECTING INNER PROPERTIES IS NOT ALLOWED
+                        continue
+                    # WE MUST FIGURE OUT WHICH NAMESPACE s.value.var IS USING SO WE CAN EXTRACT THE child
                     for np in n.nested_path:
                         c_name = untype_path(relative_field(n.name, np))
                         if startswith_field(c_name, select.value.var):
-                            # PREFER THE MOST-RELATIVE NAME
                             child = relative_field(c_name, select.value.var)
                             break
                     else:
-                        continue
+                        raise Log.error("Not expected")
 
+                    pull = get_pull_function(n)
                     new_select.append({
                         "name": select.name,
                         "pull": pull,
@@ -176,8 +179,6 @@ def es_deepop(es, query):
                 "put": {"name": select.name, "index": put_index, "child": "."}
             })
             put_index += 1
-
-    es_query.stored_fields = sorted(es_query.stored_fields)
 
     # <COMPLICATED> ES needs two calls to get all documents
     more = []
@@ -240,5 +241,3 @@ class MapToLocal(object):
             return "coalesce(" + (",".join(get_pull(c) for c in cs)) + ")"
 
 
-def _untyper(func):
-    return lambda row: untyped(func(row))

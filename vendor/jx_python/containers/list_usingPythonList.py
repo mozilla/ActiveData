@@ -72,7 +72,6 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         if is_aggs(q):
             output = list_aggs(output.data, q)
         else:
-            # SETOP
             try:
                 if q.filter != None or q.esfilter != None:
                     Log.error("use 'where' clause")
@@ -87,7 +86,8 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
             if q.select:
                 output = output.select(q.select)
-        #TODO: ADD EXTRA COLUMN DESCRIPTIONS TO RESULTING SCHEMA
+
+        # TODO: ADD EXTRA COLUMN DESCRIPTIONS TO RESULTING SCHEMA
         for param in q.window:
             output.window(param)
 
@@ -190,10 +190,10 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
                     output[n] = unwraplist(p(wrap(d)))
                 return unwrap(output)
 
-            new_data = map(selector, self.data)
+            new_data = list(map(selector, self.data))
         else:
             select_value = jx_expression_to_function(select.value)
-            new_data = map(select_value, self.data)
+            new_data = list(map(select_value, self.data))
             if is_op(select.value, Variable):
                 column = copy(first(c for c in self.schema.columns if c.name == select.value.var))
                 column.name = '.'

@@ -15,7 +15,7 @@ from mo_dots import wrap
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
-from pyLibrary.env import http
+from mo_http import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 

@@ -707,7 +707,7 @@ class DimFieldListDecoder(SetDecoder):
             self.parts.append(value)
 
     def done_count(self):
-        columns = map(text, range(len(self.fields)))
+        columns = list(map(text, range(len(self.fields))))
         parts = wrap([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
         sorted_parts = jx.sort(parts, columns)

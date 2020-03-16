@@ -17,7 +17,7 @@ import boto
 from boto.s3.connection import Location
 from bs4 import BeautifulSoup
 
-from mo_dots import Data, Null, coalesce, unwrap, wrap
+from mo_dots import Data, Null, coalesce, unwrap, wrap, is_many
 from mo_files.url import value2url_param
 from mo_future import StringIO, is_binary, text
 from mo_kwargs import override
@@ -25,8 +25,8 @@ from mo_logs import Except, Log
 from mo_times.dates import Date
 from mo_times.timer import Timer
 from pyLibrary import convert
-from pyLibrary.env import http
-from pyLibrary.env.big_data import LazyLines, MAX_STRING_SIZE, ibytes2ilines, safe_size, scompressed2ibytes
+from mo_http import http
+from mo_http.big_data import LazyLines, MAX_STRING_SIZE, ibytes2ilines, safe_size, scompressed2ibytes
 
 TOO_MANY_KEYS = 1000 * 1000 * 1000
 READ_ERROR = "S3 read error"
@@ -343,7 +343,7 @@ class Bucket(object):
         archive = gzip.GzipFile(fileobj=buff, mode='w')
         count = 0
         for l in lines:
-            if hasattr(l, "__iter__"):
+            if is_many(l):
                 for ll in l:
                     archive.write(ll.encode("utf8"))
                     archive.write(b"\n")

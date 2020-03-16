@@ -8,17 +8,19 @@
 #
 from __future__ import unicode_literals
 
+import re
+
 from jx_elasticsearch import elasticsearch
 from jx_python import jx
-from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import Null, coalesce, wrap
-from mo_future import items
+from mo_dots.lists import last
+from mo_future import items, sort_using_key
 from mo_json import CAN_NOT_DECODE_JSON, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_math.randoms import Random
-from mo_threads import Lock
+from mo_threads import Lock, Thread
 from mo_times.dates import Date, unicode2Date, unix2Date
 from mo_times.durations import Duration
 from mo_times.timer import Timer
@@ -80,19 +82,23 @@ class RolloverIndex(object):
         with self.locker:
             queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
-            candidates = jx.run({
-                "from": ListContainer(".", self.cluster.get_aliases()),
-                "where": {"regex": {"index": self.settings.index + "\\d\\d\\d\\d\\d\\d\\d\\d_\\d\\d\\d\\d\\d\\d"}},
-                "sort": "index"
-            })
+            candidates = wrap(sort_using_key(
+                filter(
+                    lambda r: re.match(
+                        re.escape(self.settings.index) + r"\d\d\d\d\d\d\d\d_\d\d\d\d\d\d$",
+                        r['index']
+                    ),
+                    self.cluster.get_aliases()
+                ),
+                key=lambda r: r['index']
+            ))
             best = None
             for c in candidates:
-                c = wrap(c)
                 c.date = unicode2Date(c.index[-15:], elasticsearch.INDEX_DATE_FORMAT)
                 if timestamp > c.date:
                     best = c
             if not best or rounded_timestamp > best.date:
-                if rounded_timestamp < wrap(candidates[-1]).date:
+                if rounded_timestamp < wrap(last(candidates)).date:
                     es = self.cluster.get_or_create_index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
                 else:
                     try:
@@ -106,10 +112,13 @@ class RolloverIndex(object):
             else:
                 es = self.cluster.get_or_create_index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
 
-            try:
-                es.set_refresh_interval(seconds=60 * 10, timeout=5)
-            except Exception:
-                Log.note("Could not set refresh interval for {{index}}", index=es.settings.index)
+            def refresh(please_stop):
+                try:
+                    es.set_refresh_interval(seconds=60 * 10, timeout=5)
+                except Exception:
+                    Log.note("Could not set refresh interval for {{index}}", index=es.settings.index)
+
+            Thread.run("refresh", refresh)
 
             self._delete_old_indexes(candidates)
             threaded_queue = es.threaded_queue(max_size=self.settings.queue_size, batch_size=self.settings.batch_size, silent=True)

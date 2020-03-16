@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from mo_dots import wrap
 from mo_logs import Log
-from pyLibrary.env import http
+from mo_http import http
 
 
 def move_shards(settings):

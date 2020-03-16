@@ -10,14 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import listwrap
-from mo_dots.lists import last
-from mo_json import INTEGER
-
 from jx_base import Column
 from jx_base.expressions import FALSE, TRUE, jx_expression
 from jx_base.queries import is_variable_name
 from jx_python.expressions import Python
+from mo_json import INTEGER
 from mo_json.typed_encoder import NESTED_TYPE
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times import Date, MONTH

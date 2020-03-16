@@ -191,7 +191,7 @@ class Data(object):
         RECURSIVE COALESCE OF DATA PROPERTIES
         """
         if not _get(other, CLASS) in data_types:
-            get_logger().error("Expecting a Mapping")
+            get_logger().error("Expecting Data")
 
         d = self._internal_dict
         output = Data(**d)
@@ -203,7 +203,7 @@ class Data(object):
         RECURSIVE COALESCE OF DATA PROPERTIES
         """
         if not _get(other, CLASS) in data_types:
-            get_logger().error("Expecting a Mapping")
+            get_logger().error("Expecting Data")
 
         return wrap(other).__or__(self)
 
@@ -212,7 +212,7 @@ class Data(object):
         RECURSIVE COALESCE OF DATA PROPERTIES
         """
         if not _get(other, CLASS) in data_types:
-            get_logger().error("Expecting a Mapping")
+            get_logger().error("Expecting Data")
         d = self._internal_dict
         for ok, ov in other.items():
             if ov == None:
@@ -407,7 +407,7 @@ def _iadd(self, other):
     """
 
     if not _get(other, CLASS) in data_types:
-        get_logger().error("Expecting a Mapping")
+        get_logger().error("Expecting Data")
     d = unwrap(self)
     for ok, ov in other.items():
         sv = d.get(ok)

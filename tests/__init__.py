@@ -222,10 +222,10 @@ class ESUtils(object):
             # EXECUTE QUERY
             num_expectations = 0
             for i, (k, v) in enumerate(subtest.items()):
-                if k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
-                    format = k[len("expecting_"):]
-                elif k == "expecting":  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
+                if k in ["expecting", "expecting_error"]:  # NO FORMAT REQUESTED (TO TEST DEFAULT FORMATS)
                     format = None
+                elif k.startswith("expecting_"):  # WHAT FORMAT ARE WE REQUESTING
+                    format = k[len("expecting_"):]
                 else:
                     continue
 
@@ -238,9 +238,20 @@ class ESUtils(object):
                 # EXECUTE QUERY
                 response = self.try_till_response(self.testing.query, data=query)
 
-                if response.status_code != 200:
-                    error(response)
-                result = json2value(response.all_content.decode('utf8'))
+                if k == "expecting_error":
+                    if response.status_code != 200:
+                        message = response.content.decode('utf8')
+                        if v in message:
+                            Log.note("PASS {{name|quote}} (expected error)", name=subtest.name)
+                            continue
+                        else:
+                            Log.error("expecting {{expecting}} not {{error}}", expecting=v, error=message)
+                    else:
+                        Log.error("expecting a failure")
+                else:
+                    if response.status_code != 200:
+                        error(response)
+                    result = json2value(response.all_content.decode('utf8'))
 
                 container = jx_elasticsearch.new_instance(self._es_test_settings)
                 query = QueryOp.wrap(subtest.query, container, container.namespace)

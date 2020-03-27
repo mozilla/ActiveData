@@ -1351,6 +1351,7 @@ class TestSetOps(BaseTestCase):
                 "select": {"between": "a"},
                 "from": TEST_TABLE,
             },
+            "expecting_error": "Expecting `value` or `aggregate` in select "
         }
         subtest = wrap(subtest)
 

@@ -27,12 +27,14 @@ from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND, UNION, is_number
 
+BAD_SELECT = "Expecting `value` or `aggregate` in select clause not {{select}}"
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
 DEFAULT_SELECT = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
 
 _jx = None
 _Column = None
+
 
 
 def _late_import():
@@ -339,7 +341,9 @@ def _normalize_select(select, frum, schema=None):
         return frum._normalize_select(canonical)
 
     output = []
-    if not select.value or select.value == ".":
+    if select and not select.value:
+        Log.error(BAD_SELECT, select=select)
+    elif not select.value or select.value == ".":
         output.extend([
             set_default(
                 {
@@ -397,8 +401,10 @@ def _normalize_select_no_context(select, schema=None):
         output.name = coalesce(select.name, select.aggregate)
         if output.name:
             output.value = jx_expression(".", schema=schema)
+        elif select:
+            Log.error(BAD_SELECT, select=select)
         else:
-            return Null
+            return None
     elif is_text(select.value):
         if select.value.endswith(".*"):
             name = select.value[:-2].lstrip(".")

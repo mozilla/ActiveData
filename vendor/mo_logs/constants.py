@@ -33,7 +33,7 @@ def set(constants):
             Log.error("expecting <module>.<constant> format, not {{path|quote}}", path=k_path)
         name = k_path[-1]
         try:
-            old_value = mo_dots_set_attr(sys.modules, k_path, new_value)
+            mo_dots_set_attr(sys.modules, k_path, new_value)
             continue
         except Exception as e:
             errors.append(e)

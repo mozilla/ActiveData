@@ -92,7 +92,7 @@ class Log(object):
         if logs:
             cls.logging_multi = StructuredLogger_usingMulti()
             for log in listwrap(logs):
-                Log.add_log(Log.new_instance(log))
+                Log._add_log(Log.new_instance(log))
 
             from mo_logs.log_usingThread import StructuredLogger_usingThread
             cls.main_log = StructuredLogger_usingThread(cls.logging_multi)
@@ -155,8 +155,16 @@ class Log(object):
         Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
 
     @classmethod
-    def add_log(cls, log):
+    def _add_log(cls, log):
         cls.logging_multi.add_log(log)
+
+    @classmethod
+    def set_logger(cls, logger):
+        if cls.logging_multi:
+            cls.logging_multi.add_log(logger)
+        else:
+            from mo_logs.log_usingThread import StructuredLogger_usingThread
+            cls.main_log = StructuredLogger_usingThread(logger)
 
     @classmethod
     def note(

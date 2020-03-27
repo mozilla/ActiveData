@@ -37,7 +37,8 @@ def milli2datetime(u):
 
 def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
-        return value.strftime(format)
+        utc_time = datetime.utcfromtimestamp(value.timestamp())
+        return utc_time.strftime(format)
     except Exception as e:
         from mo_logs import Log
         Log.error("Can not format {{value}} with {{format}}", value=value, format=format, cause=e)

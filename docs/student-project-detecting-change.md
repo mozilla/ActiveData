@@ -18,6 +18,8 @@ Our performance tests are run many times a day, we are looking for points-in-tim
 
 Provide a better model for each performance test: Given a family of statistical models, use machine learning to choose the most likely model. Identify when the performance test deviates from that model.
 
+For example, one model is [Mixture of Gaussians](https://robertovitillo.com/2016/01/10/detecting-talos-regressions/)
+
 ## Non-solutions
 
 We are analyzing uni-variate data over time, finding points where behaviour likely changed.

@@ -87,7 +87,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
         Log.warning(text(
             "The mo_http.http module was meant to add extra " +
             "default headers to all requests, specifically the 'Referer' " +
-            "header with a URL to the project. Use the `pyLibrary.debug.constants.set()` " +
+            "header with a URL to the project. Use the `mo_logs.constants.set()` " +
             "function to set `mo_http.http.default_headers`"
         ))
     _warning_sent = True

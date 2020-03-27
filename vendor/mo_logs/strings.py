@@ -60,7 +60,7 @@ def formatter(func):
     """
     register formatters
     """
-    FORMATTERS[get_function_name(func)]=func
+    FORMATTERS[get_function_name(func)] = func
     return func
 
 

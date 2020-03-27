@@ -341,7 +341,8 @@ def _normalize_select(select, frum, schema=None):
         return frum._normalize_select(canonical)
 
     output = []
-    if select and not select.value:
+
+    if len(select) and not select.value:
         Log.error(BAD_SELECT, select=select)
     elif not select.value or select.value == ".":
         output.extend([
@@ -401,10 +402,10 @@ def _normalize_select_no_context(select, schema=None):
         output.name = coalesce(select.name, select.aggregate)
         if output.name:
             output.value = jx_expression(".", schema=schema)
-        elif select:
+        elif len(select):
             Log.error(BAD_SELECT, select=select)
         else:
-            return None
+            return Null
     elif is_text(select.value):
         if select.value.endswith(".*"):
             name = select.value[:-2].lstrip(".")

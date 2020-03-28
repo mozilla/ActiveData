@@ -164,6 +164,8 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     if test == expected:
         # shortcut
         return
+    if isinstance(expected, dates.Date):
+        return assertAlmostEqualValue(dates.Date(test).unix, expected.unix)
 
     if not is_number(expected):
         # SOME SPECIAL CASES, EXPECTING EMPTY CONTAINERS IS THE SAME AS EXPECTING NULL

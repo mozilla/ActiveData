@@ -10,6 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import math
 import sys
 from math import sqrt
 
@@ -357,8 +358,8 @@ def percentile(values, percent):
     if not N:
         return None
     k = (len(N) - 1) * percent
-    f = int(mo_math.floor(k))
-    c = int(mo_math.ceil(k))
+    f = int(math.floor(k))
+    c = int(math.ceil(k))
     if f == c:
         return N[int(k)]
     d0 = N[f] * (c - k)

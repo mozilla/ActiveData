@@ -12,10 +12,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skip, skipIf
 
+from mo_future import text
+
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from mo_dots import wrap
 import mo_math
+from mo_logs.exceptions import get_stacktrace
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
 lots_of_data = wrap([{"a": i} for i in range(30)])
@@ -1334,3 +1337,27 @@ class TestSetOps(BaseTestCase):
             }
         }
         self.utils.execute_tests(test)
+
+    def test_bad_select(self):
+        subtest = {
+            "data": [
+                {"a": 1},
+                {"a": 2},
+                {"a": 3},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "select": {"between": "a"},
+                "from": TEST_TABLE,
+            },
+            "expecting_error": "Expecting `value` or `aggregate` in select "
+        }
+        subtest = wrap(subtest)
+
+        self.utils.fill_container(subtest)
+        self.utils.send_queries(subtest)
+
+
+
+

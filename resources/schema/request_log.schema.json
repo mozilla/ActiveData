@@ -7,12 +7,15 @@
 		"request_log": {
 			"properties": {
 				"path": {
+					"store": true,
 					"type": "keyword"
 				},
 				"remote_addr": {
+					"store": true,
 					"type": "keyword"
 				},
 				"http_accept_encoding": {
+					"store": true,
 					"type": "keyword"
 				},
 				"query": {
@@ -20,9 +23,11 @@
 					"enabled": false
 				},
 				"query_text": {
+					"store": true,
 					"type": "text"
 				},
 				"data": {
+					"store": true,
 					"type": "text"
 				},
 				"error": {
@@ -30,15 +35,19 @@
 					"enabled": false
 				},
 				"from": {
+					"store": true,
 					"type": "keyword"
 				},
 				"content_length": {
+					"store": true,
 					"type": "long"
 				},
 				"http_user_agent": {
+					"store": true,
 					"type": "keyword"
 				},
 				"timestamp":{
+					"store": true,
 					"type": "double"
 				}
 

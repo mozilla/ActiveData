@@ -97,6 +97,7 @@ class BaseThread(object):
 
     def __init__(self, ident):
         self.id = ident
+        self.name = None
         if ident != -1:
             self.name = "Unknown Thread " + text(ident)
         self.child_locker = allocate_lock()
@@ -464,10 +465,11 @@ class RegisterThread(object):
 
     __slots__ = ["thread"]
 
-    def __init__(self, thread=None):
+    def __init__(self, thread=None, name=None):
         if thread is None:
             thread = BaseThread(get_ident())
         self.thread = thread
+        thread.name = name
 
     def __enter__(self):
         with ALL_LOCK:

@@ -67,7 +67,7 @@ def es_bulksetop(esq, frum, query):
         es_query,
         formatter,
         parent_thread=Null,
-    )
+    ).release()
 
     output = wrap(
         {

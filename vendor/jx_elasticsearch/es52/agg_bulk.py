@@ -121,7 +121,7 @@ def es_bulkaggsop(esq, frum, query):
             abs_limit,
             formatter,
             parent_thread=Null,
-        )
+        ).release()
 
     output = wrap(
         {

@@ -158,7 +158,7 @@ def capture_termination_signal(please_stop):
                 (Till(seconds=61) | please_stop).wait()
             (Till(seconds=11) | please_stop).wait()
 
-    Thread.run("listen for termination", worker)
+    Thread.run("listen for termination", worker).release()
 
 
 def get_instance_metadata(timeout=None):
@@ -192,6 +192,6 @@ def _get_metadata_from_from_aws(please_stop):
             machine_metadata.aws_instance_type = ec2.instance_type
             machine_metadata.name = ec2.instance_id
 
-Thread.run("get aws machine metadata", _get_metadata_from_from_aws)
+Thread.run("get aws machine metadata", _get_metadata_from_from_aws).release()
 
 from . import s3

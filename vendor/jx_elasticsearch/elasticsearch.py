@@ -567,7 +567,7 @@ class Cluster(object):
             except Exception as e:
                 Log.warning("could not set refresh interval for {{index}}", index=known_index.settings.index, cause=e)
         if kwargs.refresh_interval:
-            Thread.run("setting refresh interval", set_refresh, parent_thread=MAIN_THREAD)
+            Thread.run("setting refresh interval", set_refresh, parent_thread=MAIN_THREAD).release()
         else:
             pass
         return known_index

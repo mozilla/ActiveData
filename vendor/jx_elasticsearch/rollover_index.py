@@ -118,7 +118,7 @@ class RolloverIndex(object):
                 except Exception:
                     Log.note("Could not set refresh interval for {{index}}", index=es.settings.index)
 
-            Thread.run("refresh", refresh)
+            Thread.run("refresh", refresh).release()
 
             self._delete_old_indexes(candidates)
             threaded_queue = es.threaded_queue(max_size=self.settings.queue_size, batch_size=self.settings.batch_size, silent=True)

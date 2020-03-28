@@ -54,7 +54,7 @@ class ColumnList(Table, jx_base.Container):
         self._db_load()
         Thread.run(
             "update " + META_COLUMNS_NAME, self._update_from_es, parent_thread=MAIN_THREAD
-        )
+        ).release()
 
     def _query(self, query):
         result = Data()

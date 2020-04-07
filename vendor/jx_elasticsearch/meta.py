@@ -238,13 +238,13 @@ class ElasticsearchMetadata(Namespace):
 
         column_names = {c.es_column for c in columns}
         # DELETE SOME COLUMNS
-        current_columns = self.meta.columns.find(alias)
-        for c in current_columns:
-            if is_text(c):
-                Log.warning("problem with metadata: column object is string {{column}}", column=c)
-                continue
-            if c.es_column not in column_names:
-                self.meta.columns.remove(c, now)
+        try:
+            current_columns = self.meta.columns.find(alias)
+            for c in current_columns:
+                if c.es_column not in column_names:
+                    self.meta.columns.remove(c, now)
+        except Exception as e:
+            Log.warning("problem removing columns from {{table}}", table=alias, cause=e)
 
         # ASK FOR COLUMNS TO BE RE-SCANNED
         rescan = [

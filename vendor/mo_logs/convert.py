@@ -10,11 +10,22 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
-from datetime import date, datetime
 import json as _json
+from datetime import date, datetime
 
 from mo_future import PY3
+
+if PY3:
+    from datetime import timezone
+    def utcfromtimestamp(u):
+        d = datetime.utcfromtimestamp(u)
+        d = d.replace(tzinfo=timezone.utc)
+        return d
+    MAX_TIME = datetime(2286, 11, 20, 17, 46, 39, 0, timezone.utc)
+else:
+    def utcfromtimestamp(u):
+        return datetime.utcfromtimestamp(u)
+    MAX_TIME = datetime(2286, 11, 20, 17, 46, 39)
 
 
 def unix2datetime(u):
@@ -22,8 +33,8 @@ def unix2datetime(u):
         if u == None:
             return None
         if u == 9999999999: # PYPY BUG https://bugs.pypy.org/issue1697
-            return datetime(2286, 11, 20, 17, 46, 39)
-        return datetime.utcfromtimestamp(u)
+            return MAX_TIME
+        return utcfromtimestamp(u)
     except Exception as e:
         from mo_logs import Log
         Log.error("Can not convert {{value}} to datetime",  value= u, cause=e)
@@ -37,7 +48,7 @@ def milli2datetime(u):
 
 def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
     try:
-        utc_time = datetime.utcfromtimestamp(value.timestamp())
+        utc_time = utcfromtimestamp(value.timestamp())
         return utc_time.strftime(format)
     except Exception as e:
         from mo_logs import Log

@@ -48,7 +48,7 @@ from mo_dots import (
     wrap,
     listwrap, unwrap)
 from mo_dots.lists import last
-from mo_future import first, long, none_type, text
+from mo_future import first, long, none_type, text, is_text
 from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT
 from mo_json.typed_encoder import (
     BOOLEAN_TYPE,
@@ -240,6 +240,9 @@ class ElasticsearchMetadata(Namespace):
         # DELETE SOME COLUMNS
         current_columns = self.meta.columns.find(alias)
         for c in current_columns:
+            if is_text(c):
+                Log.warning("problem with metadata: column object is string {{column}}", column=c)
+                continue
             if c.es_column not in column_names:
                 self.meta.columns.remove(c, now)
 

@@ -419,10 +419,9 @@ class ThreadedQueue(Queue):
     ):
         if period !=None and not isinstance(period, (int, float, long)):
             Log.error("Expecting a float for the period")
-
+        period = coalesce(period, 1)  # SECONDS
         batch_size = coalesce(batch_size, int(max_size / 2) if max_size else None, 900)
         max_size = coalesce(max_size, batch_size * 2)  # REASONABLE DEFAULT
-        period = coalesce(period, 1)  # SECONDS
 
         Queue.__init__(self, name=name, max=max_size, silent=silent)
 

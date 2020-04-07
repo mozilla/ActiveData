@@ -15,6 +15,8 @@ from mo_dots import listwrap, coalesce
 from mo_future import is_text, text
 from mo_json import json2value, value2json
 from mo_logs import Log, constants, Except
+from mo_logs.log_usingNothing import StructuredLogger
+
 from mo_threads import Signal
 from mo_threads.threads import STDOUT, STDIN
 
@@ -114,11 +116,18 @@ def temp_var():
         num_temps += 1
 
 
+class RawLogger(StructuredLogger):
+    def write(self, template, params):
+        STDOUT.write(value2json({"log": {"template": template, "params": params}}))
+
+
 def start():
     try:
-        config = json2value(STDIN.readline().decode("utf8"))
+        line = STDIN.readline().decode("utf8")
+        config = json2value(line)
         constants.set(config.constants)
-        Log.start(config.debug + {"logs": [{"type": "raw"}]})
+        Log.start(config.debug)
+        Log.set_logger(RawLogger())
         command_loop({"config": config})
     except Exception as e:
         Log.error("problem staring worker", cause=e)

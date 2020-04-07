@@ -152,7 +152,7 @@ class Log(object):
             from mo_logs.log_usingNothing import StructuredLogger
             return StructuredLogger()
 
-        Log.error("Log type of {{log_type|quote}} is not recognized", log_type=settings.log_type)
+        Log.error("Log type of {{config|json}} is not recognized", config=settings)
 
     @classmethod
     def _add_log(cls, log):

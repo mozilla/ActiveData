@@ -452,7 +452,7 @@ class TempDirectory(File):
     def __exit__(self, exc_type, exc_val, exc_tb):
         from mo_threads import Thread
 
-        Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
+        Thread.run("delete dir " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1)).release()
 
 
 class TempFile(File):
@@ -476,8 +476,7 @@ class TempFile(File):
     def __exit__(self, exc_type, exc_val, exc_tb):
         from mo_threads import Thread
 
-        Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1))
-
+        Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1)).release()
 
 def _copy(from_, to_):
     if from_.is_directory():

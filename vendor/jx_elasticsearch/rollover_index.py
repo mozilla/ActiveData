@@ -114,11 +114,11 @@ class RolloverIndex(object):
 
             def refresh(please_stop):
                 try:
-                    es.set_refresh_interval(seconds=60 * 10, timeout=5)
+                    es.set_refresh_interval(seconds=coalesce(Duration(self.settings.refresh_interval).seconds, 60 * 10), timeout=5)
                 except Exception:
                     Log.note("Could not set refresh interval for {{index}}", index=es.settings.index)
 
-            Thread.run("refresh", refresh)
+            Thread.run("refresh", refresh).release()
 
             self._delete_old_indexes(candidates)
             threaded_queue = es.threaded_queue(max_size=self.settings.queue_size, batch_size=self.settings.batch_size, silent=True)

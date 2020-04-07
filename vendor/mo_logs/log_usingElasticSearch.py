@@ -43,6 +43,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         type="log",
         queue_size=1000,
         batch_size=100,
+        refresh_interval="1second",
         kwargs=None,
     ):
         """

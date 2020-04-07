@@ -30,7 +30,7 @@ from mo_logs.exceptions import Except, suppress_exception
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP, Thread, MAIN_THREAD
-from mo_times import Date, Timer, HOUR, dates
+from mo_times import Date, Timer, HOUR, dates, Duration
 from mo_http import http
 
 DEBUG = True
@@ -386,7 +386,7 @@ class Index(object):
         if seconds <= 0:
             interval = -1
         else:
-            interval = text(seconds) + "s"
+            interval = text(int(seconds)) + "s"
 
         if self.cluster.version.startswith(("1.4.", "1.5.", "1.6.", "1.7.", "5.", "6.")):
             result = self.cluster.put(
@@ -563,7 +563,7 @@ class Cluster(object):
 
         def set_refresh(please_stop):
             try:
-                known_index.set_refresh_interval(seconds=int(dates.parse(kwargs.refresh_interval).seconds))
+                known_index.set_refresh_interval(seconds=Duration(kwargs.refresh_interval).seconds)
             except Exception as e:
                 Log.warning("could not set refresh interval for {{index}}", index=known_index.settings.index, cause=e)
         if kwargs.refresh_interval:

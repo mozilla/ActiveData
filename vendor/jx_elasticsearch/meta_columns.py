@@ -197,7 +197,7 @@ class ColumnList(Table, jx_base.Container):
         return canonical
 
     def remove(self, column, after):
-        if column.last_updated>after:
+        if column.last_updated > after:
             return
         with self.locker:
             canonical = self._add(column)
@@ -215,6 +215,9 @@ class ColumnList(Table, jx_base.Container):
         :param column: ANY COLUMN OBJECT
         :return:  None IF column IS canonical ALREADY (NET-ZERO EFFECT)
         """
+        if not isinstance(column, Column):
+            Log.warning("expecting a column not {{column|json}}", column=column)
+            return
         columns_for_table = self.data.setdefault(column.es_index, {})
         existing_columns = columns_for_table.setdefault(column.name, [])
 

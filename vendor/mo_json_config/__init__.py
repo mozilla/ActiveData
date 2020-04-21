@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 
-from mo_dots import is_data, is_list, set_default, unwrap, wrap, is_sequence, coalesce, get_attr, listwrap, unwraplist, \
-    Null
+from mo_dots import is_data, is_list, set_default, unwrap, wrap, is_sequence, coalesce, get_attr, listwrap, unwraplist
 from mo_files import File
 from mo_files.url import URL
 from mo_future import is_text

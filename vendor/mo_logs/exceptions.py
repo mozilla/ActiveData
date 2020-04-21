@@ -94,10 +94,11 @@ class Except(Exception, LogItem):
                 trace = get_traceback(0)
 
             cause = Except.wrap(getattr(e, '__cause__', None))
-            if hasattr(e, "message") and e.message:
-                output = Except(context=ERROR, template=text(e.message), trace=trace, cause=cause)
+            message = getattr(e, "message", None)
+            if message:
+                output = Except(context=ERROR, template=e.__class__.__name__+": "+text(message), trace=trace, cause=cause)
             else:
-                output = Except(context=ERROR, template=text(e), trace=trace, cause=cause)
+                output = Except(context=ERROR, template=e.__class__.__name__+": "+text(e), trace=trace, cause=cause)
 
             trace = get_stacktrace(stack_depth + 2)  # +2 = to remove the caller, and it's call to this' Except.wrap()
             output.trace.extend(trace)

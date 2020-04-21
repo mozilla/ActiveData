@@ -26,12 +26,16 @@ class Timer(object):
         something_that_takes_long()
     OUTPUT:
         doing hard time took 45.468 sec
-
-    param - USED WHEN LOGGING
-    debug - SET TO False TO DISABLE THIS TIMER
     """
 
-    def __init__(self, description, param=None, silent=None, verbose=None, too_long=0):
+    def __init__(
+            self,
+            description,  # A DESCRIPTION
+            param=None,  # description CAN HAVE PARAMETERS, PUT THEM HERE
+            silent=None,  # DO NOT LOG
+            verbose=None,  # PLEASE LOG
+            too_long=0  # ONLY LOG IF MORE THAN THIS NUMBER OF SECONDS
+    ):
         self.template = description
         self.param = wrap(coalesce(param, {}))
         self.verbose = coalesce(verbose, False if silent is True else True)

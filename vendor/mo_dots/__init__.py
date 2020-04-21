@@ -209,19 +209,19 @@ def hash_value(v):
         return hash(tuple(sorted(hash_value(vv) for vv in v.values())))
 
 
-def set_default(*params):
+def set_default(*dicts):
     """
-    UPDATES FIRST dict WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
-    FOR EACH LEAF, RETURN THE HIGHEST PRIORITY LEAF VALUE
+    RECURSIVE MERGE OF MULTIPLE dicts MOST IMPORTANT FIRST
 
-    RECURSIVE VERSION OF params[0].update(*reversed(params));
+    UPDATES dicts[0] WITH THE MERGE RESULT, WHERE MERGE RESULT IS DEFINED AS:
+    FOR EACH LEAF, RETURN THE FIRST NOT-NULL LEAF VALUE
 
-    :param params:  dicts IN PRIORITY ORDER, FIRST IS HIGHES PRIORITY
-    :return: FIRST dict OR NEW dict WITH PROPERTIES SET
+    :param dicts: dicts IN PRIORITY ORDER, HIHEST TO LOWEST
+    :return: dicts[0]
     """
-    p0 = params[0]
+    p0 = dicts[0]
     agg = p0 if p0 or _get(p0, CLASS) in data_types else {}
-    for p in params[1:]:
+    for p in dicts[1:]:
         p = unwrap(p)
         if p is None:
             continue

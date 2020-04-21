@@ -265,7 +265,8 @@ def _dict2json(value, _buffer):
 
 ARRAY_ROW_LENGTH = 80
 ARRAY_ITEM_MAX_LENGTH = 30
-ARRAY_MAX_COLUMNS = 10
+ARRAY_MAX_COLUMNS = 20
+ARRAY_MIN_ITEMS = 20  # DO NOT ATTEMPT ARRAY FORMATTING IF TOO FEW ITEMS
 INDENT = "    "
 
 
@@ -352,7 +353,7 @@ def pretty_json(value):
 
             js = [pretty_json(v) for v in value]
             max_len = max(*[len(j) for j in js])
-            if max_len <= ARRAY_ITEM_MAX_LENGTH and max(*[j.find("\n") for j in js]) == -1:
+            if len(js) < ARRAY_MIN_ITEMS and max_len <= ARRAY_ITEM_MAX_LENGTH and max(*[j.find("\n") for j in js]) == -1:
                 # ALL TINY VALUES
                 num_columns = max(1, min(ARRAY_MAX_COLUMNS, int(floor((ARRAY_ROW_LENGTH + 2.0) / float(max_len + 2)))))  # +2 TO COMPENSATE FOR COMMAS
                 if len(js) <= num_columns:  # DO NOT ADD \n IF ONLY ONE ROW

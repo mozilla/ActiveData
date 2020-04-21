@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 import cProfile
 import pstats
-from datetime import datetime
 
+from mo_dots import wrap
 from mo_future import iteritems
 from mo_logs import Log
 
@@ -82,7 +82,6 @@ def write_profiles(main_thread_profile):
     if cprofiler_stats is None:
         return
 
-    from pyLibrary import convert
     from mo_files import File
 
     cprofiler_stats.add(pstats.Stats(main_thread_profile.cprofiler))
@@ -106,6 +105,23 @@ def write_profiles(main_thread_profile):
         }
         for f, d, in iteritems(acc.stats)
     ]
-    stats_file = File(FILENAME, suffix=convert.datetime2string(datetime.now(), "_%Y%m%d_%H%M%S"))
-    stats_file.write(convert.list2tab(stats))
+    from mo_times import Date
+
+    stats_file = File(FILENAME, suffix=Date.now().format("_%Y%m%d_%H%M%S"))
+    stats_file.write(list2tab(stats))
     Log.note("profile written to {{filename}}", filename=stats_file.abspath)
+
+
+def list2tab(rows):
+    from mo_json import value2json
+
+    columns = set()
+    for r in wrap(rows):
+        columns |= set(k for k, v in r.leaves())
+    keys = list(columns)
+
+    output = []
+    for r in wrap(rows):
+        output.append("\t".join(value2json(r[k]) for k in keys))
+
+    return "\t".join(keys) + "\n" + "\n".join(output)

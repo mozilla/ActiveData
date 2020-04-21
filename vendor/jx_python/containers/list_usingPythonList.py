@@ -9,8 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from copy import copy
 import itertools
+from copy import copy
 
 import jx_base
 from jx_base import Container
@@ -18,15 +18,14 @@ from jx_base.expressions import TRUE, Variable
 from jx_base.language import is_expression, is_op
 from jx_base.meta_columns import get_schema_from_list
 from jx_base.schema import Schema
+from jx_python.convert import list2cube, list2table
 from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from mo_collections import UniqueIndex
-from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, wrap, coalesce, relative_field, \
-    split_field
+from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, wrap, coalesce
 from mo_future import first, sort_using_key
 from mo_logs import Log
 from mo_threads import Lock
-from pyLibrary import convert
 
 
 class ListContainer(Container, jx_base.Namespace, jx_base.Table):
@@ -208,9 +207,9 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
     def format(self, format):
         if format == "table":
-            frum = convert.list2table(self.data, self._schema.lookup.keys())
+            frum = list2table(self.data, self._schema.lookup.keys())
         elif format == "cube":
-            frum = convert.list2cube(self.data, self.schema.lookup.keys())
+            frum = list2cube(self.data, self.schema.lookup.keys())
         else:
             frum = self.__data__()
 

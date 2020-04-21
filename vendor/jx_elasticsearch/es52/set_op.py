@@ -313,8 +313,6 @@ def es_setop(es, query):
     with Timer("call to ES", silent=DEBUG) as call_timer:
         result = es.search(es_query)
 
-    # Log.note("{{result}}", result=result)
-
     T = result.hits.hits
 
     try:

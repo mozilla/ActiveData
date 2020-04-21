@@ -176,51 +176,6 @@ def list2tab(rows):
     return "\t".join(keys) + "\n" + "\n".join(output)
 
 
-def list2table(rows, column_names=None):
-    if column_names:
-        keys = list(set(column_names))
-    else:
-        columns = set()
-        for r in rows:
-            columns |= set(r.keys())
-        keys = list(columns)
-
-    output = [[unwraplist(r.get(k)) for k in keys] for r in rows]
-
-    return wrap({
-        "meta": {"format": "table"},
-        "header": keys,
-        "data": output
-    })
-
-
-def list2cube(rows, column_names=None):
-    if column_names:
-        keys = column_names
-    else:
-        columns = set()
-        for r in rows:
-            columns |= set(r.keys())
-        keys = list(columns)
-
-    data = {k: [] for k in keys}
-    output = wrap({
-        "meta": {"format": "cube"},
-        "edges": [
-            {
-                "name": "rownum",
-                "domain": {"type": "rownum", "min": 0, "max": len(rows), "interval": 1}
-            }
-        ],
-        "data": data
-    })
-
-    for r in rows:
-        for k in keys:
-            data[k].append(unwraplist(r[k]))
-
-    return output
-
 
 def value2string(value):
     # PROPER NULL HANDLING
@@ -597,21 +552,6 @@ def json_schema_to_markdown(schema):
 
     return "\n".join(lines)
 
-
-def table2csv(table_data):
-    """
-    :param table_data: expecting a list of tuples
-    :return: text in nice formatted csv
-    """
-    text_data = [tuple(value2json(vals, pretty=True) for vals in rows) for rows in table_data]
-
-    col_widths = [max(len(t) for t in cols) for cols in zip(*text_data)]
-    template = ", ".join(
-        "{{" + text(i) + "|left_align(" + text(w) + ")}}"
-        for i, w in enumerate(col_widths)
-    )
-    output = "\n".join(expand_template(template, d) for d in text_data)
-    return output
 
 
 ZeroMoment2dict = mo_math.stats.ZeroMoment2dict

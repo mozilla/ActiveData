@@ -115,33 +115,38 @@ class Duration(object):
         return output
 
     def __div__(self, amount):
-        if isinstance(amount, Duration) and amount.month:
-            m = self.month
-            r = self.milli
+        if isinstance(amount, Duration):
+            if amount.month:
+                m = self.month
+                r = self.milli
 
-            # DO NOT CONSIDER TIME OF DAY
-            tod = r % MILLI_VALUES.day
-            r = r - tod
+                # DO NOT CONSIDER TIME OF DAY
+                tod = r % MILLI_VALUES.day
+                r = r - tod
 
-            if m == 0 and r > (MILLI_VALUES.year / 3):
-                m = floor(12 * self.milli / MILLI_VALUES.year)
-                r -= (m / 12) * MILLI_VALUES.year
+                if m == 0 and r > (MILLI_VALUES.year / 3):
+                    m = floor(12 * self.milli / MILLI_VALUES.year)
+                    r -= (m / 12) * MILLI_VALUES.year
+                else:
+                    r = r - (self.month * MILLI_VALUES.month)
+                    if r >= MILLI_VALUES.day * 31:
+                        from mo_logs import Log
+                        Log.error("Do not know how to handle")
+                r = MIN([29 / 30, (r + tod) / (MILLI_VALUES.day * 30)])
+
+                output = floor(m / amount.month) + r
+                return output
             else:
-                r = r - (self.month * MILLI_VALUES.month)
-                if r >= MILLI_VALUES.day * 31:
-                    from mo_logs import Log
-                    Log.error("Do not know how to handle")
-            r = MIN([29 / 30, (r + tod) / (MILLI_VALUES.day * 30)])
-
-            output = floor(m / amount.month) + r
-            return output
+                return self.milli / amount.milli
         elif is_number(amount):
             output = Duration(0)
             output.milli = self.milli / amount
             output.month = self.month / amount
             return output
         else:
-            return self.milli / amount.milli
+            if not _Log:
+                _delayed_import()
+            _Log.error("Do not know how to divide by {{type}}", type=type(amount).__name__)
 
     def __truediv__(self, other):
         return self.__div__(other)

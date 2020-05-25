@@ -23,11 +23,11 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import concat_field, unwrap, unwraplist, wrap, is_many
+from mo_dots import concat_field, unwrap, wrap, is_many
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
-from mo_logs.strings import expand_template, quote
+from mo_logs.strings import quote
 from mo_times.dates import Date
 
 """

@@ -39,7 +39,7 @@ class Till(Signal):
 
     def __new__(cls, till=None, seconds=None):
         if not enabled:
-            Log.note("Till daemon not enabled")
+            Log.note("Till daemon not enabled", stack_depth=1)
             return DONE
         elif till != None:
             return object.__new__(cls)

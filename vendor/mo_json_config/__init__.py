@@ -102,6 +102,7 @@ def _replace_ref(node, url):
             if not ref.scheme and not ref.path:
                 # DO NOT TOUCH LOCAL REF YET
                 ref_remain.append(ref)
+                ref_found = True
                 continue
 
             if not ref.scheme:

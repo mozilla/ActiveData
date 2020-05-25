@@ -73,6 +73,13 @@ class URL(object):
         output.path = output.path.rstrip('/') + "/" + other.lstrip('/')
         return output
 
+    def __add__(self, other):
+        if not is_data(other):
+            Log.error("can only add data for query parameters")
+        output = self.__copy__()
+        output.query += other
+        return output
+
     def __unicode__(self):
         return self.__str__().decode('utf8')  # ASSUME chr<128 ARE VALID UNICODE
 
@@ -91,6 +98,12 @@ class URL(object):
 
     def __data__(self):
         return str(self)
+
+    def __hash__(self):
+        return hash(str(self))
+
+    def __eq__(self, other):
+        return text(self) == text(other)
 
     def __str__(self):
         url = ""
@@ -218,10 +231,10 @@ def value2url_param(value):
         from mo_json import value2json
 
         value_ = wrap(value)
-        output = "&".join([
+        output = "&".join(
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
-            for k, v in value_.leaves()
-            ])
+            for k, v in sorted(value_.leaves(), key=lambda p: p[0])
+        )
     elif is_text(value):
         output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif is_binary(value):

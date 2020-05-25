@@ -7,6 +7,8 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from __future__ import absolute_import, division, unicode_literals
+
 import base64
 import io
 import os
@@ -46,8 +48,8 @@ class File(object):
         """
         if isinstance(filename, File):
             return
-        if not isinstance(filename, text):
-            Log.error('Expecting string, not {{type}}', type=type(filename).__name__)
+        elif not isinstance(filename, (str, text)):
+            Log.error('Expecting str, not {{type}}', type=type(filename).__name__)
 
         self.key = base642bytearray(key)
         self._mime_type = mime_type

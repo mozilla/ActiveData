@@ -310,29 +310,8 @@ class ElasticsearchMetadata(Namespace):
             # ENSURE COLUMN HAS CORRECT jx_type
             # PICK DEEPEST NESTED PROPERTY AS REPRESENTATIVE
             output = []
-            best = {}
             for abs_column in abs_columns:
                 abs_column.jx_type = jx_type(abs_column)
-                if abs_column.jx_type not in STRUCT:
-                    clean_name = unnest_path(abs_column.name)
-                    other = best.get(clean_name)
-                    if other:
-                        if len(other.nested_path) < len(abs_column.nested_path):
-                            output.remove(other)
-                            self.meta.columns.update(
-                                {
-                                    "clear": ".",
-                                    "where": {
-                                        "eq": {
-                                            "es_column": other.es_column,
-                                            "es_index": other.es_index,
-                                        }
-                                    },
-                                }
-                            )
-                        else:
-                            continue
-                    best[clean_name] = abs_column
                 output.append(abs_column)
 
             # REGISTER ALL COLUMNS

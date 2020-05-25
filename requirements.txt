@@ -1,3 +1,4 @@
+hjson
 urllib3==1.24.3
 Flask
 pymysql

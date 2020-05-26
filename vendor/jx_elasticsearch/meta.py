@@ -46,10 +46,12 @@ from mo_dots import (
     startswith_field,
     tail_field,
     wrap,
-    listwrap, unwrap)
+    listwrap,
+    unwrap,
+)
 from mo_dots.lists import last
-from mo_future import first, long, none_type, text, is_text
-from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT
+from mo_future import first, long, none_type, text
+from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT, NESTED
 from mo_json.typed_encoder import (
     BOOLEAN_TYPE,
     EXISTS_TYPE,
@@ -57,7 +59,9 @@ from mo_json.typed_encoder import (
     STRING_TYPE,
     unnest_path,
     untype_path,
-    NESTED_TYPE, get_nested_path)
+    NESTED_TYPE,
+    get_nested_path,
+)
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -135,9 +139,7 @@ class ElasticsearchMetadata(Namespace):
         # TODO: fix monitor so it does not bring down ES
         if ENABLE_META_SCAN:
             self.worker = Thread.run(
-                "refresh metadata",
-                self.monitor,
-                parent_thread=MAIN_THREAD
+                "refresh metadata", self.monitor, parent_thread=MAIN_THREAD
             )
         else:
             self.worker = Thread.run(
@@ -204,9 +206,7 @@ class ElasticsearchMetadata(Namespace):
                                 break
                         except Exception as e:
                             Log.warning(
-                                "problem adding field {{field}}",
-                                field=name,
-                                cause=e,
+                                "problem adding field {{field}}", field=name, cause=e,
                             )
                 else:
                     # ALL OTHER INDEXES HAVE ZERO RECORDS FOR THIS COLUMN
@@ -215,13 +215,15 @@ class ElasticsearchMetadata(Namespace):
                         es_column=name,
                         es_index=alias,
                         es_type=es_details.type,
-                        jx_type=es_type_to_json_type[coalesce(es_details.type, "object")],
+                        jx_type=es_type_to_json_type[
+                            coalesce(es_details.type, "object")
+                        ],
                         nested_path=get_nested_path(name),
                         count=0,
-                        cardinality=0,   # MARKED AS DELETED
-                        multi=1001 if es_details.type == 'nested' else 0,
+                        cardinality=0,  # MARKED AS DELETED
+                        multi=1001 if es_details.type == "nested" else 0,
                         partitions=None,
-                        last_updated=Date.now()
+                        last_updated=Date.now(),
                     )
                     if len(zero_col.nested_path) > 1:
                         pass
@@ -307,16 +309,9 @@ class ElasticsearchMetadata(Namespace):
             self.alias_to_query_paths[alias] = query_paths
             self.alias_to_query_paths[self._find_alias(alias)] = query_paths
 
-            # ENSURE COLUMN HAS CORRECT jx_type
-            # PICK DEEPEST NESTED PROPERTY AS REPRESENTATIVE
-            output = []
-            for abs_column in abs_columns:
-                abs_column.jx_type = jx_type(abs_column)
-                output.append(abs_column)
-
             # REGISTER ALL COLUMNS
             canonicals = []
-            for abs_column in output:
+            for abs_column in abs_columns:
                 canonical = self.meta.columns.add(abs_column)
                 canonicals.append(canonical)
 
@@ -538,7 +533,7 @@ class ElasticsearchMetadata(Namespace):
                 self.meta.columns.update(
                     {
                         "set": {
-                            "count": 1000*1000,
+                            "count": 1000 * 1000,
                             "cardinality": 10000,
                             "multi": 10000,
                             "last_updated": now,
@@ -803,7 +798,8 @@ class ElasticsearchMetadata(Namespace):
                                 "Old columns {{names|json}} last updated {{dates|json}}",
                                 names=wrap(old_columns).es_column,
                                 dates=[
-                                    Date(t).format() for t in wrap(old_columns).last_updated
+                                    Date(t).format()
+                                    for t in wrap(old_columns).last_updated
                                 ],
                             )
                         else:
@@ -812,7 +808,7 @@ class ElasticsearchMetadata(Namespace):
                     for g, index_columns in jx.groupby(old_columns, "es_index"):
                         # TRIGGER COLUMN UNIFICATION BEFORE WE DO ANALYSIS
                         try:
-                           self.get_columns(g.es_index)
+                            self.get_columns(g.es_index)
                         except Exception as e:
                             if "{{table|quote}} does not exist" in e:
                                 self.meta.columns.update(
@@ -822,7 +818,11 @@ class ElasticsearchMetadata(Namespace):
                                     }
                                 )
                                 continue
-                            Log.warning("problem getting column info on {{table}}", table=g.es_index, cause=e)
+                            Log.warning(
+                                "problem getting column info on {{table}}",
+                                table=g.es_index,
+                                cause=e,
+                            )
 
                         self.todo.extend(
                             (c, max(last_good_update, c.last_updated))
@@ -843,7 +843,11 @@ class ElasticsearchMetadata(Namespace):
                         param={"table": column.es_index, "column": column.es_column},
                         verbose=DEBUG,
                     ):
-                        all_tables = [n for p in self.es_cluster.get_aliases(after=after) for n in (p.index, p.alias)]
+                        all_tables = [
+                            n
+                            for p in self.es_cluster.get_aliases(after=after)
+                            for n in (p.index, p.alias)
+                        ]
                         if column.es_index not in all_tables:
                             DEBUG and Log.note(
                                 "{{column.es_column}} of {{column.es_index}} does not exist",
@@ -860,7 +864,10 @@ class ElasticsearchMetadata(Namespace):
                             column.jx_type in STRUCT
                             or split_field(column.es_column)[-1] == EXISTS_TYPE
                         ):
-                            if (column.es_type=="nested" or last(split_field(column.es_column))==NESTED_TYPE) and (column.multi==None or column.multi<2):
+                            if (
+                                column.es_type == "nested"
+                                or last(split_field(column.es_column)) == NESTED_TYPE
+                            ) and (column.multi == None or column.multi < 2):
                                 column.multi = 1001
                                 Log.warning("fixing multi on nested problem")
                             # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
@@ -1054,20 +1061,25 @@ class Schema(jx_base.Schema):
             else:
                 # LOOK INTO A SPECIFIC MULTI VALUED COLUMN
                 try:
-                    self.multi = first([
-                        c
-                        for c in self.snowflake.columns
-                        if (
-                            untype_path(c.name) == query_path
-                            and (
-                                c.multi > 1
-                                or last(split_field(c.es_column)) == NESTED_TYPE  # THIS IS TO COMPENSATE FOR BAD c.multi
+                    self.multi = first(
+                        [
+                            c
+                            for c in self.snowflake.columns
+                            if (
+                                untype_path(c.name) == query_path
+                                and (
+                                    c.multi > 1
+                                    or last(split_field(c.es_column))
+                                    == NESTED_TYPE  # THIS IS TO COMPENSATE FOR BAD c.multi
+                                )
                             )
-                        )
-                    ])
+                        ]
+                    )
                     if not self.multi:
                         Log.error("expecting a nested column")
-                    self.query_path = [self.multi.name] + unwrap(listwrap(self.multi.nested_path))
+                    self.query_path = [self.multi.name] + unwrap(
+                        listwrap(self.multi.nested_path)
+                    )
                 except Exception as e:
                     # PROBLEM WITH METADATA UPDATE
                     self.multi = None
@@ -1094,29 +1106,43 @@ class Schema(jx_base.Schema):
         :param column_name:
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
-        clean_name = unnest_path(column_name)
+        clean_name = untype_path(column_name)
+        columns = self.columns
+
+        if clean_name == ".":
+            # ALL COLUMNS
+            return set(
+                c
+                for c in columns
+                if c.name != "_id" and c.jx_type not in OBJECTS and c.cardinality != 0
+            )
 
         if clean_name != column_name:
-            clean_name = column_name
-            cleaner = lambda x: x
-        else:
-            cleaner = unnest_path
+            # column_name IS AN EXPLICT NAME, INCLUDING TYPE INFO
+            for path in self.query_path:
+                output = [
+                    c
+                    for c in columns
+                    if (
+                        (c.name != "_id" or column_name == "_id")
+                        and c.jx_type not in (OBJECT, NESTED)
+                        and startswith_field(relative_field(c.name, path), column_name)
+                    )
+                ]
+                if output:
+                    return set(output)
+            return set()
 
-        columns = self.columns
-        # TODO: '.' IMPLIES ALL FIELDS FROM ABSOLUTE PERPECTIVE, ALL OTHERS ARE A RELATIVE PERSPECTIVE
         # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
-        for path in reversed(self.query_path) if clean_name == "." else self.query_path:
+        for path in self.query_path:
             output = [
                 c
                 for c in columns
                 if (
                     (c.name != "_id" or clean_name == "_id")
-                    and (
-                        c.jx_type not in OBJECTS
-                        or (clean_name == "." and c.cardinality == 0)
-                    )
+                    and c.jx_type not in OBJECTS
                     and startswith_field(
-                        cleaner(relative_field(c.name, path)), clean_name
+                        untype_path(relative_field(c.name, path)), clean_name
                     )
                 )
             ]
@@ -1251,15 +1277,6 @@ def _counting_query(c):
         }
     else:
         return {"cardinality": {"field": c.es_column}}
-
-
-def jx_type(column):
-    """
-    return the jx_type for given column
-    """
-    if column.es_column.endswith(EXISTS_TYPE):
-        return EXISTS
-    return es_type_to_json_type[column.es_type]
 
 
 python_type_to_es_type = {

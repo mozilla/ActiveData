@@ -310,7 +310,7 @@ def es_setop(es, query):
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
-    with Timer("call to ES", silent=DEBUG) as call_timer:
+    with Timer("call to ES", verbose=DEBUG) as call_timer:
         result = es.search(es_query)
 
     T = result.hits.hits

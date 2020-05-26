@@ -41,14 +41,10 @@
 		"port": 9200,
 		"index": "testdata",
 		"type": "test_result",
-		"debug": true
+		"debug": false
 	},
 	"debug": {
 		"trace": true,
-		"cprofile": {
-			"enabled": false,
-			"filename": "./results/profile.tab"
-		},
 		"log": [
 			{
 				"log_type": "console"

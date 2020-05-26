@@ -234,4 +234,3 @@ if __name__ in ("__main__", "active_data.app"):
 
     if config.flask:
         flask_app.run(**config.flask)
-

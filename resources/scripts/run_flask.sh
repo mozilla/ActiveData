@@ -6,4 +6,4 @@ git clean -fxd
 
 
 export PYTHONPATH=.:vendor
-python active_data/app.py  --settings=resources/config/staging_settings.json
+python active_data/app.py  --settings=resources/config/simple_settings.json

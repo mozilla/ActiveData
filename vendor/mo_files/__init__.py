@@ -7,6 +7,8 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
+from __future__ import absolute_import, division, unicode_literals
+
 import base64
 import io
 import os
@@ -19,9 +21,10 @@ from tempfile import NamedTemporaryFile, mkdtemp
 from mo_dots import Null, coalesce, get_module, is_list
 from mo_files import mimetype
 from mo_files.url import URL
-from mo_future import PY3, binary_type, text, is_text
+from mo_future import PY3, text, is_text
 from mo_logs import Except, Log
 from mo_logs.exceptions import get_stacktrace
+from mo_math.randoms import Random
 
 
 class File(object):
@@ -29,7 +32,7 @@ class File(object):
     ASSUMES ALL FILE CONTENT IS UTF8 ENCODED STRINGS
     """
 
-    def __new__(cls, filename, buffering=2 ** 14, suffix=None):
+    def __new__(cls, filename, key=None, buffering=2 ** 14, suffix=None):
         if filename == None:
             return Null
         elif isinstance(filename, File):
@@ -37,44 +40,33 @@ class File(object):
         else:
             return object.__new__(cls)
 
-    def __init__(self, filename, buffering=2 ** 14, suffix=None, mime_type=None):
+    def __init__(self, filename, key=None, mime_type=None):
         """
-        YOU MAY SET filename TO {"path":p, "key":k} FOR CRYPTO FILES
+        :param filename: STRING
+        :param key: BASE64 AES KEY USED ON ENCRYPTED FILES
+        :param mime_type: IN THE UNLIKELY CASE YOU WISH TO DICTATE THE mimetype
         """
         if isinstance(filename, File):
             return
+        elif not isinstance(filename, (str, text)):
+            Log.error('Expecting str, not {{type}}', type=type(filename).__name__)
 
+        self.key = base642bytearray(key)
         self._mime_type = mime_type
 
-        if isinstance(filename, (binary_type, text)):
-            try:
-                self.key = None
-                if filename==".":
-                    self._filename = ""
-                elif filename.startswith("~"):
-                    home_path = os.path.expanduser("~")
-                    if os.sep == "\\":
-                        home_path = home_path.replace(os.sep, "/")
-                    if home_path.endswith("/"):
-                        home_path = home_path[:-1]
-                    filename = home_path + filename[1::]
-                self._filename = filename.replace(os.sep, "/")  # USE UNIX STANDARD
-            except Exception as e:
-                Log.error(u"can not load {{file}}", file=filename, cause=e)
-        else:
-            try:
-                self.key = base642bytearray(filename.key)
-                self._filename = "/".join(filename.path.split(os.sep))  # USE UNIX STANDARD
-            except Exception as e:
-                Log.error(u"can not load {{file}}", file=filename.path, cause=e)
+        if filename == ".":
+            self._filename = ""
+        elif filename.startswith("~"):
+            home_path = os.path.expanduser("~")
+            if os.sep == "\\":
+                home_path = home_path.replace(os.sep, "/")
+            home_path = home_path.rstrip("/")
+            filename = home_path + "/" + filename[1::].lstrip("/")
+        self._filename = filename.replace(os.sep, "/")  # USE UNIX STANDARD
 
         while self._filename.find(".../") >= 0:
             # LET ... REFER TO GRANDPARENT, .... REFER TO GREAT-GRAND-PARENT, etc...
             self._filename = self._filename.replace(".../", "../../")
-        self.buffering = buffering
-
-        if suffix:
-            self._filename = add_suffix(self._filename, suffix)
 
     @classmethod
     def new_instance(cls, *path):
@@ -96,7 +88,7 @@ class File(object):
 
     @property
     def filename(self):
-        return self._filename.replace("/", os.sep)
+        return self._filename
 
     @property
     def abspath(self):
@@ -118,7 +110,7 @@ class File(object):
         """
         ADD suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
         """
-        return File(add_suffix(self._filename, suffix))
+        return add_suffix(self._filename, suffix)
 
     @property
     def extension(self):
@@ -149,7 +141,7 @@ class File(object):
                 mime = MimeTypes()
                 self._mime_type, _ = mime.guess_type(self.abspath)
                 if not self._mime_type:
-                    self._mime_type = "application/binary"
+                    self._mime_type = mimetype.BINARY
         return self._mime_type
 
     def find(self, pattern):
@@ -165,6 +157,7 @@ class File(object):
             if dir.is_directory():
                 for c in dir.children:
                     _find(c)
+
         _find(self)
         return output
 
@@ -269,21 +262,25 @@ class File(object):
             else:
                 f.write(content)
 
-    def write(self, data):
+    def write(self, content):
+        """
+        :param content: text, or iterable of text
+        :return:
+        """
         if not self.parent.exists:
             self.parent.create()
         with open(self._filename, "wb") as f:
-            if is_list(data) and self.key:
+            if is_list(content) and self.key:
                 Log.error(u"list of data and keys are not supported, encrypt before sending to file")
 
-            if is_list(data):
+            if is_list(content):
                 pass
-            elif isinstance(data, (binary_type, text)):
-                data=[data]
-            elif hasattr(data, "__iter__"):
+            elif isinstance(content, text):
+                content = [content]
+            elif hasattr(content, "__iter__"):
                 pass
 
-            for d in data:
+            for d in content:
                 if not is_text(d):
                     Log.error(u"Expecting unicode data only")
                 if self.key:
@@ -373,7 +370,7 @@ class File(object):
         try:
             os.makedirs(self._filename)
         except Exception as e:
-            Log.error(u"Could not make directory {{dir_name}}",  dir_name= self._filename, cause=e)
+            Log.error(u"Could not make directory {{dir_name}}", dir_name=self._filename, cause=e)
 
     @property
     def children(self):
@@ -391,10 +388,10 @@ class File(object):
 
     @property
     def parent(self):
-        if not self._filename or self._filename==".":
+        if not self._filename or self._filename == ".":
             return File("..")
         elif self._filename.endswith(".."):
-            return File(self._filename+"/..")
+            return File(self._filename + "/..")
         else:
             return File("/".join(self._filename.split("/")[:-1]))
 
@@ -406,6 +403,12 @@ class File(object):
             return os.path.exists(self._filename)
         except Exception as e:
             return False
+
+    @property
+    def length(self):
+        return os.path.getsize(self._filename)
+
+    size = length
 
     def __bool__(self):
         return self.__nonzero__()
@@ -440,6 +443,7 @@ class TempDirectory(File):
     A CONTEXT MANAGER FOR AN ALLOCATED, BUT UNOPENED TEMPORARY DIRECTORY
     WILL BE DELETED WHEN EXITED
     """
+
     def __new__(cls):
         return object.__new__(cls)
 
@@ -460,13 +464,14 @@ class TempFile(File):
     A CONTEXT MANAGER FOR AN ALLOCATED, BUT UNOPENED TEMPORARY FILE
     WILL BE DELETED WHEN EXITED
     """
+
     def __new__(cls, *args, **kwargs):
         return object.__new__(cls)
 
     def __init__(self, filename=None):
         if isinstance(filename, File):
             return
-        self.temp = NamedTemporaryFile(delete=False)
+        self.temp = NamedTemporaryFile(prefix=Random.filename(), delete=False)
         self.temp.close()
         File.__init__(self, self.temp.name)
 
@@ -477,6 +482,7 @@ class TempFile(File):
         from mo_threads import Thread
 
         Thread.run("delete file " + self.name, delete_daemon, file=self, caller_stack=get_stacktrace(1)).release()
+
 
 def _copy(from_, to_):
     if from_.is_directory():
@@ -505,7 +511,6 @@ def datetime2string(value, format="%Y-%m-%d %H:%M:%S"):
         return value.strftime(format)
     except Exception as e:
         Log.error(u"Can not format {{value}} with {{format}}", value=value, format=format, cause=e)
-
 
 
 def join_path(*path):
@@ -571,15 +576,15 @@ def delete_daemon(file, caller_stack, please_stop):
             return
         except Exception as e:
             e = Except.wrap(e)
-            e.trace = e.trace[0:2]+caller_stack
+            e.trace = e.trace[0:2] + caller_stack
 
             Log.warning(u"problem deleting file {{file}}", file=file.abspath, cause=e)
-            (Till(seconds=10)|please_stop).wait()
+            (Till(seconds=10) | please_stop).wait()
 
 
 def add_suffix(filename, suffix):
     """
-    ADD suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
+    ADD .suffix TO THE filename (NOT INCLUDING THE FILE EXTENSION)
     """
     path = filename.split("/")
     parts = path[-1].split(".")
@@ -587,4 +592,3 @@ def add_suffix(filename, suffix):
     parts[i] = parts[i] + "." + text(suffix).strip(".")
     path[-1] = ".".join(parts)
     return File("/".join(path))
-

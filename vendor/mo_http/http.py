@@ -25,6 +25,8 @@ from mmap import mmap
 from numbers import Number
 from tempfile import TemporaryFile
 
+from mo_files import mimetype
+
 import mo_math
 from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap, is_sequence
 from mo_files.url import URL
@@ -313,7 +315,7 @@ class HttpResponse(Response):
 
             if self.headers.get('content-encoding') == 'gzip':
                 return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
-            elif self.headers.get('content-type') == 'application/zip':
+            elif self.headers.get('content-type') in [mimetype.ZIP, mimetype.GZIP]:
                 return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)
             elif self.url.endswith('.gz'):
                 return ibytes2ilines(icompressed2ibytes(iterator), encoding=encoding, flexible=flexible)

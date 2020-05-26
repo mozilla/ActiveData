@@ -9,10 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from datetime import date, datetime, timedelta
-from decimal import Decimal
 import math
 import re
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+
+from hjson import loads as hjson2value
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
 from mo_dots.objects import DataObject
@@ -293,28 +295,19 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
     :param leaves: ASSUME JSON KEYS ARE DOT-DELIMITED
     :return: Python value
     """
+    json_string = text(json_string)
     if not is_text(json_string) and json_string.__class__.__name__ != "FileString":
         Log.error("only unicode json accepted")
 
     try:
-        if flexible:
-            # REMOVE """COMMENTS""", # COMMENTS, //COMMENTS, AND \n \r
-            # DERIVED FROM https://github.com/jeads/datasource/blob/master/datasource/bases/BaseHub.py# L58
-            json_string = re.sub(r"\"\"\".*?\"\"\"", r"\n", json_string, flags=re.MULTILINE)
-            json_string = "\n".join(remove_line_comment(l) for l in json_string.split("\n"))
-            # ALLOW DICTIONARY'S NAME:VALUE LIST TO END WITH COMMA
-            json_string = re.sub(r",\s*\}", r"}", json_string)
-            # ALLOW LISTS TO END WITH COMMA
-            json_string = re.sub(r",\s*\]", r"]", json_string)
-
         if params:
             # LOOKUP REFERENCES
             json_string = expand_template(json_string, params)
 
-        try:
+        if flexible:
+            value = hjson2value(json_string)
+        else:
             value = wrap(json_decoder(text(json_string)))
-        except Exception as e:
-            Log.error("can not decode\n{{content}}", content=json_string, cause=e)
 
         if leaves:
             value = wrap_leaves(value)

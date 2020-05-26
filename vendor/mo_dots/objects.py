@@ -109,6 +109,8 @@ def datawrap(v):
         m = Data()
         _set(m, SLOT, v)  # INJECT m.__dict__=v SO THERE IS NO COPY
         return m
+    elif type_ is tuple:
+        return FlatList(v)
     elif type_ is list:
         return FlatList(v)
     elif type_ in (Data, DataObject, none_type, FlatList, text, binary_type, int, float, Decimal, datetime, date, NullType, none_type):

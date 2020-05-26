@@ -54,8 +54,8 @@ def sql_query(path):
                 data = json2value(text)
                 record_request(flask.request, data, None, None)
 
-            translate_timer = Timer("translate", silent=True)
-            with translate_timer:
+            sql_translate_timer = Timer("sql translate", silent=True)
+            with sql_translate_timer:
                 if not data.sql:
                     Log.error("Expecting a `sql` parameter")
                 jx_query = parse_sql(data.sql)
@@ -79,7 +79,7 @@ def sql_query(path):
                         Log.warning("Unexpected save problem", cause=e)
 
             result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
-            result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
+            result.meta.timing.sql_translate = mo_math.round(sql_translate_timer.duration.seconds, digits=4)
             result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 

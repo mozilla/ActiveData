@@ -31,6 +31,10 @@ class Random(object):
         return Random.string(length, SIMPLE_ALPHABET + extra)
 
     @staticmethod
+    def filename():
+        return Random.base64(20, extra="-_")
+
+    @staticmethod
     def int(*args):
         return SEED.randrange(*args)
 

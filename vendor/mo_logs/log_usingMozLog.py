@@ -9,7 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from decimal import Decimal
 
 from mo_dots import wrap
@@ -37,7 +36,7 @@ class StructuredLogger_usingMozLog(StructuredLogger):
         if not app_name:
             Log.error("mozlog expects an `app_name` in the config")
         if not Log.trace:
-            Log.error("mozlog expects trace=True so it get s the information it requires")
+            Log.error("mozlog expects trace=True so it gets the information it requires")
 
     def write(self, template, params):
         output = {
@@ -57,11 +56,12 @@ class StructuredLogger_usingMozLog(StructuredLogger):
         self.stream.write(b'\n')
 
 
+# https://en.wikipedia.org/wiki/Syslog#Severity_levels
 severity_map = {
-    ERROR: 3,
-    WARNING: 4,
-    ALARM: 5,
-    NOTE: 6
+    ERROR: 3,  # Error
+    WARNING: 4,  # Warning
+    ALARM: 5,  # Notice
+    NOTE: 6  # Informational
 }
 
 

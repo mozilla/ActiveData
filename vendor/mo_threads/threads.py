@@ -30,7 +30,6 @@ from mo_future import (
     PY3,
 )
 from mo_logs import Except, Log
-from mo_threads.lock import Lock
 from mo_threads.profiles import CProfiler, write_profiles
 from mo_threads.signals import AndSignals, Signal
 from mo_threads.till import Till
@@ -254,6 +253,7 @@ class Thread(BaseThread):
             self.please_stop = self.kwargs[PLEASE_STOP] = Signal(
                 "please_stop for " + self.name
             )
+        self.please_stop.then(self.start)
 
         self.thread = None
         self.ready_to_stop = Signal("joining with " + self.name)
@@ -280,6 +280,8 @@ class Thread(BaseThread):
 
     def start(self):
         try:
+            if self.thread:
+                return
             self.thread = start_new_thread(Thread._run, (self,))
             return self
         except Exception as e:

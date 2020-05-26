@@ -277,6 +277,10 @@ class Data(object):
         d = self._internal_dict
         return ((k, wrap(v)) for k, v in iteritems(d))
 
+    def pop(self, item, default=None):
+        d = self._internal_dict
+        return d.pop(item, default)
+
     def keys(self):
         d = self._internal_dict
         return set(d.keys())

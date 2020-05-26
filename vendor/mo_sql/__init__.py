@@ -8,13 +8,18 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, PY2, next
+from mo_future import is_text, PY2
 from mo_logs import Log
 
-DEBUG = True
+ENABLE_TYPE_CHECKING = True
 
 
 class SQL(object):
+    """
+    THIS CLASS USES THE TYPE SYSTEM TO PREVENT SQL INJECTION ATTACKS
+    ENSURES ONLY SQL OBJECTS ARE CONCATENATED TO MAKE MORE SQL OBJECTS
+    """
+
     __slots__ = []
 
     def __new__(cls, value=None, *args, **kwargs):
@@ -37,8 +42,8 @@ class SQL(object):
         if not isinstance(other, SQL):
             if (
                 is_text(other)
-                and DEBUG
-                and all(c not in other for c in ('"', "'", "`"))
+                and ENABLE_TYPE_CHECKING
+                and all(c not in other for c in ('"', "'", "`", "\\"))
             ):
                 return ConcatSQL(self, SQL(other))
             Log.error("Can only concat other SQL")
@@ -46,16 +51,7 @@ class SQL(object):
             return ConcatSQL(self, other)
 
     def __radd__(self, other):
-        if not isinstance(other, SQL):
-            if (
-                is_text(other)
-                and DEBUG
-                and all(c not in other for c in ('"', "'", "`"))
-            ):
-                return ConcatSQL(SQL(other), self)
-            Log.error("Can only concat other SQL")
-        else:
-            return ConcatSQL(other, self)
+        return self.__add__(other)
 
     def join(self, list_):
         return JoinSQL(self, list_)
@@ -75,15 +71,14 @@ class SQL(object):
 
 
 class TextSQL(SQL):
-    """
-    ACTUAL SQL, DO NOT QUOTE THIS STRING
-    """
-
     __slots__ = ["value"]
 
     def __init__(self, value):
+        """
+        ACTUAL SQL, DO NOT QUOTE value
+        """
         SQL.__init__(self)
-        if DEBUG and isinstance(value, SQL):
+        if ENABLE_TYPE_CHECKING and isinstance(value, SQL):
             Log.error("Expecting text, not SQL")
         self.value = value
 
@@ -95,10 +90,15 @@ class JoinSQL(SQL):
     __slots__ = ["sep", "concat"]
 
     def __init__(self, sep, concat):
+        """
+        CONVIENENCE METHOD TO str.join() SOME SQL
+        :param sep: THE SEPARATOR
+        :param concat:  A LIST/TUPLE/ITERABLE OF SQL
+        """
         SQL.__init__(self)
-        if not isinstance(concat, (tuple, list)):
-            concat = tuple(concat)
-        if DEBUG:
+        if ENABLE_TYPE_CHECKING:
+            if not isinstance(concat, (tuple, list)):
+                concat = tuple(concat)
             if not isinstance(sep, SQL):
                 Log.error("Expecting SQL, not text")
             if any(not isinstance(s, SQL) for s in concat):
@@ -107,28 +107,23 @@ class JoinSQL(SQL):
         self.concat = concat
 
     def __iter__(self):
-        if not self.concat:
-            return
-        it = self.concat.__iter__()
-        v = next(it)
-        for vv in v:
-            yield vv
-        for v in it:
-            for s in self.sep:
+        sep = NO_SQL
+        for v in self.concat:
+            for s in sep:
                 yield s
+            sep = self.sep
             for vv in v:
                 yield vv
 
 
 class ConcatSQL(SQL):
-    """
-    ACTUAL SQL, DO NOT QUOTE THIS STRING
-    """
-
     __slots__ = ["concat"]
 
     def __init__(self, *concat):
-        if DEBUG:
+        """
+        A SEQUENCE OF SQL FOR EVENTUAL CONCATENATION
+        """
+        if ENABLE_TYPE_CHECKING:
             if len(concat) == 1:
                 Log.error("Expecting at least 2 parameters")
             if any(not isinstance(s, SQL) for s in concat):
@@ -141,6 +136,7 @@ class ConcatSQL(SQL):
                 yield cc
 
 
+NO_SQL = tuple()
 SQL_STAR = SQL(" * ")
 SQL_PLUS = SQL(" + ")
 

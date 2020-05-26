@@ -17,6 +17,7 @@ from jx_base.query import QueryOp, _normalize_selects
 from jx_base.language import is_op, value_compare
 from jx_python import expressions as _expressions, flat_list, group_by
 from jx_python.containers.cube import Cube
+from jx_python.convert import list2table, list2cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
 from jx_python.expressions import jx_expression_to_function as get
@@ -30,7 +31,6 @@ from mo_future import is_text, sort_using_cmp
 from mo_logs import Log
 import mo_math
 from mo_math import MIN, UNION
-from pyLibrary import convert
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
 # JSON QUERY EXPRESSION DOCUMENTATION: https://github.com/klahnakoski/jx/tree/master/docs
@@ -98,9 +98,9 @@ def run(query, container=Null):
 
     # AT THIS POINT frum IS IN LIST FORMAT, NOW PACKAGE RESULT
     if query_op.format == "cube":
-        container = convert.list2cube(container)
+        container = list2cube(container)
     elif query_op.format == "table":
-        container = convert.list2table(container)
+        container = list2table(container)
         container.meta.format = "table"
     else:
         container = wrap({"meta": {"format": "list"}, "data": container})

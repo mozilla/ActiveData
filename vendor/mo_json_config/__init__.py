@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 
-from mo_dots import is_data, is_list, set_default, unwrap, wrap, is_sequence, coalesce, get_attr
+from mo_dots import is_data, is_list, set_default, unwrap, wrap, is_sequence, coalesce, get_attr, listwrap, unwraplist
 from mo_files import File
 from mo_files.url import URL
 from mo_future import is_text
@@ -84,49 +84,59 @@ def _replace_ref(node, url):
         url.path = url.path[:-1]
 
     if is_data(node):
-        ref = None
+        refs = None
         output = {}
         for k, v in node.items():
             if k == "$ref":
-                ref = URL(v)
+                refs = URL(v)
             else:
                 output[k] = _replace_ref(v, url)
 
-        if not ref:
+        if not refs:
             return output
 
-        node = output
+        ref_found = False
+        ref_error = None
+        ref_remain = []
+        for ref in listwrap(refs):
+            if not ref.scheme and not ref.path:
+                # DO NOT TOUCH LOCAL REF YET
+                ref_remain.append(ref)
+                ref_found = True
+                continue
 
-        if not ref.scheme and not ref.path:
-            # DO NOT TOUCH LOCAL REF YET
-            output["$ref"] = ref
-            return output
+            if not ref.scheme:
+                # SCHEME RELATIVE IMPLIES SAME PROTOCOL AS LAST TIME, WHICH
+                # REQUIRES THE CURRENT DOCUMENT'S SCHEME
+                ref.scheme = url.scheme
 
-        if not ref.scheme:
-            # SCHEME RELATIVE IMPLIES SAME PROTOCOL AS LAST TIME, WHICH
-            # REQUIRES THE CURRENT DOCUMENT'S SCHEME
-            ref.scheme = url.scheme
+            # FIND THE SCHEME AND LOAD IT
+            if ref.scheme not in scheme_loaders:
+                raise Log.error("unknown protocol {{scheme}}", scheme=ref.scheme)
+            try:
+                new_value = scheme_loaders[ref.scheme](ref, url)
+                ref_found = True
+            except Exception as e:
+                ref_error = e
+                continue
 
-        # FIND THE SCHEME AND LOAD IT
-        if ref.scheme in scheme_loaders:
-            new_value = scheme_loaders[ref.scheme](ref, url)
-        else:
-            raise Log.error("unknown protocol {{scheme}}", scheme=ref.scheme)
+            if ref.fragment:
+                new_value = get_attr(new_value, ref.fragment)
 
-        if ref.fragment:
-            new_value = get_attr(new_value, ref.fragment)
+            DEBUG and Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
 
-        DEBUG and Log.note("Replace {{ref}} with {{new_value}}", ref=ref, new_value=new_value)
+            if not output:
+                output = new_value
+            elif is_text(output):
+                pass  # WE HAVE A VALUE
+            else:
+                set_default(output, new_value)
 
-        if not output:
-            output = new_value
-        elif is_text(output):
-            Log.error("Can not handle set_default({{output}},{{new_value}})", output=output, new_value=new_value)
-        else:
-            output = unwrap(set_default(output, new_value))
-
+        if not ref_found:
+            raise ref_error
+        if ref_remain:
+            output["$ref"] = unwraplist(ref_remain)
         DEBUG and Log.note("Return {{output}}", output=output)
-
         return output
     elif is_list(node):
         output = [_replace_ref(n, url) for n in node]

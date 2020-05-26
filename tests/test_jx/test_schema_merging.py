@@ -267,7 +267,41 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("schema merging not working")
+    def test_select2(self):
+        test = {
+            "data": [
+                {"k": 1, "a": "b"},
+                {"k": 2, "a": {"b": 1}},
+                {"k": 3, "a": {}},
+                {"k": 4, "a": [{"b": 1}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
+                {"k": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"k": 6, "a": 3},
+                {"k": 7, }
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": ["a.b"],
+                "where": {"eq": {"k": 2}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [{"a": {"b": 1}}]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["a.b"],
+                "data": [[1]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "a.b": [1]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
+    # @skip("schema merging not working")
     def test_sum(self):
         test = {
             "data": [

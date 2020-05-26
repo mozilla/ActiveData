@@ -16,8 +16,8 @@ from jx_base.schema import Schema
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, listwrap, split_field
 from mo_dots.lists import last
-from mo_json import STRUCT, NESTED, OBJECT
-from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path
+from mo_json import STRUCT, NESTED, OBJECT, EXISTS
+from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path, EXISTS_TYPE
 from mo_logs import Log
 from mo_math import MAX
 from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
@@ -110,12 +110,14 @@ class ColumnList(Table, jx_base.Container):
                 }
             )
 
+            with Timer("adding columns to structure"):
+                with self.locker:
+                    for r in result.hits.hits._source:
+                        col = doc_to_column(r)
+                        if col:
+                            self._add(col)
+
             Log.note("{{num}} columns loaded", num=result.hits.total)
-            with self.locker:
-                for r in result.hits.hits._source:
-                    col = doc_to_column(r)
-                    if col:
-                        self._add(col)
 
         except Exception as e:
             metadata = self.es_cluster.get_metadata(after=Date.now())
@@ -458,16 +460,24 @@ class ColumnList(Table, jx_base.Container):
 def doc_to_column(doc):
     try:
         doc = wrap(untyped(doc))
+
+        # I HAVE MANAGED TO MAKE MANY MISTAKES WRITING COLUMNS TO ES. HERE ARE THE FIXES
+
+        # FIX
         if not doc.last_updated:
             doc.last_updated = Date.now()-YEAR
 
+        # FIX
         if doc.es_type == None:
             if doc.jx_type == OBJECT:
                 doc.es_type = "object"
             else:
                 Log.warning("{{doc}} has no es_type", doc=doc)
+
+        # FIX
         doc.multi = 1001 if doc.es_type == "nested" else doc.multi
 
+        # FIX
         doc.nested_path = tuple(listwrap(doc.nested_path))
         if last(split_field(doc.es_column)) == NESTED_TYPE and doc.es_type != "nested":
             doc.es_type = "nested"
@@ -475,9 +485,12 @@ def doc_to_column(doc):
             doc.multi = 1001
             doc.last_updated = Date.now()
 
+        # FIX
         expected_nested_path = get_nested_path(doc.es_column)
         if len(doc.nested_path) > 1 and doc.nested_path[-2] == '.':
             doc.nested_path = doc.nested_path[:-1]
+
+        # FIX
         if untype_path(doc.es_column) == doc.es_column:
             if doc.nested_path != (".",):
                 if doc.es_index in {"repo"}:
@@ -488,6 +501,11 @@ def doc_to_column(doc):
         else:
             if doc.nested_path != expected_nested_path:
                 doc.nested_path = expected_nested_path
+
+        # FIX
+        if last(split_field(doc.es_column)) == EXISTS_TYPE:
+            doc.jx_type = EXISTS
+
         return Column(**doc)
     except Exception:
         doc.nested_path = ["."]

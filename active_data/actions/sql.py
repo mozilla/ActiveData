@@ -23,7 +23,7 @@ from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_testing.fuzzytestcase import assertAlmostEqual
-from mo_threads.threads import register_thread
+from mo_threads.threads import register_thread, MAIN_THREAD
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
@@ -61,7 +61,7 @@ def sql_query(path):
                 jx_query = parse_sql(data.sql)
                 if jx_query['from'] != None:
                     if data.meta.testing:
-                        test_mode_wait(jx_query)
+                        test_mode_wait(jx_query, MAIN_THREAD.please_stop)
                     frum = find_container(jx_query['from'], after=None)
                 else:
                     frum = None

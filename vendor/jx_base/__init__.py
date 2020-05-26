@@ -11,13 +11,15 @@ from __future__ import absolute_import, division, unicode_literals
 
 from uuid import uuid4
 
+from mo_json.typed_encoder import EXISTS_TYPE
+
 from jx_base.expressions import jx_expression
 from jx_python.expressions import Literal, Python
 from mo_dots import coalesce, listwrap, wrap
 from mo_dots.datas import register_data
 from mo_dots.lists import last
 from mo_future import is_text, text
-from mo_json import value2json, true, false, null
+from mo_json import value2json, true, false, null, EXISTS
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 
@@ -115,8 +117,7 @@ class {{class_name}}(Mapping):
             "constraint\\n{" + "{code}}\\nnot satisfied {" + "{expect}}\\n{" + "{value|indent}}",
             code={{constraint_expr|quote}}, 
             expect={{constraint}}, 
-            value=row,
-            cause=e
+            value=row
         )
 
     def __init__(self, **kwargs):
@@ -238,6 +239,11 @@ Column = DataClass(
             {"not": {"find": {"es_column": "null"}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
+            {
+                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+                "then": {"eq": {"jx_type": EXISTS}},
+                "else": True
+            },
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},
             {
                 "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},

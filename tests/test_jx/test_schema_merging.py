@@ -301,6 +301,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("complicated where clause needs support")
     def test_where(self):
         test = {
             "data": [
@@ -369,7 +370,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("For Orange query")
+    # @skip("For Orange query")
     def test_edge(self):
         test = {
             "data": [
@@ -394,18 +395,7 @@ class TestSchemaMerging(BaseTestCase):
                     {"b": 4, "v": 5},
                     {"v": 14}
                 ]
-            },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            }
         }
         self.utils.execute_tests(test)
 

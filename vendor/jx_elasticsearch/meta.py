@@ -479,12 +479,12 @@ class ElasticsearchMetadata(Namespace):
 
             es_index = column.es_index.split(".")[0]
 
-            is_text = [
+            is_es_text = [
                 cc
-                for cc in self.meta.columns
-                if cc.es_column == column.es_column and cc.es_type == "text"
+                for cc in self.meta.columns.find(column.es_index, column.es_column)
+                if cc.es_type == "text"
             ]
-            if is_text:
+            if is_es_text:
                 # text IS A MULTIVALUE STRING THAT CAN ONLY BE FILTERED
                 result = self.es_cluster.post(
                     "/" + es_index + "/_search",
@@ -886,7 +886,8 @@ class ElasticsearchMetadata(Namespace):
                             (
                                 DEBUG
                                 and not column.es_index.startswith(TEST_TABLE_PREFIX)
-                            ) and Log.note("updated {{column.name}}", column=column)
+                                and Log.note("updated {{column.name}}", column=column)
+                            )
                         except Exception as e:
                             if '"status":404' in e:
                                 self.meta.columns.update(
@@ -1111,11 +1112,7 @@ class Schema(jx_base.Schema):
                 if (
                     (c.name != "_id" or clean_name == "_id")
                     and (
-                        (
-                            c.jx_type == EXISTS
-                            and column_name.endswith("." + EXISTS_TYPE)
-                        )
-                        or c.jx_type not in OBJECTS
+                        c.jx_type not in OBJECTS
                         or (clean_name == "." and c.cardinality == 0)
                     )
                     and startswith_field(

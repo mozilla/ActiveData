@@ -89,22 +89,7 @@ class ColumnList(Table, jx_base.Container):
 
             result = self.es_index.search(
                 {
-                    "query": {
-                        "bool": {
-                            "should": [
-                                {
-                                    "bool": {
-                                        "must_not": {
-                                            "exists": {"field": "cardinality.~n~"}
-                                        }
-                                    }
-                                },
-                                {  # ASSUME UNUSED COLUMNS DO NOT EXIST
-                                    "range": {"cardinality.~n~": {"gt": 0}}
-                                },
-                            ]
-                        }
-                    },
+                    "query": {"match_all": {}},
                     "sort": ["es_index.~s~", "name.~s~", "es_column.~s~"],
                     "size": 10000,
                 }

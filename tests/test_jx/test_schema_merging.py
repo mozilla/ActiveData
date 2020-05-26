@@ -301,7 +301,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("schema merging not working")
+    # @skip("schema merging not working")
     def test_sum(self):
         test = {
             "data": [

@@ -21,7 +21,7 @@ from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
-from mo_times import YEAR
+from mo_times import YEAR, Timer
 from mo_times.dates import Date
 
 DEBUG = False

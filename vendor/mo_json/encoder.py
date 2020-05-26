@@ -122,22 +122,6 @@ class cPythonJSONEncoder(object):
             raise e
 
 
-def ujson_encode(value, pretty=False):
-    if pretty:
-        return pretty_json(value)
-
-    try:
-        scrubbed = scrub(value)
-        return ujson_dumps(scrubbed, ensure_ascii=False, sort_keys=True, escape_forward_slashes=False).decode('utf8')
-    except Exception as e:
-        from mo_logs.exceptions import Except
-        from mo_logs import Log
-
-        e = Except.wrap(e)
-        Log.warning("problem serializing {{type}}", type=text(repr(value)), cause=e)
-        raise e
-
-
 def _value2json(value, _buffer):
     try:
         _class = value.__class__
@@ -501,14 +485,9 @@ def unicode_key(key):
     return quote(text(key))
 
 
-# OH HUM, cPython with uJSON, OR pypy WITH BUILTIN JSON?
-# http://liangnuren.wordpress.com/2012/08/13/python-json-performance/
-# http://morepypy.blogspot.ca/2011/10/speeding-up-json-encoding-in-pypy.html
 if PYPY:
     json_encoder = pypy_json_encode
 else:
-    # from ujson import dumps as ujson_dumps
-    # json_encoder = ujson_encode
     json_encoder = cPythonJSONEncoder().encode
 
 

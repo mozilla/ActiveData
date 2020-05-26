@@ -329,7 +329,7 @@ class TestSchemaMerging(BaseTestCase):
             "expecting_cube": {
                 "meta": {"format": "cube"},
                 "data": {
-                    "a.b": [2, 4]
+                    "k": [2, 4]
                 }
             }
         }

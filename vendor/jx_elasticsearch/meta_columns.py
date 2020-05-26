@@ -89,7 +89,22 @@ class ColumnList(Table, jx_base.Container):
 
             result = self.es_index.search(
                 {
-                    "query": {"match_all": {}},
+                    "query": {
+                        "bool": {
+                            "should": [
+                                {
+                                    "bool": {
+                                        "must_not": {
+                                            "exists": {"field": "cardinality.~n~"}
+                                        }
+                                    }
+                                },
+                                {  # ASSUME UNUSED COLUMNS DO NOT EXIST
+                                    "range": {"cardinality.~n~": {"gt": -1}}
+                                },
+                            ]
+                        }
+                    },
                     "sort": ["es_index.~s~", "name.~s~", "es_column.~s~"],
                     "size": 10000,
                 }
@@ -482,7 +497,7 @@ def doc_to_column(doc):
 
 def mark_as_deleted(col):
     col.count = 0
-    col.cardinality = 0
+    col.cardinality = -1
     col.multi = 1001 if col.es_type == "nested" else 0,
     col.partitions = None
     col.last_updated = Date.now()

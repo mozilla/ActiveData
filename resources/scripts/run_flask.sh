@@ -2,7 +2,7 @@
 
 cd ~/ActiveData
 git checkout master
-git clean -nfxd
+git clean -fxd
 
 
 export PYTHONPATH=.:vendor

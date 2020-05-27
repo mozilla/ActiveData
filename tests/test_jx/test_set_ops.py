@@ -1358,7 +1358,7 @@ class TestSetOps(BaseTestCase):
         self.utils.fill_container(subtest)
         self.utils.send_queries(subtest)
 
-    def test_exists_in_deep_where_clause(self):
+    def test_prefix_in_deep_where_clause(self):
         test = {
             "data": [
                 {"a": "test1"},
@@ -1377,6 +1377,31 @@ class TestSetOps(BaseTestCase):
                     {"a": "test1"},
                     {"a": "test2"},
                     {"a": "test3"},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
+
+    def test_exists_in_where_clause(self):
+        test = {
+            "data": [
+                {"a": "test1"},
+                {"a": 0},
+                {"a": False},
+                {"a": {"b": 3}},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"exists": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "test1"},
+                    {"a": 0},
+                    {"a": False},
+                    {"a": {"b": 3}},
                 ]
             },
         }

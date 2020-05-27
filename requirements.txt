@@ -6,4 +6,4 @@ requests==2.18.4
 moz-sql-parser
 boto==2.48.0
 beautifulsoup4==4.6.0
-cryptography==2.1.4
+

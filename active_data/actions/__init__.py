@@ -52,7 +52,7 @@ def send_error(active_data_timer, body, e):
     return Response(value2json(e).encode("utf8"), status=status)
 
 
-def test_mode_wait(query):
+def test_mode_wait(query, please_stop):
     """
     WAIT FOR METADATA TO ARRIVE ON INDEX
     :param query: dict() OF REQUEST BODY
@@ -76,7 +76,7 @@ def test_mode_wait(query):
         ):
             metadata_manager = find_container(alias, after=after).namespace
 
-            timeout = Till(seconds=MINUTE.seconds)
+            timeout = Till(seconds=MINUTE.seconds) | please_stop
             while not timeout:
                 # GET FRESH VERSIONS
                 cols = metadata_manager.get_columns(

@@ -301,6 +301,41 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+    @skip("complicated where clause needs support")
+    def test_where(self):
+        test = {
+            "data": [
+                {"k": 1, "a": "b"},
+                {"k": 2, "a": {"b": 1}},
+                {"k": 3, "a": {}},
+                {"k": 4, "a": [{"b": 1}, {"b": 2}]},  # TEST THAT INNER CAN BE MAPPED TO NESTED
+                {"k": 5, "a": {"b": 4}},  # TEST THAT INNER IS MAPPED TO NESTED, AFTER SEEING NESTED
+                {"k": 6, "a": 3},
+                {"k": 7, }
+            ],
+            "query": {
+                "from": TEST_TABLE + ".a",
+                "select": ["k"],
+                "where": {"eq": {"a.b": 1}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [{"k": 2}, {"k": 4}]
+            },
+            "expecting_table": {
+                "meta": {"format": "table"},
+                "header": ["k"],
+                "data": [[2], [4]]
+            },
+            "expecting_cube": {
+                "meta": {"format": "cube"},
+                "data": {
+                    "k": [2, 4]
+                }
+            }
+        }
+        self.utils.execute_tests(test)
+
     # @skip("schema merging not working")
     def test_sum(self):
         test = {
@@ -360,18 +395,7 @@ class TestSchemaMerging(BaseTestCase):
                     {"b": 4, "v": 5},
                     {"v": 14}
                 ]
-            },
-            # "expecting_table": {
-            #     "meta": {"format": "table"},
-            #     "header": ["a.b"],
-            #     "data": [[8]]
-            # },
-            # "expecting_cube": {
-            #     "meta": {"format": "cube"},
-            #     "data": {
-            #         "a.b": 8
-            #     }
-            # }
+            }
         }
         self.utils.execute_tests(test)
 

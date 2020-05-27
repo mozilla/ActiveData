@@ -20,7 +20,7 @@ from mo_files import File
 from mo_future import binary_type
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
-from mo_threads.threads import register_thread
+from mo_threads.threads import register_thread, MAIN_THREAD
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
@@ -53,7 +53,7 @@ def jx_query(path):
                 data = json2value(text)
                 record_request(flask.request, data, None, None)
                 if data.meta.testing:
-                    test_mode_wait(data)
+                    test_mode_wait(data, MAIN_THREAD.please_stop)
 
             find_table_timer = Timer("find container", verbose=DEBUG)
             with find_table_timer:

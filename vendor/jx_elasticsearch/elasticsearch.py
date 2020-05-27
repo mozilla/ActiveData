@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import ast
 import re
-from collections import namedtuple
 from copy import deepcopy
 
 from jx_base import Column
@@ -21,6 +20,7 @@ from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_fiel
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
+from mo_http import http
 from mo_json import BOOLEAN, EXISTS, NESTED, NUMBER, OBJECT, STRING, json2value, value2json
 from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER_TYPE, STRING_TYPE, TYPE_PREFIX, \
     json_type_to_inserter_type
@@ -30,8 +30,7 @@ from mo_logs.exceptions import Except, suppress_exception
 from mo_math import is_integer, is_number
 from mo_math.randoms import Random
 from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP, Thread, MAIN_THREAD
-from mo_times import Date, Timer, HOUR, dates, Duration
-from mo_http import http
+from mo_times import Date, Timer, HOUR, Duration
 
 DEBUG = True
 DEBUG_METADATA_UPDATE = False
@@ -1284,9 +1283,9 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
             nested_path=nested_path
         ))
 
-    for name, property in esProperties.items():
+    for short_name, property in esProperties.items():
         index_name = parent_index_name
-        column_name = concat_field(parent_name, name)
+        column_name = concat_field(parent_name, short_name)
         jx_name = column_name
 
         if property.type == "nested" and property.properties:
@@ -1325,7 +1324,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
         if not property.type:
             continue
 
-        cardinality = 0 if not (property.store or property.enabled) and name != '_id' else None
+        cardinality = 0 if not (property.store or property.enabled) and short_name != '_id' else None
 
         if property.fields:
             child_columns = parse_properties(index_name, column_name, nested_path, property.fields)
@@ -1334,7 +1333,18 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                     cc.cardinality = None
             columns.extend(child_columns)
 
-        if property.type in es_type_to_json_type.keys():
+        if short_name == EXISTS_TYPE:
+            columns.append(Column(
+                name=jx_name,
+                es_index=index_name,
+                es_column=column_name,
+                es_type=property.type,
+                jx_type=EXISTS,
+                cardinality=cardinality,
+                last_updated=Date.now(),
+                nested_path=nested_path
+            ))
+        elif property.type in es_type_to_json_type.keys():
             columns.append(Column(
                 name=jx_name,
                 es_index=index_name,
@@ -1345,7 +1355,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))
-            if property.index_name and name != property.index_name:
+            if property.index_name and short_name != property.index_name:
                 columns.append(Column(
                     name=jx_name,
                     es_index=index_name,

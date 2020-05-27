@@ -933,18 +933,19 @@ class ElasticsearchMetadata(Namespace):
                 verbose=DEBUG,
                 too_long=0.05,
             ):
-                if (
-                    column.jx_type in STRUCT
-                    or split_field(column.es_column)[-1] == EXISTS_TYPE
-                ):
+                if column.jx_type in STRUCT:
                     # DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
                     continue
                 elif after and column.last_updated > after:
                     continue  # COLUMN IS STILL YOUNG
-                elif (
-                    column.last_updated > Date.now() - TOO_OLD
-                    and column.cardinality > 0
-                ):
+                elif column.cardinality == 0:
+                    # DO NOT UPDATE DELETED COLUMNS
+                    DEBUG and Log.note(
+                        "{{column.es_column}} does not exist, do not update",
+                        column=column,
+                    )
+                    continue
+                elif column.last_updated > Date.now() - TOO_OLD:
                     # DO NOT UPDATE FRESH COLUMN METADATA
                     DEBUG and Log.note(
                         "{{column.es_column}} is still fresh ({{ago}} ago)",
@@ -952,8 +953,7 @@ class ElasticsearchMetadata(Namespace):
                         ago=(Date.now() - Date(column.last_updated)).seconds,
                     )
                     continue
-
-                if untype_path(column.name) in KNOWN_MULTITYPES:
+                elif untype_path(column.name) in KNOWN_MULTITYPES:
                     try:
                         self._update_cardinality(column)
                     except Exception as e:
@@ -968,12 +968,10 @@ class ElasticsearchMetadata(Namespace):
                     {
                         "set": {"last_updated": Date.now()},
                         "clear": ["count", "cardinality", "multi", "partitions"],
-                        "where": {
-                            "eq": {
-                                "es_index": column.es_index,
-                                "es_column": column.es_column,
-                            }
-                        },
+                        "where": {"eq": {
+                            "es_index": column.es_index,
+                            "es_column": column.es_column,
+                        }}
                     }
                 )
 

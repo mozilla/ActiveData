@@ -10,6 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.container import type2container
+
+import jx_elasticsearch
+from jx_elasticsearch.es52 import ES52
+
 from jx_python import jx
 from mo_future import text
 
@@ -287,11 +292,66 @@ class TestESSpecial(BaseTestCase):
         pass
 
     def test_columns_not_leaked(self):
+        alias = "testing_replace"
+        index_name = "testing_replace-20200527_000000"
+        cluster = self.utils._es_cluster
+        common = Data(
+            alias=alias,
+            limit_replicas=True,
+            limit_replicas_warning=False,
+            read_only=False,
+            typed=True,
+            type=cluster.settings.type,
+            schema= {},
+
+        )
+
         # MAKE INDEX WITH ALIAS
+        try:
+            cluster.delete_index(index_name)
+        except Exception:
+            pass
+        index1 = cluster.create_index(
+            index=index_name,
+            kwargs=common
+        )
+        index1.add_alias(common.alias)
+
         # ADD DATA
+        index1.add({"value": {"a": 1}})
+        index1.refresh()
+        # REGISTER JX QUERIES TO OPERATE ON ES
+        type2container.setdefault("elasticsearch", ES52)
+        # FORCE RELOAD
+        found_container = find_container(alias, after=Date.now())
+
         # VERIFY SCHEMA OF DATA
+        columns = found_container.snowflake.columns
+        self.assertEqual(columns.get("es_column"), {'.', '_id', 'a', 'a.~n~', '~e~'})
+
         # DROP INDEX
+        try:
+            cluster.delete_index(index_name)
+        except Exception:
+            pass
+
         # MAKE NEW INDEX, WITH SAME NAME
+        index1 = cluster.create_index(
+            index=index_name,
+            kwargs=common
+        )
+        index1.add_alias(common.alias)
+
         # ADD OTHER DATA
+        index1.add({"value": {"b": 2}})
+        index1.refresh()
+
+        while index1.search({"query": {"match_all": {}}, "size": 0}).hits.hits.total < 1:
+            pass
+
+        # FORCE RELOAD
+        new_found_container = find_container(alias, after=Date.now())
+
         # VERIFY OLD SCHEMA DOES NOT EXIST
-        pass
+        columns = wrap([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
+        self.assertEqual(columns.get("es_column"), {'.', '_id', 'b', 'b.~n~', '~e~'})

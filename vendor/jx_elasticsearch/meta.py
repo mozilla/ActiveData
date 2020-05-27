@@ -238,12 +238,12 @@ class ElasticsearchMetadata(Namespace):
         columns = self._parse_properties(alias, mapping)
         table_desc.last_updated = now
 
-        column_names = {c.es_column for c in columns}
+        existing_columns = {c.es_column for c in columns}
         # DELETE SOME COLUMNS
         try:
             current_columns = self.meta.columns.find(alias)
             for c in current_columns:
-                if c.es_column not in column_names:
+                if c.es_column not in existing_columns:
                     self.meta.columns.remove(c, now)
         except Exception as e:
             Log.warning("problem removing columns from {{table}}", table=alias, cause=e)
@@ -860,17 +860,19 @@ class ElasticsearchMetadata(Namespace):
                                 }
                             )
                             continue
-                        if (
-                            column.jx_type in STRUCT
-                            or split_field(column.es_column)[-1] == EXISTS_TYPE
-                        ):
+                        if column.jx_type == EXISTS:
+                            column.multi = 1
+                            column.cardinality = 1
+                            column.last_updated = now
+                            continue
+                        elif column.jx_type in (OBJECT, NESTED):
                             if (
                                 column.es_type == "nested"
                                 or last(split_field(column.es_column)) == NESTED_TYPE
                             ) and (column.multi == None or column.multi < 2):
                                 column.multi = 1001
                                 Log.warning("fixing multi on nested problem")
-                            # DEBUG and Log.note("{{column.es_column}} is a struct, not scanned", column=column)
+
                             column.last_updated = now
                             continue
                         elif column.cardinality is None:

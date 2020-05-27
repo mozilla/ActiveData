@@ -179,7 +179,11 @@ class ColumnList(Table, jx_base.Container):
                 self._update_meta()
 
             if not abs_column_name:
-                return [c for cs in self.data.get(es_index, {}).values() for c in cs]
+                return [
+                    c
+                    for cs in self.data.get(es_index, {}).values()
+                    for c in cs
+                ]
             else:
                 return self.data.get(es_index, {}).get(abs_column_name, [])
 
@@ -201,11 +205,11 @@ class ColumnList(Table, jx_base.Container):
     def remove(self, column, after):
         if column.last_updated > after:
             return
+        mark_as_deleted(column)
         with self.locker:
             canonical = self._add(column)
         if canonical:
             Log.error("Expecting canonical column to be removed")
-        mark_as_deleted(column)
         DEBUG and Log.note("delete {{col|quote}}, at {{timestamp}}", col=column.es_column, timestamp=column.last_updated)
         self.for_es_update.add(column)
 
@@ -460,6 +464,7 @@ class ColumnList(Table, jx_base.Container):
 def doc_to_column(doc):
     try:
         doc = wrap(untyped(doc))
+        now = Date.now()
 
         # I HAVE MANAGED TO MAKE MANY MISTAKES WRITING COLUMNS TO ES. HERE ARE THE FIXES
 
@@ -483,12 +488,13 @@ def doc_to_column(doc):
             doc.es_type = "nested"
             doc.jx_type = NESTED
             doc.multi = 1001
-            doc.last_updated = Date.now()
+            doc.last_updated = now
 
         # FIX
         expected_nested_path = get_nested_path(doc.es_column)
         if len(doc.nested_path) > 1 and doc.nested_path[-2] == '.':
             doc.nested_path = doc.nested_path[:-1]
+            doc.last_updated = now
 
         # FIX
         if untype_path(doc.es_column) == doc.es_column:
@@ -498,18 +504,31 @@ def doc_to_column(doc):
                 else:
                     Log.note("not expected")
                     doc.nested_path = expected_nested_path
+                    doc.last_updated = now
         else:
             if doc.nested_path != expected_nested_path:
                 doc.nested_path = expected_nested_path
+                doc.last_updated = now
 
         # FIX
         if last(split_field(doc.es_column)) == EXISTS_TYPE:
-            doc.jx_type = EXISTS
+            if doc.jx_type != EXISTS or doc.cardinality != 1:
+                doc.jx_type = EXISTS
+                doc.cardinality = 1
+                doc.last_updated = now
+
+        # FIX
+        if doc.jx_type in (OBJECT, NESTED):
+            if doc.cardinality not in [0, 1]:
+                doc.cardinality = 1  # DO NOT KNOW IF EXISTS OR NOT
+                doc.last_updated = now
 
         return Column(**doc)
-    except Exception:
-        doc.nested_path = ["."]
-        mark_as_deleted(Column(**doc))
+    except Exception as e:
+        try:
+            mark_as_deleted(Column(**doc))
+        except Exception:
+            pass
         return None
 
 

@@ -118,19 +118,17 @@ class ES52(Container):
                     all_paths[step] = best
             for p in all_paths.keys():
                 nested_path = nested_path_of(p)
-                try:
-                    self.namespace.meta.columns.add(Column(
-                        name=p,
-                        es_column=p,
-                        es_index=self.name,
-                        es_type=OBJECT,
-                        jx_type=OBJECT,
-                        nested_path=nested_path,
-                        multi=1001 if last(split_field(p)) == NESTED_TYPE else None,
-                        last_updated=Date.now()
-                    ))
-                except Exception as e:
-                    raise e
+                self.namespace.meta.columns.add(Column(
+                    name=p,
+                    es_column=p,
+                    es_index=self.name,
+                    es_type=OBJECT,
+                    jx_type=OBJECT,
+                    cardinality=1,
+                    nested_path=nested_path,
+                    multi=1001 if last(split_field(p)) == NESTED_TYPE else None,
+                    last_updated=Date.now()
+                ))
 
     @property
     def snowflake(self):

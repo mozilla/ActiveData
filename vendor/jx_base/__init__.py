@@ -19,7 +19,7 @@ from mo_dots import coalesce, listwrap, wrap
 from mo_dots.datas import register_data
 from mo_dots.lists import last
 from mo_future import is_text, text
-from mo_json import value2json, true, false, null, EXISTS
+from mo_json import value2json, true, false, null, EXISTS, OBJECT, NESTED
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 
@@ -242,6 +242,21 @@ Column = DataClass(
             {
                 "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
                 "then": {"eq": {"jx_type": EXISTS}},
+                "else": True
+            },
+            {
+                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+                "then": {"gt": {"cardinality": 0}},
+                "else": True
+            },
+            {
+                "when": {"eq": {"jx_type": OBJECT}},
+                "then": {"in": {"cardinality": [0, 1]}},
+                "else": True
+            },
+            {
+                "when": {"eq": {"jx_type": NESTED}},
+                "then": {"in": {"cardinality": [0, 1]}},
                 "else": True
             },
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},

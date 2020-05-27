@@ -224,6 +224,10 @@ class Index(object):
         return True
 
     def flush(self, forced=False):
+        """
+        TELL ES TO FLUSH TO DISK (DO NOT USE)
+        """
+        Log.warning("depreciated: Do not use")
         try:
             self.cluster.post("/" + self.settings.index + "/_flush", data={"wait_if_ongoing": True, "forced": forced})
         except Exception as e:
@@ -233,6 +237,9 @@ class Index(object):
                 Log.error("Problem flushing", cause=e)
 
     def refresh(self):
+        """
+        TELL ES TO INDEX THE GIVEN DATA, FLUSH MAY NOT HAPPEN
+        """
         self.cluster.post("/" + self.settings.index + "/_refresh")
 
     def delete_record(self, filter):
@@ -706,6 +713,7 @@ class Cluster(object):
         limit_replicas_warning=True,
         read_only=False,
         typed=True,
+        type=None,
         kwargs=None
     ):
         if kwargs.tjson != None:
@@ -731,6 +739,16 @@ class Cluster(object):
             Log.error("Expecting a JSON schema")
         else:
             schema = wrap(schema)
+
+        if type != None:
+            if len(schema.mappings) and type not in schema.mappings:
+                Log.error(
+                    "if you declare type={{type}}, and you declare a schema, then {{type}} is expected in the schema",
+                    type=type
+                )
+            schema.mappings = {type: {}}
+        elif len(schema.mappings) == 0:
+            Log.error("Expecting a schema, even if only the name of the type")
 
         for k, m in items(schema.mappings):
             if typed:
@@ -1294,6 +1312,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
             es_column='.',
             es_type="object",
             jx_type=OBJECT,
+            cardinality=1,
             last_updated=Date.now(),
             nested_path=nested_path
         ))
@@ -1330,6 +1349,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_column=column_name,
                 es_type="source" if property.enabled == False else "object",
                 jx_type=OBJECT,
+                cardinality=1,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))

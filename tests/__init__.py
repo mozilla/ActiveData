@@ -195,7 +195,7 @@ class ESUtils(object):
             if '"null"' in value2json(subtest.data):
                 Log.error("not expected")
             container.extend([{"value": d} for d in subtest.data])
-            container.flush()
+            container.refresh()
 
             now = Date.now()
             namespace = ElasticsearchMetadata(self._es_cluster.settings)

@@ -741,13 +741,15 @@ class Cluster(object):
             schema = wrap(schema)
 
         if type != None:
-            if len(schema.mappings) and type not in schema.mappings:
-                Log.error(
-                    "if you declare type={{type}}, and you declare a schema, then {{type}} is expected in the schema",
-                    type=type
-                )
-            schema.mappings = {type: {}}
-        elif len(schema.mappings) == 0:
+            if schema.mappings:
+                if type not in schema.mappings:
+                    Log.error(
+                        "if you declare type={{type}}, and you declare a schema, then {{type}} is expected in the schema",
+                        type=type
+                    )
+            else:
+                schema.mappings = {type: {}}
+        elif not schema.mappings:
             Log.error("Expecting a schema, even if only the name of the type")
 
         for k, m in items(schema.mappings):
@@ -1333,6 +1335,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_column=column_name,
                 es_type="nested",
                 jx_type=NESTED,
+                cardinality=1,
                 multi=1001,
                 last_updated=Date.now(),
                 nested_path=nested_path
@@ -1375,7 +1378,7 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 es_column=column_name,
                 es_type=property.type,
                 jx_type=EXISTS,
-                cardinality=cardinality,
+                cardinality=1,
                 last_updated=Date.now(),
                 nested_path=nested_path
             ))

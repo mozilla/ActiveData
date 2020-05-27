@@ -246,7 +246,7 @@ Column = DataClass(
             },
             {
                 "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
-                "then": {"gt": {"cardinality": 0}},
+                "then": {"exists": "cardinality"},
                 "else": True
             },
             {

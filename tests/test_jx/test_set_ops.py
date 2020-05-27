@@ -1358,13 +1358,13 @@ class TestSetOps(BaseTestCase):
         self.utils.fill_container(subtest)
         self.utils.send_queries(subtest)
 
-    def test_exists_in_where_clause(self):
+    def test_exists_in_deep_where_clause(self):
         test = {
             "data": [
                 {"a": "test1"},
                 {"a": "test2"},
                 {"a": "test3"},
-                {"a": None},
+                {"a": {"b": 3}},
                 {},
             ],
             "query": {

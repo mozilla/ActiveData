@@ -258,5 +258,5 @@ class ES52(Container):
             self.es.delete_record(es_filter)
             return
 
-        es_index.flush()
+        es_index.refresh()
 

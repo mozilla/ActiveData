@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_logs import Log
+
 from jx_base.expressions import (
     FALSE,
     NULL,
@@ -24,6 +26,7 @@ from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from jx_elasticsearch.es52.painless import StringOp as PainlessStringOp, PrefixOp as PainlessPrefixOp
 from mo_future import first
+from mo_json import STRING
 
 
 class PrefixOp(PrefixOp_):
@@ -54,7 +57,7 @@ class PrefixOp(PrefixOp_):
             expr = expr.term
 
         if is_op(expr, Variable_) and is_literal(self.prefix):
-            col = first(schema.leaves(expr.var))
+            col = first(schema.values(expr.var))
             if not col:
                 return MATCH_NONE
             return {"prefix": {col.es_column: self.prefix.value}}

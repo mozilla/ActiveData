@@ -54,7 +54,6 @@ from mo_future import first, long, none_type, text
 from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT, NESTED
 from mo_json.typed_encoder import (
     BOOLEAN_TYPE,
-    EXISTS_TYPE,
     NUMBER_TYPE,
     STRING_TYPE,
     unnest_path,
@@ -234,7 +233,7 @@ class ElasticsearchMetadata(Namespace):
         now = self.es_cluster.metatdata_last_updated
         meta = metadata.indices[literal_field(canonical_index)]
         es_details, mapping = _get_best_type_from_mapping(meta.mappings)
-        mapping.properties["_id"] = {"type": "string", "index": "not_analyzed"}
+        mapping.properties["_id"] = {"type": "keyword"}
         columns = self._parse_properties(alias, mapping)
         table_desc.last_updated = now
 
@@ -437,7 +436,7 @@ class ElasticsearchMetadata(Namespace):
         if column.es_index in self.index_does_not_exist:
             return
 
-        if column.jx_type in STRUCT:
+        if column.jx_type in (OBJECT, NESTED):
             Log.error("not supported")
         try:
             if column.es_index == META_TABLES_NAME:
@@ -494,6 +493,14 @@ class ElasticsearchMetadata(Namespace):
                     data={"query": {"match_all": {}}, "size": 0},
                 )
                 count = cardinality = result.hits.total
+                multi = 1
+            elif column.es_type == EXISTS:
+                result = self.es_cluster.post(
+                    "/" + es_index + "/_search",
+                    data={"query": {"bool": {"must_not": {"missing": column.es_column}}}, "size": 0},
+                )
+                count = result.hits.total
+                cardinality = 1
                 multi = 1
             elif column.es_type == BOOLEAN:
                 result = self.es_cluster.post(
@@ -861,10 +868,7 @@ class ElasticsearchMetadata(Namespace):
                             )
                             continue
                         if column.jx_type == EXISTS:
-                            column.multi = 1
-                            column.cardinality = 1
-                            column.last_updated = now
-                            continue
+                            pass  # WE MUST PROBE ES TO SEE IF STILL EXISTS
                         elif column.jx_type in (OBJECT, NESTED):
                             if (
                                 column.es_type == "nested"
@@ -1141,6 +1145,7 @@ class Schema(jx_base.Schema):
                 for c in columns
                 if (
                     (c.name != "_id" or clean_name == "_id")
+                    and c.cardinality != 0
                     and c.jx_type not in OBJECTS
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
@@ -1151,58 +1156,7 @@ class Schema(jx_base.Schema):
                 return set(output)
         return set()
 
-    def new_leaves(self, column_name):
-        """
-        :param column_name:
-        :return: ALL COLUMNS THAT START WITH column_name, INCLUDING DEEP COLUMNS
-        """
-        column_name = unnest_path(column_name)
-        columns = self.columns
-        all_paths = self.snowflake.sorted_query_paths
-
-        output = {}
-        for c in columns:
-            if c.name == "_id" and column_name != "_id":
-                continue
-            if c.jx_type in OBJECTS:
-                continue
-            if c.cardinality == 0:
-                continue
-            for path in all_paths:
-                if not startswith_field(
-                    unnest_path(relative_field(c.name, path)), column_name
-                ):
-                    continue
-                existing = output.get(path)
-                if not existing:
-                    output[path] = [c]
-                    continue
-                if len(path) > len(c.nested_path[0]):
-                    continue
-                if any(
-                    "." + t + "." in c.es_column
-                    for t in (STRING_TYPE, NUMBER_TYPE, BOOLEAN_TYPE)
-                ):
-                    # ELASTICSEARCH field TYPES ARE NOT ALLOWED
-                    continue
-                # ONLY THE DEEPEST COLUMN WILL BE CHOSEN
-                output[path].append(c)
-        return set(output.values())
-
-    def both_leaves(self, column_name):
-        old = self.old_leaves(column_name)
-        new = self.new_leaves(column_name)
-
-        if old != new:
-            Log.error(
-                "not the same: {{old}}, {{new}}",
-                old=[c.name for c in old],
-                new=[c.name for c in new],
-            )
-
-        return new
-
-    def values(self, column_name, exclude_type=STRUCT):
+    def values(self, column_name, exclude_type=(OBJECT, NESTED)):
         """
         RETURN ALL COLUMNS THAT column_name REFERS TO
         """
@@ -1214,8 +1168,8 @@ class Schema(jx_base.Schema):
             for c in columns:
                 if c.jx_type in exclude_type:
                     continue
-                # if c.cardinality == 0:
-                #     continue
+                if c.cardinality == 0:
+                    continue
                 if untype_path(c.name) == full_path:
                     output.append(c)
             if output:

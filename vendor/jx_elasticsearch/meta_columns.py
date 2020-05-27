@@ -512,8 +512,11 @@ def doc_to_column(doc):
 
         # FIX
         if last(split_field(doc.es_column)) == EXISTS_TYPE:
-            if doc.jx_type != EXISTS or doc.cardinality != 1:
+            if doc.jx_type != EXISTS:
                 doc.jx_type = EXISTS
+                doc.last_updated = now
+
+            if doc.cardinality == None:
                 doc.cardinality = 1
                 doc.last_updated = now
 

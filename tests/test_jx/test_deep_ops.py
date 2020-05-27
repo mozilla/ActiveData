@@ -621,14 +621,14 @@ class TestDeepOps(BaseTestCase):
     def test_deep_where_on_fact_table(self):
         test = {
             "data": [
-                {"o": 3, "a": {"_a": [
-                    {"v": "a string", "s": False},
-                    {"v": "another string"}
-                ]}},
                 {"o": 1, "a": {"_a": {
                     "v": "still more",
                     "s": False
                 }}},
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
                 {"o": 2, "a": {"_a": [
                     {"v": "string!", "s": True},
                 ]}},
@@ -636,8 +636,8 @@ class TestDeepOps(BaseTestCase):
             ],
             "query": {
                 "from": TEST_TABLE,
-                "select": ["o", "v"],
-                "where": {"exists": "v"}
+                "select": ["o", "a._a.v"],
+                "where": {"exists": "a._a.v"}
             },
             "expecting_list": {
                 "meta": {"format": "list"},

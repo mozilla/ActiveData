@@ -1358,6 +1358,28 @@ class TestSetOps(BaseTestCase):
         self.utils.fill_container(subtest)
         self.utils.send_queries(subtest)
 
-
+    def test_exists_in_where_clause(self):
+        test = {
+            "data": [
+                {"a": "test1"},
+                {"a": "test2"},
+                {"a": "test3"},
+                {"a": None},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"prefix": {"a": "test"}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "test1"},
+                    {"a": "test2"},
+                    {"a": "test3"},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
 
 

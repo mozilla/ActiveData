@@ -100,7 +100,7 @@ class ColumnList(Table, jx_base.Container):
                                     }
                                 },
                                 {  # ASSUME UNUSED COLUMNS DO NOT EXIST
-                                    "range": {"cardinality.~n~": {"gt": -1}}
+                                    "range": {"cardinality.~n~": {"gte": 0}}
                                 },
                             ]
                         }

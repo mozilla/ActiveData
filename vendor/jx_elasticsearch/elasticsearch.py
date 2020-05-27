@@ -368,10 +368,25 @@ class Index(object):
             else:
                 details = {"properties": {n: set_default(details, {"type": "object", "dynamic": True})}}
 
-        self.cluster.put(
-            "/" + self.settings.index + "/_mapping/" + self.settings.type,
-            data=details
-        )
+        try:
+            self.cluster.put(
+                "/" + self.settings.index + "/_mapping/" + self.settings.type,
+                data=details,
+
+            )
+        except Exception as e:
+            if "Limit of total fields [" in e:
+                self.cluster.put(
+                    "/" + self.settings.index + "/_settings",
+                    data={"index.mapping.total_fields.limit": 2000},
+                    timeout=600
+                )
+                self.cluster.put(
+                    "/" + self.settings.index + "/_mapping/" + self.settings.type,
+                    data=details
+                )
+            else:
+               raise e
 
     def refresh(self):
         self.cluster.post("/" + self.settings.index + "/_refresh")

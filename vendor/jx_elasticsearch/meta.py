@@ -176,7 +176,7 @@ class ElasticsearchMetadata(Namespace):
         ]
 
         # CONFIRM ALL COLUMNS ARE SAME, FIX IF NOT
-        dirty = False
+        dirty = 0
         all_comparisions = list(jx.pairwise(props)) + list(
             jx.pairwise(jx.reverse(props))
         )
@@ -188,7 +188,7 @@ class ElasticsearchMetadata(Namespace):
                     # QUERYING OBJECTS RETURNS NOTHING
                     continue
                 col = first(self.meta.columns.find(alias, name))
-                if col and col.last_updated > after and col.cardinality == 0:
+                if col and col.last_updated > after and col.cardinality <= 0:
                     continue
                 if col and col.jx_type in STRUCT:
                     continue
@@ -201,7 +201,7 @@ class ElasticsearchMetadata(Namespace):
                                 {"query": {"exists": {"field": name}}, "size": 0}
                             )
                             if result.hits.total > 0:
-                                dirty = True
+                                dirty += 1
                                 i1.add_property(name, es_details)
                                 break
                         except Exception as e:

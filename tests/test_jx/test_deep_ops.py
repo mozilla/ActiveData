@@ -618,6 +618,46 @@ class TestDeepOps(BaseTestCase):
 
         self.utils.execute_tests(test)
 
+    def test_deep_where_on_fact_table(self):
+        test = {
+            "data": [
+                {"o": 3, "a": {"_a": [
+                    {"v": "a string", "s": False},
+                    {"v": "another string"}
+                ]}},
+                {"o": 1, "a": {"_a": {
+                    "v": "still more",
+                    "s": False
+                }}},
+                {"o": 2, "a": {"_a": [
+                    {"v": "string!", "s": True},
+                ]}},
+                {"o": 4, "a": {"_a": {"s": False}}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": ["o", "v"],
+                "where": {"exists": "v"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"o": 1, "a": {"_a": {
+                        "v": "still more",
+                        "s": False
+                    }}},
+                    {"o": 3, "a": {"_a": [
+                        {"v": "a string", "s": False},
+                        {"v": "another string"}
+                    ]}},
+                    {"o": 2, "a": {"_a": [
+                        {"v": "string!", "s": True},
+                    ]}}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
     def test_id_select(self):
         """
         ALWAYS GOOD TO HAVE AN ID, CALL IT "_id"

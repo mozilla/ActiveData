@@ -964,6 +964,7 @@ class ElasticsearchMetadata(Namespace):
                         )
                     continue
 
+                # SET THE REST TO UNKNOWN
                 self.meta.columns.update(
                     {
                         "set": {"last_updated": Date.now()},

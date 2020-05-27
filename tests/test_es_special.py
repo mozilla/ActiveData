@@ -230,10 +230,15 @@ class TestESSpecial(BaseTestCase):
         schema2 = indices[index2.settings.index]
 
         # THE one_value GOT PICKED UP
-        self.assertEqual(schema1,
-                         {"mappings": {"test": {"properties": {"one_value": {"type": "keyword", "store": True}}}}})
+        self.assertEqual(
+            schema1,
+            {"mappings": {"test": {"properties": {"one_value": {"type": "keyword", "store": True}}}}}
+        )
         # THE missing_value DID NOT GET PICKED UP
-        self.assertEqual(schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}})
+        self.assertEqual(
+            schema2,
+            {"mappings": {"test": {"properties": {"missing_value": NULL}}}}
+        )
 
 
         try:
@@ -269,3 +274,24 @@ class TestESSpecial(BaseTestCase):
                 json=test.query,
             )
         self.assertRaises(Exception, result)
+
+    def test_missing_column_removed_from_metadata(self):
+        # MAKE INDEX WITH ALIAS
+        # ADD TWO COLUMNS, USE ONLY ONE
+        # MAKE ANOTHER INDEX
+        # VERIFY NEW INDEX GETS USED COLUMN
+        # VERIFY NEW INDEX DOES NOT HAVE UNUSED COLUMN
+        # DROP OLD INDEX
+        # VERIFY UNUSED COLUMN IS DROPPED FROM METADATA
+        # VERIFY "USED" COLUMN STILL EXISTS (BUT HAS ZERO CARDINALITY)
+        pass
+
+    def test_columns_not_leaked(self):
+        # MAKE INDEX WITH ALIAS
+        # ADD DATA
+        # VERIFY SCHEMA OF DATA
+        # DROP INDEX
+        # MAKE NEW INDEX, WITH SAME NAME
+        # ADD OTHER DATA
+        # VERIFY OLD SCHEMA DOES NOT EXIST
+        pass

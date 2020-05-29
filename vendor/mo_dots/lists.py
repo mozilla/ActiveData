@@ -266,7 +266,7 @@ class FlatList(list):
         if num == None:
             return self
         if num <= 0:
-            return FlatList.EMPTY
+            return EMPTY
 
         return FlatList(_get_list(self)[:-num:])
 
@@ -318,7 +318,7 @@ def last(values):
     return values
 
 
-FlatList.EMPTY = Null
+EMPTY = Null
 
 list_types = (list, FlatList)
 container_types = (list, FlatList, set)

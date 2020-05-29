@@ -29,7 +29,7 @@ from jx_python import jx
 from mo_dots import Data, coalesce, listwrap, split_field, startswith_field, unwrap, wrap
 from mo_dots.lists import last
 from mo_future import sort_using_key
-from mo_json import OBJECT, value2json
+from mo_json import OBJECT, value2json, NESTED
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_kwargs import override
 from mo_logs import Except, Log
@@ -118,15 +118,16 @@ class ES52(Container):
                     all_paths[step] = best
             for p in all_paths.keys():
                 nested_path = nested_path_of(p)
+                jx_type = (NESTED if last(split_field(p)) == NESTED_TYPE else OBJECT)
                 self.namespace.meta.columns.add(Column(
                     name=p,
                     es_column=p,
                     es_index=self.name,
-                    es_type=OBJECT,
-                    jx_type=OBJECT,
+                    es_type=jx_type,
+                    jx_type=jx_type,
                     cardinality=1,
                     nested_path=nested_path,
-                    multi=1001 if last(split_field(p)) == NESTED_TYPE else None,
+                    multi=1001 if jx_type is NESTED else None,
                     last_updated=Date.now()
                 ))
 

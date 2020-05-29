@@ -224,7 +224,7 @@ class TestESSpecial(BaseTestCase):
         )
         index2.add_alias(common.alias)
         index2.add({"value": {"one_value": "a value!"}})
-        index2.flush(forced=True)
+        index2.refresh()
 
         # FORCE metadata MERGE
         c = find_container(common.alias, Date.now())

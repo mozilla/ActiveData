@@ -39,8 +39,10 @@ datetime.strptime('2012-01-01', '%Y-%m-%d')  # http://bugs.python.org/issue7980
 
 class Queue(object):
     """
-     SIMPLE MESSAGE QUEUE, multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
-     IS DIFFICULT TO USE JUST BETWEEN THREADS (SERIALIZATION REQUIRED)
+     SIMPLE MULTI-THREADED QUEUE
+
+     (multiprocessing.Queue REQUIRES SERIALIZATION, WHICH
+     IS DIFFICULT TO USE JUST BETWEEN THREADS)
     """
 
     def __init__(self, name, max=None, silent=False, unique=False, allow_add_after_close=False):

@@ -1,9 +1,9 @@
-hjson==3.0.1
-urllib3==1.22
+beautifulsoup4==4.6.0
+boto==2.48.0
 Flask==0.10.1
+hjson==3.0.1
+moz-sql-parser
 pymysql==0.8.0
 requests==2.18.4
-moz-sql-parser
-boto==2.48.0
-beautifulsoup4==4.6.0
+urllib3==1.22
 

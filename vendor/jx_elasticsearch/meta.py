@@ -66,13 +66,13 @@ from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_logs.strings import quote
 from mo_threads import Queue, THREAD_STOP, Thread, Till, MAIN_THREAD
-from mo_times import Date, HOUR, MINUTE, Timer, WEEK
+from mo_times import Date, HOUR, MINUTE, Timer, WEEK, Duration
 
 DEBUG = False
 ENABLE_META_SCAN = True
 TOO_OLD = 24 * HOUR
 OLD_METADATA = MINUTE
-MAX_COLUMN_METADATA_AGE = 12 * HOUR
+MAX_COLUMN_METADATA_AGE = "12hour"
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
 
 
@@ -497,7 +497,10 @@ class ElasticsearchMetadata(Namespace):
             elif column.es_type == EXISTS:
                 result = self.es_cluster.post(
                     "/" + es_index + "/_search",
-                    data={"query": {"bool": {"must_not": {"missing": column.es_column}}}, "size": 0},
+                    data={
+                        "query": {"bool": {"must_not": {"missing": column.es_column}}},
+                        "size": 0,
+                    },
                 )
                 count = result.hits.total
                 cardinality = 1
@@ -739,26 +742,17 @@ class ElasticsearchMetadata(Namespace):
                 w in e for w in ["IndexMissingException", "index_not_found_exception"]
             )
             is_test_table = column.es_index.startswith((TEST_TABLE_PREFIX, TEST_TABLE))
+
+            meta_columns = self.meta.columns
             if is_missing_index:
                 # WE EXPECT TEST TABLES TO DISAPPEAR
                 if not is_test_table:
                     Log.warning("Missing index {{col.es_index}}", col=column)
-                self.meta.columns.update(
-                    {"clear": ".", "where": {"eq": {"es_index": column.es_index}}}
-                )
+                self.meta.columns.clear(column.es_index, after=now)
                 self.index_does_not_exist.add(column.es_index)
+                self.meta.columns.delete_from_es(column.es_index, after=now)
             elif "No field found for" in e:
-                self.meta.columns.update(
-                    {
-                        "clear": ".",
-                        "where": {
-                            "eq": {
-                                "es_index": column.es_index,
-                                "es_column": column.es_column,
-                            }
-                        },
-                    }
-                )
+                self.meta.columns.clear(column.es_index, column.es_column, after=now)
                 Log.warning(
                     "Could not get column {{col.es_index}}.{{col.es_column}} info",
                     col=column,
@@ -790,7 +784,7 @@ class ElasticsearchMetadata(Namespace):
                 if not self.todo:
                     # LOOK FOR OLD COLUMNS WE CAN RE-SCAN
                     now = Date.now()
-                    last_good_update = now - MAX_COLUMN_METADATA_AGE
+                    last_good_update = now - Duration(MAX_COLUMN_METADATA_AGE)
                     old_columns = [
                         c
                         for c in self.meta.columns
@@ -801,14 +795,17 @@ class ElasticsearchMetadata(Namespace):
 
                     if DEBUG:
                         if old_columns:
-                            Log.note(
-                                "Old columns {{names|json}} last updated {{dates|json}}",
-                                names=wrap(old_columns).es_column,
-                                dates=[
-                                    Date(t).format()
-                                    for t in wrap(old_columns).last_updated
-                                ],
-                            )
+                            if len(old_columns) > 5:
+                                Log.note("{{num}} old columns", num=len(old_columns))
+                            else:
+                                Log.note(
+                                    "Old columns {{names|json}} last updated {{dates|json}}",
+                                    names=wrap(old_columns).es_column,
+                                    dates=[
+                                        Date(t).format()
+                                        for t in wrap(old_columns).last_updated
+                                    ],
+                                )
                         else:
                             Log.note("no more metatdata to update")
 
@@ -818,12 +815,8 @@ class ElasticsearchMetadata(Namespace):
                             self.get_columns(g.es_index)
                         except Exception as e:
                             if "{{table|quote}} does not exist" in e:
-                                self.meta.columns.update(
-                                    {
-                                        "clear": ".",
-                                        "where": {"eq": {"es_index": g.es_index}},
-                                    }
-                                )
+                                self.meta.columns.clear(g.es_index, after=now)
+                                self.meta.columns.delete_from_es(g.es_index, after=now)
                                 continue
                             Log.warning(
                                 "problem getting column info on {{table}}",
@@ -860,12 +853,7 @@ class ElasticsearchMetadata(Namespace):
                                 "{{column.es_column}} of {{column.es_index}} does not exist",
                                 column=column,
                             )
-                            self.meta.columns.update(
-                                {
-                                    "clear": ".",
-                                    "where": {"eq": {"es_index": column.es_index}},
-                                }
-                            )
+                            self.meta.columns.clear(column.es_index, after=now)
                             continue
                         if column.jx_type == EXISTS:
                             pass  # WE MUST PROBE ES TO SEE IF STILL EXISTS
@@ -903,16 +891,8 @@ class ElasticsearchMetadata(Namespace):
                             )
                         except Exception as e:
                             if '"status":404' in e:
-                                self.meta.columns.update(
-                                    {
-                                        "clear": ".",
-                                        "where": {
-                                            "eq": {
-                                                "es_index": column.es_index,
-                                                "es_column": column.es_column,
-                                            }
-                                        },
-                                    }
+                                self.meta.columns.clear(
+                                    column.es_index, column.es_column, after=now
                                 )
                             else:
                                 Log.warning(
@@ -975,10 +955,12 @@ class ElasticsearchMetadata(Namespace):
                     {
                         "set": {"last_updated": Date.now()},
                         "clear": ["count", "cardinality", "multi", "partitions"],
-                        "where": {"eq": {
-                            "es_index": column.es_index,
-                            "es_column": column.es_column,
-                        }}
+                        "where": {
+                            "eq": {
+                                "es_index": column.es_index,
+                                "es_column": column.es_column,
+                            }
+                        },
                     }
                 )
 
@@ -1160,8 +1142,34 @@ class Schema(jx_base.Schema):
         """
         RETURN ALL COLUMNS THAT column_name REFERS TO
         """
-        column_name = unnest_path(column_name)
+        clean_name = untype_path(column_name)
         columns = self.columns
+
+        if clean_name == ".":
+            return set(
+                c
+                for c in columns
+                if c.name != "_id"
+                and c.jx_type not in exclude_type
+                and c.cardinality != 0
+                and untype_path(c.nested_path[0]) == "."
+            )
+        elif clean_name != column_name:
+            # SPECIFIC FIELD REQUESTED
+            output = []
+            for path in self.query_path:
+                full_path = concat_field(path, column_name)
+                for c in columns:
+                    if c.jx_type in exclude_type:
+                        continue
+                    if c.cardinality == 0:
+                        continue
+                    if c.name == full_path:
+                        output.append(c)
+                if output:
+                    return output
+            return []
+
         output = []
         for path in self.query_path:
             full_path = untype_path(concat_field(path, column_name))

@@ -1219,44 +1219,6 @@ class Alias(object):
                 Log.error("{{index}} does not have type {{type}}", self.settings)
             return wrap({"mappings": mapping[self.settings.type]})
 
-    def delete(self, filter):
-        self.cluster.get_metadata()
-
-        if self.cluster.info.version.number.startswith("1."):
-            query = {"query": {"filtered": {
-                "query": {"match_all": {}},
-                "filter": filter
-            }}}
-        else:
-            raise NotImplementedError
-
-        self.debug and Log.note("Delete documents:\n{{query}}", query=query)
-
-        keep_trying = True
-        while keep_trying:
-            result = self.cluster.delete(
-                self.path + "/_query",
-                data=value2json(query),
-                timeout=60
-            )
-            keep_trying = False
-            for name, status in result._indices.items():
-                if status._shards.failed > 0:
-                    if status._shards.failures[0].reason.find("rejected execution (queue capacity ") >= 0:
-                        keep_trying = True
-                        Till(seconds=5).wait()
-                        break
-
-            if not keep_trying:
-                for name, status in result._indices.items():
-                    if status._shards.failed > 0:
-                        Log.error(
-                            "ES shard(s) report Failure to delete from {{index}}: {{message}}.  Query was {{query}}",
-                            index=name,
-                            query=query,
-                            message=status._shards.failures[0].reason
-                        )
-
     def search(self, query, timeout=None, scroll=None):
         query = wrap(query)
         try:

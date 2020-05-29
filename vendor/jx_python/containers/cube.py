@@ -16,6 +16,7 @@ from jx_python.lists.aggs import is_aggs
 from mo_collections.matrix import Matrix
 from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, wrap, wrap_leaves
 import mo_dots as dot
+from mo_dots.lists import EMPTY
 from mo_future import is_text, transpose
 from mo_logs import Log
 from mo_math import MAX, OR
@@ -52,14 +53,14 @@ class Cube(Container):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix.ZERO}
-                self.edges = FlatList.EMPTY
+                self.edges = EMPTY
             elif is_data(data):
                 # EXPECTING NO MORE THAN ONE rownum EDGE IN THE DATA
                 length = MAX([len(v) for v in data.values()])
                 if length >= 1:
                     self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum"}}])
                 else:
-                    self.edges = FlatList.EMPTY
+                    self.edges = EMPTY
             elif is_list(data):
                 if is_list(select):
                     Log.error("not expecting a list of records")
@@ -76,7 +77,7 @@ class Cube(Container):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix(value=data)}
-                self.edges = FlatList.EMPTY
+                self.edges = EMPTY
         else:
             self.edges = wrap(edges)
 

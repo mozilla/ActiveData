@@ -21,6 +21,7 @@ from jx_base.language import is_expression, is_op
 from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
     literal_field, relative_field, set_default, unwrap, unwraplist, wrap, is_many
+from mo_dots.lists import EMPTY
 from mo_future import is_text, text
 from mo_json import STRUCT
 from mo_json.typed_encoder import untype_path
@@ -777,8 +778,8 @@ def _normalize_sort(sort=None):
     CONVERT SORT PARAMETERS TO A NORMAL FORM SO EASIER TO USE
     """
 
-    if sort==None:
-        return FlatList.EMPTY
+    if sort == None:
+        return EMPTY
 
     output = FlatList()
     for s in listwrap(sort):

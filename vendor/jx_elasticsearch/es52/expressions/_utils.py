@@ -13,7 +13,7 @@ from jx_base.expressions import (
     AndOp as AndOp_,
     FALSE,
     Variable as Variable_,
-)
+    OrOp)
 from jx_base.expressions.literal import is_literal
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
@@ -93,9 +93,9 @@ def split_expression_by_path(
     :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: output: A MAP FROM PATH TO EXPRESSION
     """
-    where_vars = expr.vars()
+    expr_vars = expr.vars()
     if var_to_columns is None:
-        var_to_columns = {v.var: schema.leaves(v.var) for v in where_vars}
+        var_to_columns = {v.var: schema.leaves(v.var) for v in expr_vars}
         output = {schema.query_path[0]: []}
         if not var_to_columns:
             output.setdefault(".", []).append(
@@ -103,17 +103,26 @@ def split_expression_by_path(
             )  # LEGIT EXPRESSIONS OF ZERO VARIABLES
             return output
 
-    all_paths = set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
+    all_paths = set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
 
     if len(all_paths) == 0:
         output.setdefault(".", []).append(expr)
     elif len(all_paths) == 1:
         output.setdefault(first(all_paths), []).append(expr)
     elif is_op(expr, AndOp_):
-        for w in expr.terms:
-            split_expression_by_path(w, schema, output, var_to_columns, lang=lang)
+        for e in expr.terms:
+            split_expression_by_path(e, schema, output, var_to_columns, lang=lang)
     else:
-        Log.error("Can not handle complex expression clause")
+        # ASSUME ALL TOP-LEVEL (TECHNICALLY WRONG)
+        output["."].append(OrOp([
+            expr.map({
+                v: c.es_column
+                for v in expr_vars
+                for c in var_to_columns[v.var]
+                if c.nested_path[0] == p
+            })
+            for p in all_paths
+        ]))
 
     return output
 

@@ -20,7 +20,7 @@ from mo_json import STRUCT, NESTED, OBJECT, EXISTS
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path, EXISTS_TYPE
 from mo_logs import Log
 from mo_math import MAX
-from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till
+from mo_threads import Lock, MAIN_THREAD, Queue, Thread, Till, THREAD_STOP
 from mo_times import YEAR, Timer
 from mo_times.dates import Date
 
@@ -52,8 +52,12 @@ class ColumnList(Table, jx_base.Container):
             "update columns to es"
         )  # HOLD (action, column) PAIR, WHERE action in ['insert', 'update']
         self._db_load()
+        self.delete_queue = Queue("delete columns from es")  # CONTAINS (es_index, after) PAIRS
         Thread.run(
             "update " + META_COLUMNS_NAME, self._update_from_es, parent_thread=MAIN_THREAD
+        ).release()
+        Thread.run(
+            "delete columns", self._delete_columns, parent_thread=MAIN_THREAD
         ).release()
 
     def _query(self, query):
@@ -126,6 +130,33 @@ class ColumnList(Table, jx_base.Container):
 
             Log.warning("no {{index}} exists, making one", index=META_COLUMNS_NAME, cause=e)
             self._db_create()
+
+    def delete_from_es(self, es_index, after):
+        """
+        DELETE COLUMNS STORED IN THE ES INDEX
+        :param es_index:
+        :param after: ONLY DELETE RECORDS BEFORE THIS TIME
+        :return:
+        """
+        self.delete_queue.add((es_index, after))
+
+    def _delete_columns(self, please_stop):
+        while not please_stop:
+            result = self.delete_queue.pop(till=please_stop)
+            if result == THREAD_STOP:
+                break
+            more_result = self.delete_queue.pop_all()
+            try:
+                self.es_index.delete_record({"bool": {"should": [
+                    {"bool": {"must": [
+                        {"term": {"es_index.~s~": es_index}},
+                        {"range": {"timestamp.~n~": {"lt": after.unix}}}
+                    ]}}
+                    for es_index, after in [result] + more_result
+                ]}})
+            except Exception as cause:
+                Log.error("Problem with delete of table", cause=cause)
+            Till(seconds=1).wait()
 
     def _update_from_es(self, please_stop):
         try:
@@ -205,7 +236,7 @@ class ColumnList(Table, jx_base.Container):
     def remove(self, column, after):
         if column.last_updated > after:
             return
-        mark_as_deleted(column)
+        mark_as_deleted(column, after)
         with self.locker:
             canonical = self._add(column)
         if canonical:
@@ -294,6 +325,23 @@ class ColumnList(Table, jx_base.Container):
     def __len__(self):
         return self.data[META_COLUMNS_NAME]["es_index"].count
 
+    def clear(self, es_index, es_column=None, after=None):
+        if es_column:
+            for c in self.data.get(es_index, {}).get(es_column, []):
+                self.remove(c, after=after)
+            return
+
+        data = self.data
+        with self.locker:
+            cols = data.get(es_index)
+            if not cols:
+                return
+            del data[es_index]
+
+        for c in cols.values():
+            for cc in c:
+                mark_as_deleted(cc, after=after)
+
     def update(self, command):
         self.dirty = True
         try:
@@ -357,7 +405,7 @@ class ColumnList(Table, jx_base.Container):
                     )
                     for k in command["clear"]:
                         if k == ".":
-                            mark_as_deleted(col)
+                            mark_as_deleted(col, Date.now())
                             self.for_es_update.add(col)
                             lst = self.data[col.es_index]
                             cols = lst[col.name]
@@ -462,9 +510,9 @@ class ColumnList(Table, jx_base.Container):
 
 
 def doc_to_column(doc):
+    now = Date.now()
     try:
         doc = wrap(untyped(doc))
-        now = Date.now()
 
         # I HAVE MANAGED TO MAKE MANY MISTAKES WRITING COLUMNS TO ES. HERE ARE THE FIXES
 
@@ -481,6 +529,15 @@ def doc_to_column(doc):
 
         # FIX
         doc.multi = 1001 if doc.es_type == "nested" else doc.multi
+
+        # FIX
+        if doc.es_column.endswith("."+NESTED_TYPE):
+            if doc.jx_type == OBJECT:
+                doc.jx_type = NESTED
+                doc.last_updated = now
+            if doc.es_type == "nested":
+                doc.es_type = "nested"
+                doc.last_updated = now
 
         # FIX
         doc.nested_path = tuple(listwrap(doc.nested_path))
@@ -529,15 +586,17 @@ def doc_to_column(doc):
         return Column(**doc)
     except Exception as e:
         try:
-            mark_as_deleted(Column(**doc))
+            mark_as_deleted(Column(**doc), now)
         except Exception:
             pass
         return None
 
 
-def mark_as_deleted(col):
+def mark_as_deleted(col, after):
+    if col.last_updated > after:
+        return
     col.count = 0
     col.cardinality = 0
     col.multi = 1001 if col.es_type == "nested" else 0,
     col.partitions = None
-    col.last_updated = Date.now()
+    col.last_updated = after

@@ -262,7 +262,7 @@ Column = DataClass(
             {"eq": [{"last": "nested_path"}, {"literal": "."}]},
             {
                 "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},
-                "then": {"gt": {"multi": 1}},
+                "then": {"and": [{"gt": {"multi": 1}}, {"eq": {"jx_type": "nested"}}, {"eq": {"es_type": "nested"}}]},
                 "else": True,
             },
             {

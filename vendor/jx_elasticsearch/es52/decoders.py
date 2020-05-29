@@ -15,7 +15,7 @@ from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, 
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
-from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
+from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp, split_expression_by_path
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
@@ -23,8 +23,8 @@ from jx_python import jx
 from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap, join_field, \
     split_field
 from mo_future import first, is_text, text, transpose
-from mo_json import EXISTS, OBJECT, STRING
-from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path, unnest_path
+from mo_json import STRING
+from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, MIN
@@ -181,6 +181,7 @@ class SetDecoder(AggsDecoder):
         cnv = pull_functions[value.type]
         include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
+        schema = self.schema
         exists = Painless[AndOp([
             InOp([value, Literal(include)])
         ])].partial_eval()
@@ -188,7 +189,7 @@ class SetDecoder(AggsDecoder):
         limit = coalesce(self.limit, len(domain.partitions))
 
         if is_op(value, Variable):
-            es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
+            es_field = first(schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
             match = TermsAggs(
                 "_match",
                 {
@@ -202,7 +203,7 @@ class SetDecoder(AggsDecoder):
             match = TermsAggs(
                 "_match",
                 {
-                    "script": text(value.to_es_script(self.schema)),
+                    "script": text(value.to_es_script(schema)),
                     "size": limit
                 },
                 self
@@ -210,15 +211,22 @@ class SetDecoder(AggsDecoder):
         output = Aggs().add(FilterAggs("_filter", exists, None).add(match.add(es_query)))
 
         if self.edge.allowNulls:
-            p = self.schema.query_path[0]
 
             # MISSING AT THE QUERY DEPTH
-            output.add(
-                NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
-            )
+            by_path = split_expression_by_path(exists, schema)
+            not_match = es_query
+            for p in schema.query_path:
+                e = by_path[p]
+                if e:
+                    not_match = NestedAggs(p).add(FilterAggs("_missing0", NotOp(AndOp(e)), self).add(not_match))
+            if not_match is es_query:
+                Log.error("expecting some logic that does not match")
+            output.add(not_match)
+
             # WHEN PARENT HAS NO NESTED
+            p = schema.query_path[0]
             exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
-            column = first(self.schema.snowflake.get_schema(".").values(exist_name))
+            column = first(schema.snowflake.get_schema(".").values(exist_name))
             output.add(
                 NestedAggs(column.nested_path[0]).add(
                     FilterAggs(
@@ -231,7 +239,7 @@ class SetDecoder(AggsDecoder):
 
 
             # FIND NULLS AT EACH NESTED LEVEL
-            # for p in self.schema.query_path:
+            # for p in schema.query_path:
             #     if p == query_path:
             #         # MISSING AT THE QUERY DEPTH
             #         output.add(
@@ -240,7 +248,7 @@ class SetDecoder(AggsDecoder):
             #     else:
             #         # PARENT HAS NO CHILDREN, SO MISSING
             #         exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
-            #         column = first(self.schema.snowflake.get_schema(".").values(exist_name))
+            #         column = first(schema.snowflake.get_schema(".").values(exist_name))
             #         output.add(
             #             NestedAggs(column.nested_path[0]).add(
             #                 FilterAggs(

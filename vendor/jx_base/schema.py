@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy
 
 from mo_dots import Null, relative_field, set_default, startswith_field, wrap
-from mo_json import EXISTS, NESTED, OBJECT, STRUCT
+from mo_json import EXISTS, NESTED, OBJECT, INTERNAL
 from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Log
 
@@ -88,13 +88,13 @@ class Schema(object):
                 relative_field(c.name, full_name): c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
-                for c in cs if c.jx_type not in STRUCT
+                for c in cs if c.jx_type not in INTERNAL
             },
             {
                 c.name: c.es_column
                 for k, cs in self.lookup.items()
                 # if startswith_field(k, full_name)
-                for c in cs if c.jx_type not in STRUCT
+                for c in cs if c.jx_type not in INTERNAL
             }
         )
 

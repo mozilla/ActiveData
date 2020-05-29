@@ -41,7 +41,7 @@ from mo_dots import (
     wrap,
 )
 from mo_future import first, text
-from mo_json import NESTED, STRUCT
+from mo_json import NESTED, INTERNAL
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
 from mo_math import AND
@@ -363,7 +363,7 @@ def get_pull(column):
 
 def get_pull_function(column):
     func = jx_expression_to_function(get_pull(column))
-    if column.jx_type in STRUCT:
+    if column.jx_type in INTERNAL:
         return lambda doc: untyped(func(doc))
     else:
         return func

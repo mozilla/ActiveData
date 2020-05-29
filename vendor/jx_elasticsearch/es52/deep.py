@@ -19,8 +19,8 @@ from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, FlatList, coalesce, concat_field, is_list as is_list_, listwrap, literal_field, \
     relative_field, set_default, split_field, startswith_field, unwrap, wrap
 from mo_future import zip_longest
-from mo_json import NESTED
-from mo_json.typed_encoder import untype_path, untyped
+from mo_json import NESTED, INTERNAL
+from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_threads import Thread
 from mo_times.timer import Timer
@@ -100,7 +100,7 @@ def es_deepop(es, query):
             col_names = set()
             for c in leaves:
                 if c.nested_path[0] == ".":
-                    if c.jx_type == NESTED:
+                    if c.jx_type in INTERNAL:
                         continue
                     es_query.stored_fields += [c.es_column]
                 c_name = untype_path(relative_field(c.name, query_path))

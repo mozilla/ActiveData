@@ -13,7 +13,7 @@ from jx_elasticsearch.elasticsearch import parse_properties, random_id
 from jx_python import jx
 from mo_dots import Data, ROOT_PATH, is_data, unwrap
 from mo_future import text
-from mo_json import NESTED, OBJECT, json2value, value2json
+from mo_json import json2value, value2json, STRUCT
 from mo_json.encoder import UnicodeBuilder
 from mo_json.typed_encoder import typed_encode
 
@@ -28,7 +28,7 @@ class TypedInserter(object):
         if es:
             _schema = Data()
             for c in parse_properties(es.settings.alias, ".", ROOT_PATH, es.get_properties()):
-                if c.es_type in (OBJECT, NESTED):
+                if c.es_type in STRUCT:
                     _schema[c.name] = {}
                 else:
                     _schema[c.name] = c

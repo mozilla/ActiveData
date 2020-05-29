@@ -23,7 +23,7 @@ from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, 
     literal_field, relative_field, set_default, unwrap, unwraplist, wrap, is_many
 from mo_dots.lists import EMPTY
 from mo_future import is_text, text
-from mo_json import STRUCT
+from mo_json import INTERNAL
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND, UNION, is_number
@@ -371,7 +371,7 @@ def _normalize_select(select, frum, schema=None):
                         canonical
                     )
                     for c in frum.get_columns()
-                    if c.jx_type not in STRUCT
+                    if c.jx_type not in INTERNAL
                 ])
             else:
                 Log.error("do not know what to do")

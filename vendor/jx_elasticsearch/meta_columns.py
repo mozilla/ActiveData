@@ -16,7 +16,7 @@ from jx_base.schema import Schema
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, listwrap, split_field
 from mo_dots.lists import last
-from mo_json import STRUCT, NESTED, OBJECT, EXISTS
+from mo_json import INTERNAL, NESTED, OBJECT, EXISTS
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path, EXISTS_TYPE
 from mo_logs import Log
 from mo_math import MAX
@@ -499,7 +499,7 @@ class ColumnList(Table, jx_base.Container):
                 for tname, css in self.data.items()
                 for cname, cs in css.items()
                 for c in cs
-                if c.jx_type not in STRUCT  # and c.es_column != "_id"
+                if c.jx_type not in INTERNAL  # and c.es_column != "_id"
             ]
 
         from jx_python.containers.list_usingPythonList import ListContainer
@@ -580,7 +580,7 @@ def doc_to_column(doc):
                 doc.last_updated = now
 
         # FIX
-        if doc.jx_type in (OBJECT, NESTED):
+        if doc.jx_type in STRUCT:
             if doc.cardinality not in [0, 1]:
                 doc.cardinality = 1  # DO NOT KNOW IF EXISTS OR NOT
                 doc.last_updated = now

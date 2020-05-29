@@ -51,11 +51,8 @@ from mo_dots import (
 )
 from mo_dots.lists import last
 from mo_future import first, long, none_type, text
-from mo_json import BOOLEAN, EXISTS, OBJECT, STRUCT, NESTED
+from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT
 from mo_json.typed_encoder import (
-    BOOLEAN_TYPE,
-    NUMBER_TYPE,
-    STRING_TYPE,
     unnest_path,
     untype_path,
     NESTED_TYPE,
@@ -189,7 +186,7 @@ class ElasticsearchMetadata(Namespace):
                 col = first(self.meta.columns.find(alias, name))
                 if col and col.last_updated > after and col.cardinality <= 0:
                     continue
-                if col and col.jx_type in STRUCT:
+                if col and col.jx_type in INTERNAL:
                     continue
                 for i, t, _ in props:
                     if i is not i1:  # WE KNOW IT IS NOT IN i1 BECAUSE diff SAYS SO
@@ -436,7 +433,7 @@ class ElasticsearchMetadata(Namespace):
         if column.es_index in self.index_does_not_exist:
             return
 
-        if column.jx_type in (OBJECT, NESTED):
+        if column.jx_type in STRUCT:
             Log.error("not supported")
         try:
             if column.es_index == META_TABLES_NAME:
@@ -789,7 +786,7 @@ class ElasticsearchMetadata(Namespace):
                         c
                         for c in self.meta.columns
                         if (c.last_updated < last_good_update)
-                        and c.jx_type not in STRUCT
+                        and c.jx_type not in INTERNAL
                         and c.es_index != META_COLUMNS_NAME
                     ]
 
@@ -857,7 +854,7 @@ class ElasticsearchMetadata(Namespace):
                             continue
                         if column.jx_type == EXISTS:
                             pass  # WE MUST PROBE ES TO SEE IF STILL EXISTS
-                        elif column.jx_type in (OBJECT, NESTED):
+                        elif column.jx_type in STRUCT:
                             if (
                                 column.es_type == "nested"
                                 or last(split_field(column.es_column)) == NESTED_TYPE
@@ -919,7 +916,7 @@ class ElasticsearchMetadata(Namespace):
                 verbose=DEBUG,
                 too_long=0.05,
             ):
-                if column.jx_type in STRUCT:
+                if column.jx_type in INTERNAL:
                     # DEBUG and Log.note("{{column.es_column}} is a struct", column=column)
                     continue
                 elif after and column.last_updated > after:
@@ -1101,7 +1098,7 @@ class Schema(jx_base.Schema):
             return set(
                 c
                 for c in columns
-                if c.name != "_id" and c.jx_type not in OBJECTS and c.cardinality != 0
+                if c.name != "_id" and c.jx_type not in INTERNAL and c.cardinality != 0
             )
 
         if clean_name != column_name:
@@ -1112,7 +1109,7 @@ class Schema(jx_base.Schema):
                     for c in columns
                     if (
                         (c.name != "_id" or column_name == "_id")
-                        and c.jx_type not in (OBJECT, NESTED)
+                        and c.jx_type not in STRUCT
                         and startswith_field(relative_field(c.name, path), column_name)
                     )
                 ]
@@ -1128,7 +1125,7 @@ class Schema(jx_base.Schema):
                 if (
                     (c.name != "_id" or clean_name == "_id")
                     and c.cardinality != 0
-                    and c.jx_type not in OBJECTS
+                    and c.jx_type not in INTERNAL
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
                     )
@@ -1138,7 +1135,7 @@ class Schema(jx_base.Schema):
                 return set(output)
         return set()
 
-    def values(self, column_name, exclude_type=(OBJECT, NESTED)):
+    def values(self, column_name, exclude_type=STRUCT):
         """
         RETURN ALL COLUMNS THAT column_name REFERS TO
         """
@@ -1197,7 +1194,7 @@ class Schema(jx_base.Schema):
                 {
                     k: c.es_column
                     for c in self.columns
-                    if c.jx_type not in STRUCT
+                    if c.jx_type not in INTERNAL
                     for rel_name in [relative_field(c.name, path)]
                     for k in [rel_name, untype_path(rel_name), unnest_path(rel_name)]
                 },

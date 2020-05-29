@@ -17,7 +17,7 @@ from jx_elasticsearch.es52.util import aggregates
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import join_field
 from mo_future import first, is_text, text
-from mo_json import EXISTS, NESTED, OBJECT, NUMBER_TYPES, BOOLEAN
+from mo_json import EXISTS, NUMBER_TYPES, BOOLEAN, STRUCT
 from mo_json.typed_encoder import encode_property
 from mo_logs import Log
 from mo_logs.strings import quote
@@ -27,7 +27,7 @@ def agg_field(acc, new_select, query_path, schema):
     for s in (s for _, many in new_select.items() for s in many):
         canonical_name = s.name
         if s.aggregate in ("value_count", "count"):
-            columns = schema.values(s.value.var, exclude_type=(OBJECT, NESTED))
+            columns = schema.values(s.value.var, exclude_type=STRUCT)
         else:
             columns = schema.values(s.value.var)
 

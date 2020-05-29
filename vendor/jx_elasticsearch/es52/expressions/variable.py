@@ -14,13 +14,13 @@ from jx_elasticsearch.es52.expressions.and_op import es_and
 from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from mo_future import first
-from mo_json import BOOLEAN, NESTED, OBJECT
+from mo_json import BOOLEAN
 
 
 class Variable(Variable_):
     def to_esfilter(self, schema):
         v = self.var
-        cols = schema.values(v, (OBJECT, NESTED))
+        cols = schema.values(v, STRUCT)
         if len(cols) == 0:
             return MATCH_NONE
         elif len(cols) == 1:

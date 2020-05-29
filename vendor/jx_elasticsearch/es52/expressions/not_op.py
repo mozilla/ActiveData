@@ -9,20 +9,19 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_elasticsearch.es52.expressions import literal, or_op
-from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
-from mo_dots import wrap
-
 from jx_base.expressions import (
     MissingOp as MissingOp_,
     NotOp as NotOp_,
     Variable as Variable_,
 )
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions import literal, or_op
 from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.or_op import es_or
+from mo_dots import wrap
 from mo_future import first
-from mo_json import NESTED, OBJECT
+from mo_json import STRUCT
 
 
 class NotOp(NotOp_):
@@ -30,7 +29,7 @@ class NotOp(NotOp_):
         if is_op(self.term, MissingOp_) and is_op(self.term.expr, Variable_):
             # PREVENT RECURSIVE LOOP
             v = self.term.expr.var
-            cols = schema.values(v, (OBJECT, NESTED))
+            cols = schema.values(v, STRUCT)
             if len(cols) == 0:
                 return MATCH_NONE
             elif len(cols) == 1:

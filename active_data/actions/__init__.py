@@ -20,7 +20,7 @@ from jx_python.containers.list_usingPythonList import ListContainer
 from mo_dots import is_container, join_field
 from mo_dots import is_data, set_default, split_field
 from mo_future import is_text, first
-from mo_json import STRUCT, value2json
+from mo_json import INTERNAL, value2json
 from mo_logs import Log
 from mo_threads import Till
 from mo_times import Timer
@@ -87,7 +87,7 @@ def test_mode_wait(query, please_stop):
                 not_ready = [
                     c
                     for c in cols
-                    if c.jx_type not in STRUCT
+                    if c.jx_type not in INTERNAL
                     and (
                         after >= c.last_updated
                         or (require_cardinality and c.cardinality == None)

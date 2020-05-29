@@ -216,7 +216,7 @@ class SetDecoder(AggsDecoder):
             by_path = split_expression_by_path(exists, schema)
             not_match = es_query
             for p in schema.query_path:
-                e = by_path[p]
+                e = by_path.get(p)
                 if e:
                     not_match = NestedAggs(p).add(FilterAggs("_missing0", NotOp(AndOp(e)), self).add(not_match))
             if not_match is es_query:

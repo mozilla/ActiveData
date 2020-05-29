@@ -1,6 +1,6 @@
 beautifulsoup4==4.6.0
 boto==2.48.0
-Flask==0.10.1
+Flask==1.0
 hjson==3.0.1
 moz-sql-parser
 pymysql==0.8.0

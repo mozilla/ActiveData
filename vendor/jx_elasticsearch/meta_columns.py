@@ -146,14 +146,16 @@ class ColumnList(Table, jx_base.Container):
             if result == THREAD_STOP:
                 break
             more_result = self.delete_queue.pop_all()
+            results = [result] + more_result
             try:
-                self.es_index.delete_record({"bool": {"should": [
+                delete_result = self.es_index.delete_record({"bool": {"should": [
                     {"bool": {"must": [
                         {"term": {"es_index.~s~": es_index}},
                         {"range": {"timestamp.~n~": {"lt": after.unix}}}
                     ]}}
-                    for es_index, after in [result] + more_result
+                    for es_index, after in results
                 ]}})
+                Log.note("Num deleted = {{delete_result}}", delete_result=delete_result.deleted)
             except Exception as cause:
                 Log.error("Problem with delete of table", cause=cause)
             Till(seconds=1).wait()

@@ -268,7 +268,7 @@ class Index(object):
 
             if result.failures:
                 Log.error("Failure to delete fom {{index}}:\n{{data|pretty}}", index=self.settings.index, data=result)
-
+            return result
         else:
             raise NotImplementedError
 

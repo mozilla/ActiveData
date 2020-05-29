@@ -218,7 +218,7 @@ class SetDecoder(AggsDecoder):
                     )
                 else:
                     # PARENT HAS NO CHILDREN, SO MISSING
-                    column = first(self.schema.values(query_path))
+                    column = first(self.schema.values(concat_field(untype_path(query_path), EXISTS_TYPE)))
                     output.add(
                         NestedAggs(column.nested_path[0]).add(
                             FilterAggs(

@@ -223,7 +223,7 @@ class SetDecoder(AggsDecoder):
                         NestedAggs(column.nested_path[0]).add(
                             FilterAggs(
                                 "_missing1",
-                                NotOp(ExistsOp(Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE)))),
+                                NotOp(ExistsOp(Variable(column.es_column))),
                                 self
                             ).add(es_query)
                         )

@@ -1145,16 +1145,7 @@ class Schema(jx_base.Schema):
         clean_name = untype_path(column_name)
         columns = self.columns
 
-        if clean_name == ".":
-            return set(
-                c
-                for c in columns
-                if c.name != "_id"
-                and c.jx_type not in exclude_type
-                and c.cardinality != 0
-                and untype_path(c.nested_path[0]) == "."
-            )
-        elif clean_name != column_name:
+        if clean_name != column_name:
             # SPECIFIC FIELD REQUESTED
             output = []
             for path in self.query_path:
@@ -1169,6 +1160,15 @@ class Schema(jx_base.Schema):
                 if output:
                     return output
             return []
+        elif clean_name == ".":
+            return set(
+                c
+                for c in columns
+                if c.name != "_id"
+                and c.jx_type not in exclude_type
+                and c.cardinality != 0
+                and untype_path(c.name) == "."
+            )
 
         output = []
         for path in self.query_path:

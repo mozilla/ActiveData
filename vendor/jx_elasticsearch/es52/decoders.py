@@ -210,26 +210,46 @@ class SetDecoder(AggsDecoder):
         output = Aggs().add(FilterAggs("_filter", exists, None).add(match.add(es_query)))
 
         if self.edge.allowNulls:
+            p = self.schema.query_path[0]
+
+            # MISSING AT THE QUERY DEPTH
+            output.add(
+                NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
+            )
+            # WHEN PARENT HAS NO NESTED
+            exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
+            column = first(self.schema.snowflake.get_schema(".").values(exist_name))
+            output.add(
+                NestedAggs(column.nested_path[0]).add(
+                    FilterAggs(
+                        "_missing1",
+                        NotOp(ExistsOp(Variable(column.es_column))),
+                        self
+                    ).add(es_query)
+                )
+            )
+
+
             # FIND NULLS AT EACH NESTED LEVEL
-            for p in self.schema.query_path:
-                if p == query_path:
-                    # MISSING AT THE QUERY DEPTH
-                    output.add(
-                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
-                    )
-                else:
-                    # PARENT HAS NO CHILDREN, SO MISSING
-                    exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
-                    column = first(self.schema.snowflake.get_schema(".").values(exist_name))
-                    output.add(
-                        NestedAggs(column.nested_path[0]).add(
-                            FilterAggs(
-                                "_missing1",
-                                NotOp(ExistsOp(Variable(column.es_column))),
-                                self
-                            ).add(es_query)
-                        )
-                    )
+            # for p in self.schema.query_path:
+            #     if p == query_path:
+            #         # MISSING AT THE QUERY DEPTH
+            #         output.add(
+            #             NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
+            #         )
+            #     else:
+            #         # PARENT HAS NO CHILDREN, SO MISSING
+            #         exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
+            #         column = first(self.schema.snowflake.get_schema(".").values(exist_name))
+            #         output.add(
+            #             NestedAggs(column.nested_path[0]).add(
+            #                 FilterAggs(
+            #                     "_missing1",
+            #                     NotOp(ExistsOp(Variable(column.es_column))),
+            #                     self
+            #                 ).add(es_query)
+            #             )
+            #         )
         return output
 
     def get_value(self, index):

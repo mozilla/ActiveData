@@ -1119,6 +1119,20 @@ class Schema(jx_base.Schema):
 
         # TODO: HOW TO REFER TO FIELDS THAT MAY BE SHADOWED BY A RELATIVE NAME?
         for path in self.query_path:
+            if untype_path(path) == clean_name:
+                # ASKING FOR LEAVES OF A NESTED COLUMN
+                output = [
+                    c
+                    for c in columns
+                    if (
+                        (c.name != "_id" or clean_name == "_id")
+                        and c.cardinality != 0
+                        and c.jx_type not in (OBJECT, EXISTS)
+                        and path == c.nested_path[0]  # EVERYTHING AT THIS LEVEL
+                    )
+                ]
+                return set(output)
+
             output = [
                 c
                 for c in columns

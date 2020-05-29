@@ -1109,7 +1109,8 @@ class Schema(jx_base.Schema):
                     for c in columns
                     if (
                         (c.name != "_id" or column_name == "_id")
-                        and c.jx_type not in STRUCT
+                        and c.jx_type not in (OBJECT, EXISTS)
+                        and startswith_field(path, c.nested_path[0])  # NOT NESTED
                         and startswith_field(relative_field(c.name, path), column_name)
                     )
                 ]
@@ -1125,7 +1126,8 @@ class Schema(jx_base.Schema):
                 if (
                     (c.name != "_id" or clean_name == "_id")
                     and c.cardinality != 0
-                    and c.jx_type not in INTERNAL
+                    and c.jx_type not in (OBJECT, EXISTS)
+                    and startswith_field(path, c.nested_path[0])  # NOT NESTED
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
                     )

@@ -236,6 +236,11 @@ Column = DataClass(
     ],
     constraint={
         "and": [
+            {
+                "when": {"ne":{"name":"."}},
+                "then": {"ne": ["name", {"first": "nested_path"}]},
+                "else": True
+            },
             {"not": {"find": {"es_column": "null"}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},

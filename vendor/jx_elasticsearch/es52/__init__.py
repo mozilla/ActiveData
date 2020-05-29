@@ -117,8 +117,12 @@ class ES52(Container):
                                 best = candidate
                     all_paths[step] = best
             for p in all_paths.keys():
-                nested_path = nested_path_of(p)
-                jx_type = (NESTED if last(split_field(p)) == NESTED_TYPE else OBJECT)
+                if p == ".":
+                    nested_path = ('.',)
+                else:
+                    nested_path = nested_path_of(p)[1:]
+
+                jx_type = (OBJECT if p == "." else NESTED)
                 self.namespace.meta.columns.add(Column(
                     name=p,
                     es_column=p,

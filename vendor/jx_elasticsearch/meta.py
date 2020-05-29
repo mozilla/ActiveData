@@ -1037,11 +1037,11 @@ class Schema(jx_base.Schema):
             )
         self.snowflake = snowflake
         try:
-            path = [p for p in snowflake.query_paths if untype_path(p[0]) == query_path]
+            path = first(p for p in snowflake.query_paths if untype_path(p[0]) == query_path)
             if path:
                 # WE DO NOT NEED TO LOOK INTO MULTI-VALUED FIELDS AS A TABLE
                 self.multi = None
-                self.query_path = path[0]
+                self.query_path = path
             else:
                 # LOOK INTO A SPECIFIC MULTI VALUED COLUMN
                 try:
@@ -1109,7 +1109,6 @@ class Schema(jx_base.Schema):
                     for c in columns
                     if (
                         (c.name != "_id" or column_name == "_id")
-                        and c.jx_type not in (OBJECT, EXISTS)
                         and startswith_field(path, c.nested_path[0])  # NOT NESTED
                         and startswith_field(relative_field(c.name, path), column_name)
                     )

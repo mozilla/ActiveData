@@ -20,7 +20,8 @@ from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
-from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap, join_field, \
+    split_field
 from mo_future import first, is_text, text, transpose
 from mo_json import EXISTS, OBJECT, STRING
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path, unnest_path
@@ -218,7 +219,8 @@ class SetDecoder(AggsDecoder):
                     )
                 else:
                     # PARENT HAS NO CHILDREN, SO MISSING
-                    column = first(self.schema.values(concat_field(untype_path(query_path), EXISTS_TYPE)))
+                    exist_name = join_field(split_field(p)[:-1]+[EXISTS_TYPE])
+                    column = first(self.schema.snowflake.get_schema(".").values(exist_name))
                     output.add(
                         NestedAggs(column.nested_path[0]).add(
                             FilterAggs(

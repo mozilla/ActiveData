@@ -16,12 +16,12 @@ from mo_future import text
 
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from mo_dots import wrap
+from mo_dots import to_data, dict_to_data
 import mo_math
 from mo_logs.exceptions import get_stacktrace
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
-lots_of_data = wrap([{"a": i} for i in range(30)])
+lots_of_data = to_data([{"a": i} for i in range(30)])
 
 
 class TestSetOps(BaseTestCase):
@@ -622,7 +622,7 @@ class TestSetOps(BaseTestCase):
 
     @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -636,7 +636,7 @@ class TestSetOps(BaseTestCase):
         self.assertEqual(result.meta.es_query.size, MAX_LIMIT)
 
     def test_default_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -658,7 +658,7 @@ class TestSetOps(BaseTestCase):
         self.assertEqual(len(result.data.value), DEFAULT_LIMIT)
 
     def test_specific_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -681,7 +681,7 @@ class TestSetOps(BaseTestCase):
         self.assertEqual(len(result.data.value), 5)
 
     def test_negative_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -1353,7 +1353,7 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_error": "Expecting `value` or `aggregate` in select "
         }
-        subtest = wrap(subtest)
+        subtest = to_data(subtest)
 
         self.utils.fill_container(subtest)
         self.utils.send_queries(subtest)

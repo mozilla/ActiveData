@@ -17,7 +17,7 @@ from jx_base.language import is_op
 from jx_base.query import _normalize_group
 from jx_elasticsearch.es52.agg_format import format_list_from_groupby, format_table_from_groupby
 from jx_elasticsearch.es52.agg_op import build_es_query
-from mo_dots import listwrap, unwrap, Null, wrap, coalesce
+from mo_dots import listwrap, unwrap, Null, to_data, coalesce
 from mo_files import TempFile, URL, mimetype
 from mo_future import first
 from mo_json import value2json
@@ -123,7 +123,7 @@ def es_bulkaggsop(esq, frum, query):
             parent_thread=Null,
         ).release()
 
-    output = wrap(
+    output = to_data(
         {
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),

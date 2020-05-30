@@ -14,7 +14,7 @@ from jx_base.language import is_op
 from jx_base.query import canonical_aggregates
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, coalesce, is_list, split_field, wrap
+from mo_dots import Data, coalesce, is_list, split_field, to_data
 from mo_files import mimetype
 from mo_future import sort_using_key, next
 from mo_json import value2json
@@ -86,7 +86,7 @@ def _value_drill(agg):
 
 
 def format_table(aggs, es_query, query, decoders, all_selects):
-    new_edges = wrap(count_dim(aggs, es_query, decoders))
+    new_edges = to_data(count_dim(aggs, es_query, decoders))
     dims = tuple(len(e.domain.partitions) + (0 if e.allowNulls is False else 1) for e in new_edges)
     rank = len(dims)
     header = tuple(new_edges.name + all_selects.name)
@@ -189,7 +189,7 @@ def format_csv(aggs, es_query, query, decoders, select):
 
 
 def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
-    new_edges = wrap(count_dim(aggs, es_query, decoders))
+    new_edges = to_data(count_dim(aggs, es_query, decoders))
     header = tuple(new_edges.name + all_selects.name)
     name2index = {s.name: i for i, s in enumerate(all_selects)}
 
@@ -231,7 +231,7 @@ def format_table_from_groupby(aggs, es_query, query, decoders, all_selects):
 
 
 def format_list_from_groupby(aggs, es_query, query, decoders, all_selects):
-    new_edges = wrap(count_dim(aggs, es_query, decoders))
+    new_edges = to_data(count_dim(aggs, es_query, decoders))
 
     def data():
         groupby = query.groupby

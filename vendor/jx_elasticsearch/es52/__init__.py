@@ -15,10 +15,10 @@ from jx_base.expressions import jx_expression
 from jx_base.language import is_op
 from jx_base.query import QueryOp
 from jx_elasticsearch import elasticsearch
-from jx_elasticsearch.es52.expressions import ES52 as ES52Lang
 from jx_elasticsearch.es52.agg_bulk import is_bulk_agg, es_bulkaggsop
 from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
 from jx_elasticsearch.es52.deep import es_deepop, is_deepop
+from jx_elasticsearch.es52.expressions import ES52 as ES52Lang
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_bulk import is_bulk_set, es_bulksetop
 from jx_elasticsearch.es52.set_op import es_setop, is_setop
@@ -26,15 +26,14 @@ from jx_elasticsearch.es52.stats import QueryStats
 from jx_elasticsearch.es52.util import aggregates, temper_limit
 from jx_elasticsearch.meta import ElasticsearchMetadata, Table
 from jx_python import jx
-from mo_dots import Data, coalesce, listwrap, split_field, startswith_field, unwrap, wrap
-from mo_dots.lists import last
+from mo_dots import Data, coalesce, listwrap, split_field, startswith_field, unwrap, to_data
 from mo_future import sort_using_key
+from mo_http import http
 from mo_json import OBJECT, value2json, NESTED
-from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_kwargs import override
 from mo_logs import Except, Log
 from mo_times import Date
-from mo_http import http
 
 
 class ES52(Container):
@@ -218,7 +217,7 @@ class ES52(Container):
         THE set CLAUSE IS A DICT MAPPING NAMES TO VALUES
         THE where CLAUSE IS AN ES FILTER
         """
-        command = wrap(command)
+        command = to_data(command)
         table = self.get_table(command['update'])
 
         es_index = self.es.cluster.get_index(read_only=False, alias=None, kwargs=self.es.settings)

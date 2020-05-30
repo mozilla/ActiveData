@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 import mo_json_config
-from mo_dots import coalesce, listwrap, unwrap, wrap
+from mo_dots import coalesce, listwrap, unwrap, to_data
 from mo_files import File
 from mo_logs import Log
 
@@ -52,7 +52,7 @@ def argparse(defs, complain=True):
     if unknown and complain:
         Log.warning("Ignoring arguments: {{unknown|json}}", unknown=unknown)
     output = {k: getattr(namespace, k) for k in vars(namespace)}
-    return wrap(output)
+    return to_data(output)
 
 
 def read_settings(defs=None, filename=None, default_filename=None, complain=True):

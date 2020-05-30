@@ -29,22 +29,30 @@ class EsNestedOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
-    def __init__(self, terms):
-        Expression.__init__(self, terms)
-        self.path, self.query = terms
+    def __init__(self, path, query, select):
+        Expression.__init__(self, [query])
+        self.path = path
+        self.query = query
+        self.select = select
 
     @simplified
     def partial_eval(self):
-        if self.path.var == ".":
-            return self.query.partial_eval()
         return self.lang[
-            EsNestedOp("es.nested", [self.path, self.query.partial_eval()])
+            EsNestedOp(self.path, self.query.partial_eval(), self.select)
         ]
 
     def __data__(self):
-        return {"es.nested": {self.path.var: self.query.__data__()}}
+        return {"es.nested": {
+            "path": self.path.var,
+            "query": self.query.__data__(),
+            "select": self.select.__data__()
+        }}
 
     def __eq__(self, other):
         if is_op(other, EsNestedOp):
             return self.path.var == other.path.var and self.query == other.query
         return False
+
+    def vars(self):
+        return self.path.vars() | self.query.vars() | self.select.vars()
+

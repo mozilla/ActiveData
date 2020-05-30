@@ -15,7 +15,7 @@ from flask import Response
 import jx_elasticsearch
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_python.containers.cube import Cube
-from mo_dots import wrap
+from mo_dots import dict_to_data
 from mo_future import first
 from mo_json import json2value, value2json
 from mo_kwargs import override
@@ -86,7 +86,7 @@ class SaveQueries(object):
 
         try:
             hash = result.data[0].hash
-            query = wrap(result.data[0]).query
+            query = dict_to_data(result.data[0]).query
             if len(query) == 0:
                 return None
         except Exception:

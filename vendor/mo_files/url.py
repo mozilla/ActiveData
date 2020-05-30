@@ -7,7 +7,7 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from mo_dots import Data, Null, coalesce, is_data, is_list, wrap
+from mo_dots import Data, Null, coalesce, is_data, is_list, to_data
 from mo_future import PY2, is_text, text, unichr, urlparse, is_binary
 from mo_logs import Log
 
@@ -44,14 +44,14 @@ class URL(object):
                 scheme, suffix = value.split("//", 2)
                 self.scheme = scheme.rstrip(":")
                 parse(self, suffix, 0, 1)
-                self.query = wrap(url_param2value(self.query))
+                self.query = to_data(url_param2value(self.query))
             else:
                 output = urlparse(value)
                 self.scheme = output.scheme
                 self.port = coalesce(port, output.port)
                 self.host = output.netloc.split(":")[0]
                 self.path = coalesce(path, output.path)
-                self.query = coalesce(query, wrap(url_param2value(output.query)))
+                self.query = coalesce(query, to_data(url_param2value(output.query)))
                 self.fragment = coalesce(fragment, output.fragment)
         except Exception as e:
             Log.error(u"problem parsing {{value}} to URL", value=value, cause=e)
@@ -230,7 +230,7 @@ def value2url_param(value):
     if is_data(value):
         from mo_json import value2json
 
-        value_ = wrap(value)
+        value_ = to_data(value)
         output = "&".join(
             value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
             for k, v in sorted(value_.leaves(), key=lambda p: p[0])

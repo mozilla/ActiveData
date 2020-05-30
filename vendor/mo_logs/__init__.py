@@ -14,7 +14,7 @@ import platform
 import sys
 from datetime import datetime
 
-from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, wrap
+from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, to_data, dict_to_data
 from mo_future import PY3, is_text, text
 from mo_logs import constants, exceptions, strings
 from mo_logs.exceptions import Except, LogItem, suppress_exception
@@ -54,7 +54,7 @@ class Log(object):
         global _Thread
         if not settings:
             return
-        settings = wrap(settings)
+        settings = to_data(settings)
 
         Log.stop()
 
@@ -109,7 +109,7 @@ class Log(object):
 
     @classmethod
     def new_instance(cls, settings):
-        settings = wrap(settings)
+        settings = to_data(settings)
 
         if settings["class"]:
             if settings["class"].startswith("logging.handlers."):
@@ -412,7 +412,7 @@ def _same_frame(frameA, frameB):
 
 
 # GET THE MACHINE METADATA
-machine_metadata = wrap({
+machine_metadata = dict_to_data({
     "pid":  os.getpid(),
     "python": text(platform.python_implementation()),
     "os": text(platform.system() + platform.release()).strip(),

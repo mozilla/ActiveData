@@ -13,11 +13,11 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import skip
 
 from jx_base.expressions import NULL
-from mo_dots import wrap
+from mo_dots import to_data
 import mo_math
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
-lots_of_data = wrap([{"a": i} for i in range(30)])
+lots_of_data = to_data([{"a": i} for i in range(30)])
 
 
 class TestDeepOps(BaseTestCase):

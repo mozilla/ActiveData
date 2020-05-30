@@ -17,14 +17,13 @@ from jx_base.expressions import (
     Variable as Variable_,
     is_literal,
     simplified,
-)
+    BooleanOp)
 from jx_base.language import is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.expressions._utils import ES52
 from jx_elasticsearch.es52.expressions.not_op import NotOp
 from mo_json import STRING
 
-BooleanOp = None
 
 class FindOp(FindOp_):
     def to_esfilter(self, schema):
@@ -60,3 +59,9 @@ class FindOp(FindOp_):
 
     def exists(self):
         return BooleanOp(self)
+
+
+# EXPORT
+from jx_base.expressions import boolean_op
+boolean_op.FindOp = FindOp
+del boolean_op

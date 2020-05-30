@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
-from mo_dots import _set_attr as mo_dots_set_attr, split_field, wrap
+from mo_dots import _set_attr as mo_dots_set_attr, split_field, to_data
 
 DEBUG = True
 
@@ -23,7 +23,7 @@ def set(constants):
     """
     if not constants:
         return
-    constants = wrap(constants)
+    constants = to_data(constants)
 
     for full_path, new_value in constants.leaves():
         errors = []

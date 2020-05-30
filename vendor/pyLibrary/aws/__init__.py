@@ -14,7 +14,7 @@ import time
 import requests
 from boto import utils as boto_utils
 
-from mo_dots import coalesce, wrap
+from mo_dots import coalesce, to_data, dict_to_data
 from mo_logs import Log, machine_metadata
 from mo_logs.exceptions import Except, suppress_exception
 from mo_threads import Thread, Till
@@ -56,7 +56,7 @@ def get_instance_metadata(timeout=None):
     if not isinstance(timeout, (int, float)):
         timeout = Duration(timeout).seconds
 
-    output = wrap({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata(timeout=coalesce(timeout, 5), num_retries=2).items()})
+    output = dict_to_data({k.replace("-", "_"): v for k, v in boto_utils.get_instance_metadata(timeout=coalesce(timeout, 5), num_retries=2).items()})
     return output
 
 

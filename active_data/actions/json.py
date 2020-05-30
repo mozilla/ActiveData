@@ -14,7 +14,7 @@ from flask import Response
 from active_data.actions import find_container, send_error
 from jx_base.container import Container
 from jx_python import jx
-from mo_dots import listwrap, unwraplist, wrap
+from mo_dots import listwrap, unwraplist, to_data
 from mo_json import value2json
 from mo_logs import Except, Log
 from mo_math import is_integer, is_number
@@ -72,4 +72,4 @@ def scrub_args(args):
             else:
                 vs.append(v)
         output[k] = unwraplist(vs)
-    return wrap(output)
+    return to_data(output)

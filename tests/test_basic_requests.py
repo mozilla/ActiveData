@@ -11,11 +11,11 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from active_data import OVERVIEW
-from mo_dots import wrap
+from mo_dots import dict_to_data
+from mo_http import http
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
-from mo_http import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -71,7 +71,7 @@ class TestBasicRequests(BaseTestCase):
             {"a": 1, "b": 1}
         ]
 
-        test = wrap({
+        test = dict_to_data({
             "data": data,
             "query": {"from": TEST_TABLE},
             "expecting_list": {"data": data}

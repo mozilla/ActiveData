@@ -16,7 +16,7 @@ from decimal import Decimal
 
 from hjson import loads as hjson2value
 
-from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, wrap, wrap_leaves
+from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, to_data, wrap_leaves
 from mo_dots.objects import DataObject
 from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text
 from mo_logs import Except, Log, strings
@@ -308,7 +308,7 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
         if flexible:
             value = hjson2value(json_string)
         else:
-            value = wrap(json_decoder(text(json_string)))
+            value = to_data(json_decoder(text(json_string)))
 
         if leaves:
             value = wrap_leaves(value)

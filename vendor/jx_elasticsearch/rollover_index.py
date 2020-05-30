@@ -12,7 +12,7 @@ import re
 
 from jx_elasticsearch import elasticsearch
 from jx_python import jx
-from mo_dots import Null, coalesce, wrap
+from mo_dots import Null, coalesce, to_data
 from mo_dots.lists import last
 from mo_future import items, sort_using_key
 from mo_json import CAN_NOT_DECODE_JSON, json2value, value2json
@@ -69,7 +69,7 @@ class RolloverIndex(object):
         # Log.error("Not supported")
 
     def _get_queue(self, row):
-        row = wrap(row)
+        row = to_data(row)
         if row.json:
             row.value, row.json = json2value(row.json), None
         timestamp = Date(self.rollover_field(row.value))
@@ -82,7 +82,7 @@ class RolloverIndex(object):
         with self.locker:
             queue = self.known_queues.get(rounded_timestamp.unix)
         if queue == None:
-            candidates = wrap(sort_using_key(
+            candidates = to_data(sort_using_key(
                 filter(
                     lambda r: re.match(
                         re.escape(self.settings.index) + r"\d\d\d\d\d\d\d\d_\d\d\d\d\d\d$",
@@ -98,7 +98,7 @@ class RolloverIndex(object):
                 if timestamp > c.date:
                     best = c
             if not best or rounded_timestamp > best.date:
-                if rounded_timestamp < wrap(last(candidates)).date:
+                if rounded_timestamp < to_data(last(candidates)).date:
                     es = self.cluster.get_or_create_index(read_only=False, alias=best.alias, index=best.index, kwargs=self.settings)
                 else:
                     try:
@@ -272,7 +272,7 @@ class RolloverIndex(object):
             else:
                 queue.add(done_copy)
 
-        if [p for p in pending if wrap(p).value.task.state not in ('failed', 'exception')]:
+        if [p for p in pending if to_data(p).value.task.state not in ('failed', 'exception')]:
             Log.error("Did not find an index for {{alias}} to place the data for key={{key}}", key=tuple(keys)[0], alias=self.settings.index)
 
         Log.note("{{num}} keys from {{key|json}} added", num=num_keys, key=keys)

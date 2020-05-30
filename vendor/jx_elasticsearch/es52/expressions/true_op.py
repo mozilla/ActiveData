@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import TrueOp, extend
-from mo_dots import wrap
+from mo_dots import dict_to_data
 
 
 @extend(TrueOp)
@@ -19,4 +19,4 @@ def to_esfilter(self, schema):
     return MATCH_ALL
 
 
-MATCH_ALL = wrap({"match_all": {}})
+MATCH_ALL = dict_to_data({"match_all": {}})

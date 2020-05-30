@@ -13,7 +13,7 @@ importScript("../util/convert.js");
       description = convert.value2json(description)
     }//endif
     this.message=description;
-    this.cause=wrap(cause);
+    this.cause=to_data(cause);
     if (offset!==undefined){
       try{
         throw new Error();
@@ -47,7 +47,7 @@ importScript("../util/convert.js");
   }//function
 
 
-  function wrap(e){
+  function to_data(e){
     if (e===undefined || e instanceof Exception) return e;
     if (e instanceof Error){
       let output=new Exception(e.message, e.cause);

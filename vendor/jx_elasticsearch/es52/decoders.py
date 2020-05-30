@@ -20,8 +20,8 @@ from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
-from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap, join_field, \
-    split_field
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, to_data, join_field, \
+    split_field, dict_to_data
 from mo_future import first, is_text, text, transpose
 from mo_json import STRING
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
@@ -540,7 +540,7 @@ class ObjectDecoder(AggsDecoder):
             for c in query.frum.schema.leaves(prefix)
         ])
 
-        self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
+        self.domain = self.edge.domain = dict_to_data({"dimension": {"fields": self.fields}})
         self.domain.limit = temper_limit(self.domain.limit, query)
         self.parts = list()
         self.key2index = {}
@@ -738,7 +738,7 @@ class DimFieldListDecoder(SetDecoder):
 
     def done_count(self):
         columns = list(map(text, range(len(self.fields))))
-        parts = wrap([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
+        parts = to_data([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
         sorted_parts = jx.sort(parts, columns)
 

@@ -14,7 +14,7 @@ from jx_base.query import _normalize_edge
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.lists.aggs import is_aggs
 from mo_collections.matrix import Matrix
-from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, wrap, wrap_leaves
+from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, wrap, leaves_to_data
 import mo_dots as dot
 from mo_dots.lists import EMPTY
 from mo_future import is_text, transpose
@@ -58,7 +58,7 @@ class Cube(Container):
                 # EXPECTING NO MORE THAN ONE rownum EDGE IN THE DATA
                 length = MAX([len(v) for v in data.values()])
                 if length >= 1:
-                    self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum"}}])
+                    self.edges = to_data([{"name": "rownum", "domain": {"type": "rownum"}}])
                 else:
                     self.edges = EMPTY
             elif is_list(data):
@@ -66,7 +66,7 @@ class Cube(Container):
                     Log.error("not expecting a list of records")
 
                 data = {select.name: Matrix.wrap(data)}
-                self.edges = wrap([{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(data), "interval": 1}}])
+                self.edges = to_data([{"name": "rownum", "domain": {"type": "rownum", "min": 0, "max": len(data), "interval": 1}}])
             elif isinstance(data, Matrix):
                 if is_list(select):
                     Log.error("not expecting a list of records")
@@ -79,7 +79,7 @@ class Cube(Container):
                 data = {select.name: Matrix(value=data)}
                 self.edges = EMPTY
         else:
-            self.edges = wrap(edges)
+            self.edges = to_data(edges)
 
         self.data = data
 
@@ -100,7 +100,7 @@ class Cube(Container):
         if not self.edges:
             return list.__iter__([])
 
-        if len(self.edges) == 1 and wrap(self.edges[0]).domain.type == "index":
+        if len(self.edges) == 1 and to_data(self.edges[0]).domain.type == "index":
             # ITERATE AS LIST OF RECORDS
             keys = list(self.data.keys())
             output = (dot.zip(keys, r) for r in zip(*self.data.values()))
@@ -113,7 +113,7 @@ class Cube(Container):
         if is_aggs(q):
             return cube_aggs(frum, q)
 
-        columns = wrap({s.name: s for s in self.select + self.edges})
+        columns = dot.dict_to_data({s.name: s for s in self.select + self.edges})
 
         # DEFER TO ListContainer
         from jx_python.containers.list_usingPythonList import ListContainer
@@ -138,7 +138,7 @@ class Cube(Container):
                 Log.error("problem", cause=e)
             for s in s_names:
                 output[s] = self.data[s][c]
-            yield wrap(output)
+            yield to_data(output)
 
     @property
     def value(self):
@@ -208,12 +208,12 @@ class Cube(Container):
 
             # MAP DICT TO NUMERIC INDICES
             for name, v in item.items():
-                ei, parts = wrap([(i, e.domain.partitions) for i, e in enumerate(self.edges) if e.name == name])[0]
+                ei, parts = to_data([(i, e.domain.partitions) for i, e in enumerate(self.edges) if e.name == name])[0]
                 if not parts:
                     Log.error("Can not find {{name}}=={{value|quote}} in list of edges, maybe this feature is not implemented yet",
                         name= name,
                         value= v)
-                part = wrap([p for p in parts if p.value == v])[0]
+                part = to_data([p for p in parts if p.value == v])[0]
                 if not part:
                     return Null
                 else:
@@ -222,11 +222,11 @@ class Cube(Container):
             edges = [e for e, v in zip(self.edges, coordinates) if v is None]
             if not edges:
                 # ZERO DIMENSIONAL VALUE
-                return wrap({k: v.__getitem__(coordinates) for k, v in self.data.items()})
+                return dict_to_data({k: v.__getitem__(coordinates) for k, v in self.data.items()})
             else:
                 output = Cube(
                     select=self.select,
-                    edges=wrap([e for e, v in zip(self.edges, coordinates) if v is None]),
+                    edges=to_data([e for e, v in zip(self.edges, coordinates) if v is None]),
                     data={k: Matrix(values=c.__getitem__(coordinates)) for k, c in self.data.items()}
                 )
                 return output
@@ -326,7 +326,7 @@ class Cube(Container):
             selects = listwrap(self.select)
             index, v = transpose(*self.data[selects[0].name].groupby(selector))
 
-            coord = wrap([coord2term(c) for c in index])
+            coord = to_data([coord2term(c) for c in index])
 
             values = [v]
             for s in selects[1::]:
@@ -381,7 +381,7 @@ class Cube(Container):
             selects = listwrap(self.select)
             index, v = transpose(*self.data[selects[0].name].groupby(selector))
 
-            coord = wrap([coord2term(c) for c in index])
+            coord = to_data([coord2term(c) for c in index])
 
             values = [v]
             for s in selects[1::]:

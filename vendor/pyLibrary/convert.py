@@ -23,7 +23,7 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import concat_field, unwrap, wrap, is_many
+from mo_dots import concat_field, unwrap, to_data, is_many
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -150,7 +150,7 @@ def table2list(
     column_names, # tuple of columns names
     rows          # list of tuples
 ):
-    return wrap([dict(zip(column_names, r)) for r in rows])
+    return to_data([dict(zip(column_names, r)) for r in rows])
 
 def table2tab(
     column_names, # tuple of columns names
@@ -165,12 +165,12 @@ def table2tab(
 
 def list2tab(rows):
     columns = set()
-    for r in wrap(rows):
+    for r in to_data(rows):
         columns |= set(k for k, v in r.leaves())
     keys = list(columns)
 
     output = []
-    for r in wrap(rows):
+    for r in to_data(rows):
         output.append("\t".join(value2json(r[k]) for k in keys))
 
     return "\t".join(keys) + "\n" + "\n".join(output)
@@ -460,7 +460,7 @@ def ini2value(ini_content):
         output[section]=s = {}
         for k, v in config.items(section):
             s[k]=v
-    return wrap(output)
+    return to_data(output)
 
 
 if PY3:

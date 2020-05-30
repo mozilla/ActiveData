@@ -13,7 +13,7 @@ from jx_base.expressions import LeavesOp
 from jx_base.language import is_op
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, is_data, is_list, unwrap, unwraplist, wrap, listwrap
+from mo_dots import Data, is_data, is_list, unwrap, unwraplist, to_data, listwrap
 from mo_files import mimetype
 from mo_future import transpose
 from mo_logs import Log
@@ -155,7 +155,7 @@ def format_cube(T, select, query=None):
 
 
 def scrub_select(select):
-    return wrap(
+    return to_data(
         [{k: v for k, v in s.items() if k not in ["pull", "put"]} for s in select]
     )
 

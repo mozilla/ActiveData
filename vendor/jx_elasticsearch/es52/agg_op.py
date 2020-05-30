@@ -24,7 +24,7 @@ from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplif
 from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
-from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, wrap
+from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
 from mo_future import first, next
 from mo_logs import Log
 from mo_times.timer import Timer
@@ -57,7 +57,7 @@ def get_decoders_by_path(query):
         if query.sort and query.format != "cube":
             query.groupby = sort_edges(query, "groupby")
 
-    for edge in wrap(coalesce(query.edges, query.groupby, [])):
+    for edge in to_data(coalesce(query.edges, query.groupby, [])):
         limit = coalesce(edge.domain.limit, query.limit, DEFAULT_LIMIT)
         if edge.value != None and not edge.value is NULL:
             edge = edge.copy()
@@ -167,7 +167,7 @@ def build_es_query(select, query_path, schema, query):
         acc = NestedAggs(path).add(acc)
     acc = NestedAggs('.').add(acc)
     acc = simplify(acc)
-    es_query = wrap(acc.to_es(schema))
+    es_query = to_data(acc.to_es(schema))
     es_query.size = 0
     return acc, decoders, es_query
 

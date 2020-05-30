@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
-from mo_dots import Data, wrap
+from mo_dots import Data, to_data
 from mo_files.url import URL
 from mo_json import json2value, value2json
 from mo_logs import Log
@@ -166,7 +166,7 @@ class TestSQL(BaseTestCase):
         self.assertAlmostEqual(jx_query, expected, places=6)
 
     def execute(self, test):
-        test = wrap(test)
+        test = to_data(test)
         self.utils.fill_container(test)
         test.query.sql = test.query.sql.replace(TEST_TABLE, test.query['from'])
         self.utils.send_queries(test)

@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from decimal import Decimal
 
-from mo_dots import wrap
+from mo_dots import to_data
 from mo_json import datetime2unix, value2json
 from mo_kwargs import override
 from mo_logs import Log
@@ -49,7 +49,7 @@ class StructuredLogger_usingMozLog(StructuredLogger):
             "Pid": params.machine.pid,
             "Fields": {
                 k: _deep_json_to_string(v, 0)
-                for k, v in wrap(params).leaves()
+                for k, v in to_data(params).leaves()
             }
         }
         self.stream.write(value2json(output).encode('utf8'))

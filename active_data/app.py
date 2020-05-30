@@ -117,7 +117,10 @@ def setup():
     constants.set(config.constants)
     Log.start(config.debug)
 
-    agg_bulk.S3_CONFIG = config.bulk.s3
+    if config.bulk.s3:
+        agg_bulk.S3_CONFIG = config.bulk.s3
+    else:
+        Log.alert("Bulk queries are disabled, add `bulk.s3` properties to config to enable")
 
     File.new_instance("activedata.pid").write(text(machine_metadata.pid))
 

@@ -18,7 +18,7 @@ from active_data.actions import find_container, save_query, send_error, test_mod
 from active_data.actions.query import BLANK, QUERY_SIZE_LIMIT
 from jx_base.container import Container
 from jx_python import jx
-from mo_dots import is_data, is_list, listwrap, unwraplist, wrap
+from mo_dots import is_data, is_list, listwrap, unwraplist, to_data
 from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -116,7 +116,7 @@ def parse_sql(sql):
     #     pass
     # elif all(isinstance(r, number_types) or (is_data(r) and "literal" in r.keys()) for r in output):
     #     output = {"literal": [r['literal'] if is_data(r) else r for r in output]}
-    query = wrap(moz_sql_parser.parse(sql))
+    query = to_data(moz_sql_parser.parse(sql))
     redundant_select = []
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):

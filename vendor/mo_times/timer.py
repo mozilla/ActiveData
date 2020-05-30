@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from datetime import timedelta
 from time import time
 
-from mo_dots import coalesce, wrap
+from mo_dots import coalesce, to_data
 from mo_logs import Log
 from mo_times.durations import Duration
 
@@ -37,7 +37,7 @@ class Timer(object):
         too_long=0,  # ONLY LOG IF MORE THAN THIS NUMBER OF SECONDS
     ):
         self.template = description
-        self.param = wrap(coalesce(param, {}))
+        self.param = to_data(coalesce(param, {}))
         self.verbose = coalesce(verbose, False if silent is True else True)
         self.agg = 0
         self.too_long = too_long  # ONLY SHOW TIMING FOR DURATIONS THAT ARE too_long

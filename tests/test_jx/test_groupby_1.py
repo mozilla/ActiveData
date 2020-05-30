@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import skip, skipIf
 
 from jx_base.expressions import NULL
-from mo_dots import set_default, wrap
+from mo_dots import set_default, to_data
 from mo_future import text
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
@@ -336,7 +336,7 @@ class TestgroupBy1(BaseTestCase):
                     "a": {"b": {"c": d.v}},
                     "b": d.a
                 }
-                for d in wrap(simple_test_data)
+                for d in to_data(simple_test_data)
             ],
             "query": {
                 "from": TEST_TABLE,

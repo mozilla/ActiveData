@@ -14,7 +14,7 @@ from copy import deepcopy
 
 from mo_future import generator_types, text, first
 
-from mo_dots import CLASS, coalesce, unwrap, wrap
+from mo_dots import CLASS, coalesce, unwrap, to_data
 from mo_dots.nones import Null
 
 LIST = text("list")
@@ -85,7 +85,7 @@ class FlatList(list):
 
         if not isinstance(index, int) or index < 0 or len(_get_list(self)) <= index:
             return Null
-        return wrap(_get_list(self)[index])
+        return to_data(_get_list(self)[index])
 
     def __setitem__(self, i, y):
         try:
@@ -126,7 +126,7 @@ class FlatList(list):
 
     def filter(self, _filter):
         return FlatList(
-            vals=[unwrap(u) for u in (wrap(v) for v in _get_list(self)) if _filter(u)]
+            vals=[unwrap(u) for u in (to_data(v) for v in _get_list(self)) if _filter(u)]
         )
 
     def __delslice__(self, i, j):
@@ -140,7 +140,7 @@ class FlatList(list):
         self.list = []
 
     def __iter__(self):
-        temp = [wrap(v) for v in _get_list(self)]
+        temp = [to_data(v) for v in _get_list(self)]
         return iter(temp)
 
     def __contains__(self, item):
@@ -181,7 +181,7 @@ class FlatList(list):
 
     def __deepcopy__(self, memo):
         d = _get_list(self)
-        return wrap(deepcopy(d, memo))
+        return to_data(deepcopy(d, memo))
 
     def remove(self, x):
         _get_list(self).remove(x)
@@ -195,9 +195,9 @@ class FlatList(list):
 
     def pop(self, index=None):
         if index is None:
-            return wrap(_get_list(self).pop())
+            return to_data(_get_list(self).pop())
         else:
-            return wrap(_get_list(self).pop(index))
+            return to_data(_get_list(self).pop(index))
 
     def __eq__(self, other):
         lst = _get_list(self)
@@ -287,7 +287,7 @@ class FlatList(list):
         """
         lst = _get_list(self)
         if lst:
-            return wrap(lst[-1])
+            return to_data(lst[-1])
         return Null
 
     def map(self, oper, includeNone=True):

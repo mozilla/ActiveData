@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPublicNumbers
 
-from mo_dots import Data, wrap
+from mo_dots import Data, to_data, dict_to_data
 from mo_json import value2json, json2value
 from mo_math import bytes2base64, base642bytes, int2base64, base642int
 
@@ -50,7 +50,7 @@ def sign(message, private_key):
     # SIGN DATA/STRING
     signature = private_key.sign(data=data, padding=PSS, algorithm=SHA256)
 
-    return wrap({
+    return dict_to_data({
         "data": bytes2base64(data),
         "signature": bytes2base64(signature),
         "padding": "PSS",

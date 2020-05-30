@@ -14,7 +14,7 @@ import hashlib
 
 from active_data.actions import save_query
 from jx_elasticsearch import elasticsearch
-from mo_dots import wrap
+from mo_dots import to_data, dict_to_data
 from mo_future import text
 from mo_json import value2json
 from mo_json_config import URL
@@ -55,7 +55,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         bytes = json.encode('utf8')
         expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
         Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
-        wrap(test).expecting_list.meta.saved_as = expected_hash
+        to_data(test).expecting_list.meta.saved_as = expected_hash
 
         self.utils.send_queries(test)
 
@@ -71,7 +71,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.all_content, bytes)
 
     def test_recovery_of_empty_string(self):
-        test = wrap({
+        test = dict_to_data({
             "data": [
                 {"a": "bee"}
             ],

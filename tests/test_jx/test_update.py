@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
-from mo_dots import wrap
+from mo_dots import to_data, dict_to_data
 from tests.test_jx import BaseTestCase
 
 
@@ -18,7 +18,7 @@ class TestUpdate(BaseTestCase):
 
     def test_new_field(self):
         settings = self.utils.fill_container(
-            wrap({"data": [
+            dict_to_data({"data": [
                 {"a": 1, "b": 5},
                 {"a": 3, "b": 4},
                 {"a": 4, "b": 3},
@@ -47,7 +47,7 @@ class TestUpdate(BaseTestCase):
 
     def test_delete(self):
         settings = self.utils.fill_container(
-            wrap({"data": [
+            dict_to_data({"data": [
                 {"a": 1, "b": 5},
                 {"a": 3, "b": 4},
                 {"a": 4, "b": 3},

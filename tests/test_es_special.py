@@ -10,19 +10,15 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.container import type2container
-
-import jx_elasticsearch
-from jx_elasticsearch.es52 import ES52
-
-from jx_python import jx
-from mo_future import text
-
 from active_data.actions import find_container
+from jx_base.container import type2container
 from jx_base.expressions import NULL
-from mo_dots import Data, wrap, set_default
-from mo_times import Date
+from jx_elasticsearch.es52 import ES52
+from jx_python import jx
+from mo_dots import Data, to_data, dict_to_data
+from mo_future import text
 from mo_http import http
+from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -259,7 +255,7 @@ class TestESSpecial(BaseTestCase):
     def test_no_update(self):
         data = jx.sort([{"a": "test" + text(i)} for i in range(10)], "a")
 
-        test = wrap({
+        test = dict_to_data({
             "data": data,
             "query": {
                 "from": TEST_TABLE,
@@ -353,5 +349,5 @@ class TestESSpecial(BaseTestCase):
         new_found_container = find_container(alias, after=Date.now())
 
         # VERIFY OLD SCHEMA DOES NOT EXIST
-        columns = wrap([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
+        columns = to_data([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
         self.assertEqual(columns.get("es_column"), {'.', '_id', 'b', 'b.~n~', '~e~'})

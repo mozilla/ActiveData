@@ -26,7 +26,7 @@ from mo_dots import (
     listwrap,
     split_field,
     unwraplist,
-    wrap)
+    to_data)
 from mo_future import binary_type, items, long, none_type, reduce, text
 from mo_json import INTEGER, NUMBER, STRING, python_type_to_json_type
 from mo_times.dates import Date
@@ -140,7 +140,7 @@ META_COLUMNS_DESC = TableDesc(
     url=None,
     query_path=ROOT_PATH,
     last_updated=Date.now(),
-    columns=wrap(
+    columns=to_data(
         [
             Column(
                 name=c,
@@ -193,7 +193,7 @@ META_TABLES_DESC = TableDesc(
     url=None,
     query_path=ROOT_PATH,
     last_updated=Date.now(),
-    columns=wrap(
+    columns=to_data(
         [
             Column(
                 name=c,

@@ -14,7 +14,7 @@ from jx_base.expressions import Variable
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
 from jx_elasticsearch.es52.expressions.and_op import es_and
-from mo_dots import wrap, Null, coalesce
+from mo_dots import to_data, Null, coalesce, dict_to_data
 from mo_future import is_text, first
 from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING, NUMBER_TYPES
 from mo_logs import Log
@@ -34,7 +34,7 @@ def es_query_template(path):
     if path != ".":
         f0 = {}
         f1 = {}
-        output = wrap({
+        output = dict_to_data({
             "query": es_and([
                 f0,
                 {"nested": {
@@ -47,16 +47,16 @@ def es_query_template(path):
             "size": 0,
             "sort": []
         })
-        return output, wrap([f0, f1])
+        return output, to_data([f0, f1])
     else:
         f0 = {}
-        output = wrap({
+        output = dict_to_data({
             "query": es_and([f0]),
             "from": 0,
             "size": 0,
             "sort": []
         })
-        return output, wrap([f0])
+        return output, to_data([f0])
 
 
 def jx_sort_to_es_sort(sort, schema):

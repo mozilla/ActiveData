@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 import os
 import platform
 
-from mo_dots import set_default, wrap
+from mo_dots import set_default, to_data
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
 
@@ -24,7 +24,7 @@ DEBUG = True
 class Python(object):
 
     def __init__(self, name, config):
-        config = wrap(config)
+        config = to_data(config)
         if config.debug.logs:
             Log.error("not allowed to configure logging on other process")
 

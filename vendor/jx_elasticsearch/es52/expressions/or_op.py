@@ -11,10 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import OrOp as OrOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
-from jx_elasticsearch.es52.expressions.and_op import es_and
-from mo_dots import wrap
+from mo_dots import dict_to_data
 
-NotOp, es_not = [None] * 2
+NotOp, es_not, es_and = [None] * 3
 
 
 class OrOp(OrOp_):
@@ -41,4 +40,4 @@ class OrOp(OrOp_):
 
 
 def es_or(terms):
-    return wrap({"bool": {"should": terms}})
+    return dict_to_data({"bool": {"should": terms}})

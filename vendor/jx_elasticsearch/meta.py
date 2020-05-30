@@ -45,10 +45,9 @@ from mo_dots import (
     split_field,
     startswith_field,
     tail_field,
-    wrap,
     listwrap,
     unwrap,
-)
+    to_data)
 from mo_dots.lists import last
 from mo_future import first, long, none_type, text
 from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT
@@ -797,10 +796,10 @@ class ElasticsearchMetadata(Namespace):
                             else:
                                 Log.note(
                                     "Old columns {{names|json}} last updated {{dates|json}}",
-                                    names=wrap(old_columns).es_column,
+                                    names=to_data(old_columns).es_column,
                                     dates=[
                                         Date(t).format()
-                                        for t in wrap(old_columns).last_updated
+                                        for t in to_data(old_columns).last_updated
                                     ],
                                 )
                         else:
@@ -1141,7 +1140,7 @@ class Schema(jx_base.Schema):
                     (c.name != "_id" or clean_name == "_id")
                     and c.cardinality != 0
                     and c.jx_type not in (OBJECT, EXISTS)
-                    and startswith_field(query_path, c.nested_path[0])  # NOT DEEPER THAN THE SCHEMA
+                    # and startswith_field(query_path, c.nested_path[0])  # NOT DEEPER THAN THE SCHEMA
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
                     )

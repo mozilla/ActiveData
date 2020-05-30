@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.expression import jx_expression, Expression, _jx_expression
 from jx_base.utils import is_variable_name
-from mo_dots import wrap, is_container
+from mo_dots import to_data, is_container
 from mo_future import is_text
 from mo_logs import Log
 from mo_math import UNION
@@ -38,7 +38,7 @@ class SelectOp(Expression):
 
     @classmethod
     def define(cls, expr):
-        expr = wrap(expr)
+        expr = to_data(expr)
         term = expr.select
         terms = []
         if not is_container(term):
@@ -78,7 +78,7 @@ class SelectOp(Expression):
         return {
             "select": [
                 {"name": t.name, "value": t.value.__data__()}
-                for t in wrap(self.terms)
+                for t in to_data(self.terms)
             ]
         }
 

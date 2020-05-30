@@ -33,7 +33,7 @@ class Data(object):
     def __init__(self, *args, **kwargs):
         """
         CALLING Data(**something) WILL RESULT IN A COPY OF something, WHICH
-        IS UNLIKELY TO BE USEFUL. USE wrap() INSTEAD
+        IS UNLIKELY TO BE USEFUL. USE to_data() INSTEAD
         """
         if DEBUG:
             d = self._internal_dict
@@ -101,13 +101,13 @@ class Data(object):
                 else:
                     d = _getdefault(d, n)  # EVERYTHING ELSE TREATS n AS LITERAL
 
-            return wrap(d)
+            return to_data(d)
         else:
             o = d.get(key)
 
         if o == None:
             return NullType(d, key)
-        return wrap(o)
+        return to_data(o)
 
     def __setitem__(self, key, value):
         if key == "":
@@ -153,7 +153,7 @@ class Data(object):
         v = d.get(key)
         t = _get(v, CLASS)
 
-        # OPTIMIZED wrap()
+        # OPTIMIZED to_data()
         if t is dict:
             m = object.__new__(Data)
             _set(m, SLOT, v)
@@ -194,7 +194,7 @@ class Data(object):
             get_logger().error("Expecting Data")
 
         d = self._internal_dict
-        output = Data(**d)
+        output = Data(**d)  # COPY
         output.__ior__(other)
         return output
 
@@ -205,7 +205,7 @@ class Data(object):
         if not _get(other, CLASS) in data_types:
             get_logger().error("Expecting Data")
 
-        return wrap(other).__or__(self)
+        return to_data(other).__or__(self)
 
     def __ior__(self, other):
         """
@@ -264,7 +264,7 @@ class Data(object):
 
     def items(self):
         d = self._internal_dict
-        return [(k, wrap(v)) for k, v in d.items() if v != None or _get(v, CLASS) in data_types]
+        return [(k, to_data(v)) for k, v in d.items() if v != None or _get(v, CLASS) in data_types]
 
     def leaves(self, prefix=None):
         """
@@ -275,7 +275,7 @@ class Data(object):
     def iteritems(self):
         # LOW LEVEL ITERATION, NO WRAPPING
         d = self._internal_dict
-        return ((k, wrap(v)) for k, v in iteritems(d))
+        return ((k, to_data(v)) for k, v in iteritems(d))
 
     def pop(self, item, default=None):
         d = self._internal_dict
@@ -312,7 +312,7 @@ class Data(object):
 
     def __deepcopy__(self, memo):
         d = self._internal_dict
-        return wrap(deepcopy(d, memo))
+        return to_data(deepcopy(d, memo))
 
     def __delitem__(self, key):
         if key.find(".") == -1:
@@ -359,7 +359,7 @@ MutableMapping.register(Data)
 def leaves(value, prefix=None):
     """
     LIKE items() BUT RECURSIVE, AND ONLY FOR THE LEAVES (non dict) VALUES
-    SEE wrap_leaves FOR THE INVERSE
+    SEE leaves_to_data FOR THE INVERSE
 
     :param value: THE Mapping TO TRAVERSE
     :param prefix:  OPTIONAL PREFIX GIVEN TO EACH KEY
@@ -475,4 +475,4 @@ def is_data(d):
 
 from mo_dots.nones import Null, NullType
 from mo_dots.lists import is_list, FlatList
-from mo_dots import unwrap, wrap
+from mo_dots import unwrap, to_data

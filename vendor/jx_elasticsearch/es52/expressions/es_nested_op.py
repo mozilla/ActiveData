@@ -15,11 +15,20 @@ from jx_base.expressions import EsNestedOp as EsNestedOp_
 class EsNestedOp(EsNestedOp_):
     def to_esfilter(self, schema):
         if self.path.var == ".":
-            return {"query": self.query.to_esfilter(schema)}
+            return self.select.to_es() | {"query": self.query.to_esfilter(schema), "from": 0}
         else:
             return {
                 "nested": {
                     "path": self.path.var,
                     "query": self.query.to_esfilter(schema),
+                    "inner_hits": (self.select.to_es() | {"size": 100000})
+                    if self.select
+                    else None,
                 }
             }
+
+
+# EXPORT
+from jx_elasticsearch.es52.expressions import and_op
+and_op.EsNestedOp = EsNestedOp
+del and_op

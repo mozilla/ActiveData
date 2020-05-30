@@ -15,7 +15,7 @@ from jx_elasticsearch.es52.expressions import split_expression_by_path, ES52
 from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
 from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from mo_dots import wrap, Null
+from mo_dots import to_data, Null
 from mo_files import TempFile
 from mo_json import value2json
 from mo_logs import Log, Except
@@ -47,10 +47,9 @@ def es_bulksetop(esq, frum, query):
     guid = Random.base64(32, extra="-_")
 
     schema = query.frum.schema
-    query_path = schema.query_path[0]
     new_select, split_select = get_selects(query)
     split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
-    es_query = es_query_proto(query_path, split_select, split_wheres, schema)
+    es_query = es_query_proto(split_select, split_wheres, schema)
     es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
     if not es_query.sort:
@@ -69,7 +68,7 @@ def es_bulksetop(esq, frum, query):
         parent_thread=Null,
     ).release()
 
-    output = wrap(
+    output = to_data(
         {
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),

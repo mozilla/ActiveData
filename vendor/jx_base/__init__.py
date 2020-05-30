@@ -15,7 +15,7 @@ from mo_json.typed_encoder import EXISTS_TYPE
 
 from jx_base.expressions import jx_expression
 from jx_python.expressions import Literal, Python
-from mo_dots import coalesce, listwrap, wrap
+from mo_dots import coalesce, listwrap, to_data
 from mo_dots.datas import register_data
 from mo_dots.lists import last
 from mo_future import is_text, text
@@ -79,7 +79,7 @@ def DataClass(name, columns, constraint=None):
     :return: The class that has been created
     """
 
-    columns = wrap(
+    columns = to_data(
         [
             {"name": c, "required": True, "nulls": False, "type": object}
             if is_text(c)
@@ -88,10 +88,10 @@ def DataClass(name, columns, constraint=None):
         ]
     )
     slots = columns.name
-    required = wrap(
+    required = to_data(
         filter(lambda c: c.required and not c.nulls and not c.default, columns)
     ).name
-    nulls = wrap(filter(lambda c: c.nulls, columns)).name
+    nulls = to_data(filter(lambda c: c.nulls, columns)).name
     defaults = {c.name: coalesce(c.default, None) for c in columns}
     types = {c.name: coalesce(c.jx_type, object) for c in columns}
 

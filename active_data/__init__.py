@@ -8,7 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import wrap, coalesce
+from mo_dots import to_data, coalesce, dict_to_data
 from mo_files import File
 from mo_json import value2json
 from mo_logs import Log
@@ -27,7 +27,7 @@ def record_request(request, query_, data, error):
         if data and len(data)>10000:
             data = data[:10000]
 
-        log = wrap({
+        log = dict_to_data({
             "timestamp": Date.now(),
             "http_user_agent": request.headers.get("user_agent"),
             "http_accept_encoding": request.headers.get("accept_encoding"),

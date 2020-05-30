@@ -72,7 +72,7 @@ class AndOp(Expression):
             if simple.type != BOOLEAN:
                 simple = simple.exists()
 
-            if simple is self.lang[TRUE]:
+            if simple is TRUE:
                 continue
             elif simple is FALSE:
                 return FALSE

@@ -13687,7 +13687,7 @@ $.extend( $.effects, {
 			$( active ).focus();
 		}
 
-		wrapper = element.parent(); //Hotfix for jQuery 1.4 since some change in wrap() seems to actually lose the reference to the wrapped element
+		wrapper = element.parent(); //Hotfix for jQuery 1.4 since some change in to_data() seems to actually lose the reference to the wrapped element
 
 		// transfer positioning properties to the wrapper
 		if ( element.css( "position" ) === "static" ) {

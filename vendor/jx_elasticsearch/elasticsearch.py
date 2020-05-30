@@ -16,7 +16,7 @@ from copy import deepcopy
 from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
-    literal_field, set_default, split_field, wrap, lists
+    literal_field, set_default, split_field, lists, dict_to_data, to_data
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
@@ -175,7 +175,7 @@ class Index(object):
                     index=self.settings.index,
                     type=self.settings.type
                 )
-            return wrap({"mappings": mapping[self.settings.type]})
+            return dict_to_data({"mappings": mapping[self.settings.type]})
 
     def delete_all_but_self(self):
         """
@@ -243,7 +243,7 @@ class Index(object):
         self.cluster.post("/" + self.settings.index + "/_refresh")
 
     def delete_record(self, filter):
-        filter = wrap(filter)
+        filter = to_data(filter)
 
         if self.settings.read_only:
             Log.error("Index opened in read only mode, no changes allowed")
@@ -424,7 +424,7 @@ class Index(object):
             Log.error("Do not know how to handle ES version {{version}}", version=self.cluster.version)
 
     def search(self, query, timeout=None, retry=None, scroll=None):
-        query = wrap(query)
+        query = to_data(query)
         try:
             suffix = "/_search?scroll=" + scroll if scroll else "/_search"
             url = self.path + suffix
@@ -603,7 +603,7 @@ class Cluster(object):
             Log.error("used `typed` parameter, not `tjson`")
         if read_only:
             # GET EXACT MATCH, OR ALIAS
-            aliases = wrap(self.get_aliases())
+            aliases = to_data(self.get_aliases())
             if index in aliases.index:
                 pass
             elif index in aliases.alias:
@@ -738,7 +738,7 @@ class Cluster(object):
         elif is_text(schema):
             Log.error("Expecting a JSON schema")
         else:
-            schema = wrap(schema)
+            schema = to_data(schema)
 
         if type != None:
             if schema.mappings:
@@ -754,7 +754,7 @@ class Cluster(object):
 
         for k, m in items(schema.mappings):
             if typed:
-                m = schema.mappings[k] = wrap(add_typed_annotations(m))
+                m = schema.mappings[k] = to_data(add_typed_annotations(m))
 
             m.date_detection = False  # DISABLE DATE DETECTION
             m.dynamic_templates = (
@@ -867,7 +867,7 @@ class Cluster(object):
         self.metatdata_last_updated = now  # ONLY UPDATE AFTER WE GET A RESPONSE
 
         with self.metadata_locker:
-            self._metadata = wrap(response.metadata)
+            self._metadata = to_data(response.metadata)
             for new_index_name, new_meta in self._metadata.indices.items():
                 old_index = old_indices[literal_field(new_index_name)]
                 if not old_index:
@@ -885,7 +885,7 @@ class Cluster(object):
                 if not new_index:
                     DEBUG_METADATA_UPDATE and Log.note("Old index lost: {{index}} at {{time}}", index=old_index_name, time=now)
                     self.index_last_updated[old_index_name] = now
-        self.info = wrap(self.get("/", stream=False))
+        self.info = to_data(self.get("/", stream=False))
         self._version = self.info.version.number
         return self._metadata
 
@@ -911,7 +911,7 @@ class Cluster(object):
             Log.error("data must be utf8 encoded string")
 
         try:
-            heads = wrap(kwargs).headers
+            heads = to_data(kwargs).headers
             heads["Accept-Encoding"] = "gzip,deflate"
             heads["Content-Type"] = mimetype.JSON
 
@@ -1004,7 +1004,7 @@ class Cluster(object):
     def put(self, path, **kwargs):
         url = self.settings.host + ":" + text(self.settings.port) + path
 
-        heads = wrap(kwargs).headers
+        heads = to_data(kwargs).headers
         heads[text("Accept-Encoding")] = text("gzip,deflate")
         heads[text("Content-Type")] = mimetype.JSON
 
@@ -1071,7 +1071,7 @@ def proto_name(prefix, timestamp=None):
 
 
 def sort(values):
-    return wrap(sorted(values))
+    return to_data(sorted(values))
 
 
 def scrub(r):
@@ -1080,7 +1080,7 @@ def scrub(r):
     CONVERT STRINGS OF NUMBERS TO NUMBERS
     RETURNS **COPY**, DOES NOT CHANGE ORIGINAL
     """
-    return wrap(_scrub(r))
+    return to_data(_scrub(r))
 
 
 def _scrub(r):
@@ -1187,7 +1187,7 @@ class Alias(object):
                 # TODO: MERGE THE mappings OF ALL candidates, DO NOT JUST PICK THE LAST ONE
 
                 index = "dummy value"
-                schema = wrap({"properties": {}})
+                schema = dict_to_data({"properties": {}})
                 for _, ind in jx.sort(candidates, {"value": 0, "sort": -1}):
                     mapping = ind.mappings[self.settings.type]
                     schema.properties = _merge_mapping(schema.properties, mapping.properties)
@@ -1217,10 +1217,10 @@ class Alias(object):
             mapping = self.cluster.get(self.path + "/_mapping")
             if not mapping[self.settings.type]:
                 Log.error("{{index}} does not have type {{type}}", self.settings)
-            return wrap({"mappings": mapping[self.settings.type]})
+            return dict_to_data({"mappings": mapping[self.settings.type]})
 
     def search(self, query, timeout=None, scroll=None):
-        query = wrap(query)
+        query = to_data(query)
         try:
             suffix = "/_search?scroll=" + scroll if scroll else "/_search"
             path = self.path + suffix
@@ -1466,7 +1466,7 @@ def retro_schema(schema):
     :param schema:
     :return:
     """
-    output = wrap({
+    output = dict_to_data({
         "mappings": {
             typename: {
                 "dynamic_templates": [
@@ -1582,7 +1582,7 @@ def diff_schema(A, B):
     return output
 
 
-DEFAULT_DYNAMIC_TEMPLATES = wrap([
+DEFAULT_DYNAMIC_TEMPLATES = to_data([
     {
         "default_typed_boolean": {
             "mapping": {

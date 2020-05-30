@@ -10,7 +10,6 @@ from jx_elasticsearch.es52.expressions.div_op import DivOp
 from jx_elasticsearch.es52.expressions.eq_op import EqOp
 from jx_elasticsearch.es52.expressions.es_nested_op import EsNestedOp
 from jx_elasticsearch.es52.expressions.exists_op import ExistsOp
-from jx_elasticsearch.es52.expressions.false_op import FalseOp, MATCH_NONE
 from jx_elasticsearch.es52.expressions.find_op import FindOp
 from jx_elasticsearch.es52.expressions.gt_op import GtOp
 from jx_elasticsearch.es52.expressions.gte_op import GteOp
@@ -28,7 +27,6 @@ from jx_elasticsearch.es52.expressions.prefix_op import PrefixOp
 from jx_elasticsearch.es52.expressions.reg_exp_op import RegExpOp
 from jx_elasticsearch.es52.expressions.script_op import ScriptOp
 from jx_elasticsearch.es52.expressions.suffix_op import SuffixOp
-from jx_elasticsearch.es52.expressions.true_op import TrueOp, MATCH_ALL
 from jx_elasticsearch.es52.expressions.variable import Variable
 from jx_elasticsearch.es52.expressions.when_op import WhenOp
 

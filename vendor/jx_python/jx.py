@@ -25,7 +25,7 @@ from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
 from mo_logs import Log
@@ -50,7 +50,7 @@ def run(query, container=Null):
     BUT IT IS ALSO PROCESSING A list CONTAINER; SEPARATE TO A ListContainer
     """
     if container == None:
-        container = wrap(query)["from"]
+        container = to_data(query)["from"]
         query_op = QueryOp.wrap(query, container=container, namespace=container.schema)
     else:
         query_op = QueryOp.wrap(query, container, container.namespace)
@@ -62,7 +62,7 @@ def run(query, container=Null):
     elif isinstance(container, Container):
         return container.query(query_op)
     elif is_many(container):
-        container = wrap(list(container))
+        container = to_data(list(container))
     elif isinstance(container, Cube):
         if is_aggs(query_op):
             return cube_aggs(container, query_op)
@@ -103,7 +103,7 @@ def run(query, container=Null):
         container = list2table(container)
         container.meta.format = "table"
     else:
-        container = wrap({"meta": {"format": "list"}, "data": container})
+        container = dict_to_data({"meta": {"format": "list"}, "data": container})
 
     return container
 
@@ -288,7 +288,7 @@ def select(data, field_name):
         return select_one(data, field_name)
 
     if is_data(field_name):
-        field_name = wrap(field_name)
+        field_name = to_data(field_name)
         if field_name.value in ["*", "."]:
             return data
 
@@ -306,7 +306,7 @@ def select(data, field_name):
             flat_list._select1(data, path, 0, output)
             return output
     elif is_list(field_name):
-        keys = [_select_a_field(wrap(f)) for f in field_name]
+        keys = [_select_a_field(to_data(f)) for f in field_name]
         return _select(Data(), unwrap(data), keys, 0)
     else:
         keys = [_select_a_field(field_name)]
@@ -315,12 +315,12 @@ def select(data, field_name):
 
 def _select_a_field(field):
     if is_text(field):
-        return wrap({"name": field, "value": split_field(field)})
-    elif is_text(wrap(field).value):
-        field = wrap(field)
-        return wrap({"name": field.name, "value": split_field(field.value)})
+        return dict_to_data({"name": field, "value": split_field(field)})
+    elif is_text(to_data(field).value):
+        field = to_data(field)
+        return dict_to_data({"name": field.name, "value": split_field(field.value)})
     else:
-        return wrap({"name": field.name, "value": field.value})
+        return dict_to_data({"name": field.name, "value": field.value})
 
 
 def _select(template, data, fields, depth):
@@ -360,7 +360,7 @@ def _select_deep(v, field, depth, record):
     """
     if hasattr(field.value, "__call__"):
         try:
-            record[field.name] = field.value(wrap(v))
+            record[field.name] = field.value(to_data(v))
         except Exception as e:
             record[field.name] = None
         return 0, None
@@ -396,7 +396,7 @@ def _select_deep_meta(field, depth):
         try:
 
             def assign(source, destination):
-                destination[name] = field.value(wrap(source))
+                destination[name] = field.value(to_data(source))
                 return 0, None
 
             return assign
@@ -464,9 +464,9 @@ def _select_deep_meta(field, depth):
 def get_columns(data, leaves=False):
     # TODO Split this into two functions
     if not leaves:
-        return wrap([{"name": n} for n in UNION(set(d.keys()) for d in data)])
+        return to_data([{"name": n} for n in UNION(set(d.keys()) for d in data)])
     else:
-        return wrap(
+        return to_data(
             [
                 {"name": leaf}
                 for leaf in set(leaf for row in data for leaf, _ in row.leaves())
@@ -551,7 +551,7 @@ def sort(data, fieldnames=None, already_normalized=False):
             funcs = [(lambda t: t[fieldnames], 1)]
         else:
             if not fieldnames:
-                return wrap(sort_using_cmp(data, value_compare))
+                return to_data(sort_using_cmp(data, value_compare))
 
             if already_normalized:
                 formal = fieldnames
@@ -619,8 +619,8 @@ def filter(data, where):
 
     if is_container(data):
         temp = get(where)
-        dd = wrap(data)
-        return wrap([unwrap(d) for i, d in enumerate(data) if temp(wrap(d), i, dd)])
+        dd = to_data(data)
+        return to_data([unwrap(d) for i, d in enumerate(data) if temp(to_data(d), i, dd)])
     else:
         Log.error(
             "Do not know how to handle type {{type}}", type=data.__class__.__name__
@@ -630,7 +630,7 @@ def filter(data, where):
         return drill_filter(where, data)
     except Exception as _:
         # WOW!  THIS IS INEFFICIENT!
-        return wrap(
+        return to_data(
             [unwrap(d) for d in drill_filter(where, [DataObject(d) for d in data])]
         )
 
@@ -714,7 +714,7 @@ def drill_filter(esfilter, data):
         if filter is FALSE:
             return False
 
-        filter = wrap(filter)
+        filter = to_data(filter)
 
         if filter["and"]:
             result = True
@@ -895,7 +895,7 @@ def drill_filter(esfilter, data):
     # OUTPUT
     for i, d in enumerate(data):
         if is_data(d):
-            main([], esfilter, wrap(d), 0)
+            main([], esfilter, to_data(d), 0)
         else:
             Log.error("filter is expecting a dict, not {{type}}", type=d.__class__)
 
@@ -931,7 +931,7 @@ def drill_filter(esfilter, data):
 
     if not max:
         # SIMPLE LIST AS RESULT
-        return wrap([unwrap(u[0]) for u in uniform_output])
+        return to_data([unwrap(u[0]) for u in uniform_output])
 
     return PartFlatList(primary_column[0:max], uniform_output)
 
@@ -1089,7 +1089,7 @@ def reverse(vals):
         l -= 1
         output[l] = v
 
-    return wrap(output)
+    return to_data(output)
 
 
 def countdown(vals):

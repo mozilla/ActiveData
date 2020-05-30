@@ -14,8 +14,8 @@ from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.expressions._utils import ES52
-from jx_elasticsearch.es52.expressions import find_op
-from jx_elasticsearch.es52.expressions.find_op import FindOp
+
+FindOp = None
 
 
 class BooleanOp(BooleanOp_):
@@ -26,6 +26,3 @@ class BooleanOp(BooleanOp_):
             return ES52[self.term].to_esfilter(schema)
         else:
             return Painless[self].to_es_script(schema).to_esfilter(schema)
-
-
-find_op.BooleanOp = BooleanOp

@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import Data, wrap
+from mo_dots import Data, to_data
 from mo_files import File
 import mo_json
 from mo_logs import Log
@@ -71,7 +71,7 @@ class PersistentQueue(object):
             DEBUG and Log.note("New persistent queue {{name}}", name=self.file.abspath)
 
     def _add_pending(self, delta):
-        delta = wrap(delta)
+        delta = to_data(delta)
         self.pending.append(delta)
 
     def _apply_pending(self):

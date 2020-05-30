@@ -13,7 +13,7 @@ from datetime import date, datetime
 import sys
 
 from jx_python import jx
-from mo_dots import coalesce, listwrap, set_default, wrap, is_data, is_sequence
+from mo_dots import coalesce, listwrap, set_default, to_data, is_data, is_sequence
 from mo_future import number_types, text, is_text, is_binary
 from mo_json import datetime2unix, json2value, value2json
 from mo_kwargs import override
@@ -91,7 +91,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         bad_count = 0
         while not please_stop:
             try:
-                messages = wrap(self.queue.pop_all())
+                messages = to_data(self.queue.pop_all())
                 if not messages:
                     Till(seconds=PAUSE_AFTER_GOOD_INSERT).wait()
                     continue

@@ -14,7 +14,7 @@ from jx_base import Column, Table
 from jx_base.meta_columns import META_COLUMNS_NAME, META_COLUMNS_TYPE_NAME, SIMPLE_METADATA_COLUMNS, META_COLUMNS_DESC
 from jx_base.schema import Schema
 from jx_python import jx
-from mo_dots import Data, Null, is_data, is_list, unwraplist, wrap, listwrap, split_field
+from mo_dots import Data, Null, is_data, is_list, unwraplist, to_data, listwrap, split_field
 from mo_dots.lists import last
 from mo_json import INTERNAL, NESTED, OBJECT, EXISTS
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path, EXISTS_TYPE
@@ -347,7 +347,7 @@ class ColumnList(Table, jx_base.Container):
     def update(self, command):
         self.dirty = True
         try:
-            command = wrap(command)
+            command = to_data(command)
             DEBUG and Log.note(
                 "Update {{timestamp}}: {{command|json}}",
                 command=command,
@@ -514,7 +514,7 @@ class ColumnList(Table, jx_base.Container):
 def doc_to_column(doc):
     now = Date.now()
     try:
-        doc = wrap(untyped(doc))
+        doc = to_data(untyped(doc))
 
         # I HAVE MANAGED TO MAKE MANY MISTAKES WRITING COLUMNS TO ES. HERE ARE THE FIXES
 

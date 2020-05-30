@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 import os
 
-from mo_dots import is_data, is_list, set_default, unwrap, wrap, is_sequence, coalesce, get_attr, listwrap, unwraplist
+from mo_dots import is_data, is_list, set_default, unwrap, to_data, is_sequence, coalesce, get_attr, listwrap, unwraplist, \
+    dict_to_data
 from mo_files import File
 from mo_files.url import URL
 from mo_future import is_text
@@ -49,10 +50,10 @@ def get(url):
     elif url[url.find("://") + 3] != "/":
         Log.error("{{url}} must be absolute", url=url)
 
-    phase1 = _replace_ref(wrap({"$ref": url}), base)  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
+    phase1 = _replace_ref(dict_to_data({"$ref": url}), base)  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     try:
         phase2 = _replace_locals(phase1, [phase1])
-        return wrap(phase2)
+        return to_data(phase2)
     except Exception as e:
         Log.error("problem replacing locals in\n{{phase1}}", phase1=phase1, cause=e)
 
@@ -76,7 +77,7 @@ def expand(doc, doc_url="param://", params=None):
     url.query = set_default(url.query, params)
     phase1 = _replace_ref(doc, url)  # BLANK URL ONLY WORKS IF url IS ABSOLUTE
     phase2 = _replace_locals(phase1, [phase1])
-    return wrap(phase2)
+    return to_data(phase2)
 
 
 def _replace_ref(node, url):

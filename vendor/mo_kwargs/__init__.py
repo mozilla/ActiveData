@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from functools import update_wrapper
 
-from mo_dots import get_logger, is_data, wrap, zip as dict_zip, set_default
+from mo_dots import get_logger, is_data, to_data, zip as dict_zip, set_default
 from mo_future import (
     get_function_arguments,
     get_function_defaults,
@@ -139,7 +139,7 @@ def override(kwargs=None):
         for a in args:
             for k, v in a.items():
                 settings[str(k)] = v
-        settings[kwargs] = wrap(settings)
+        settings[kwargs] = to_data(settings)
 
         if params and params[0] in ("self", "cls"):
             s = settings.get(params[0])

@@ -20,7 +20,7 @@ from jx_base.query import QueryOp, get_all_vars
 from jx_python.containers import Container
 from jx_python.expressions import TRUE
 from jx_python.namespace import Namespace, convert_list
-from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, listwrap, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, listwrap, to_data, dict_to_data
 from mo_future import text
 from mo_logs import Log
 import mo_math
@@ -42,7 +42,7 @@ class Normal(Namespace):
     def _convert_query(self, query):
         # if not isinstance(query["from"], Container):
         #     Log.error('Expecting from clause to be a Container')
-        query = wrap(query)
+        query = to_data(query)
 
         output = QueryOp(None)
         output["from"] = self._convert_from(query["from"])
@@ -102,7 +102,7 @@ class Normal(Namespace):
                 aggregate="none"
             )
         else:
-            select = wrap(select)
+            select = to_data(select)
             output = copy(select)
             if not select.value or is_text(select.value):
                 if select.value == ".":
@@ -126,7 +126,7 @@ class Normal(Namespace):
                 domain=self._convert_domain()
             )
         else:
-            edge = wrap(edge)
+            edge = to_data(edge)
             if not edge.name and not is_text(edge.value):
                 Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
@@ -152,20 +152,20 @@ class Normal(Namespace):
 
     def _convert_group(self, column):
         if is_text(column):
-            return wrap({
+            return dict_to_data({
                 "name": column,
                 "value": column,
                 "domain": {"type": "default"}
             })
         else:
-            column = wrap(column)
+            column = to_data(column)
             if (column.domain and column.domain.type != "default") or column.allowNulls != None:
                 Log.error("groupby does not accept complicated domains")
 
             if not column.name and not is_text(column.value):
                 Log.error("You must name compound edges: {{edge}}",  edge= column)
 
-            return wrap({
+            return dict_to_data({
                 "name": coalesce(column.name, column.value),
                 "value": column.value,
                 "domain": {"type": "default"}
@@ -238,7 +238,7 @@ def normalize_sort(sort=None):
                 output.append({"value": n, "sort": sort_direction[v]})
         else:
             output.append({"value": coalesce(s.field, s.value), "sort": coalesce(sort_direction[s.sort], 1)})
-    return wrap(output)
+    return to_data(output)
 
 
 sort_direction = {

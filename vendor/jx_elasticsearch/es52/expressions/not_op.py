@@ -15,11 +15,10 @@ from jx_base.expressions import (
     Variable as Variable_,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions import literal, or_op
 from jx_elasticsearch.es52.expressions._utils import ES52
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.or_op import es_or
-from mo_dots import wrap
+from mo_dots import dict_to_data
 from mo_future import first
 from mo_json import STRUCT
 
@@ -42,8 +41,11 @@ class NotOp(NotOp_):
 
 
 def es_not(term):
-    return wrap({"bool": {"must_not": term}})
+    return dict_to_data({"bool": {"must_not": term}})
 
+
+# EXPORT
+from jx_elasticsearch.es52.expressions import literal, or_op
 
 literal.es_not = es_not
 or_op.es_not = es_not

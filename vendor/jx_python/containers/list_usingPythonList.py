@@ -22,7 +22,7 @@ from jx_python.convert import list2cube, list2table
 from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from mo_collections import UniqueIndex
-from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, wrap, coalesce
+from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, to_data, coalesce, dict_to_data
 from mo_future import first, sort_using_key
 from mo_logs import Log
 from mo_threads import Lock
@@ -66,7 +66,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             return Null
 
     def query(self, q):
-        q = wrap(q)
+        q = to_data(q)
         output = self
         if is_aggs(q):
             output = list_aggs(output.data, q)
@@ -126,7 +126,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         THE set CLAUSE IS A DICT MAPPING NAMES TO VALUES
         THE where CLAUSE IS A JSON EXPRESSION FILTER
         """
-        command = wrap(command)
+        command = to_data(command)
         command_clear = listwrap(command["clear"])
         command_set = command.set.items()
         command_where = jx.get(command.where)
@@ -186,7 +186,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
             def selector(d):
                 output = Data()
                 for n, p in push_and_pull:
-                    output[n] = unwraplist(p(wrap(d)))
+                    output[n] = unwraplist(p(to_data(d)))
                 return unwrap(output)
 
             new_data = list(map(selector, self.data))
@@ -227,7 +227,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
                     group = Data()
                     for k, gg in zip(keys, g):
                         group[k] = gg
-                    yield (group, wrap(list(v)))
+                    yield (group, to_data(list(v)))
 
             return _output()
         except Exception as e:
@@ -241,12 +241,12 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
 
     def __data__(self):
         if first(self.schema.columns).name=='.':
-            return wrap({
+            return dict_to_data({
                 "meta": {"format": "list"},
                 "data": self.data
             })
         else:
-            return wrap({
+            return dict_to_data({
                 "meta": {"format": "list"},
                 "data": [{k: unwraplist(v) for k, v in row.items()} for row in self.data]
             })
@@ -263,7 +263,7 @@ class ListContainer(Container, jx_base.Namespace, jx_base.Table):
         return self.data[item]
 
     def __iter__(self):
-        return (wrap(d) for d in self.data)
+        return (to_data(d) for d in self.data)
 
     def __len__(self):
         return len(self.data)

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT
-from mo_dots import wrap
+from mo_dots import to_data
 from mo_json import null
 from mo_logs import Log
 from mo_times.dates import Date
@@ -35,7 +35,7 @@ test_data_1 = [
     {"a": "y", "t": Date("today-5day").unix, "v": 23}
 ]
 
-expected_list_1 = wrap([
+expected_list_1 = to_data([
     {"t": (TODAY - WEEK).unix, "v": NULL},
     {"t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"t": (TODAY - 5 * DAY).unix, "v": 34},
@@ -46,7 +46,7 @@ expected_list_1 = wrap([
     {"v": 29}
 ])
 
-expected2 = wrap([
+expected2 = to_data([
     {"a": "x", "t": (TODAY - WEEK).unix,    "v": NULL},
     {"a": "x", "t": (TODAY - 6 * DAY).unix, "v": NULL},
     {"a": "x", "t": (TODAY - 5 * DAY).unix, "v": 11},
@@ -89,7 +89,7 @@ test_data_3 = [
     {"a": TODAY, "t": Date("today-5day").unix, "v": 23}
 ]
 
-expected3 = wrap([
+expected3 = to_data([
     {"since": -7 * DAY.seconds, "v": NULL},
     {"since": -6 * DAY.seconds, "v": NULL},
     {"since": -5 * DAY.seconds, "v": 34},
@@ -249,7 +249,7 @@ class TestTime(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": Date(r.a).unix, "t": Date(r.t).unix, "v":r.v, "diff": (Date(r.t) - Date(r.a)).seconds}
-                    for r in wrap(data)
+                    for r in to_data(data)
                 ]
             }
         }

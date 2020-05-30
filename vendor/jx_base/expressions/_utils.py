@@ -111,7 +111,7 @@ def _jx_expression(expr, lang):
     elif is_sequence(expr):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
 
-    # expr = wrap(expr)
+    # expr = to_data(expr)
     try:
         items = items_(expr)
 

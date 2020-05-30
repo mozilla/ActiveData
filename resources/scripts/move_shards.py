@@ -8,7 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import wrap
+from mo_dots import to_data, dict_to_data
 from mo_logs import Log
 from mo_http import http
 
@@ -33,7 +33,7 @@ def move_shards(settings):
 
 def main():
     try:
-        settings = wrap({"elasticsearch":{
+        settings = dict_to_data({"elasticsearch":{
             "host": "http://activedata.allizom.org",
             "port": 9200,
             "debug": True

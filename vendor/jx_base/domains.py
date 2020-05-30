@@ -14,7 +14,8 @@ from numbers import Number
 
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
-from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, listwrap, set_default, unwrap, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, listwrap, set_default, unwrap, to_data, \
+    dict_to_data
 from mo_future import text
 from mo_logs import Log
 from mo_math import MAX, MIN
@@ -40,7 +41,7 @@ class Domain(object):
             return object.__new__(cls)
 
     def __init__(self, **desc):
-        desc = wrap(desc)
+        desc = to_data(desc)
         self._set_slots_to_null(self.__class__)
         set_default(self, desc)
         self.name = coalesce(desc.name, desc.type)
@@ -66,7 +67,7 @@ class Domain(object):
         return self.__class__(**self.__data__())
 
     def __data__(self):
-        return wrap({
+        return dict_to_data({
             "name": self.name,
             "type": self.type,
             "value": self.value,
@@ -213,7 +214,7 @@ class SimpleSetDomain(Domain):
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
-        desc = wrap(desc)
+        desc = to_data(desc)
 
         self.type = "set"
         self.order = {}
@@ -308,7 +309,7 @@ class SimpleSetDomain(Domain):
         self.label = coalesce(self.label, "name")
 
         if hasattr(desc.partitions, "__iter__"):
-            self.partitions = wrap(list(desc.partitions))
+            self.partitions = to_data(list(desc.partitions))
         else:
             Log.error("expecting a list of partitions")
 
@@ -368,7 +369,7 @@ class SetDomain(Domain):
 
     def __init__(self, **desc):
         Domain.__init__(self, **desc)
-        desc = wrap(desc)
+        desc = to_data(desc)
 
         self.type = "set"
         self.order = {}
@@ -489,7 +490,7 @@ class TimeDomain(Domain):
 
         self.verify_attributes_not_null(["min", "max", "interval"])
         self.key = "min"
-        self.partitions = wrap([
+        self.partitions = to_data([
             {"min": v, "max": v + self.interval, "dataIndex": i}
             for i, v in enumerate(Date.range(self.min, self.max, self.interval))
         ])
@@ -552,7 +553,7 @@ class DurationDomain(Domain):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Duration.range(self.min, self.max, self.interval))])
+        self.partitions = to_data([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Duration.range(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)
@@ -680,13 +681,13 @@ class RangeDomain(Domain):
                 if p.min <= q.min and q.min < p.max and unwrap(p) is not unwrap(q):
                     Log.error("partitions overlap!")
 
-            self.partitions = wrap(parts)
+            self.partitions = to_data(parts)
             return
         elif any([self.min == None, self.max == None, self.interval == None]):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = wrap([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
+        self.partitions = to_data([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)

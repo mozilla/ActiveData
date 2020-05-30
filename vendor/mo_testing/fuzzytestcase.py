@@ -15,7 +15,7 @@ import unittest
 
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, wrap, is_data, is_many
+from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, to_data, is_data, is_many
 from mo_future import is_text, zip_longest
 from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template, quote
@@ -109,7 +109,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     t = test[k]
                 assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
         elif is_container(test) and isinstance(expected, set):
-            test = set(wrap(t) for t in test)
+            test = set(to_data(t) for t in test)
             if len(test) != len(expected):
                 Log.error(
                     "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",

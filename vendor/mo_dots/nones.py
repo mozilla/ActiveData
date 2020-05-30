@@ -9,6 +9,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_dots import to_data
 from mo_future import is_binary, text, none_type
 
 from mo_dots.utils import CLASS, OBJ
@@ -176,7 +177,7 @@ class NullType(object):
         key = text(key)
 
         d = _get(self, "__dict__")
-        o = wrap(d[OBJ])
+        o = to_data(d[OBJ])
         k = d["__key__"]
         if o is None:
             return Null
@@ -186,7 +187,7 @@ class NullType(object):
         if v == None:
             return NullType(self, key)
         try:
-            return wrap(v.get(key))
+            return to_data(v.get(key))
         except Exception as e:
             from mo_logs import Log
             Log.error("not expected", cause=e)
@@ -195,7 +196,7 @@ class NullType(object):
         key = text(key)
 
         d = _get(self, "__dict__")
-        o = wrap(d[OBJ])
+        o = to_data(d[OBJ])
         k = d["__key__"]
 
         seq = [k] + [key]

@@ -13,13 +13,13 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import skipIf
 
 from jx_base.expressions import NULL
-from mo_dots import to_data
+from mo_dots import to_data, list_to_data
 from mo_logs import Log
 from mo_logs.exceptions import get_stacktrace
 from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
-lots_of_data = to_data([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSorting(BaseTestCase):

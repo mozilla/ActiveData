@@ -20,7 +20,7 @@ from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_
 from jx_base.language import is_expression, is_op
 from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
-    literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data
+    literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data, list_to_data
 from mo_dots.lists import EMPTY
 from mo_future import is_text, text
 from mo_json import INTERNAL
@@ -177,18 +177,18 @@ class QueryOp(QueryOp_):
             return edge
 
         if is_list(self.select):
-            select = to_data([map_select(s, map_) for s in self.select])
+            select = list_to_data([map_select(s, map_) for s in self.select])
         else:
             select = map_select(self.select, map_)
 
         return QueryOp(
             frum=self.frum.map(map_),
             select=select,
-            edges=to_data([map_edge(e, map_) for e in self.edges]),
-            groupby=to_data([g.map(map_) for g in self.groupby]),
-            window=to_data([w.map(map_) for w in self.window]),
+            edges=list_to_data([map_edge(e, map_) for e in self.edges]),
+            groupby=list_to_data([g.map(map_) for g in self.groupby]),
+            window=list_to_data([w.map(map_) for w in self.window]),
             where=self.where.map(map_),
-            sort=to_data([map_select(s, map_) for s in listwrap(self.sort)]),
+            sort=list_to_data([map_select(s, map_) for s in listwrap(self.sort)]),
             limit=self.limit,
             format=self.format
         )
@@ -440,7 +440,7 @@ def _normalize_select_no_context(select, schema=None):
 
 
 def _normalize_edges(edges, limit, schema=None):
-    return to_data([n for ie, e in enumerate(listwrap(edges)) for n in _normalize_edge(e, ie, limit=limit, schema=schema)])
+    return list_to_data([n for ie, e in enumerate(listwrap(edges)) for n in _normalize_edge(e, ie, limit=limit, schema=schema)])
 
 
 def _normalize_edge(edge, dim_index, limit, schema=None):
@@ -534,7 +534,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
 def _normalize_groupby(groupby, limit, schema=None):
     if groupby == None:
         return None
-    output = to_data([n for e in listwrap(groupby) for n in _normalize_group(e, None, limit, schema=schema)])
+    output = list_to_data([n for e in listwrap(groupby) for n in _normalize_group(e, None, limit, schema=schema)])
     for i, o in enumerate(output):
         o.dim = i
     if any(o == None for o in output):
@@ -553,7 +553,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
         if edge.endswith(".*"):
             prefix = edge[:-2]
             if schema:
-                output = to_data([
+                output = list_to_data([
                     {  # BECASUE THIS IS A GROUPBY, EARLY SPLIT INTO LEAVES WORKS JUST FINE
                         "name": concat_field(prefix, literal_field(relative_field(untype_path(c.name), prefix))),
                         "put": {"name": literal_field(untype_path(c.name))},
@@ -565,7 +565,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                 ])
                 return output
             else:
-                return to_data([{
+                return list_to_data([{
                     "name": untype_path(prefix),
                     "put": {"name": literal_field(untype_path(prefix))},
                     "value": LeavesOp(Variable(prefix)),
@@ -574,7 +574,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
                     "domain": {"type": "default"}
                 }])
 
-        return to_data([{
+        return list_to_data([{
             "name": edge,
             "value": jx_expression(edge, schema=schema),
             "allowNulls": True,
@@ -589,7 +589,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
         if not edge.name and not is_text(edge.value):
             Log.error("You must name compound edges: {{edge}}",  edge= edge)
 
-        return to_data([{
+        return list_to_data([{
             "name": coalesce(edge.name, edge.value),
             "value": jx_expression(edge.value, schema=schema),
             "allowNulls": True,

@@ -23,7 +23,8 @@ from jx_base.query import QueryOp
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
-from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, to_data, is_many, dict_to_data
+from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, to_data, is_many, dict_to_data, \
+    list_to_data
 from mo_files.url import URL
 from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
@@ -405,7 +406,7 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = to_data([{text(i): v for i, v in enumerate(row) if v != None} for row in result.data])
+    data = list_to_data([{text(i): v for i, v in enumerate(row) if v != None} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
     result.data = [tuple(row[text(i)] for i in range(len(result.header))) for row in data]

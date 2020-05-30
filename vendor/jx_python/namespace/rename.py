@@ -65,7 +65,7 @@ class Rename(Namespace):
                 k, v = expr.items()[0]
                 return converter_map.get(k, self._convert_bop)(self, k, v)
         elif is_many(expr):
-            return to_data([self.convert(value) for value in expr])
+            return list_to_data([self.convert(value) for value in expr])
         else:
             return expr
 

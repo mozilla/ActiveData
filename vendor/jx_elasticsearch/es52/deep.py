@@ -18,7 +18,7 @@ from jx_elasticsearch.es52.set_op import set_formatters, get_pull, get_pull_func
 from jx_elasticsearch.es52.util import es_query_template, jx_sort_to_es_sort
 from jx_python.expressions import jx_expression_to_function
 from mo_dots import Data, FlatList, coalesce, concat_field, is_list as is_list_, listwrap, literal_field, \
-    relative_field, set_default, split_field, startswith_field, unwrap, wrap
+    relative_field, set_default, split_field, startswith_field, unwrap, wrap, list_to_data
 from mo_future import zip_longest
 from mo_json import NESTED, INTERNAL
 from mo_json.typed_encoder import untype_path
@@ -90,7 +90,7 @@ def es_deepop(es, query):
     es_query.stored_fields = []
 
     is_list = is_list_(query.select)
-    selects = to_data([unwrap(s.copy()) for s in listwrap(query.select)])
+    selects = list_to_data([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
 
     put_index = 0

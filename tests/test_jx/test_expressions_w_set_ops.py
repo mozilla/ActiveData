@@ -11,11 +11,11 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
-from mo_dots import to_data
+from mo_dots import list_to_data
 from mo_json import null
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
-lots_of_data = to_data([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSetOps(BaseTestCase):

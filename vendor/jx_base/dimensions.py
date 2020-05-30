@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC, Domain, KNOWN
-from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, to_data
+from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, to_data, list_to_data
 import mo_dots as dot
 from mo_future import transpose
 from mo_logs import Log
@@ -53,10 +53,10 @@ class Dimension(object):
             return  # NO FIELDS TO SEARCH
         elif is_data(fields):
             self.fields = to_data(fields)
-            edges = to_data([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
+            edges = list_to_data([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
         else:
             self.fields = listwrap(fields)
-            edges = to_data([{"name": f, "value": f, "index": i, "allowNulls": False} for i, f in enumerate(self.fields)])
+            edges = list_to_data([{"name": f, "value": f, "index": i, "allowNulls": False} for i, f in enumerate(self.fields)])
 
         if dim.partitions:
             return  # ALREADY HAVE PARTS
@@ -112,7 +112,7 @@ class Dimension(object):
             self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
 
             # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-            self.partitions = to_data([
+            self.partitions = list_to_data([
                 {
                     "name": str(d.partitions[i].name),  # CONVERT TO STRING
                     "value": d.getEnd(d.partitions[i]),
@@ -138,7 +138,7 @@ class Dimension(object):
                 else:
                     return tuple(values)
 
-            self.partitions = to_data([
+            self.partitions = list_to_data([
                 {
                     "name": str(d.partitions[i].name),  # CONVERT TO STRING
                     "value": d.getEnd(d.partitions[i]),

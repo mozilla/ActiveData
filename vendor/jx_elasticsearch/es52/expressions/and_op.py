@@ -66,5 +66,6 @@ def es_and(terms):
 
 # EXPORT
 from jx_elasticsearch.es52.expressions import or_op
+
 or_op.es_and = es_and
 del or_op

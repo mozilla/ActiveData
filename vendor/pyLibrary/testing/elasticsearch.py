@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_python import jx
-from mo_dots import Data, Null, is_list, unwrap, to_data, dict_to_data
+from mo_dots import Data, Null, is_list, unwrap, to_data, dict_to_data, list_to_data
 from mo_files import File
 import mo_json
 from mo_kwargs import override
@@ -68,7 +68,7 @@ class FakeES():
     def search(self, query):
         query = to_data(query)
         f = jx.get(query.query.filtered.filter)
-        filtered = to_data([{"_id": i, "_source": d} for i, d in self.data.items() if f(d)])
+        filtered = list_to_data([{"_id": i, "_source": d} for i, d in self.data.items() if f(d)])
         if query.fields:
             return dict_to_data({"hits": {"total": len(filtered), "hits": [{"_id": d._id, "fields": unwrap(jx.select([unwrap(d._source)], query.fields)[0])} for d in filtered]}})
         else:

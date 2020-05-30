@@ -15,7 +15,7 @@ from jx_base.container import type2container
 from jx_base.expressions import NULL
 from jx_elasticsearch.es52 import ES52
 from jx_python import jx
-from mo_dots import Data, to_data, dict_to_data
+from mo_dots import Data, dict_to_data, list_to_data
 from mo_future import text
 from mo_http import http
 from mo_times import Date
@@ -349,5 +349,5 @@ class TestESSpecial(BaseTestCase):
         new_found_container = find_container(alias, after=Date.now())
 
         # VERIFY OLD SCHEMA DOES NOT EXIST
-        columns = to_data([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
+        columns = list_to_data([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
         self.assertEqual(columns.get("es_column"), {'.', '_id', 'b', 'b.~n~', '~e~'})

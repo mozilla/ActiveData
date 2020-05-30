@@ -1084,7 +1084,7 @@
       }
     }
     function onAdd() {
-      var l = to_data(listener, d3_array(arguments));
+      var l = wrap(listener, d3_array(arguments));
       onRemove.call(this);
       this.addEventListener(type, this[name] = l, l.$ = capture);
       l._ = listener;

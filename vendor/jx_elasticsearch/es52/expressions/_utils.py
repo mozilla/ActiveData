@@ -18,7 +18,7 @@ from jx_base.expressions.literal import is_literal
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
-from mo_dots import Null, to_data
+from mo_dots import Null, to_data, list_to_data
 from mo_future import first
 from mo_logs import Log
 from mo_math import MAX
@@ -68,7 +68,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth.values())
         if len(all_depths) == 0:
             all_depths = {0}
-        output = to_data([[] for _ in range(MAX(all_depths) + 1)])
+        output = list_to_data([[] for _ in range(MAX(all_depths) + 1)])
     else:
         all_depths = set(var_to_depth[v.var] for v in vars_)
 

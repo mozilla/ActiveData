@@ -15,7 +15,7 @@ from numbers import Number
 from jx_base.expressions import jx_expression
 from mo_collections.unique_index import UniqueIndex
 from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, listwrap, set_default, unwrap, to_data, \
-    dict_to_data
+    dict_to_data, list_to_data
 from mo_future import text
 from mo_logs import Log
 from mo_math import MAX, MIN
@@ -490,7 +490,7 @@ class TimeDomain(Domain):
 
         self.verify_attributes_not_null(["min", "max", "interval"])
         self.key = "min"
-        self.partitions = to_data([
+        self.partitions = list_to_data([
             {"min": v, "max": v + self.interval, "dataIndex": i}
             for i, v in enumerate(Date.range(self.min, self.max, self.interval))
         ])
@@ -553,7 +553,7 @@ class DurationDomain(Domain):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = to_data([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Duration.range(self.min, self.max, self.interval))])
+        self.partitions = list_to_data([{"min": v, "max": v + self.interval, "dataIndex":i} for i, v in enumerate(Duration.range(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)
@@ -687,7 +687,7 @@ class RangeDomain(Domain):
             Log.error("Can not handle missing parameter")
 
         self.key = "min"
-        self.partitions = to_data([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
+        self.partitions = list_to_data([{"min": v, "max": v + self.interval, "dataIndex": i} for i, v in enumerate(frange(self.min, self.max, self.interval))])
 
     def compare(self, a, b):
         return value_compare(a, b)

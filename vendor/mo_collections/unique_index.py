@@ -43,7 +43,7 @@ class UniqueIndex(Set, Mapping):
                 d = self._data.get(_key)
                 return to_data(d)
             else:
-                output = to_data([
+                output = list_to_data([
                     d
                     for d in self._data.values()
                     if all(to_data(d)[k] == v for k, v in _key.items())

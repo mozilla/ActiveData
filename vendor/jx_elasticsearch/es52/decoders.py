@@ -20,8 +20,9 @@ from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
-from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, to_data, join_field, \
-    split_field, dict_to_data
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, to_data, \
+    join_field, \
+    split_field, dict_to_data, list_to_data
 from mo_future import first, is_text, text, transpose
 from mo_json import STRING
 from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
@@ -738,7 +739,7 @@ class DimFieldListDecoder(SetDecoder):
 
     def done_count(self):
         columns = list(map(text, range(len(self.fields))))
-        parts = to_data([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
+        parts = list_to_data([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
         sorted_parts = jx.sort(parts, columns)
 

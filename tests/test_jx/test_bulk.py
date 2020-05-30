@@ -13,7 +13,7 @@ from unittest import skipIf
 from jx_base.query import MAX_LIMIT
 from jx_elasticsearch.es52 import agg_bulk
 from jx_python import jx
-from mo_dots import to_data
+from mo_dots import to_data, list_to_data
 from mo_future import text
 from mo_logs import Log
 from mo_threads import Till
@@ -43,7 +43,7 @@ class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_bulk_aggs_list(self):
-        data = to_data([{"a": "test" + text(i)} for i in range(10111)])
+        data = list_to_data([{"a": "test" + text(i)} for i in range(10111)])
         expected = jx.sort([{"a": r.a, "count": 1} for r in data], "a")
 
         test = to_data(
@@ -78,7 +78,7 @@ class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_bulk_aggs_list_no_records(self):
-        data = to_data([{"a": "test" + text(i)} for i in range(10111)])
+        data = list_to_data([{"a": "test" + text(i)} for i in range(10111)])
         expected = []
 
         test = to_data(
@@ -114,7 +114,7 @@ class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_scroll_query_list(self):
-        data = to_data([{"a": "test" + text(i)} for i in range(10111)])
+        data = list_to_data([{"a": "test" + text(i)} for i in range(10111)])
         expected = jx.sort(data, "a")
 
         test = to_data(
@@ -147,7 +147,7 @@ class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_bulk_aggs_table(self):
-        data = to_data([{"a": "test" + text(i)} for i in range(10111)])
+        data = list_to_data([{"a": "test" + text(i)} for i in range(10111)])
         expected = jx.sort([{"a": r.a, "count": 1} for r in data], "a")
 
         test = to_data(
@@ -183,7 +183,7 @@ class TestBulk(BaseTestCase):
 
     @skipIf(not agg_bulk.S3_CONFIG, "can not test S3")
     def test_scroll_query_table(self):
-        data = to_data([{"a": "test" + text(i)} for i in range(10111)])
+        data = list_to_data([{"a": "test" + text(i)} for i in range(10111)])
         expected = jx.sort(data, "a")
 
         test = to_data(

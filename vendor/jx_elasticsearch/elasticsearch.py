@@ -16,7 +16,7 @@ from copy import deepcopy
 from jx_base import Column
 from jx_python import jx
 from mo_dots import Data, FlatList, Null, ROOT_PATH, SLOT, coalesce, concat_field, is_data, is_list, listwrap, \
-    literal_field, set_default, split_field, lists, dict_to_data, to_data
+    literal_field, set_default, split_field, lists, dict_to_data, to_data, list_to_data
 from mo_files import File, mimetype
 from mo_files.url import URL
 from mo_future import binary_type, generator_types, is_binary, is_text, items, text
@@ -1582,7 +1582,7 @@ def diff_schema(A, B):
     return output
 
 
-DEFAULT_DYNAMIC_TEMPLATES = to_data([
+DEFAULT_DYNAMIC_TEMPLATES = list_to_data([
     {
         "default_typed_boolean": {
             "mapping": {

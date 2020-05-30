@@ -12,16 +12,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skip, skipIf
 
-from mo_future import text
-
+import mo_math
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from mo_dots import to_data, dict_to_data
-import mo_math
-from mo_logs.exceptions import get_stacktrace
+from mo_dots import to_data, dict_to_data, list_to_data
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
-lots_of_data = to_data([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSetOps(BaseTestCase):

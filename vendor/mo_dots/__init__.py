@@ -475,6 +475,15 @@ def dict_to_data(d):
     return m
 
 
+def list_to_data(v):
+    """
+    to_data, BUT WITHOUT CHECKS
+    """
+    output = list.__new__(FlatList)
+    output.list = v
+    return output
+
+
 def to_data(v):
     """
     WRAP AS Data OBJECT FOR DATA PROCESSING: https://github.com/klahnakoski/mo-dots/tree/dev/docs
@@ -613,11 +622,11 @@ def listwrap(value):
     if value == None:
         return FlatList()
     elif is_list(value):
-        return to_data(value)
+        return list_to_data(value)
     elif is_many(value):
-        return to_data(list(value))
+        return list_to_data(list(value))
     else:
-        return to_data([unwrap(value)])
+        return list_to_data([unwrap(value)])
 
 def unwraplist(v):
     """

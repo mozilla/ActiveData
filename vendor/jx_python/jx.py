@@ -25,7 +25,7 @@ from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
 from mo_logs import Log
@@ -464,7 +464,7 @@ def _select_deep_meta(field, depth):
 def get_columns(data, leaves=False):
     # TODO Split this into two functions
     if not leaves:
-        return to_data([{"name": n} for n in UNION(set(d.keys()) for d in data)])
+        return list_to_data([{"name": n} for n in UNION(set(d.keys()) for d in data)])
     else:
         return to_data(
             [
@@ -620,7 +620,7 @@ def filter(data, where):
     if is_container(data):
         temp = get(where)
         dd = to_data(data)
-        return to_data([unwrap(d) for i, d in enumerate(data) if temp(to_data(d), i, dd)])
+        return list_to_data([unwrap(d) for i, d in enumerate(data) if temp(to_data(d), i, dd)])
     else:
         Log.error(
             "Do not know how to handle type {{type}}", type=data.__class__.__name__
@@ -931,7 +931,7 @@ def drill_filter(esfilter, data):
 
     if not max:
         # SIMPLE LIST AS RESULT
-        return to_data([unwrap(u[0]) for u in uniform_output])
+        return list_to_data([unwrap(u[0]) for u in uniform_output])
 
     return PartFlatList(primary_column[0:max], uniform_output)
 

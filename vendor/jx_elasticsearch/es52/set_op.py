@@ -37,7 +37,7 @@ from mo_dots import (
     unwraplist,
     dict_to_data,
     Null,
-    to_data)
+    to_data, list_to_data)
 from mo_future import first, text
 from mo_json import NESTED, INTERNAL
 from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
@@ -83,7 +83,7 @@ def get_selects(query):
             es_select = split_select[path] = ESSelect(path)
         return es_select
 
-    selects = to_data([unwrap(s.copy()) for s in listwrap(query.select)])
+    selects = list_to_data([unwrap(s.copy()) for s in listwrap(query.select)])
     new_select = FlatList()
     put_index = 0
     for select in selects:

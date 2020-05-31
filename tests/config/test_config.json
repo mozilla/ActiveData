@@ -21,7 +21,7 @@
 		"mo_http.http.default_headers": {
 			"Referer": "ActiveDataTests"
 		},
-		"jx_elasticsearch.es52.agg_bulk.S3_CONFIG": true
+		"jx_elasticsearch.es52.agg_bulk.S3_CONFIG": {"$ref": "file://app_config.json#bulk.s3"}
 	},
 	"flask": {
 		"host": "0.0.0.0",

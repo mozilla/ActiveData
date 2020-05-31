@@ -423,7 +423,7 @@ def es_query_proto(selects, op, wheres, schema):
     """
     es_query = op.zero
     for p in reversed(sorted(set(wheres.keys()) | set(selects.keys()))):
-        where = wheres.get(p, Null)
+        where = wheres.get(p, op.zero)
         select = selects.get(p, Null)
 
         es_where = op([where, es_query])

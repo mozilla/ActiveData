@@ -102,7 +102,10 @@ def split_expression_by_path(
             mode, split = split_expression_by_path(w, schema, lang=lang)
             if mode == AndOp:
                 for v, es in split.items():
-                    output.setdefault(v, []).append(es)
+                    ae = output.get(v)
+                    if not ae:
+                        output[v] = ae = AndOp([])
+                    ae.terms.append(es)
             else:
                 Log.error("confused")
         return AndOp, output

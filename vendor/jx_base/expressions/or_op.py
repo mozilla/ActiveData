@@ -74,7 +74,7 @@ class OrOp(Expression):
             if simple is TRUE:
                 return TRUE
             elif simple is FALSE:
-                pass
+                continue
             elif is_op(simple, OrOp):
                 terms.extend([tt for tt in simple.terms if tt not in terms])
             elif is_op(simple, AndOp):

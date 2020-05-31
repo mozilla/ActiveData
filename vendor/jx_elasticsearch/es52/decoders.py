@@ -62,7 +62,7 @@ class AggsDecoder(object):
                 cols = schema.leaves(e.value.var)
                 if not cols:
                     return object.__new__(DefaultDecoder)
-                if len(cols) != 1:
+                if len(cols) > 1:
                     return object.__new__(ObjectDecoder)
                 col = first(cols)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
@@ -214,12 +214,12 @@ class SetDecoder(AggsDecoder):
         if self.edge.allowNulls:
 
             # MISSING AT THE QUERY DEPTH
-            op, by_path = split_expression_by_path(exists, schema)
+            op, split = split_expression_by_path(exists, schema)
             not_match = es_query
             for p in schema.query_path:
-                e = by_path.get(p)
+                e = split.get(p)
                 if e:
-                    not_match = NestedAggs(p).add(FilterAggs("_missing0", NotOp(AndOp(e)), self).add(not_match))
+                    not_match = NestedAggs(p).add(FilterAggs("_missing0", NotOp(e), self).add(not_match))
             if not_match is es_query:
                 Log.error("expecting some logic that does not match")
             output.add(not_match)

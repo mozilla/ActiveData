@@ -1108,7 +1108,6 @@ class Schema(jx_base.Schema):
                     for c in columns
                     if (
                         (c.name != "_id" or column_name == "_id")
-                        and startswith_field(path, c.nested_path[0])  # NOT NESTED
                         and startswith_field(relative_field(c.name, path), column_name)
                     )
                 ]

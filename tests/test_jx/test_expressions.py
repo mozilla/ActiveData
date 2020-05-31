@@ -90,6 +90,7 @@ class TestExpressions(FuzzyTestCase):
             es_index="es_index",
             es_type="nested",
             jx_type=NESTED,
+            cardinality=1,
             multi=2,
             nested_path=".",
             last_updated=Date.now(),
@@ -142,6 +143,7 @@ class TestExpressions(FuzzyTestCase):
             es_type="nested",
             jx_type=NESTED,
             multi=1001,
+            cardinality=1,
             nested_path=["."],
             last_updated=Date.now(),
         )

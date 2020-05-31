@@ -14,7 +14,7 @@ from jx_elasticsearch.es52.expressions.and_op import es_and
 from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from mo_future import first
-from mo_json import BOOLEAN
+from mo_json import BOOLEAN, STRUCT
 
 
 class Variable(Variable_):

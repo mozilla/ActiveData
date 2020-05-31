@@ -16,7 +16,7 @@ from jx_base.schema import Schema
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, to_data, listwrap, split_field
 from mo_dots.lists import last
-from mo_json import INTERNAL, NESTED, OBJECT, EXISTS
+from mo_json import INTERNAL, NESTED, OBJECT, EXISTS, STRUCT
 from mo_json.typed_encoder import unnest_path, untype_path, untyped, NESTED_TYPE, get_nested_path, EXISTS_TYPE
 from mo_logs import Log
 from mo_math import MAX
@@ -122,6 +122,8 @@ class ColumnList(Table, jx_base.Container):
                             self._add(col)
 
             Log.note("{{num}} columns loaded", num=result.hits.total)
+            if not self.data.get(META_COLUMNS_NAME):
+                Log.error("metadata missing from index!")
 
         except Exception as e:
             metadata = self.es_cluster.get_metadata(after=Date.now())

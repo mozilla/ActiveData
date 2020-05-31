@@ -9,13 +9,14 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import mo_dots as dot
 from jx_base.container import Container
 from jx_base.query import _normalize_edge
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.lists.aggs import is_aggs
 from mo_collections.matrix import Matrix
-from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, wrap, leaves_to_data
-import mo_dots as dot
+from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, leaves_to_data, to_data, list_to_data, \
+    dict_to_data
 from mo_dots.lists import EMPTY
 from mo_future import is_text, transpose
 from mo_logs import Log
@@ -319,7 +320,7 @@ class Cube(Container):
         lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 
         def coord2term(coord):
-            output = wrap_leaves({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
+            output = leaves_to_data({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
             return output
 
         if is_list(self.select):
@@ -374,7 +375,7 @@ class Cube(Container):
         lookup = [[getKey[i](p) for p in e.domain.partitions+([None] if e.allowNulls else [])] for i, e in enumerate(self.edges)]
 
         def coord2term(coord):
-            output = wrap_leaves({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
+            output = leaves_to_data({keys[i]: lookup[i][c] for i, c in enumerate(coord)})
             return output
 
         if is_list(self.select):

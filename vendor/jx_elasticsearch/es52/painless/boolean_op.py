@@ -18,7 +18,10 @@ from mo_json import BOOLEAN
 
 class BooleanOp(BooleanOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        value = self.lang[self.term].to_es_script(schema)
+        try:
+            value = self.lang[self.term].to_es_script(schema)
+        except Exception as e:
+            raise e
         if value.many:
             return BooleanOp(
                 EsScript(

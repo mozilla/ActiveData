@@ -62,6 +62,6 @@ class FindOp(FindOp_):
 
 
 # EXPORT
-from jx_base.expressions import boolean_op
+from jx_elasticsearch.es52.expressions import boolean_op
 boolean_op.FindOp = FindOp
 del boolean_op

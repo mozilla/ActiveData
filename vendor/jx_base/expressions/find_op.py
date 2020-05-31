@@ -47,7 +47,7 @@ class FindOp(Expression):
     def __data__(self):
         if is_op(self.value, Variable) and is_literal(self.find):
             output = {
-                "find": {self.value.var, self.find.value},
+                "find": {self.value.var: self.find.value},
                 "start": self.start.__data__(),
             }
         else:

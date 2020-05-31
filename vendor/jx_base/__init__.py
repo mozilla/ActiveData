@@ -218,6 +218,7 @@ TableDesc = DataClass(
 )
 
 
+from jx_base.container import Container
 Column = DataClass(
     "Column",
     [
@@ -278,7 +279,6 @@ Column = DataClass(
         ]
     },
 )
-from jx_base.container import Container
 from jx_base.namespace import Namespace
 from jx_base.facts import Facts
 from jx_base.snowflake import Snowflake

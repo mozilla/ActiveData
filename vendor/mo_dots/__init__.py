@@ -562,7 +562,7 @@ def _leaves_to_data(value):
     if hasattr(value, '__iter__'):
         output = []
         for v in value:
-            v = wrap_leaves(v)
+            v = leaves_to_data(v)
             output.append(v)
         return output
     return value

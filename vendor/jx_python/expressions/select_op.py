@@ -17,7 +17,7 @@ from mo_logs.strings import quote
 class SelectOp(SelectOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
-            "wrap_leaves({"
+            "leaves_to_data({"
             + ",".join(
                 quote(t["name"]) + ":" + Python[t["value"]].to_python()
                 for t in self.terms

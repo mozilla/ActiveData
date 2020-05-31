@@ -80,7 +80,7 @@ def agg_formula(acc, formula, query_path, schema):
     # DUPLICATED FOR SCRIPTS, MAYBE THIS CAN BE PUT INTO A LANGUAGE?
     for i, s in enumerate(formula):
         canonical_name = s.name
-        s_path = [k for k, v in split_expression_by_path(s.value, schema=schema, lang=Painless).items() if v]
+        op, s_path = [k for k, v in split_expression_by_path(s.value, schema=schema, lang=Painless).items() if v]
         if len(s_path) == 0:
             # FOR CONSTANTS
             nest = NestedAggs(query_path)

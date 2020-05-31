@@ -67,7 +67,14 @@ class Variable(Expression):
         return {self}
 
     def map(self, map_):
-        return Variable(coalesce(map_.get(self.var), self.var))
+        replacement = map_.get(self.var)
+        if replacement:
+            if is_text(replacement):
+                return Variable(replacement)
+            else:
+                return replacement
+        else:
+            return self
 
     def __hash__(self):
         return self.var.__hash__()

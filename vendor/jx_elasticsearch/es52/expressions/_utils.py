@@ -10,20 +10,18 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
-    AndOp as AndOp_,
     FALSE,
-    Variable as Variable_,
-    OrOp)
-from jx_base.expressions.literal import is_literal
+    Variable as Variable_)
+from jx_base.expressions.literal import is_literal, TRUE
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
-from mo_dots import Null, to_data, list_to_data
+from mo_dots import Null, to_data
 from mo_future import first
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, Painlesss = [None] * 3
+MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [None] * 5  # IMPORTS
 
 
 def _inequality_to_esfilter(self, schema):
@@ -68,13 +66,13 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
         all_depths = set(var_to_depth.values())
         if len(all_depths) == 0:
             all_depths = {0}
-        output = list_to_data([[] for _ in range(MAX(all_depths) + 1)])
+        output = to_data([[] for _ in range(MAX(all_depths) + 1)])
     else:
         all_depths = set(var_to_depth[v.var] for v in vars_)
 
     if len(all_depths) == 1:
         output[first(all_depths)] += [where]
-    elif is_op(where, AndOp_):
+    elif is_op(where, AndOp):
         for a in where.terms:
             split_expression_by_depth(a, schema, output, var_to_depth)
     else:
@@ -84,47 +82,70 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
 
 def split_expression_by_path(
-    expr, schema, output=None, var_to_columns=None, lang=Language
+    expr, schema, lang=Language
 ):
     """
     :param expr: EXPRESSION TO INSPECT
     :param schema: THE SCHEMA
     :param output: THE MAP FROM PATH TO EXPRESSION WE WANT UPDATED
     :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
-    :return: output: A MAP FROM PATH TO EXPRESSION
+    :return: type, output: (OP, MAP) PAIR WHERE OP IS OPERATOR TO APPLY ON MAP ITEMS, AND MAP FROM PATH TO EXPRESSION
     """
-    expr_vars = expr.vars()
-    if var_to_columns is None:
-        var_to_columns = {v.var: schema.leaves(v.var) for v in expr_vars}
-        output = {schema.query_path[0]: []}
-        if not var_to_columns:
-            output.setdefault(".", []).append(
-                expr
-            )  # LEGIT EXPRESSIONS OF ZERO VARIABLES
-            return output
+    if is_op(expr, AndOp):
+        if not expr.terms:
+            return AndOp, {".": TRUE}
+        elif len(expr.terms) == 1:
+            return split_expression_by_path(expr.terms[0], schema, lang=lang)
 
+        output = {}
+        for w in expr.terms:
+            mode, split = split_expression_by_path(w, schema, lang=lang)
+            if mode == AndOp:
+                for v, es in split.items():
+                    output.setdefault(v, []).append(es)
+            else:
+                Log.error("confused")
+        return AndOp, output
+
+    expr_vars = expr.vars()
+    var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
     all_paths = set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
 
     if len(all_paths) == 0:
-        output.setdefault(".", []).append(expr)
+        return AndOp, {'.': expr}  # CONSTANTS
     elif len(all_paths) == 1:
-        output.setdefault(first(all_paths), []).append(expr)
-    elif is_op(expr, AndOp_):
-        for e in expr.terms:
-            split_expression_by_path(e, schema, output, var_to_columns, lang=lang)
+        return AndOp, {first(all_paths): expr}
     else:
-        # ASSUME ALL TOP-LEVEL (TECHNICALLY WRONG)
-        output["."].append(OrOp([
-            expr.map({
-                v: c.es_column
-                for v in expr_vars
-                for c in var_to_columns[v.var]
-                if c.nested_path[0] == p
-            })
-            for p in all_paths
-        ]))
+        exprs = [expr]
+        for v, cols in var_to_columns.items():
+            for col in cols:
+                var_to_columns[col.es_column] = [col]
+            if len(cols) <= 1:
+                continue
 
-    return output
+            more_expr = []
+            for e in exprs:
+                for col in cols:
+                    more_expr.append(e.map({v: col.es_column}))
+            exprs = more_expr
+
+        acc = {}
+        for e in exprs:
+            nestings = list(set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v]))
+            if not nestings:
+                a = acc.get('.')
+                if not a:
+                    acc['.'] = a = OrOp([])
+                a.terms.append(e)
+            elif len(nestings) == 1:
+                a = acc.get(nestings[0])
+                if not a:
+                    acc[nestings[0]] = a = OrOp([])
+                a.terms.append(e)
+            else:
+                Log.error("Expression is too complex")
+
+        return OrOp, acc
 
 
 def get_type(var_name):

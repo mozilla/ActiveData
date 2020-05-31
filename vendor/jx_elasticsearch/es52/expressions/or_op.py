@@ -13,7 +13,7 @@ from jx_base.expressions import OrOp as OrOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
 from mo_dots import dict_to_data
 
-NotOp, es_not, es_and = [None] * 3
+NotOp, es_not, es_and = [None] * 3  # IMPORTS
 
 
 class OrOp(OrOp_):
@@ -41,3 +41,9 @@ class OrOp(OrOp_):
 
 def es_or(terms):
     return dict_to_data({"bool": {"should": terms}})
+
+
+# EXPORT
+from jx_elasticsearch.es52.expressions import _utils
+_utils.OrOp = OrOp
+del _utils

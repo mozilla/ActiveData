@@ -260,7 +260,7 @@ def get_selects(query):
                 )
             put_index += 1
         else:
-            split_scripts = split_expression_by_path(
+            op, split_scripts = split_expression_by_path(
                 select.value, schema, lang=Painless
             )
             for p, script in split_scripts.items():
@@ -302,8 +302,8 @@ def es_setop(es, query):
 
     new_select, split_select = get_selects(query)
 
-    split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
-    es_query = es_query_proto(split_select, split_wheres, schema)
+    op, split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
+    es_query = es_query_proto(split_select, op, split_wheres, schema)
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -414,19 +414,19 @@ class ESSelect(object):
         return self.to_es()
 
 
-def es_query_proto(selects, wheres, schema):
+def es_query_proto(selects, op, wheres, schema):
     """
     RETURN AN ES QUERY
     :param selects: MAP FROM path TO ESSelect INSTANCE
     :param wheres: MAP FROM path TO LIST OF WHERE CONDITIONS
     :return: es_query
     """
-    es_query = TRUE
+    es_query = op.zero
     for p in reversed(sorted(set(wheres.keys()) | set(selects.keys()))):
         where = wheres.get(p, Null)
         select = selects.get(p, Null)
 
-        es_where = AndOp(where + [es_query])
+        es_where = op([where, es_query])
         es_query = EsNestedOp(Variable(p), query=es_where, select=select)
 
     return es_query.partial_eval().to_esfilter(schema)

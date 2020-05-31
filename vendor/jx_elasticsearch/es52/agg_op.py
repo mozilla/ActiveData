@@ -131,7 +131,7 @@ def extract_aggs(select, query_path, schema):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         elif s.aggregate:
-            split_select = split_expression_by_path(s.value, schema, lang=Painless)
+            op, split_select = split_expression_by_path(s.value, schema, lang=Painless)
             for si_key, si_value in split_select.items():
                 if si_value:
                     if s.query_path:
@@ -149,7 +149,7 @@ def build_es_query(select, query_path, schema, query):
     acc = extract_aggs(select, query_path, schema)
     acc = NestedAggs(query_path).add(acc)
     split_decoders = get_decoders_by_path(query)
-    split_wheres = split_expression_by_path(query.where, schema=schema, lang=ES52)
+    op, split_wheres = split_expression_by_path(query.where, schema=schema, lang=ES52)
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
     paths = list(reversed(sorted(set(split_wheres.keys()) | set(split_decoders.keys()))))

@@ -637,22 +637,21 @@ class TestDeepOps(BaseTestCase):
             "query": {
                 "from": TEST_TABLE,
                 "select": ["o", "a._a.v"],
-                "where": {"exists": "a._a.v"}
+                "where": {"exists": "a._a.v"},
+                "sort": "o"
             },
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
                     {"o": 1, "a": {"_a": {
                         "v": "still more",
-                        "s": False
                     }}},
-                    {"o": 3, "a": {"_a": [
-                        {"v": "a string", "s": False},
-                        {"v": "another string"}
-                    ]}},
-                    {"o": 2, "a": {"_a": [
-                        {"v": "string!", "s": True},
-                    ]}}
+                    {"o": 2, "a": {"_a": {
+                        "v": "string!",
+                    }}},
+                    {"o": 3, "a": {"_a": {
+                        "v": {"a string", "another string"}
+                    }}},
                 ]
             }
         }

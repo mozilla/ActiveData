@@ -34,6 +34,7 @@ OrOp = None
 
 class AndOp(Expression):
     data_type = BOOLEAN
+    zero = TRUE  # ADD THIS TO terms FOR NO EEFECT
 
     def __init__(self, terms):
         Expression.__init__(self, terms)

@@ -48,8 +48,8 @@ def es_bulksetop(esq, frum, query):
 
     schema = query.frum.schema
     new_select, split_select = get_selects(query)
-    split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
-    es_query = es_query_proto(split_select, split_wheres, schema)
+    op, split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
+    es_query = es_query_proto(split_select, op, split_wheres, schema)
     es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
     if not es_query.sort:

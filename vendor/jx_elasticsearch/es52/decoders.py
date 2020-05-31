@@ -214,7 +214,7 @@ class SetDecoder(AggsDecoder):
         if self.edge.allowNulls:
 
             # MISSING AT THE QUERY DEPTH
-            by_path = split_expression_by_path(exists, schema)
+            op, by_path = split_expression_by_path(exists, schema)
             not_match = es_query
             for p in schema.query_path:
                 e = by_path.get(p)

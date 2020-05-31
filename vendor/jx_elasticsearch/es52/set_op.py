@@ -267,7 +267,7 @@ def get_selects(query):
                 es_select = get_select(p)
                 es_select.scripts[select.name] = {
                     "script": text(
-                        Painless[first(script)].partial_eval().to_es_script(schema)
+                        Painless[script].partial_eval().to_es_script(schema)
                     )
                 }
                 new_select.append(

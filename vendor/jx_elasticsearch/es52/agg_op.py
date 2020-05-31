@@ -163,7 +163,7 @@ def build_es_query(select, query_path, schema, query):
             start += d.num_columns
 
         if where:
-            acc = FilterAggs("_filter", AndOp(where), None).add(acc)
+            acc = FilterAggs("_filter", where, None).add(acc)
         acc = NestedAggs(path).add(acc)
     acc = NestedAggs('.').add(acc)
     acc = simplify(acc)

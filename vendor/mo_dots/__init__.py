@@ -514,13 +514,16 @@ def leaves_to_data(value):
     """
     dict WITH DOTS IN KEYS IS INTERPRETED AS A PATH
     """
-    return dict_to_data(_leaves_to_data(value))
+    return to_data(_leaves_to_data(value))
 
 
 wrap_leaves = leaves_to_data
 
 
 def _leaves_to_data(value):
+    """
+    RETURN UNWRAPPED STRUCTURES
+    """
     if value == None:
         return None
 

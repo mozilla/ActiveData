@@ -118,6 +118,7 @@ def _replace_ref(node, url):
                 new_value = scheme_loaders[ref.scheme](ref, url)
                 ref_found = True
             except Exception as e:
+                e = Except.wrap(e)
                 ref_error = e
                 continue
 

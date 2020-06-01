@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from unittest import skip
+
 from active_data.actions import find_container
 from jx_base.container import type2container
 from jx_base.expressions import NULL

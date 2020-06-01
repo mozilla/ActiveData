@@ -138,6 +138,7 @@ def split_expression_by_path(
     exprs = [expr]
     undo = {}
     for p in schema.query_path:
+        # TODO: NOT ACCOUNTING FOR DEEP QUERIES ON SHALLOW TABLE
         # REPLACE EACH DEEPER VAR WITH null
         mapping = {
             v: c

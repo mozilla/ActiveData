@@ -436,10 +436,11 @@ def es_query_proto(selects, op, wheres, schema):
             for col in schema.values(v.var)
             if col.nested_path[0] == p
         }
-        residue = AndOp(
-            [MissingOp(Variable(first(schema.values(c)).es_column)) for v, c in null_vars.items()] +
-            [where.map({v: NULL for v, c in null_vars.items()})]
-        )
+        if p != '.':
+            residue = AndOp(
+                [MissingOp(Variable(first(schema.values(c)).es_column)) for v, c in null_vars.items()] +
+                [where.map({v: NULL for v, c in null_vars.items()})]
+            )
     return es_query.partial_eval().to_esfilter(schema)
 
 

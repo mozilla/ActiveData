@@ -64,7 +64,7 @@ class EqOp(Expression):
 
     def __data__(self):
         if is_op(self.lhs, Variable) and is_literal(self.rhs):
-            return {"eq": {self.lhs.var, self.rhs.value}}
+            return {"eq": {self.lhs.var: self.rhs.value}}
         else:
             return {"eq": [self.lhs.__data__(), self.rhs.__data__()]}
 

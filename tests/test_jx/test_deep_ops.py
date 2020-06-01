@@ -1112,7 +1112,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("still broken")
     def test_deep_agg_w_deeper_select_relative_name_neop(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},
@@ -1137,7 +1136,7 @@ class TestDeepOps(BaseTestCase):
                     {"r": {"s": "a"}, "v": {"u": 3}},
                     {"r": {"s": "b"}, "v": NULL},
                     {"r": {"s": "c"}, "v": {"u": 5}},
-                    {"r": NULL, "v": {"u": 6}}
+                    {"r": NULL, "v": {"u": NULL}}
                 ]
             },
             "expecting_table": {
@@ -1147,7 +1146,7 @@ class TestDeepOps(BaseTestCase):
                     ["a", 3],
                     ["b", NULL],
                     ["c", 5],
-                    [NULL, 6]
+                    [NULL, NULL]
                 ]
             },
             "expecting_cube": {
@@ -1160,7 +1159,7 @@ class TestDeepOps(BaseTestCase):
                     ]}}
                 ],
                 "data": {
-                    "v.u": [3, NULL, 5, 6]
+                    "v.u": [3, NULL, 5, NULL]
                 }
             }
         }
@@ -1218,7 +1217,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("still broken")
     def test_deep_agg_w_deeper_select_relative_name(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},

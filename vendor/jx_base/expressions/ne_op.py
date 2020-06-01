@@ -19,6 +19,10 @@ LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 """
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions.exists_op import ExistsOp
+
+from jx_base.expressions.and_op import AndOp
+
 from jx_base.expressions import not_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
@@ -65,7 +69,11 @@ class NeOp(Expression):
 
     @simplified
     def partial_eval(self):
-        output = self.lang[NotOp(EqOp([self.lhs, self.rhs]))].partial_eval()
+        output = self.lang[AndOp([
+            ExistsOp(self.lhs),
+            ExistsOp(self.rhs),
+            NotOp(EqOp([self.lhs, self.rhs]))
+        ])].partial_eval()
         return output
 
 not_op.NeOp = NeOp

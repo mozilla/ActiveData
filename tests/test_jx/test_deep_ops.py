@@ -1289,7 +1289,8 @@ class TestDeepOps(BaseTestCase):
                     "v": "bad",
                     "s": False
                 }},
-                {"k": 4, "o": 4, "a": {"s": False}}
+                {"k": 4, "o": 4, "a": {"s": False}},
+                {"k": 5, "o": "a"}
             ],
             "query": {
                 "from": TEST_TABLE,
@@ -1301,7 +1302,7 @@ class TestDeepOps(BaseTestCase):
             },
             "expecting_list": {
                 "meta": {"format": "list"},
-                "data": [1, 2, 4]
+                "data": [1, 2]
             },
         }
         self.utils.execute_tests(test)

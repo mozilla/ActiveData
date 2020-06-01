@@ -138,8 +138,9 @@ def split_expression_by_path(
     exprs = [expr]
     undo = {}
     for p in schema.query_path:
-        # TODO: NOT ACCOUNTING FOR DEEP QUERIES ON SHALLOW TABLE
+        # CALCULATE THE RESIDUAL EXPRESSION
         # REPLACE EACH DEEPER VAR WITH null
+        # TODO: NOT ACCOUNTING FOR DEEP QUERIES ON SHALLOW TABLE
         mapping = {
             v: c
             for v, cols in var_to_columns.items()

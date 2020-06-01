@@ -12,6 +12,8 @@ import hashlib
 
 from flask import Response
 
+from mo_math import bytes2base64URL
+
 import jx_elasticsearch
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_python.containers.cube import Cube
@@ -69,14 +71,25 @@ class SaveQueries(object):
             typed=False,
             kwargs=kwargs,
         )
-        if es.created > Date.now() - MINUTE:
-            es.cluster.get_metadata(after=Date.now())  # ENSURE METADATA IS FRESH
-
         es.add_alias(index)
         es.set_refresh_interval(seconds=1)
 
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
+
+        if es.created > Date.now() - MINUTE:
+            # ADD DUMMY RECORD
+            self.queue.add(
+                {
+                    "value": {
+                        "hash": "~~~~~~",
+                        "create_time": Date.now(),
+                        "last_used": Date.now(),
+                        "query": "{}",
+                    },
+                }
+            )
+            self.es.namespace.get_columns(self.es.settings.alias, after=Date.now())
 
     def find(self, hash):
         result = self.es.query(
@@ -124,7 +137,7 @@ class SaveQueries(object):
             hash = hashlib.sha1(hash).digest()
             hashes[i] = hash
 
-        short_hashes = [convert.bytes2base64(h[0:6]).replace("/", "_") for h in hashes]
+        short_hashes = [bytes2base64URL(h[0:6]) for h in hashes]
         available = {h: True for h in short_hashes}
 
         existing = self.es.query(
@@ -209,7 +222,7 @@ SCHEMA = {
                 "create_time": {"type": "double", "store": True},
                 "last_used": {"type": "double", "store": True},
                 "hash": {"type": "keyword", "store": True},
-                "query": {"type": "text", "store": True},
+                "query": {"type": "keyword", "store": True},
             }
         }
     },

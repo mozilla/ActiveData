@@ -31,7 +31,10 @@ def doc_formatter(select, query=None):
                 v = unwraplist(s.pull(doc))
                 if v is not None:
                     try:
-                        r[s.put.name][s.put.child] = v
+                        if s.put.child == '.':
+                            r[s.put.name] = v
+                        else:
+                            r[s.put.name][s.put.child] = v
                     except Exception as e:
                         Log.error("what's happening here?", cause=e)
             return r if r else None

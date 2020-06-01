@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 import hashlib
 
+from mo_math import bytes2base64URL
+
 from active_data.actions import save_query
 from jx_elasticsearch import elasticsearch
 from mo_dots import to_data, dict_to_data
@@ -53,7 +55,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
             "format": "list"
         })
         bytes = json.encode('utf8')
-        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
+        expected_hash = bytes2base64URL(hashlib.sha1(bytes).digest()[0:6])
         Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
         to_data(test).expecting_list.meta.saved_as = expected_hash
 

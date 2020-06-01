@@ -1189,7 +1189,6 @@ class TestDeepOps(BaseTestCase):
                     {"r": {"s": "a"}, "v": {"u": 1}},
                     {"r": {"s": "a"}, "v": {"u": 2}},
                     {"r": {"s": "c"}, "v": {"u": 5}},
-                    {"v": {"u": 6}}
                 ]
             },
             "expecting_table": {
@@ -1198,8 +1197,7 @@ class TestDeepOps(BaseTestCase):
                 "data": [
                     ["a", 1],
                     ["a", 2],
-                    ["c", 5],
-                    [NULL, 6]
+                    ["c", 5]
                 ]
             },
             "expecting_cube": {
@@ -1208,13 +1206,13 @@ class TestDeepOps(BaseTestCase):
                     {"name": "rownum", "domain": {
                         "type": "rownum",
                         "min": 0,
-                        "max": 4,
+                        "max": 3,
                         "interval": 1
                     }}
                 ],
                 "data": {
-                    "v.u": [1, 2, 5, 6],
-                    "r.s": ["a", "a", "c", NULL]
+                    "v.u": [1, 2, 5],
+                    "r.s": ["a", "a", "c"]
                 }
             }
         }

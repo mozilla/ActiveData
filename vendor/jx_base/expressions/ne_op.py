@@ -65,7 +65,7 @@ class NeOp(Expression):
     def missing(self):
         return (
             FALSE
-        )  # USING THE decisive EQUAILTY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
+        )  # USING THE decisive EQUALITY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
 
     @simplified
     def partial_eval(self):

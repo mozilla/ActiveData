@@ -39,7 +39,7 @@ from mo_times import Date
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
 
-Literal, TRUE, NULL, TupleOp, Variable = [None] * 5  # IMPORTS
+Literal, TRUE, NULL, TupleOp, Variable = [Null] * 5  # IMPORTS
 
 def extend(cls):
     """

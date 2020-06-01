@@ -9,10 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_json import EXISTS
-from mo_json.typed_encoder import EXISTS_TYPE
-
-from jx_base import Column
 from jx_base.expressions import (
     FALSE,
     Variable as Variable_, MissingOp, Variable)
@@ -20,12 +16,14 @@ from jx_base.expressions.literal import is_literal, TRUE, NULL
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
-from mo_dots import Null, to_data, Data, join_field, split_field
+from mo_dots import Null, to_data, join_field, split_field
 from mo_future import first
+from mo_json import EXISTS
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [None] * 5  # IMPORTS
+MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [Null] * 5  # IMPORTS
 
 
 def _inequality_to_esfilter(self, schema):

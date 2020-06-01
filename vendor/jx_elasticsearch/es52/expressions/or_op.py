@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import OrOp as OrOp_, TRUE, FALSE, simplified
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions._utils import ES52
-from mo_dots import dict_to_data
+from mo_dots import dict_to_data, Null
 from mo_json import BOOLEAN
 
-NotOp, es_not, es_and, EsNestedOp = [None] * 4  # IMPORTS
+NotOp, es_not, es_and, EsNestedOp = [Null] * 4  # IMPORTS
 
 
 class OrOp(OrOp_):

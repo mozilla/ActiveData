@@ -22,6 +22,7 @@ from mo_kwargs import override
 from mo_logs import Log, Except
 from mo_threads import Thread, Till
 from mo_threads.threads import register_thread
+from mo_times import MINUTE
 from mo_times.dates import Date
 from pyLibrary import convert
 from pyLibrary.env.flask_wrappers import cors_wrapper
@@ -68,8 +69,12 @@ class SaveQueries(object):
             typed=False,
             kwargs=kwargs,
         )
+        if es.created > Date.now() - MINUTE:
+            es.cluster.get_metadata(after=Date.now())  # ENSURE METADATA IS FRESH
+
         es.add_alias(index)
         es.set_refresh_interval(seconds=1)
+
         self.queue = es.threaded_queue(max_size=max_size, batch_size=batch_size)
         self.es = jx_elasticsearch.new_instance(es.settings)
 
@@ -196,6 +201,8 @@ SCHEMA = {
                     }
                 }
             ],
+        },
+        "query": {
             "_all": {"enabled": False},
             "_source": {"enabled": True},
             "properties": {
@@ -203,8 +210,7 @@ SCHEMA = {
                 "last_used": {"type": "double", "store": True},
                 "hash": {"type": "keyword", "store": True},
                 "query": {"type": "text", "store": True},
-            },
-        },
-        "query": {}
+            }
+        }
     },
 }

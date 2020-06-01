@@ -236,6 +236,13 @@ class Index(object):
             else:
                 Log.error("Problem flushing", cause=e)
 
+    @property
+    def created(self):
+        """
+        :return:
+        """
+        return Date(self.settings.index[-15:])
+
     def refresh(self):
         """
         TELL ES TO INDEX THE GIVEN DATA, FLUSH MAY NOT HAPPEN

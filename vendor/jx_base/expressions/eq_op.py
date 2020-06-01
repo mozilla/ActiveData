@@ -13,7 +13,7 @@
 
 THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
 KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
+Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THEIR RESPECTIVE
 LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
 
 """
@@ -28,12 +28,11 @@ from jx_base.expressions.literal import is_literal
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op, value_compare
-from mo_dots import is_many
+from mo_dots import is_many, Null
 from mo_json import BOOLEAN
 
-CaseOp = None
-InOp = None
-WhneOp = None
+CaseOp, InOp, WhenOp = [Null] * 3  # IMPORT
+
 
 class EqOp(Expression):
     has_simple_form = True

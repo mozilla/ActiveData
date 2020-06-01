@@ -430,13 +430,13 @@ def es_query_proto(selects, op, wheres, schema):
 
         es_where = op([OrOp([es_query, residue]), where])
         es_query = EsNestedOp(Variable(p), query=es_where, select=select)
-        null_vars = {
-            v.var: join_field(split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE])
-            for v in where.vars()
-            for col in schema.values(v.var)
-            if col.nested_path[0] == p
-        }
         if p != '.':
+            null_vars = {
+                v.var: join_field(split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE])
+                for v in where.vars()
+                for col in schema.values(v.var)
+                if col.nested_path[0] == p
+            }
             residue = AndOp(
                 [MissingOp(Variable(first(schema.values(c)).es_column)) for v, c in null_vars.items()] +
                 [where.map({v: NULL for v, c in null_vars.items()})]

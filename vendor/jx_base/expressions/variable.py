@@ -68,7 +68,7 @@ class Variable(Expression):
 
     def map(self, map_):
         replacement = map_.get(self.var)
-        if replacement:
+        if replacement != None:
             if is_text(replacement):
                 return Variable(replacement)
             else:

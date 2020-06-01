@@ -9,17 +9,19 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from collections import OrderedDict
+
 from jx_base.expressions import (
     FALSE,
-    Variable as Variable_, MissingOp, Variable)
-from jx_base.expressions.literal import is_literal, TRUE, NULL
+    Variable as Variable_, MissingOp, Variable, ExistsOp)
+from jx_base.expressions.literal import is_literal, TRUE, NULL, Literal
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
 from mo_dots import Null, to_data, join_field, split_field
 from mo_future import first
 from mo_json import EXISTS
-from mo_json.typed_encoder import EXISTS_TYPE
+from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
@@ -82,6 +84,76 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     return output
 
+def get_exists(path):
+    steps = split_field(path)
+    if not steps:
+        return EXISTS_TYPE
+    if steps[-1] == NESTED_TYPE:
+        steps = steps[:-1]
+    return join_field(steps + [EXISTS_TYPE])
+
+
+def arrange(expr, schema):
+
+    # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
+    expr_vars = expr.vars()
+    var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
+
+    all_paths = list(reversed(sorted(
+        set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var]) |
+        {'.'} |
+        set(schema.query_path)
+    )))
+
+    exprs = [expr]
+
+    # CONSTANTS
+    more_exprs = []
+    for e in exprs:
+        for i, np in enumerate(all_paths):
+            existence = Variable(get_exists(np))
+            if not i:
+                more_exprs.append(AndOp([ExistsOp(existence), e]))
+            more_exprs.append(AndOp([MissingOp(existence), e]))
+    exprs = more_exprs
+
+    # EXPAND VARIABLES
+    for v, cols in var_to_columns.items():
+        more_exprs = []
+        for e in exprs:
+            for col in cols:
+                for i, np in enumerate(col.nested_path):
+                    existence = Variable(get_exists(np))
+                    if not i:
+                        more_exprs.append(AndOp([ExistsOp(existence), e.map({v: col.es_column})]))
+                    more_exprs.append(AndOp([MissingOp(existence), e.map({v: NULL})]))
+        exprs = more_exprs
+
+    # SIMPLIFY
+    simpler = OrOp(exprs).partial_eval()
+    if is_op(simpler, OrOp):
+        remain = simpler.terms
+    else:
+        remain = [simpler]
+
+    # FACTOR OUT THE existence, DEEP FIRST
+    depths = OrderedDict()
+    for p in all_paths[:-1]:
+        exists = depths[p] = []
+        missing = []
+        existence = get_exists(p)
+        miss = MissingOp(Variable(existence))
+        for e in remain:
+            if AndOp([miss, e]).partial_eval() is FALSE:
+                exists.append(e.map({existence: Literal(0)}))
+            else:
+                missing.append(e)
+        remain = missing
+    depths['.'] = [r.map({get_exists('.'): NULL}) for r in remain]
+
+    Log.note("{{expr|json}}", expr=depths)
+    return OrOp, OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
+
 
 def split_expression_by_path(
     expr, schema, lang=Language
@@ -93,6 +165,7 @@ def split_expression_by_path(
     :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: type, output: (OP, MAP) PAIR WHERE OP IS OPERATOR TO APPLY ON MAP ITEMS, AND MAP FROM PATH TO EXPRESSION
     """
+    return arrange(expr, schema)
     if is_op(expr, AndOp):
         if not expr.terms:
             return AndOp, {".": TRUE}

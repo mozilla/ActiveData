@@ -1217,7 +1217,6 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("still broken")
     def test_deep_agg_w_deeper_select_relative_name(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},

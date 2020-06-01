@@ -1790,7 +1790,7 @@ class TestDeepOps(BaseTestCase):
                     {"b": 1, "count": 2},
                     {"b": 2, "count": 1},
                     {"b": 4, "count": 1},
-                    {"count": 3}
+                    {"count": 4}
                 ]
             },
             "expecting_table": {
@@ -1800,7 +1800,7 @@ class TestDeepOps(BaseTestCase):
                     [1, 2],
                     [2, 1],
                     [4, 1],
-                    [NULL, 3]
+                    [NULL, 4]
                 ]
             },
             "expecting_cube": {
@@ -1811,7 +1811,7 @@ class TestDeepOps(BaseTestCase):
                     {"value": 4}
                 ]}}],
                 "data": {
-                    "count": [2, 1, 1, 3]
+                    "count": [2, 1, 1, 4]
                 }
             }
         }

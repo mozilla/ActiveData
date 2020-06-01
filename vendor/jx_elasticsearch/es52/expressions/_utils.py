@@ -9,14 +9,17 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_json.typed_encoder import EXISTS_TYPE
+
+from jx_base import Column
 from jx_base.expressions import (
     FALSE,
-    Variable as Variable_)
-from jx_base.expressions.literal import is_literal, TRUE
+    Variable as Variable_, MissingOp, Variable)
+from jx_base.expressions.literal import is_literal, TRUE, NULL
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
-from mo_dots import Null, to_data
+from mo_dots import Null, to_data, Data, join_field, split_field
 from mo_future import first
 from mo_logs import Log
 from mo_math import MAX
@@ -114,40 +117,76 @@ def split_expression_by_path(
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
     all_paths = set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
 
+    def add(v, c):
+        cols = var_to_columns.get(v)
+        if not cols:
+            var_to_columns[v] = cols = []
+        if c not in cols:
+            cols.append(c)
+
+    # all_paths MAY BE MISSING SHALLOW PATHS
+    exprs = [expr]
+    undo = {}
+    for p in schema.query_path:
+        # REPLACE EACH DEEPER VAR WITH null
+        mapping = {
+            v: c
+            for v, cols in var_to_columns.items()
+            for c in cols
+            if len(c.nested_path[0]) > len(p)
+        }
+        if mapping:
+            acc = []
+            for v, col in mapping.items():
+                nested_exists = join_field(split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE])
+                e = schema.values(nested_exists)
+                if not e:
+                    Log.error("do not know how to handle")
+                add(nested_exists, first(e))  # REGISTER THE EXISTENCE VARIABLE
+                acc.append(MissingOp(Variable(nested_exists)))
+            acc.append(expr.map({v: NULL for v in mapping.keys()}))
+            with_nulls = AndOp(acc).partial_eval()
+            if with_nulls is not FALSE:
+                all_paths.add(p)
+                exprs.append(with_nulls)
+
     if len(all_paths) == 0:
         return AndOp, {'.': expr}  # CONSTANTS
     elif len(all_paths) == 1:
         return AndOp, {first(all_paths): expr}
-    else:
-        exprs = [expr]
-        for v, cols in var_to_columns.items():
-            for col in cols:
-                var_to_columns[col.es_column] = [col]
-            if len(cols) <= 1:
-                continue
 
-            more_expr = []
-            for e in exprs:
-                for col in cols:
-                    more_expr.append(e.map({v: col.es_column}))
-            exprs = more_expr
+    # EXPAND EXPRESSION TO ALL REALIZED COLUMNS
+    for v, cols in list(var_to_columns.items()):
+        for col in cols:
+            add(col.es_column, col)
+        if len(cols) <= 1:
+            continue
 
-        acc = {}
+        more_expr = []
         for e in exprs:
-            nestings = list(set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v]))
-            if not nestings:
-                a = acc.get('.')
-                if not a:
-                    acc['.'] = a = OrOp([])
-                a.terms.append(e)
-            elif len(nestings) == 1:
-                a = acc.get(nestings[0])
-                if not a:
-                    acc[nestings[0]] = a = OrOp([])
-                a.terms.append(e)
-            else:
-                Log.error("Expression is too complex")
+            for col in cols:
+                more_expr.append(e.map({v: col.es_column}))
+        exprs = more_expr
 
+    acc = {}
+    for e in exprs:
+        nestings = list(set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v]))
+        if not nestings:
+            a = acc.get('.')
+            if not a:
+                acc['.'] = a = OrOp([])
+            a.terms.append(e)
+        elif len(nestings) == 1:
+            a = acc.get(nestings[0])
+            if not a:
+                acc[nestings[0]] = a = OrOp([])
+            a.terms.append(e)
+        else:
+            Log.error("Expression is too complex")
+
+    if undo:
+        return OrOp, {k: v.map(undo) for k, v in acc.items()}
+    else:
         return OrOp, acc
 
 

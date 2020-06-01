@@ -18,7 +18,7 @@ from jx_elasticsearch.es52.expressions import (
     ES52,
     split_expression_by_path,
     EsNestedOp,
-)
+    OrOp)
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
@@ -423,11 +423,21 @@ def es_query_proto(selects, op, wheres, schema):
     """
     es_query = op.zero
     for p in reversed(sorted(set(wheres.keys()) | set(selects.keys()))):
-        where = wheres.get(p, op.zero)
+        # DEEPEST TO SHALLOW
+        where = wheres.get(p)
         select = selects.get(p, Null)
 
-        es_where = op([where, es_query])
-        es_query = EsNestedOp(Variable(p), query=es_where, select=select)
+        if not where:
+            # TODO: MORE GENERALLY: IF ALL NESTED COLUMNS ARE NULL, WHAT'S THE RESIDUE?
+            residue = TRUE  # TRUE REQUIRED BECAUSE EsNestedOp IS LIMITED TO JUST NESTED DOCUMENTS
+            es_where = es_query
+            es_query = OrOp([
+                EsNestedOp(Variable(p), query=es_where, select=select),
+                residue
+            ])
+        else:
+            es_where = op([es_query, where])
+            es_query = EsNestedOp(Variable(p), query=es_where, select=select)
 
     return es_query.partial_eval().to_esfilter(schema)
 

@@ -32,3 +32,7 @@ class EsNestedOp(EsNestedOp_):
 from jx_elasticsearch.es52.expressions import and_op
 and_op.EsNestedOp = EsNestedOp
 del and_op
+
+from jx_elasticsearch.es52.expressions import or_op
+or_op.EsNestedOp = EsNestedOp
+del or_op

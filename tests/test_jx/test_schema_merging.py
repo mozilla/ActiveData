@@ -233,7 +233,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("schema merging not working")
+    # @skip("schema merging not working")
     def test_count(self):
         test = {
             "data": [
@@ -369,7 +369,7 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    @skip("For Orange query")
+    # @skip("For Orange query")
     def test_edge(self):
         test = {
             "data": [

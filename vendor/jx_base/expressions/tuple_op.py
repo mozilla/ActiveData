@@ -59,6 +59,9 @@ class TupleOp(Expression):
     def missing(self):
         return FALSE
 
+    def __call__(self):
+        return tuple(t() for t in self.terms)
+
     @simplified
     def partial_eval(self):
         if all(is_literal(t) for t in self.terms):

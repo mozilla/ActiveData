@@ -9,6 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_json import EXISTS
 from mo_json.typed_encoder import EXISTS_TYPE
 
 from jx_base import Column
@@ -101,17 +102,26 @@ def split_expression_by_path(
             return split_expression_by_path(expr.terms[0], schema, lang=lang)
 
         output = {}
+        curr_op = AndOp
         for w in expr.terms:
-            mode, split = split_expression_by_path(w, schema, lang=lang)
-            if mode == AndOp:
+            op, split = split_expression_by_path(w, schema, lang=lang)
+            if op == AndOp:
                 for v, es in split.items():
+                    ae = output.get(v)
+                    if not ae:
+                        output[v] = ae = AndOp([])
+                    ae.terms.append(es)
+            elif len(output) == 1 and all(c.jx_type == EXISTS for v in split['.'].vars() for c in schema.values(v.var)):
+                for v, es in split.items():
+                    if v == ".":
+                        continue
                     ae = output.get(v)
                     if not ae:
                         output[v] = ae = AndOp([])
                     ae.terms.append(es)
             else:
                 Log.error("confused")
-        return AndOp, output
+        return curr_op, output
 
     expr_vars = expr.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}

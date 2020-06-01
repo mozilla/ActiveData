@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE, NULL, FALSE
+from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE, NULL, FALSE, MissingOp
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
@@ -428,12 +428,13 @@ def es_query_proto(selects, op, wheres, schema):
         where = wheres.get(p, TRUE)
         select = selects.get(p, Null)
 
-        es_where = op([es_query, where])
-        es_query = OrOp([
-            EsNestedOp(Variable(p), query=es_where, select=select),
-            residue
-        ])
-        residue = where.map({v.var: NULL for v in where.vars() for col in schema.values(v.var) if col.nested_path[0] == p})
+        es_where = op([OrOp([es_query, residue]), where])
+        es_query = EsNestedOp(Variable(p), query=es_where, select=select)
+        null_vars = {v.var: col.es_column for v in where.vars() for col in schema.values(v.var) if col.nested_path[0] == p}
+        residue = AndOp(
+            [MissingOp(Variable(c)) for v, c in null_vars.items()] +
+            [where.map({v: NULL for v, c in null_vars.items()})]
+        )
     return es_query.partial_eval().to_esfilter(schema)
 
 

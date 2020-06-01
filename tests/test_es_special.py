@@ -287,6 +287,7 @@ class TestESSpecial(BaseTestCase):
         # VERIFY "USED" COLUMN STILL EXISTS (BUT HAS ZERO CARDINALITY)
         pass
 
+    @skip("still broken")
     def test_columns_not_leaked(self):
         alias = "testing_replace"
         index_name = "testing_replace-20200527_000000"

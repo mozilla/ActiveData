@@ -1112,6 +1112,7 @@ class TestDeepOps(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
+
     def test_deep_agg_w_deeper_select_relative_name_neop(self):
         data = [{"a": {"_b": [
             {"r": {"s": "a"}, "v": {"u": 1}},
@@ -1269,6 +1270,38 @@ class TestDeepOps(BaseTestCase):
                     "v.u": [3, NULL, 5, 6]
                 }
             }
+        }
+        self.utils.execute_tests(test)
+
+    def test_shallow_and_ne_deep(self):
+        test = {
+            "data": [
+                {"k": 1, "o": "a", "a": [
+                    {"v": "good", "s": False},
+                    {"v": "bad"}
+                ]},
+                {"k": 2, "o": "a", "a": [{
+                    "v": "good",
+                    "s": True},
+                ]},
+                {"k": 3, "o": "a", "a": {
+                    "v": "bad",
+                    "s": False
+                }},
+                {"k": 4, "o": 4, "a": {"s": False}}
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "select": "k",
+                "where": {"and": [
+                    {"eq": {"o": "a"}},
+                    {"neq": {"a.v": "bad"}}
+                ]}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [1, 2, 4]
+            },
         }
         self.utils.execute_tests(test)
 

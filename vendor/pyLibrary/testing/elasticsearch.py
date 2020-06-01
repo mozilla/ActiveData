@@ -59,7 +59,7 @@ class FakeES():
     def __init__(self, filename, host="fake", index="fake", kwargs=None):
         self.settings = kwargs
         self.file = File(filename)
-        self.cluster= Null
+        self.cluster = Null
         try:
             self.data = mo_json.json2value(self.file.read())
         except Exception as e:

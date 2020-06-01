@@ -35,7 +35,7 @@ class AndOp(AndOp_):
             # CAN NOT FACTOR EsNestedOp
             and_terms = []
             for i, t in enumerate(self.terms):
-                simple = BooleanOp(t).partial_eval()
+                simple = self.lang[BooleanOp(t)].partial_eval()
                 if simple.type != BOOLEAN:
                     simple = simple.exists()
 

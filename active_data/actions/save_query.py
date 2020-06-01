@@ -204,6 +204,7 @@ SCHEMA = {
                 "hash": {"type": "keyword", "store": True},
                 "query": {"type": "text", "store": True},
             },
-        }
+        },
+        "query": {}
     },
 }

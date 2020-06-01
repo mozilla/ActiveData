@@ -744,7 +744,7 @@ class Cluster(object):
             if schema.mappings:
                 if type not in schema.mappings:
                     Log.error(
-                        "if you declare type={{type}}, and you declare a schema, then {{type}} is expected in the schema",
+                        "if you declare type={{type}}, and you declare a schema, then {{type|quote}} is expected in the schema",
                         type=type
                     )
             else:

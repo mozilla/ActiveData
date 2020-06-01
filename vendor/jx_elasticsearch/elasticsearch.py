@@ -265,7 +265,7 @@ class Index(object):
                 {"one": 1, None: None}[self.settings.consistency]
             )
             path = self.path + "/_delete_by_query"
-            DEBUG and Log.note("Delete: {{path}}\n{{query}}", path=path, query=query)
+            # DEBUG and Log.note("Delete: {{path}}\n{{query}}", path=path, query=query)
             result = self.cluster.post(
                 path,
                 json=query,

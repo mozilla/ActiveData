@@ -258,7 +258,10 @@ class ESUtils(object):
                 query = QueryOp.wrap(subtest.query, container, container.namespace)
                 if is_many(expected.data) and len(result.data) != len(expected.data):
                     Log.error(
-                        "expecting data (len={{rlen}}) to have length of {{elen}}",
+                        # "expecting data (len={{rlen}}) to have length of {{elen}}",
+                        "{{test|json|limit(10000)}} does not match length of expected {{expected|json|limit(10000)}}",
+                        test=result.data,
+                        expected=expected.data,
                         rlen=len(result.data),
                         elen=len(expected.data)
                     )

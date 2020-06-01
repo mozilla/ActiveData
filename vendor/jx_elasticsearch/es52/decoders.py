@@ -9,11 +9,9 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.or_op import OrOp
-
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
-from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
+from jx_base.expressions import FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
@@ -22,12 +20,11 @@ from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
-from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, to_data, \
-    join_field, \
-    split_field, dict_to_data, list_to_data
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, dict_to_data, \
+    list_to_data
 from mo_future import first, is_text, text, transpose
 from mo_json import STRING
-from mo_json.typed_encoder import EXISTS_TYPE, untype_path, unnest_path
+from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, MIN

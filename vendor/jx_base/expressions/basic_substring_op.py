@@ -44,5 +44,15 @@ class BasicSubstringOp(Expression):
             ]
         }
 
+    def map(self, map_):
+        return self.lang[BasicSubstringOp([
+            self.value.map(map_),
+            self.start.map(map_),
+            self.end.map(map_)
+        ])]
+
+    def vars(self):
+        return self.value.vars() | self.start.vals() | self.end.vals()
+
     def missing(self):
         return FALSE

@@ -14,7 +14,7 @@ from collections import OrderedDict
 from jx_base.expressions import (
     FALSE,
     Variable as Variable_, MissingOp, Variable, ExistsOp)
-from jx_base.expressions.literal import is_literal, TRUE, NULL, Literal
+from jx_base.expressions.literal import is_literal, TRUE, NULL, Literal, ZERO
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
@@ -93,7 +93,7 @@ def get_exists(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def arrange(expr, schema):
+def split_expression_by_path_for_setop(expr, schema):
 
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = expr.vars()
@@ -145,11 +145,11 @@ def arrange(expr, schema):
         miss = MissingOp(Variable(existence))
         for e in remain:
             if AndOp([miss, e]).partial_eval() is FALSE:
-                exists.append(e.map({existence: Literal(0)}))
+                exists.append(e.map({existence: ZERO}))
             else:
                 missing.append(e)
         remain = missing
-    depths['.'] = [r.map({get_exists('.'): NULL}) for r in remain]
+    depths['.'] = [r.map({get_exists('.'): ZERO}) for r in remain]
 
     Log.note("{{expr|json}}", expr=depths)
     return OrOp, OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
@@ -165,7 +165,6 @@ def split_expression_by_path(
     :param var_to_columns: MAP FROM EACH VARIABLE NAME TO THE DEPTH
     :return: type, output: (OP, MAP) PAIR WHERE OP IS OPERATOR TO APPLY ON MAP ITEMS, AND MAP FROM PATH TO EXPRESSION
     """
-    return arrange(expr, schema)
     if is_op(expr, AndOp):
         if not expr.terms:
             return AndOp, {".": TRUE}

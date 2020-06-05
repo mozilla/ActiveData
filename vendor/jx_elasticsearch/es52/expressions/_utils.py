@@ -84,6 +84,7 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 
     return output
 
+
 def get_exists(path):
     steps = split_field(path)
     if not steps:
@@ -93,7 +94,7 @@ def get_exists(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def split_expression_by_path_for_setop(expr, schema):
+def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
 
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = expr.vars()
@@ -102,7 +103,8 @@ def split_expression_by_path_for_setop(expr, schema):
     all_paths = list(reversed(sorted(
         set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var]) |
         {'.'} |
-        set(schema.query_path)
+        set(schema.query_path) |
+        set(more_path)
     )))
 
     exprs = [expr]
@@ -151,8 +153,9 @@ def split_expression_by_path_for_setop(expr, schema):
         remain = missing
     depths['.'] = [r.map({get_exists('.'): ZERO}) for r in remain]
 
-    Log.note("{{expr|json}}", expr=depths)
-    return OrOp, OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
+    output = OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
+    Log.note("{{expr|json}}", expr=output)
+    return OrOp, output
 
 
 def split_expression_by_path(

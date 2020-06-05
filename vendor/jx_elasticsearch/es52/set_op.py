@@ -303,7 +303,7 @@ def es_setop(es, query):
 
     new_select, split_select = get_selects(query)
 
-    op, split_wheres = split_expression_by_path_for_setop(query.where, schema)
+    op, split_wheres = split_expression_by_path_for_setop(query.where, schema, split_select.keys())
     es_query = es_query_proto(split_select, op, split_wheres, schema)
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
@@ -423,25 +423,13 @@ def es_query_proto(selects, op, wheres, schema):
     :return: es_query
     """
     es_query = op.zero
-    residue = FALSE
     for p in reversed(sorted(set(wheres.keys()) | set(selects.keys()))):
         # DEEPEST TO SHALLOW
         where = wheres.get(p, TRUE)
         select = selects.get(p, Null)
 
-        es_where = op([OrOp([es_query, residue]), where])
+        es_where = op([es_query, where])
         es_query = EsNestedOp(Variable(p), query=es_where, select=select)
-        if p != '.':
-            null_vars = {
-                v.var: join_field(split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE])
-                for v in where.vars()
-                for col in schema.values(v.var)
-                if col.nested_path[0] == p
-            }
-            residue = AndOp(
-                [MissingOp(Variable(first(schema.values(c)).es_column)) for v, c in null_vars.items()] +
-                [where.map({v: NULL for v, c in null_vars.items()})]
-            )
     return es_query.partial_eval().to_esfilter(schema)
 
 

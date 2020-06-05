@@ -176,8 +176,8 @@ def get_stacktrace(start=0):
     stack = []
     while f is not None:
         stack.append({
-            "line": f.f_lineno,
             "file": f.f_code.co_filename,
+            "line": f.f_lineno,
             "method": f.f_code.co_name
         })
         f = f.f_back

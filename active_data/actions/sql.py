@@ -19,6 +19,7 @@ from active_data.actions.query import BLANK, QUERY_SIZE_LIMIT
 from jx_base.container import Container
 from jx_python import jx
 from mo_dots import is_data, is_list, listwrap, unwraplist, to_data
+from mo_files import mimetype
 from mo_json import json2value, value2json
 from mo_logs import Log
 from mo_logs.exceptions import Except
@@ -47,7 +48,7 @@ def sql_query(path):
                         }
                     )
                 elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
-                    Log.error("Query is too large")
+                    Log.error("Query must be under {{limit}}mb", limit=QUERY_SIZE_LIMIT / 1024 / 1024)
 
                 request_body = flask.request.get_data().strip()
                 text = request_body.decode('utf8')
@@ -98,7 +99,7 @@ def sql_query(path):
                 response_data,
                 status=200,
                 headers={
-                    "Content-Type": result.meta.content_type
+                    "Content-Type": mimetype.JSON
                 }
             )
     except Exception as e:

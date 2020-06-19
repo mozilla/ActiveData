@@ -253,6 +253,9 @@ class Cube(Container):
     def __getattr__(self, item):
         return self.data[item]
 
+    def items(self):
+        return self.data.items()
+
     def get_columns(self):
         return self.edges + listwrap(self.select)
 

@@ -11,6 +11,7 @@ pidfile = '/data1/logs/gunicorn.pid'
 # errorlog = "-"
 
 workers = 5
+threads = 5
 accesslog = "/data1/logs/gunicorn_access.log"
 errorlog = "/data1/logs/gunicorn_error.log"
 logfile = "/data1/logs/gunicorn_debug.log"

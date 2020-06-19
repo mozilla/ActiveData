@@ -14,6 +14,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_threads import till
+from mo_threads.futures import Future
 from mo_threads.lock import Lock
 from mo_threads.multiprocess import Process
 from mo_threads.queues import Queue, ThreadedQueue
@@ -25,6 +26,7 @@ from mo_threads.threads import (
     THREAD_TIMEOUT,
     Thread,
     stop_main_thread,
+    register_thread
 )
 from mo_threads.till import Till
 
@@ -32,6 +34,7 @@ MAIN_THREAD.timers = Thread.run("timers daemon", till.daemon)
 MAIN_THREAD.children.remove(MAIN_THREAD.timers)
 till.enabled.wait()
 keep_import = (
+    Future,
     Till,
     Lock,
     Process,
@@ -43,4 +46,5 @@ keep_import = (
     THREAD_STOP,
     THREAD_TIMEOUT,
     stop_main_thread,
+    register_thread
 )

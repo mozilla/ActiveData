@@ -33,7 +33,7 @@ class TestSetOps(BaseTestCase):
            "expecting_list": {
                "meta": {"format": "list"}, "data": [{"a": 1}]
            }
-       }
+        }
         self.utils.execute_tests(test)
 
     def test_simplest(self):

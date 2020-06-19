@@ -39,11 +39,11 @@ We are analyzing uni-variate data over time, finding points where behaviour like
 All these steps must be considered, by they can be done in any order. It is **expected** that this project will not be completed by one student in one summer.
 
 * **Familiarize oneself with example data** - See example of multimodal test results, see how test perform better on weekends, get a sense for what models will be effectively.
-* **Determine the instructions that calculate a better model** - Use familiar tools to build a machine learning algorithm that can find a likely statistical model for any given time series. 
+* **Determine the instructions that calculate a better model** - Use familiar tools to build a machine learning algorithm that can find a likely statistical model for any given time series. [please ask to read more specific information](https://docs.google.com/document/d/1B3q4JwZ4rq2HSeV60S-wFKtxkL2qhE1X_f3QK6sYx0o/edit#)
 * **Determine instructions that can find change-points** - use familiar tools to identify points in time the data deviate from the given model.  What is the probability the deviation is outside the model?  What is the probablity that the model was wrong?  This requires may assumptions about the family of priors allowed - assumptions are allowed.
 * **Prove it is better** - Prove that change-point detection emits less false positives than T-test on our current tests.  
 
-At this point it is assumed we have a prototype that can detect changed performance, but it is in no condition to run in production.
+At this point it is assumed we have a prototype that can detect changed performance, but it is in no condition to run in production. **This is backend coding, no ML, no statsistics**
 
 * **Determine the instruction set that can support the above calculations** - We must move off of the familiar tools, and perform the calculation in the Elasticsearch cluster.  What data needs to be pulled?  What basic transformations are required?  What matrix operations are required?  I suspect that these are high level, vector-like operations. Some language specification is expected. 
 * **Implement that instruction set** - Implement an interpreter for the language; converting instructions to equivalent Elasticsearch queries; so the majority of the computations are done on the ES cluster.

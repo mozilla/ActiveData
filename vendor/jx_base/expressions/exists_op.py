@@ -8,15 +8,6 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions._utils import simplified, TRUE
@@ -32,23 +23,26 @@ class ExistsOp(Expression):
 
     def __init__(self, term):
         Expression.__init__(self, [term])
-        self.field = term
+        self.expr = term
 
     def __data__(self):
-        return {"exists": self.field.__data__()}
+        return {"exists": self.expr.__data__()}
 
     def vars(self):
-        return self.field.vars()
+        return self.expr.vars()
 
     def map(self, map_):
-        return self.lang[ExistsOp(self.field.map(map_))]
+        return self.lang[ExistsOp(self.expr.map(map_))]
 
     def missing(self):
         return FALSE
+
+    def invert(self):
+        return self.lang[self.expr].missing()
 
     def exists(self):
         return TRUE
 
     @simplified
     def partial_eval(self):
-        return self.lang[NotOp(self.field.missing())].partial_eval()
+        return self.lang[NotOp(self.expr.missing())].partial_eval()

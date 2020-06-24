@@ -8,28 +8,18 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.exists_op import ExistsOp
-
-from jx_base.expressions.and_op import AndOp
-
-from jx_base.expressions import not_op
 from jx_base.expressions._utils import simplified
+from jx_base.expressions.and_op import AndOp
+from jx_base.expressions.basic_eq_op import BasicEqOp
 from jx_base.expressions.eq_op import EqOp
+from jx_base.expressions.exists_op import ExistsOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.not_op import NotOp
+from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op
 from mo_dots import is_data, is_sequence
@@ -67,13 +57,18 @@ class NeOp(Expression):
             FALSE
         )  # USING THE decisive EQUALITY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
 
+    def invert(self):
+        return self.lang[OrOp([
+            self.lhs.missing(),
+            self.rhs.missing(),
+            BasicEqOp([self.lhs, self.rhs])
+        ])].partial_eval()
+
     @simplified
     def partial_eval(self):
         output = self.lang[AndOp([
-            ExistsOp(self.lhs),
-            ExistsOp(self.rhs),
+            self.lhs.exists(),
+            self.rhs.exists(),
             NotOp(EqOp([self.lhs, self.rhs]))
         ])].partial_eval()
         return output
-
-not_op.NeOp = NeOp

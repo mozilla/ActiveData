@@ -14,4 +14,4 @@ from jx_base.expressions import ExistsOp as ExistsOp_
 
 class ExistsOp(ExistsOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        return self.field.exists().partial_eval().to_es_script(schema)
+        return self.expr.exists().partial_eval().to_es_script(schema)

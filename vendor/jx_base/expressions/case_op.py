@@ -8,24 +8,15 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import first_op, not_op, eq_op
+from jx_base.expressions import first_op, eq_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
-from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import NULL
+from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.when_op import WhenOp
@@ -79,6 +70,9 @@ class CaseOp(Expression):
                 m = self.lang[OrOp([AndOp([when, w.then.partial_eval().missing()]), m])]
         return m.partial_eval()
 
+    def invert(self):
+        return self.lang[CaseOp([w.invert() for w in self.whens])].partial_eval()
+
     @simplified
     def partial_eval(self):
         if self.type == BOOLEAN:
@@ -120,5 +114,4 @@ class CaseOp(Expression):
 
 
 first_op.CaseOp = CaseOp
-not_op.CaseOp = CaseOp
 eq_op.CaseOp = CaseOp

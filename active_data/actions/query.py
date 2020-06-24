@@ -22,12 +22,13 @@ from active_data.actions import (
 )
 from jx_base.container import Container
 from jx_python import jx
-from mo_dots import Data, is_data, is_many
-from mo_files import File, mimetype
+from mo_dots import Data, Null, listwrap, is_data
+from mo_files import File
 from mo_future import binary_type, text
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
-from mo_threads import Queue, Future, register_thread, MAIN_THREAD, Thread
+from mo_threads import Queue, Signal
+from mo_threads.threads import register_thread, MAIN_THREAD, Thread
 from mo_times.timer import Timer
 from pyLibrary.env.flask_wrappers import cors_wrapper
 
@@ -59,10 +60,13 @@ def jx_query(path):
                 query = json2value(text)
                 record_request(flask.request, query, None, None)
 
-            result = execute(query, Future()).wait()
-            if not is_data(result):
-                # SOME RESULTS ARE NOT OBJECTS, WRAP AS ONE
-                result = Data(data=result)
+            result = []
+            if query.tuple != None:
+                execute_tuple_op(query, result, Null)
+                result = Data(data=result[0])
+            else:
+                execute(query, result, Null)
+                result = result[0]
 
             result.meta.timing.preamble = mo_math.round(
                 preamble_timer.duration.seconds, digits=4
@@ -93,23 +97,17 @@ def jx_query(path):
             return Response(
                 response_data,
                 status=200,
-                headers={"Content-Type": mimetype.JSON},
+                headers={"Content-Type": result.meta.content_type},
             )
     except Exception as e:
         e = Except.wrap(e)
         return send_error(total_timer, request_body, e)
 
 
-def execute(query, output):
-    """
-    EXECUTE THE GIVEN query
-    :param query: JSON EXPRESSION TO RUN
-    :param output: Future TO PUT THE RESULT
-    """
+def execute(query, output, is_done):
     try:
         if query["tuple"] != None:
-            execute_tuple_op(query, output)
-            return output
+            return execute_tuple_op(query, output, is_done)
 
         if query.meta.testing:
             test_mode_wait(query, MAIN_THREAD.please_stop)
@@ -126,6 +124,7 @@ def execute(query, output):
                 result = query_result.format(query.format)
             else:
                 result = query_result
+            output.append(result)
 
         save_timer = Timer("save", verbose=DEBUG)
         with save_timer:
@@ -135,27 +134,32 @@ def execute(query, output):
                 except Exception as cause:
                     Log.warning("Unexpected save problem", cause=cause)
 
-        result.meta.timing.find_table = mo_math.round(find_table_timer.duration.seconds, digits=4)
-        result.meta.timing.translate = mo_math.round(translate_timer.duration.seconds, digits=4)
+        result.meta.timing.find_table = mo_math.round(
+            find_table_timer.duration.seconds, digits=4
+        )
+        result.meta.timing.translate = mo_math.round(
+            translate_timer.duration.seconds, digits=4
+        )
         result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
-
-        output.assign(result)
-        return output
     except Exception as cause:
-        output.assign(cause)
         Log.error("could not execute expression {{expression}}", expression=query, cause=cause)
+    finally:
+        is_done.go()
 
 
-def execute_tuple_op(query, output):
+def execute_tuple_op(query, output, is_done):
     try:
         items = query.tuple
-        if not items:
-            output.value = []
+        if items == None:
+            output.append([])
             return
-        if not is_many(items):
+        if is_data(items):
+            if not items:
+                output.append([])
+                return
             items = [items]
         work = [
-            (q, Future())
+            (q, [], Signal())
             for q in items
         ]
         todo.extend(work)
@@ -163,11 +167,13 @@ def execute_tuple_op(query, output):
         more = todo.pop_one()
         if more:
             execute(*more)
-        output.assign(tuple(f.wait() for _, f in work))
+        for _, _, d in work:
+            d.wait()
+        output.append(tuple(r[0] for _, r, _ in work))
     except Exception as cause:
-        output.assign(cause)
         Log.warning("Problem with tuple op", cause=cause)
-    return output
+    finally:
+        is_done.go()
 
 
 def worker(please_stop):

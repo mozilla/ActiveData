@@ -48,6 +48,9 @@ class BasicIndexOfOp(Expression):
     def missing(self):
         return FALSE
 
+    def invert(self):
+        return FALSE
+
     @simplified
     def partial_eval(self):
         start = IntegerOp(MaxOp([ZERO, self.start])).partial_eval()

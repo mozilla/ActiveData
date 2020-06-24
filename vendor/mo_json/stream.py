@@ -20,8 +20,7 @@ from mo_dots import (
     relative_field,
     split_field,
     startswith_field,
-    wrap,
-)
+    to_data)
 from mo_future import NEXT
 from mo_logs import Log
 
@@ -358,7 +357,7 @@ def parse(json, query_path, expected_vars=NO_VARS):
 
     LARGE MANY-PROPERTY OBJECTS CAN BE HANDLED BY `items()`
 
-    :param json:       SOME STRING-LIKE STRUCTURE THAT CAN ASSUME WE LOOK AT
+    :param json:       SOME STREAM, OR GENERATOR THAT CAN ASSUME WE LOOK AT
                        ONE CHARACTER AT A TIME, IN ORDER
     :param query_path: A DOT-SEPARATED STRING INDICATING THE PATH TO THE
                        NESTED ARRAY OPTIONALLY, {"items":query_path} TO

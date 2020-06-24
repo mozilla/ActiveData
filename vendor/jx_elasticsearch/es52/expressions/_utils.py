@@ -11,10 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import OrderedDict
 
-from jx_base.expressions import (
-    FALSE,
-    Variable as Variable_, MissingOp, Variable, ExistsOp)
-from jx_base.expressions.literal import is_literal, TRUE, NULL, Literal, ZERO
+from jx_base.expressions import FALSE, Variable as Variable_, MissingOp, Variable
+from jx_base.expressions.literal import is_literal, TRUE, NULL, ONE
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
@@ -25,7 +23,7 @@ from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [Null] * 5  # IMPORTS
+MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp, EsNestedOp = [Null] * 6  # IMPORTS
 
 
 def _inequality_to_esfilter(self, schema):
@@ -36,7 +34,9 @@ def _inequality_to_esfilter(self, schema):
         elif len(cols) == 1:
             lhs = first(cols).es_column
         else:
-            raise Log.error("operator {{op|quote}} does not work on objects", op=self.op)
+            raise Log.error(
+                "operator {{op|quote}} does not work on objects", op=self.op
+            )
         return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
         script = Painless[self].to_es_script(schema)
@@ -85,7 +85,10 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
     return output
 
 
-def get_exists(path):
+def exists_variable(path):
+    """
+    RETURN THE VARIABLE THAT WILL INDICATE OBJECT (OR ARRAY) EXISTS (~e~)
+    """
     steps = split_field(path)
     if not steps:
         return EXISTS_TYPE
@@ -100,67 +103,101 @@ def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
     expr_vars = expr.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
 
-    all_paths = list(reversed(sorted(
-        set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var]) |
-        {'.'} |
-        set(schema.query_path) |
-        set(more_path)
-    )))
+    all_paths = list(
+        reversed(
+            sorted(
+                set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
+                | {"."}
+                | set(schema.query_path)
+                | set(more_path)
+            )
+        )
+    )
 
     exprs = [expr]
 
-    # CONSTANTS
-    more_exprs = []
-    for e in exprs:
-        for i, np in enumerate(all_paths):
-            existence = Variable(get_exists(np))
-            if not i:
-                more_exprs.append(AndOp([ExistsOp(existence), e]))
-            more_exprs.append(AndOp([MissingOp(existence), e]))
-    exprs = more_exprs
-
-    # EXPAND VARIABLES
+    # EXPAND VARS TO COLUMNS, MULTIPLY THE EXPRESSIONS
     for v, cols in var_to_columns.items():
         more_exprs = []
-        for e in exprs:
-            for col in cols:
-                for i, np in enumerate(col.nested_path):
-                    existence = Variable(get_exists(np))
-                    if not i:
-                        more_exprs.append(AndOp([ExistsOp(existence), e.map({v: col.es_column})]))
-                    more_exprs.append(AndOp([MissingOp(existence), e.map({v: NULL})]))
+        if not cols:
+            for e in exprs:
+                more_exprs.append(e.map({v: NULL}))
+        else:
+            for c in cols:
+                path = c.nested_path[0]
+                for e in exprs:
+                    if path == ".":
+                        more_exprs.append(
+                            e.map({v: Variable(c.es_column)})
+                        )
+                    else:
+                        more_exprs.append(
+                            e.map({v: EsNestedOp(frum=Variable(path), select=Variable(c.es_column))})
+                        )
         exprs = more_exprs
+
+    paths_to_cols = OrderedDict((n, []) for n in all_paths)
+    for v, cs in var_to_columns.items():
+        for c in cs:
+            paths_to_cols[c.nested_path[0]].append(c)
+
+    # ACCOUNT FOR WHEN NESTED RECORDS ARE MISSING
+    deeper_path = None
+    deeper_cols = None
+    for path, cols in paths_to_cols.items():
+        more_exprs = []
+        for e in exprs:
+            more_exprs.append(e)
+            if deeper_path:
+                set_null = {
+                    d.es_column: NULL
+                    for d in deeper_cols
+                }
+                set_null[deeper_path] = NULL
+                deeper_is_missing = e.map(set_null)
+                more_exprs.append(deeper_is_missing)
+        exprs = more_exprs
+        deeper_path = path
+        deeper_cols = cols
 
     # SIMPLIFY
     simpler = OrOp(exprs).partial_eval()
+
+
+    simple = exprs[0].terms[0].terms[1].partial_eval()
+    # CONVERT TO CONJUNCTIVE NORMAL FORM
     if is_op(simpler, OrOp):
-        remain = simpler.terms
+        remain = [t.terms if is_op(t, AndOp) else [t] for t in simpler.terms]
+    elif is_op(simpler, AndOp):
+        remain = [[simpler.terms]]
     else:
-        remain = [simpler]
+        remain = [[simpler]]
 
     # FACTOR OUT THE existence, DEEP FIRST
     depths = OrderedDict()
     for p in all_paths[:-1]:
         exists = depths[p] = []
         missing = []
-        existence = get_exists(p)
-        miss = MissingOp(Variable(existence))
+        existence = exists_variable(p)
         for e in remain:
-            if AndOp([miss, e]).partial_eval() is FALSE:
-                exists.append(e.map({existence: ZERO}))
+            experiment = e.map({existence: NULL}).partial_eval()
+            # MUST THIS LEVEL EXIST?
+            if experiment is FALSE:
+                # REQUIRED TO EXIST TO BE NON-TRIVAL
+                exists.append(e.map({existence: ONE}))
             else:
-                missing.append(e)
+                # STILL AN EXPRESSION IF MISSING
+                missing.append(experiment)
         remain = missing
-    depths['.'] = [r.map({get_exists('.'): ZERO}) for r in remain]
+    # THERE IS ALWAYS ONE DOCUMENT
+    depths["."] = [r.map({exists_variable("."): ONE}) for r in remain]
 
     output = OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
     Log.note("{{expr|json}}", expr=output)
     return OrOp, output
 
 
-def split_expression_by_path(
-    expr, schema, lang=Language
-):
+def split_expression_by_path(expr, schema, lang=Language):
     """
     :param expr: EXPRESSION TO INSPECT
     :param schema: THE SCHEMA
@@ -184,7 +221,11 @@ def split_expression_by_path(
                     if not ae:
                         output[v] = ae = AndOp([])
                     ae.terms.append(es)
-            elif len(output) == 1 and all(c.jx_type == EXISTS for v in split['.'].vars() for c in schema.values(v.var)):
+            elif len(output) == 1 and all(
+                c.jx_type == EXISTS
+                for v in split["."].vars()
+                for c in schema.values(v.var)
+            ):
                 for v, es in split.items():
                     if v == ".":
                         continue
@@ -223,7 +264,9 @@ def split_expression_by_path(
         if mapping:
             acc = []
             for v, col in mapping.items():
-                nested_exists = join_field(split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE])
+                nested_exists = join_field(
+                    split_field(col.nested_path[0])[:-1] + [EXISTS_TYPE]
+                )
                 e = schema.values(nested_exists)
                 if not e:
                     Log.error("do not know how to handle")
@@ -236,7 +279,7 @@ def split_expression_by_path(
                 exprs.append(with_nulls)
 
     if len(all_paths) == 0:
-        return AndOp, {'.': expr}  # CONSTANTS
+        return AndOp, {".": expr}  # CONSTANTS
     elif len(all_paths) == 1:
         return AndOp, {first(all_paths): expr}
 
@@ -255,11 +298,13 @@ def split_expression_by_path(
 
     acc = {}
     for e in exprs:
-        nestings = list(set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v]))
+        nestings = list(
+            set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v])
+        )
         if not nestings:
-            a = acc.get('.')
+            a = acc.get(".")
             if not a:
-                acc['.'] = a = OrOp([])
+                acc["."] = a = OrOp([])
             a.terms.append(e)
         elif len(nestings) == 1:
             a = acc.get(nestings[0])

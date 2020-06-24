@@ -115,11 +115,10 @@ class ColumnList(Table, jx_base.Container):
             )
 
             with Timer("adding columns to structure"):
-                with self.locker:
-                    for r in result.hits.hits._source:
-                        col = doc_to_column(r)
-                        if col:
-                            self._add(col)
+                for r in result.hits.hits._source:
+                    col = doc_to_column(r)
+                    if col:
+                        self._add(col)
 
             Log.note("{{num}} columns loaded", num=result.hits.total)
             if not self.data.get(META_COLUMNS_NAME):

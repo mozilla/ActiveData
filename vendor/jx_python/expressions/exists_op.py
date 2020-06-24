@@ -15,4 +15,4 @@ from jx_python.expressions._utils import Python
 
 class ExistsOp(ExistsOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return Python[self.field].to_python() + " != None"
+        return Python[self.expr].to_python() + " != None"

@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions.and_op import AndOp
+
 from jx_base.expressions import (
     EqOp as EqOp_,
     FALSE,
@@ -31,6 +33,9 @@ from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES
 from mo_logs import Log
 
 
+EsNestedOp = None  # IMPORT
+
+
 class EqOp(EqOp_):
     @simplified
     def partial_eval(self):
@@ -41,7 +46,16 @@ class EqOp(EqOp_):
             if is_literal(rhs):
                 return FALSE if value_compare(lhs.value, rhs.value) else TRUE
             else:
-                return EqOp([rhs, lhs])  # FLIP SO WE CAN USE TERMS FILTER
+                lhs, rhs = rhs, lhs  # FLIP SO WE CAN USE TERMS FILTER
+
+        if lhs.type != rhs.type and (lhs.type not in NUMBER_TYPES or rhs.type not in NUMBER_TYPES):
+            return FALSE
+
+        if is_op(lhs, EsNestedOp):
+            return self.lang[EsNestedOp(
+                frum=lhs.frum,
+                where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
+            )]
 
         return EqOp([lhs, rhs])
 

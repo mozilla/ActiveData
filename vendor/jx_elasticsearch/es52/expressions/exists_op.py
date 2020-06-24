@@ -14,7 +14,7 @@ from jx_base.expressions import ExistsOp as ExistsOp_
 
 class ExistsOp(ExistsOp_):
     def to_esfilter(self, schema):
-        return self.field.exists().partial_eval().to_esfilter(schema)
+        return self.expr.exists().partial_eval().to_esfilter(schema)
 
 
 def es_exists(term):

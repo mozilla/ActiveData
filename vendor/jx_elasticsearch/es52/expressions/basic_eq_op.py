@@ -13,7 +13,8 @@ from jx_base.expressions import (
     BasicEqOp as BasicEqOp_,
     Variable as Variable_,
     is_literal,
-)
+    EsNestedOp,
+    IDENTITY, AndOp)
 from jx_base.language import is_op
 from jx_elasticsearch.es52.painless import Painless
 from mo_dots import is_many
@@ -21,6 +22,17 @@ from mo_future import first
 
 
 class BasicEqOp(BasicEqOp_):
+    def partial_eval(self):
+        if is_op(self.lhs, EsNestedOp):
+            return self.lang[EsNestedOp(
+                frum=self.lhs.frum.partial_eval(),
+                select=IDENTITY,
+                where=AndOp([self.lhs.where, BasicEqOp(self.lhs.select, self.rhs)]).partial_eval(),
+                sort=self.lhs.sort.partial_eval(),
+                limit=self.limit.partial_eval()
+            )]
+        return self.lang[BasicEqOp([self.lhs.partial_eval(), self.rhs.partial_eval()])]
+
     def to_esfilter(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             lhs = self.lhs.var

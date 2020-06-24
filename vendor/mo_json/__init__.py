@@ -11,8 +11,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 import math
 import re
+from collections import deque
 from datetime import date, datetime, timedelta
 from decimal import Decimal
+from test.test_deque import Deque
 
 from hjson import loads as hjson2value
 
@@ -207,7 +209,7 @@ def _scrub(value, is_done, stack, scrub_text, scrub_number):
         for v in value:
             v = _scrub(v, is_done, stack, scrub_text, scrub_number)
             output.append(v)
-        return output # if output else None
+        return output  # if output else None
     elif type_ is type:
         return value.__name__
     elif type_.__name__ == "bool_":  # DEAR ME!  Numpy has it's own booleans (value==False could be used, but 0==False in Python.  DOH!)
@@ -286,6 +288,46 @@ def remove_line_comment(line):
         elif c == "/" and mode == 0 and line[i + 1] == "/":
             return line[0:i]
     return line
+
+
+def check_depth(json, limit=30):
+    """
+    THROW ERROR IF JSON IS TOO DEEP
+    :param json:  THE JSON STRING TO CHECK
+    :param limit:  EXIST EARLY IF TOO DEEP
+    """
+    l = len(json)
+    expecting = ["{"] * limit
+    e = -1
+    i = 0
+    while i < l:
+        c = json[i]
+        if c == '"':
+            i += 1
+            while True:
+                c = json[i]
+                if c == "\\" and json[i + 1] == '"':
+                    i += 2
+                    continue
+                i += 1
+                if c == '"':
+                    break
+        elif c == "{":
+            e += 1
+            expecting[e] = "}"
+            i += 1
+        elif c == "[":
+            e += 1
+            expecting[e] = "]"
+            i += 1
+        elif c in "]}":
+            if expecting[e] == c:
+                e -= 1
+            else:
+                Log.error("invalid JSON")
+            i += 1
+        else:
+            i += 1
 
 
 def json2value(json_string, params=Null, flexible=False, leaves=False):

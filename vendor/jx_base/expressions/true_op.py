@@ -50,12 +50,6 @@ class TrueOp(Literal):
     def invert(self):
         return FALSE
 
-    def is_true(self):
-        return TRUE
-
-    def is_false(self):
-        return FALSE
-
     def __call__(self, row=None, rownum=None, rows=None):
         return True
 

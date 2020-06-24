@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions.es_nested_op import EsNestedOp
+
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.basic_eq_op import BasicEqOp
@@ -20,7 +22,7 @@ from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.or_op import OrOp
-from jx_base.expressions.variable import Variable
+from jx_base.expressions.variable import Variable, IDENTITY
 from jx_base.language import is_op
 from mo_dots import is_data, is_sequence
 from mo_json import BOOLEAN
@@ -66,9 +68,19 @@ class NeOp(Expression):
 
     @simplified
     def partial_eval(self):
+        if is_op(self.lhs, EsNestedOp):
+            lhs = self.lhs
+            return self.lang[EsNestedOp(
+                frum=lhs.frum.partial_eval(),
+                select=IDENTITY,
+                where=AndOp([lhs.where, NeOp([lhs.select, self.rhs])]).partial_eval(),
+                sort=lhs.sort.partial_eval(),
+                limit=lhs.limit.partial_eval()
+            )]
+
         output = self.lang[AndOp([
             self.lhs.exists(),
             self.rhs.exists(),
-            NotOp(EqOp([self.lhs, self.rhs]))
+            NotOp(BasicEqOp([self.lhs, self.rhs]))
         ])].partial_eval()
         return output

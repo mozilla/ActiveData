@@ -70,7 +70,7 @@ TOO_OLD = 24 * HOUR
 OLD_METADATA = MINUTE
 MAX_COLUMN_METADATA_AGE = "12hour"
 TEST_TABLE_PREFIX = "testing"  # USED TO TURN OFF COMPLAINING ABOUT TEST INDEXES
-
+TABLE_DOES_NOT_EXIST = "{{table|quote}} does not exist"
 
 known_clusters = {}  # MAP FROM id(Cluster) TO ElasticsearchMetadata INSTANCE
 
@@ -100,6 +100,7 @@ class ElasticsearchMetadata(Namespace):
         self.too_old = TOO_OLD
         self.es_cluster = elasticsearch.Cluster(kwargs=kwargs)
         self.index_does_not_exist = set()
+        self.todo_priority = False
         self.todo = Queue("refresh metadata", max=100000, unique=True)
 
         self.meta = Data()
@@ -254,7 +255,8 @@ class ElasticsearchMetadata(Namespace):
         # WE ARE ASSUMING THIS TABLE IS HIGHER PRIORITY THAN SOME
         # BACKLOG CURRENTLY IN THE todo QUEUE
         self.todo.push_all(rescan)
-        DEBUG and Log.note("asked for {{num}} columns to be rescanned", num=len(rescan))
+        self.todo_priority = True
+        DEBUG and Log.note("asked for {{num}} columns to be rescanned for {{alias}}", num=len(rescan), alias=alias)
         return columns
 
     def _parse_properties(self, alias, mapping):
@@ -361,7 +363,7 @@ class ElasticsearchMetadata(Namespace):
             self.es_cluster.get_metadata(after=after)
             alias = self._find_alias(root_table_name)
             if not alias:
-                Log.error("{{table|quote}} does not exist", table=table_name)
+                Log.error(TABLE_DOES_NOT_EXIST, table=table_name)
 
         try:
             table = self.get_table(alias)
@@ -778,14 +780,15 @@ class ElasticsearchMetadata(Namespace):
         while not please_stop:
             try:
                 if not self.todo:
+                    self.todo_priority = False
                     # LOOK FOR OLD COLUMNS WE CAN RE-SCAN
                     now = Date.now()
                     last_good_update = now - Duration(MAX_COLUMN_METADATA_AGE)
+
                     old_columns = [
                         c
                         for c in self.meta.columns
                         if (c.last_updated < last_good_update)
-                        and c.jx_type not in INTERNAL
                         and c.es_index != META_COLUMNS_NAME
                     ]
 
@@ -805,27 +808,34 @@ class ElasticsearchMetadata(Namespace):
                         else:
                             Log.note("no more metatdata to update")
 
-                    for g, index_columns in jx.groupby(old_columns, "es_index"):
-                        # TRIGGER COLUMN UNIFICATION BEFORE WE DO ANALYSIS
-                        try:
-                            self.get_columns(g.es_index)
-                        except Exception as e:
-                            if "{{table|quote}} does not exist" in e:
-                                self.meta.columns.clear(g.es_index, after=now)
-                                self.meta.columns.delete_from_es(g.es_index, after=now)
-                                continue
-                            Log.warning(
-                                "problem getting column info on {{table}}",
-                                table=g.es_index,
-                                cause=e,
+                    with Timer("Review {{num}} old columns", param={"num": len(old_columns)}, verbose=DEBUG):
+                        for g, index_columns in jx.groupby(old_columns, "es_index"):
+                            if self.todo_priority:
+                                # WE GOT OTHER WORK TO DO
+                                break
+                            if g.es_index.startswith("testing_018"):
+                                pass
+                            try:
+                                # TRIGGER COLUMN UNIFICATION BEFORE WE DO ANALYSIS
+                                self.get_columns(g.es_index)
+                            except Exception as cause:
+                                if TABLE_DOES_NOT_EXIST in cause:
+                                    DEBUG and Log.note("removing {{index}} from metadata", index=g.es_index)
+                                    self.meta.columns.clear(g.es_index, after=now)
+                                    self.meta.columns.delete_from_es(g.es_index, after=now)
+                                    continue
+                                Log.warning(
+                                    "problem getting column info on {{table}}",
+                                    table=g.es_index,
+                                    cause=cause,
+                                )
+
+                            self.todo.extend(
+                                (c, max(last_good_update, c.last_updated))
+                                for c in index_columns
                             )
 
-                        self.todo.extend(
-                            (c, max(last_good_update, c.last_updated))
-                            for c in index_columns
-                        )
-
-                    META_COLUMNS_DESC.last_updated = now
+                        META_COLUMNS_DESC.last_updated = now
 
                 work_item = self.todo.pop(Till(seconds=(10 * MINUTE).seconds))
                 if work_item:
@@ -885,8 +895,8 @@ class ElasticsearchMetadata(Namespace):
                                 and not column.es_index.startswith(TEST_TABLE_PREFIX)
                                 and Log.note("updated {{column.name}}", column=column)
                             )
-                        except Exception as e:
-                            if '"status":404' in e:
+                        except Exception as cause:
+                            if '"status":404' in cause:
                                 self.meta.columns.clear(
                                     column.es_index, column.es_column, after=now
                                 )
@@ -894,11 +904,11 @@ class ElasticsearchMetadata(Namespace):
                                 Log.warning(
                                     "problem getting cardinality for {{column.name}}",
                                     column=column,
-                                    cause=e,
+                                    cause=cause,
                                 )
                     META_COLUMNS_DESC.last_updated = now
-            except Exception as e:
-                Log.warning("problem in cardinality monitor", cause=e)
+            except Exception as cause:
+                Log.warning("problem in cardinality monitor", cause=cause)
 
     def not_monitor(self, please_stop):
         Log.alert("metadata scan has been disabled")

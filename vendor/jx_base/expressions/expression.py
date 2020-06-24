@@ -135,19 +135,7 @@ class Expression(BaseExpression):
         """
         :return: TRUE IF FALSE
         """
-        return self.lang[self].missing().partial_eval()
-
-    def is_true(self):
-        """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN true
-        """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
-
-    def is_false(self):
-        """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN false
-        """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
+        return self.lang[NotOp(self)]
 
     @simplified
     def partial_eval(self):

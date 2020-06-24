@@ -152,13 +152,25 @@ class ColumnList(Table, jx_base.Container):
                 delete_result = self.es_index.delete_record({"bool": {"should": [
                     {"bool": {"must": [
                         {"term": {"es_index.~s~": es_index}},
-                        {"range": {"timestamp.~n~": {"lt": after.unix}}}
+                        {"range": {"last_updated.~n~": {"lte": after.unix}}}
                     ]}}
                     for es_index, after in results
                 ]}})
-                Log.note("Num deleted = {{delete_result}}", delete_result=delete_result.deleted)
+
+                if DEBUG:
+                    query = {"query": {"terms": {"es_index.~s~": [es_index for es_index, after in results]}}}
+                    verify = self.es_index.search(query)
+                    while verify.hits.total:
+                        Log.note("wait for columns to be gone")
+                        verify = self.es_index.search(query)
+
+                    Log.note(
+                        "Deleted {{delete_result}} columns from {{table}}",
+                        table=[es_index for es_index, after in results],
+                        delete_result=delete_result.deleted
+                    )
             except Exception as cause:
-                Log.error("Problem with delete of table", cause=cause)
+                Log.warning("Problem with delete of table", cause=cause)
             Till(seconds=1).wait()
 
     def _update_from_es(self, please_stop):

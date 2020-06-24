@@ -101,7 +101,7 @@ class EsNestedOp(Expression):
             self.frum.missing(),
             self.select.missing(),
             EqOp([self.limit,  ZERO])
-         ])
+         ]).partial_eval()
 
     @property
     def many(self):

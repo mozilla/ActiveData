@@ -11,8 +11,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import OrderedDict
 
-from jx_base.expressions import FALSE, Variable as Variable_, MissingOp, Variable
-from jx_base.expressions.literal import is_literal, TRUE, NULL, ONE
+from jx_base.expressions import FALSE, Variable as Variable_, MissingOp, Variable, BasicEqOp
+from jx_base.expressions.literal import is_literal, TRUE, NULL, ONE, Literal
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
@@ -163,8 +163,6 @@ def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
     # SIMPLIFY
     simpler = OrOp(exprs).partial_eval()
 
-
-    simple = exprs[0].terms[0].terms[1].partial_eval()
     # CONVERT TO CONJUNCTIVE NORMAL FORM
     if is_op(simpler, OrOp):
         remain = [t.terms if is_op(t, AndOp) else [t] for t in simpler.terms]

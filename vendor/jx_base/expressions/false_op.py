@@ -51,12 +51,6 @@ class FalseOp(Literal):
     def invert(self):
         return TRUE
 
-    def is_true(self):
-        return FALSE
-
-    def is_false(self):
-        return TRUE
-
     def __call__(self, row=None, rownum=None, rows=None):
         return False
 

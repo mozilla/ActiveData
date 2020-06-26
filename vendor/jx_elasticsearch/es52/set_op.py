@@ -10,15 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC
-from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE, NULL, FALSE, MissingOp
+from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
-    AndOp,
-    ES52,
     split_expression_by_path,
-    EsNestedOp,
-    OrOp)
+    EsNestedOp)
 from jx_elasticsearch.es52.expressions._utils import split_expression_by_path_for_setop
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
@@ -36,12 +33,11 @@ from mo_dots import (
     split_field,
     unwrap,
     unwraplist,
-    dict_to_data,
     Null,
-    to_data, list_to_data)
-from mo_future import first, text
+    list_to_data)
+from mo_future import text
 from mo_json import NESTED, INTERNAL
-from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped, EXISTS_TYPE
+from mo_json.typed_encoder import decode_property, unnest_path, untype_path, untyped
 from mo_logs import Log
 from mo_math import AND
 from mo_times.timer import Timer
@@ -303,8 +299,10 @@ def es_setop(es, query):
 
     new_select, split_select = get_selects(query)
 
-    op, split_wheres = split_expression_by_path_for_setop(query.where, schema, split_select.keys())
-    es_query = es_query_proto(split_select, op, split_wheres, schema)
+    es_query = split_expression_by_path_for_setop(query.where, schema, split_select)
+
+
+
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -402,13 +400,20 @@ class ESSelect(object):
         self.fields = []
         self.scripts = {}
 
+    def to_select(self):
+        output = [{"name": f, "value": Variable(f)} for f in self.fields]
+        if self.set_op:
+            output = [IDENTITY]
+        for n, e in self.scripts.items():
+            output.append({"name": n, "value": e})
+        return output
+
+
     def to_es(self):
-        return dict_to_data(
-            {
-                "_source": self.set_op,
-                "stored_fields": self.fields if not self.set_op else None,
-                "script_fields": self.scripts if self.scripts else None,
-            }
+        return Data(
+            _source=self.set_op,
+            stored_fields=self.fields if not self.set_op else None,
+            script_fields=self.scripts if self.scripts else None,
         )
 
     def __data__(self):
@@ -432,8 +437,7 @@ def es_query_proto(selects, op, wheres, schema):
         es_query = EsNestedOp(Variable(p), query=es_where, select=select)
     return es_query.partial_eval().to_esfilter(schema)
 
-
-expsected = {
+expected = {
     "_source": False,
     "from": 0,
     "query": {"bool": {"should": [

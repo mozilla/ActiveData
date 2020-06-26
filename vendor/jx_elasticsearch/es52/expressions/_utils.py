@@ -97,7 +97,7 @@ def exists_variable(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
+def split_expression_by_path_for_setop(expr, schema, split_select):
 
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = expr.vars()
@@ -109,7 +109,7 @@ def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
                 set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
                 | {"."}
                 | set(schema.query_path)
-                | set(more_path)
+                | split_select.keys()
             )
         )
     )
@@ -163,36 +163,16 @@ def split_expression_by_path_for_setop(expr, schema, more_path=tuple()):
     # SIMPLIFY
     simpler = OrOp(exprs).partial_eval()
 
-    # CONVERT TO CONJUNCTIVE NORMAL FORM
-    if is_op(simpler, OrOp):
-        remain = [t.terms if is_op(t, AndOp) else [t] for t in simpler.terms]
-    elif is_op(simpler, AndOp):
-        remain = [[simpler.terms]]
-    else:
-        remain = [[simpler]]
+    # NEST THE CLAUSES
 
-    # FACTOR OUT THE existence, DEEP FIRST
-    depths = OrderedDict()
-    for p in all_paths[:-1]:
-        exists = depths[p] = []
-        missing = []
-        existence = exists_variable(p)
-        for e in remain:
-            experiment = e.map({existence: NULL}).partial_eval()
-            # MUST THIS LEVEL EXIST?
-            if experiment is FALSE:
-                # REQUIRED TO EXIST TO BE NON-TRIVAL
-                exists.append(e.map({existence: ONE}))
-            else:
-                # STILL AN EXPRESSION IF MISSING
-                missing.append(experiment)
-        remain = missing
-    # THERE IS ALWAYS ONE DOCUMENT
-    depths["."] = [r.map({exists_variable("."): ONE}) for r in remain]
+    # INSERT SELECTION INTO EACH OF THE NESTED
 
-    output = OrderedDict((k, OrOp(v).partial_eval()) for k, v in depths.items())
-    Log.note("{{expr|json}}", expr=output)
-    return OrOp, output
+
+    return simpler
+
+    es_query = es_query_proto(split_select, op, split_wheres, schema)
+
+
 
 
 def split_expression_by_path(expr, schema, lang=Language):

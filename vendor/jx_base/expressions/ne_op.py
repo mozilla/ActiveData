@@ -68,19 +68,21 @@ class NeOp(Expression):
 
     @simplified
     def partial_eval(self):
-        if is_op(self.lhs, EsNestedOp):
-            lhs = self.lhs
+        lhs = self.lang[self.lhs].partial_eval()
+        rhs = self.lang[self.rhs].partial_eval()
+
+        if is_op(lhs, EsNestedOp):
             return self.lang[EsNestedOp(
                 frum=lhs.frum.partial_eval(),
                 select=IDENTITY,
-                where=AndOp([lhs.where, NeOp([lhs.select, self.rhs])]).partial_eval(),
+                where=AndOp([lhs.where, NeOp([lhs.select, rhs])]).partial_eval(),
                 sort=lhs.sort.partial_eval(),
                 limit=lhs.limit.partial_eval()
-            )]
+            )].partial_eval()
 
         output = self.lang[AndOp([
-            self.lhs.exists(),
-            self.rhs.exists(),
-            NotOp(BasicEqOp([self.lhs, self.rhs]))
+            lhs.exists(),
+            rhs.exists(),
+            NotOp(BasicEqOp([lhs, rhs]))
         ])].partial_eval()
         return output

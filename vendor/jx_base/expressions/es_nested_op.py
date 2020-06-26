@@ -10,9 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions import AndOp
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.expression import Expression, Variable
+from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import ZERO
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.null_op import NULL
@@ -20,8 +21,10 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
-from mo_dots import Null
+from mo_dots import Null, startswith_field, coalesce, listwrap
 from mo_json import BOOLEAN
+
+default_select = {"name":".", "value":IDENTITY},
 
 
 class EsNestedOp(Expression):
@@ -30,7 +33,7 @@ class EsNestedOp(Expression):
 
     __slots__ = ["frum", "select", "where", "sort", "limit"]
 
-    def __init__(self, frum, select=IDENTITY, where=TRUE, sort=Null, limit=NULL):
+    def __init__(self, frum, select=default_select, where=TRUE, sort=Null, limit=NULL):
         Expression.__init__(self, [frum, select, where, sort, limit])
         self.frum = frum
         self.select = select
@@ -52,6 +55,46 @@ class EsNestedOp(Expression):
                 self.limit.partial_eval()
             )
         ]
+
+    def __and__(self, other):
+        """
+        MERGE TWO  EsNestedOp
+        """
+        if not is_op(other, EsNestedOp):
+            return AndOp([self, other])
+
+        # MERGE
+        elif self.frum == other.frum:
+            return EsNestedOp(
+                self.frum,
+                listwrap(self.select) + listwrap(other.select),
+                AndOp([self.where, other.where]),
+                coalesce(self.sort, other.sort),
+                coalesce(self.limit, other.limit),
+            )
+
+        # NEST
+        elif startswith_field(other.frum.var, self.frum.var):
+            # WE ACHIEVE INTERSECTION BY LIMITING OURSELF TO ONLY THE DEEP OBJECTS
+            # WE ASSUME frum SELECTS WHOLE DOCUMENT, SO self.select IS POSSIBLE
+            return EsNestedOp(
+                other,
+                self.select,
+                self.where,
+                self.sort,
+                self.limit,
+            )
+
+        elif startswith_field(self.frum.var, other.frum.var):
+            return EsNestedOp(
+                self,
+                other.select,
+                other.where,
+                other.sort,
+                other.limit,
+            )
+        else:
+            return AndOp([self, other])
 
     def __data__(self):
         return {

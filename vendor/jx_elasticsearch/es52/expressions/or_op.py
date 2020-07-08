@@ -13,7 +13,7 @@ from jx_base.expressions import OrOp as OrOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
 from mo_dots import dict_to_data, Null
 
-NotOp, es_not, es_and, EsNestedOp = [Null] * 4  # IMPORTS
+NotOp, es_not, es_and, InnerJoinOp = [Null] * 4  # IMPORTS
 
 
 class OrOp(OrOp_):

@@ -9,10 +9,10 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import EsNestedOp as EsNestedOp_
+from jx_base.expressions import InnerJoinOp as InnerJoinOp_
 
 
-class EsNestedOp(EsNestedOp_):
+class InnerJoinOp(InnerJoinOp_):
     def to_esfilter(self, schema):
         if self.frum.var == ".":
             return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}
@@ -30,17 +30,17 @@ class EsNestedOp(EsNestedOp_):
 
 # EXPORT
 from jx_elasticsearch.es52.expressions import and_op
-and_op.EsNestedOp = EsNestedOp
+and_op.InnerJoinOp = InnerJoinOp
 del and_op
 
 from jx_elasticsearch.es52.expressions import or_op
-or_op.EsNestedOp = EsNestedOp
+or_op.InnerJoinOp = InnerJoinOp
 del or_op
 
 from jx_elasticsearch.es52.expressions import _utils
-_utils.EsNestedOp = EsNestedOp
+_utils.InnerJoinOp = InnerJoinOp
 del _utils
 
 from jx_elasticsearch.es52.expressions import eq_op
-eq_op.EsNestedOp = EsNestedOp
+eq_op.InnerJoinOp = InnerJoinOp
 del eq_op

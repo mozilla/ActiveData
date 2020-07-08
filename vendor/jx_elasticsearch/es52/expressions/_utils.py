@@ -23,7 +23,7 @@ from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp, EsNestedOp = [Null] * 6  # IMPORTS
+MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp, InnerJoinOp = [Null] * 6  # IMPORTS
 
 
 def _inequality_to_esfilter(self, schema):
@@ -98,6 +98,7 @@ def exists_variable(path):
 
 
 def split_expression_by_path_for_setop(expr, schema, split_select):
+    split_select = to_data(split_select)
 
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = expr.vars()
@@ -132,7 +133,7 @@ def split_expression_by_path_for_setop(expr, schema, split_select):
                         )
                     else:
                         more_exprs.append(
-                            e.map({v: EsNestedOp(frum=Variable(path), select=Variable(c.es_column))})
+                            e.map({v: InnerJoinOp(frum=Variable(path), select=Variable(c.es_column))})
                         )
         exprs = more_exprs
 

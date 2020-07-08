@@ -19,7 +19,7 @@ from mo_dots import dict_to_data
 from mo_json import BOOLEAN
 
 
-EsNestedOp = None
+InnerJoinOp = None
 
 
 class AndOp(AndOp_):

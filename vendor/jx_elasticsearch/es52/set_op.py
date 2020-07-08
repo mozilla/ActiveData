@@ -15,7 +15,7 @@ from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
     split_expression_by_path,
-    EsNestedOp)
+    InnerJoinOp)
 from jx_elasticsearch.es52.expressions._utils import split_expression_by_path_for_setop
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
@@ -434,7 +434,7 @@ def es_query_proto(selects, op, wheres, schema):
         select = selects.get(p, Null)
 
         es_where = op([es_query, where])
-        es_query = EsNestedOp(Variable(p), query=es_where, select=select)
+        es_query = InnerJoinOp(Variable(p), query=es_where, select=select)
     return es_query.partial_eval().to_esfilter(schema)
 
 expected = {

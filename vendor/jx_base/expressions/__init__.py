@@ -21,7 +21,7 @@ from jx_base.expressions.count_op import CountOp
 from jx_base.expressions.date_op import DateOp
 from jx_base.expressions.div_op import DivOp
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.es_nested_op import EsNestedOp
+from jx_base.expressions.inner_join_op import InnerJoinOp
 from jx_base.expressions.es_script import EsScript
 from jx_base.expressions.exists_op import ExistsOp
 from jx_base.expressions.exp_op import ExpOp

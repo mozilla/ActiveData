@@ -33,7 +33,7 @@ from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES
 from mo_logs import Log
 
 
-EsNestedOp = None  # IMPORT
+InnerJoinOp = None  # IMPORT
 
 
 class EqOp(EqOp_):
@@ -51,8 +51,8 @@ class EqOp(EqOp_):
         if lhs.type != rhs.type and (lhs.type not in NUMBER_TYPES or rhs.type not in NUMBER_TYPES):
             return FALSE
 
-        if is_op(lhs, EsNestedOp):
-            return self.lang[EsNestedOp(
+        if is_op(lhs, InnerJoinOp):
+            return self.lang[InnerJoinOp(
                 frum=lhs.frum,
                 where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
             )]

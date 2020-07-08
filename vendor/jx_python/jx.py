@@ -596,7 +596,8 @@ def slide(values, size):
     RETURN A SLIDING SERIES OF WINDOWS OF size
     """
     if size == 2:
-        return pairwise(values)
+        yield pairwise(values)
+        return
 
     i = iter(values)
 

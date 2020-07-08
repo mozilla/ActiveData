@@ -27,7 +27,7 @@ from mo_json import BOOLEAN
 default_select = {"name":".", "value":IDENTITY},
 
 
-class EsNestedOp(Expression):
+class InnerJoinOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
@@ -47,7 +47,7 @@ class EsNestedOp(Expression):
             return NULL
 
         return self.lang[
-            EsNestedOp(
+            InnerJoinOp(
                 self.frum.partial_eval(),
                 self.select.partial_eval(),
                 self.where.partial_eval(),
@@ -58,14 +58,14 @@ class EsNestedOp(Expression):
 
     def __and__(self, other):
         """
-        MERGE TWO  EsNestedOp
+        MERGE TWO  InnerJoinOp
         """
-        if not is_op(other, EsNestedOp):
+        if not is_op(other, InnerJoinOp):
             return AndOp([self, other])
 
         # MERGE
         elif self.frum == other.frum:
-            return EsNestedOp(
+            return InnerJoinOp(
                 self.frum,
                 listwrap(self.select) + listwrap(other.select),
                 AndOp([self.where, other.where]),
@@ -77,7 +77,7 @@ class EsNestedOp(Expression):
         elif startswith_field(other.frum.var, self.frum.var):
             # WE ACHIEVE INTERSECTION BY LIMITING OURSELF TO ONLY THE DEEP OBJECTS
             # WE ASSUME frum SELECTS WHOLE DOCUMENT, SO self.select IS POSSIBLE
-            return EsNestedOp(
+            return InnerJoinOp(
                 other,
                 self.select,
                 self.where,
@@ -86,7 +86,7 @@ class EsNestedOp(Expression):
             )
 
         elif startswith_field(self.frum.var, other.frum.var):
-            return EsNestedOp(
+            return InnerJoinOp(
                 self,
                 other.select,
                 other.where,
@@ -109,7 +109,7 @@ class EsNestedOp(Expression):
 
     def __eq__(self, other):
         return (
-            is_op(other, EsNestedOp)
+            is_op(other, InnerJoinOp)
             and self.frum == other.frum
             and self.select == other.select
             and self.where == other.where
@@ -127,7 +127,7 @@ class EsNestedOp(Expression):
         )
 
     def map(self, mapping):
-        return EsNestedOp(
+        return InnerJoinOp(
             frum=self.frum.map(mapping),
             select=self.select.map(mapping),
             where=self.where.map(mapping),

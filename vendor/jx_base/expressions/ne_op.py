@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.es_nested_op import EsNestedOp
+from jx_base.expressions.inner_join_op import InnerJoinOp
 
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
@@ -71,8 +71,8 @@ class NeOp(Expression):
         lhs = self.lang[self.lhs].partial_eval()
         rhs = self.lang[self.rhs].partial_eval()
 
-        if is_op(lhs, EsNestedOp):
-            return self.lang[EsNestedOp(
+        if is_op(lhs, InnerJoinOp):
+            return self.lang[InnerJoinOp(
                 frum=lhs.frum.partial_eval(),
                 select=IDENTITY,
                 where=AndOp([lhs.where, NeOp([lhs.select, rhs])]).partial_eval(),

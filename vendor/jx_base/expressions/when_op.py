@@ -23,13 +23,7 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-<<<<<<< .mine
-from mo_json import NUMBER, OBJECT, NUMBER_TYPES
-||||||| .r654
-from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES
-=======
-from mo_json import OBJECT, same_json_type, merge_json_type
->>>>>>> .r724
+from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES, same_json_type, merge_json_type
 from mo_logs import Log
 
 

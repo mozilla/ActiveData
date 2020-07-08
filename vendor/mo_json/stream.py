@@ -20,15 +20,8 @@ from mo_dots import (
     relative_field,
     split_field,
     startswith_field,
-<<<<<<< .mine
-    to_data)
-||||||| .r662
-    wrap,
+    to_data,
 )
-=======
-    wrap,
-    to_data)
->>>>>>> .r724
 from mo_future import NEXT
 from mo_logs import Log
 

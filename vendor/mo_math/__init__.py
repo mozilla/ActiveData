@@ -35,6 +35,9 @@ func(None, *kwargs)) == None
 math_abs = __builtin__.abs
 
 
+INFINITY = float("+inf")
+
+
 def bayesian_add(*args):
     a = args[0]
     if a >= 1 or a <= 0:
@@ -120,7 +123,7 @@ def is_nan(s):
 def is_finite(s):
     try:
         f = float(s)
-        if math_abs(f) == float("+inf"):
+        if math_isnan(f) or math_abs(f) == INFINITY:
             return False
         return True
     except Exception:

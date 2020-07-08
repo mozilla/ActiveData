@@ -12,19 +12,22 @@ from __future__ import absolute_import, division, unicode_literals
 import types
 from copy import deepcopy
 
-from mo_future import generator_types, text, first
+from mo_future import generator_types, first
 
-from mo_dots import CLASS, coalesce, unwrap, to_data
+from mo_dots import CLASS, coalesce, to_data, from_data
 from mo_dots.nones import Null
 
-LIST = text("list")
-
+_list = str("list")
 _get = object.__getattribute__
-_get_list = lambda self: _get(self, LIST)
 _set = object.__setattr__
 _emit_slice_warning = True
-_datawrap = None
-Log = None
+
+
+Log, _datawrap = [None]*2
+
+
+def _get_list(self):
+    return _get(self, _list)
 
 
 def _late_import():
@@ -41,7 +44,7 @@ def _late_import():
     _ = _datawrap
 
 
-class FlatList(list):
+class FlatList(object):
     """
     ENCAPSULATES HANDING OF Nulls BY wrapING ALL MEMBERS AS NEEDED
     ENCAPSULATES FLAT SLICES ([::]) FOR USE IN WINDOW FUNCTIONS
@@ -93,21 +96,16 @@ class FlatList(list):
             if i <= len(_list):
                 for i in range(len(_list), i):
                     _list.append(None)
-            _list[i] = unwrap(y)
+            _list[i] = from_data(y)
         except Exception as e:
             if not Log:
                 _late_import()
             Log.error("problem", cause=e)
 
-    def __getattribute__(self, key):
-        try:
-            if key != "index":  # WE DO NOT WANT TO IMPLEMENT THE index METHOD
-                output = _get(self, key)
-                return output
-        except Exception as e:
-            if key[0:2] == "__":  # SYSTEM LEVEL ATTRIBUTES CAN NOT BE USED FOR SELECT
-                raise e
-        return FlatList.get(self, key)
+    def __getattr__(self, key):
+        if key in ["__json__", "__call__"]:
+            raise AttributeError()
+        return self.get(key)
 
     def get(self, key):
         """
@@ -115,8 +113,12 @@ class FlatList(list):
         """
         if not Log:
             _late_import()
+
         return FlatList(
-            vals=[unwrap(coalesce(_datawrap(v), Null)[key]) for v in _get_list(self)]
+            vals=[
+                from_data(coalesce(_datawrap(v), Null)[key])
+                for v in _get_list(self)
+            ]
         )
 
     def select(self, key):
@@ -126,7 +128,7 @@ class FlatList(list):
 
     def filter(self, _filter):
         return FlatList(
-            vals=[unwrap(u) for u in (to_data(v) for v in _get_list(self)) if _filter(u)]
+            vals=[from_data(u) for u in (to_data(v) for v in _get_list(self)) if _filter(u)]
         )
 
     def __delslice__(self, i, j):
@@ -147,7 +149,7 @@ class FlatList(list):
         return list.__contains__(_get_list(self), item)
 
     def append(self, val):
-        _get_list(self).append(unwrap(val))
+        _get_list(self).append(from_data(val))
         return self
 
     def __str__(self):
@@ -190,7 +192,7 @@ class FlatList(list):
     def extend(self, values):
         lst = _get_list(self)
         for v in values:
-            lst.append(unwrap(v))
+            lst.append(from_data(v))
         return self
 
     def pop(self, index=None):
@@ -248,7 +250,7 @@ class FlatList(list):
 
         return FlatList(_get_list(self)[-num:])
 
-    def left(self, num=None):
+    def limit(self, num=None):
         """
         NOT REQUIRED, BUT EXISTS AS OPPOSITE OF right()
         """

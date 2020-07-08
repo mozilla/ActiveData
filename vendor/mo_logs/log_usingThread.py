@@ -29,9 +29,11 @@ class StructuredLogger_usingThread(StructuredLogger):
 
         def worker(logger, please_stop):
             try:
-                while not please_stop:
+                while True:
                     logs = self.queue.pop_all()
                     if not logs:
+                        if please_stop:
+                            break
                         (Till(seconds=1) | please_stop).wait()
                         continue
                     for log in logs:

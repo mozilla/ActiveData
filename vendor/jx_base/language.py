@@ -7,9 +7,9 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-from __future__ import absolute_import, division, unicode_literals
 
 from copy import copy
+from datetime import datetime
 from decimal import Decimal
 from math import isnan
 
@@ -89,7 +89,7 @@ class Language(object):
             )
             self.ops = [None] * num_ops
 
-        for _, new_op in module_vars.items():
+        for _, new_op in list(module_vars.items()):
             if isinstance(new_op, type) and hasattr(new_op, ID):
                 # EXPECT OPERATORS TO HAVE id
                 # EXPECT NEW DEFINED OPS IN THIS MODULE TO HAVE lang NOT SET
@@ -239,6 +239,7 @@ TYPE_ORDER = {
     float: 1,
     Decimal: 1,
     Date: 1,
+    datetime: 1,
     long: 1,
     text: 3,
     list: 4,

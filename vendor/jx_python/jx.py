@@ -591,6 +591,34 @@ def count(values):
     return sum((1 if v != None else 0) for v in values)
 
 
+def slide(values, size):
+    """
+    RETURN A SLIDING SERIES OF WINDOWS OF size
+    """
+    if size == 2:
+        return pairwise(values)
+
+    i = iter(values)
+
+    # FILL THE WINDOW
+    window = []
+    for _ in range(0, size):
+        try:
+            window.append(next(i))
+        except StopIteration:
+            # WINDOW IS BIGGER THAN values, EMIT EVERYTHING WE GOT
+            yield builtin_tuple(window)
+            return
+
+    # WE NOW HAVE A FULL WINDOW
+    window = builtin_tuple(window)
+    for t in i:
+        yield window
+        window = window[1:] + (t, )
+
+    yield window
+
+
 def pairwise(values):
     """
     WITH values = [a, b, c, d, ...]
@@ -1082,6 +1110,7 @@ def reverse(vals):
     # TODO: Test how to do this fastest
     if not hasattr(vals, "len"):
         vals = list(vals)
+
     l = len(vals)
     output = [None] * l
 

@@ -24,7 +24,6 @@ from mo_threads import Lock, Thread
 from mo_times.dates import Date, unicode2Date, unix2Date
 from mo_times.durations import Duration
 from mo_times.timer import Timer
-from pyLibrary.aws.s3 import KEY_IS_WRONG_FORMAT, strip_extension
 
 MAX_RECORD_LENGTH = 400000
 DATA_TOO_OLD = "data is too old to be indexed"
@@ -247,6 +246,8 @@ class RolloverIndex(object):
                         if please_stop:
                             break
             except Exception as e:
+                from pyLibrary.aws.s3 import KEY_IS_WRONG_FORMAT, strip_extension
+
                 if KEY_IS_WRONG_FORMAT in e:
                     Log.warning("Could not process {{key}} because bad format. Never trying again.", key=key, cause=e)
                     pass

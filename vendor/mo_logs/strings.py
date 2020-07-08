@@ -18,7 +18,7 @@ import string
 from datetime import date, datetime as builtin_datetime, timedelta
 from json.encoder import encode_basestring
 
-from mo_dots import Data, coalesce, get_module, is_data, is_list, to_data, is_sequence, NullType
+from mo_dots import Data, coalesce, get_module, is_data, is_list, to_data, is_sequence, NullType, is_many
 from mo_future import PY3, get_function_name, is_text, round as _round, text, transpose, xrange, zip_longest, \
     binary_type, Mapping
 from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
@@ -26,10 +26,7 @@ from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix
 FORMATTERS = {}
 CR = text("\n")
 
-_json_encoder = None
-_Log = None
-_Except = None
-_Duration = None
+_json_encoder, _Log, _Except, _Duration = [None] * 4  # EXPECTED IMPORT
 
 
 def _late_import():
@@ -687,7 +684,7 @@ def toString(val):
 
     if val == None:
         return ""
-    elif isinstance(val, (Mapping, list, set)):
+    elif is_data(val) or is_many(val):
         return _json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()

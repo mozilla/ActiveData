@@ -23,7 +23,7 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import concat_field, unwrap, to_data, is_many, list_to_data
+from mo_dots import concat_field, unwrap, to_data, is_many, list_to_data, listwrap
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -163,19 +163,17 @@ def table2tab(
     return row(column_names)+"\n"+("\n".join(row(r) for r in rows))
 
 
-
-def list2tab(rows):
+def list2tab(rows, separator="\t"):
     columns = set()
-    for r in to_data(rows):
+    for r in listwrap(rows):
         columns |= set(k for k, v in r.leaves())
     keys = list(columns)
 
     output = []
     for r in to_data(rows):
-        output.append("\t".join(value2json(r[k]) for k in keys))
+        output.append(separator.join(value2json(r[k]) for k in keys))
 
-    return "\t".join(keys) + "\n" + "\n".join(output)
-
+    return separator.join(keys) + "\n" + "\n".join(output)
 
 
 def value2string(value):

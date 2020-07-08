@@ -16,7 +16,7 @@ from datetime import datetime
 
 from mo_dots import Data, FlatList, coalesce, is_data, is_list, listwrap, unwraplist, to_data, dict_to_data
 from mo_future import PY3, is_text, text
-from mo_logs import constants, exceptions, strings
+from mo_logs import constants, exceptions, strings, startup
 from mo_logs.exceptions import Except, LogItem, suppress_exception
 from mo_logs.strings import CR, indent
 
@@ -38,10 +38,10 @@ class Log(object):
     error_mode = False  # prevent error loops
 
     @classmethod
-    def start(cls, settings=None):
+    def start(cls, settings=None, app_name=None):
         """
         RUN ME FIRST TO SETUP THE THREADED LOGGING
-        http://victorlin.me/2012/08/good-logging-practice-in-python/
+        https://fangpenlin.com/posts/2012/08/26/good-logging-practice-in-python/
 
         log       - LIST OF PARAMETERS FOR LOGGER(S)
         trace     - SHOW MORE DETAILS IN EVERY LOG LINE (default False)
@@ -53,7 +53,11 @@ class Log(object):
         """
         global _Thread
         if not settings:
-            return
+            if app_name:
+                return LoggingContext(app_name)
+            else:
+                return None
+
         settings = to_data(settings)
 
         Log.stop()
@@ -407,6 +411,24 @@ class Log(object):
         raise NotImplementedError
 
 
+class LoggingContext:
+
+    def __init__(self, app_name):
+        self.app_name = app_name
+        self.config = None
+
+    def __enter__(self):
+        self.config = config = startup.read_settings()
+        constants.set(config.constants)
+        Log.start(config.debug)
+        return config
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_val:
+            Log.warning("Problem with {{name}}! Shutting down.", name=self.app_name, cause=exc_val)
+        Log.stop()
+
+
 def _same_frame(frameA, frameB):
     return (frameA.line, frameA.file) == (frameB.line, frameB.file)
 
@@ -423,15 +445,20 @@ machine_metadata = dict_to_data({
 def raise_from_none(e):
     raise e
 
+
 if PY3:
     exec("def raise_from_none(e):\n    raise e from None\n", globals(), locals())
 
-
+from mo_logs import startup
 from mo_logs.log_usingFile import StructuredLogger_usingFile
 from mo_logs.log_usingMulti import StructuredLogger_usingMulti
 from mo_logs.log_usingStream import StructuredLogger_usingStream
 
+# EXPORT
+startup.Log = Log
+
 
 if not Log.main_log:
     Log.main_log = StructuredLogger_usingStream(STDOUT)
+
 

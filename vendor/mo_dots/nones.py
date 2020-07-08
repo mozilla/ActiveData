@@ -9,12 +9,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import to_data
 from mo_future import is_binary, text, none_type
 
+from mo_dots import to_data
 from mo_dots.utils import CLASS, OBJ
 
-wrap = None
 is_sequence = None
 _get = object.__getattribute__
 _set = object.__setattr__

@@ -112,7 +112,7 @@ def write_profiles(main_thread_profile):
     Log.note("profile written to {{filename}}", filename=stats_file.abspath)
 
 
-def list2tab(rows):
+def list2tab(rows, separator="\t"):
     from mo_json import value2json
 
     columns = set()
@@ -122,6 +122,6 @@ def list2tab(rows):
 
     output = []
     for r in to_data(rows):
-        output.append("\t".join(value2json(r[k]) for k in keys))
+        output.append(separator.join(value2json(r[k]) for k in keys))
 
-    return "\t".join(keys) + "\n" + "\n".join(output)
+    return separator.join(keys) + "\n" + "\n".join(output)

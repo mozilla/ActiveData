@@ -13,7 +13,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import allocate_lock as _allocate_lock
+from mo_future import allocate_lock as _allocate_lock, decorate
 from mo_math.randoms import Random
 from mo_threads.signals import Signal
 
@@ -116,3 +116,15 @@ class Lock(object):
             pass
 
         return bool(waiter)
+
+
+def locked(func):
+    """
+    WRAP func WITH A Lock, TO ENSURE JUST ONE THREAD AT A TIME
+    """
+    lock = Lock()
+    @decorate(func)
+    def output(*args, **kwargs):
+        with lock:
+            return func(*args, **kwargs)
+    return output

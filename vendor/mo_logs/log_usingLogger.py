@@ -24,3 +24,9 @@ class StructuredLogger_usingLogger(StructuredLogger):
     def write(self, template, params):
         log_line = expand_template(template, params)
         self.logger.info(log_line)
+
+    def stop(self):
+        try:
+            self.logger.shutdown()
+        except Exception:
+            self.logger.info("Failure in the logger shutdown")

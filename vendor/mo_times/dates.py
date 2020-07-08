@@ -14,7 +14,7 @@ import math
 import re
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from time import time as _time
+from time import time as unix_now
 
 import mo_math
 from mo_dots import Null, NullType, coalesce
@@ -171,20 +171,18 @@ class Date(object):
 
     @staticmethod
     def now():
-        return _unix2Date(_time())
+        return _unix2Date(unix_now())
 
     @staticmethod
     def eod():
         """
         RETURN END-OF-TODAY (WHICH IS SAME AS BEGINNING OF TOMORROW)
         """
-        return _unix2Date(Date.today().unix + 86400)
+        return _unix2Date((math.floor(unix_now() / 86400) + 1) * 86400)
 
     @staticmethod
     def today():
-        now = _utcnow()
-        now_unix = datetime2unix(now)
-        return _unix2Date(math.floor(now_unix / 86400) * 86400)
+        return _unix2Date(math.floor(unix_now() / 86400) * 86400)
 
     @staticmethod
     def range(min, max, interval):

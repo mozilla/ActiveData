@@ -11,20 +11,18 @@ from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
-from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict
+from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict, none_type
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 
-none_type = type(None)
-ModuleType = type(sys.modules[__name__])
-
-
+_module_type = type(sys.modules[__name__])
 _builtin_zip = zip
-ROOT_PATH = ["."]
-
-
 _get = object.__getattribute__
 _set = object.__setattr__
+_new = object.__new__
+
+
+ROOT_PATH = ["."]
 
 
 def inverse(d):
@@ -32,7 +30,7 @@ def inverse(d):
     reverse the k:v pairs
     """
     output = {}
-    for k, v in unwrap(d).items():
+    for k, v in from_data(d).items():
         output[v] = output.get(v, [])
         output[v].append(k)
     return output
@@ -222,7 +220,7 @@ def set_default(*dicts):
     p0 = dicts[0]
     agg = p0 if p0 or _get(p0, CLASS) in data_types else {}
     for p in dicts[1:]:
-        p = unwrap(p)
+        p = from_data(p)
         if p is None:
             continue
         _all_default(agg, p, seen={})
@@ -242,7 +240,7 @@ def _all_default(d, default, seen=None):
         # Log.error("strictly dict (or object) allowed: got {{type}}", type=_get(default, CLASS).__name__)
 
     for k, default_value in default.items():
-        default_value = unwrap(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
+        default_value = from_data(default_value)  # TWO DIFFERENT Dicts CAN SHARE id() BECAUSE THEY ARE SHORT LIVED
         if is_data(d):
             existing_value = d.get(k)
         else:
@@ -370,7 +368,7 @@ def _get_attr(obj, path):
 
     attr_name = path[0]
 
-    if isinstance(obj, ModuleType):
+    if isinstance(obj, _module_type):
         if attr_name in obj.__dict__:
             return _get_attr(obj.__dict__[attr_name], path[1:])
         elif attr_name in dir(obj):
@@ -470,7 +468,7 @@ def dict_to_data(d):
     :param d: dict
     :return: Data
     """
-    m = object.__new__(Data)
+    m = _new(Data)
     _set(m, SLOT, d)
     return m
 
@@ -479,7 +477,7 @@ def list_to_data(v):
     """
     to_data, BUT WITHOUT CHECKS
     """
-    output = list.__new__(FlatList)
+    output = _new(FlatList)
     output.list = v
     return output
 
@@ -494,7 +492,7 @@ def to_data(v):
     type_ = _get(v, CLASS)
 
     if type_ in (dict, OrderedDict):
-        m = object.__new__(Data)
+        m = _new(Data)
         _set(m, SLOT, v)
         return m
     elif type_ is none_type:
@@ -502,7 +500,7 @@ def to_data(v):
     elif type_ is list:
         return FlatList(v)
     elif type_ in generator_types:
-        return FlatList(list(unwrap(vv) for vv in v))
+        return FlatList(list(from_data(vv) for vv in v))
     else:
         return v
 
@@ -532,7 +530,7 @@ def _leaves_to_data(value):
         return value
     if class_ in data_types:
         if class_ is Data:
-            value = unwrap(value)
+            value = from_data(value)
 
         output = {}
         for key, value in value.items():
@@ -571,7 +569,7 @@ def _leaves_to_data(value):
     return value
 
 
-def unwrap(v):
+def from_data(v):
     if v is None:
         return None
     _type = _get(v, CLASS)
@@ -589,9 +587,12 @@ def unwrap(v):
         else:
             return v
     elif _type in generator_types:
-        return (unwrap(vv) for vv in v)
+        return (from_data(vv) for vv in v)
     else:
         return v
+
+
+unwrap = from_data
 
 
 def listwrap(value):
@@ -629,7 +630,7 @@ def listwrap(value):
     elif is_many(value):
         return list_to_data(list(value))
     else:
-        return list_to_data([unwrap(value)])
+        return list_to_data([from_data(value)])
 
 def unwraplist(v):
     """
@@ -639,11 +640,11 @@ def unwraplist(v):
         if len(v) == 0:
             return None
         elif len(v) == 1:
-            return unwrap(v[0])
+            return from_data(v[0])
         else:
-            return unwrap(v)
+            return from_data(v)
     else:
-        return unwrap(v)
+        return from_data(v)
 
 
 def tuplewrap(value):
@@ -652,7 +653,7 @@ def tuplewrap(value):
     """
     if is_many(value):
         return tuple(tuplewrap(v) if is_sequence(v) else v for v in value)
-    return unwrap(value),
+    return from_data(value),
 
 
 from mo_dots.datas import Data, SLOT, data_types, is_data
@@ -662,6 +663,6 @@ from mo_dots.objects import DataObject
 
 # EXPORT
 import mo_dots.nones as temp
-temp.wrap = wrap
+temp.to_data = to_data
 temp.is_sequence = is_sequence
 del temp

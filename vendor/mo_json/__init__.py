@@ -42,7 +42,7 @@ EXISTS = "exists"
 
 ALL_TYPES = {IS_NULL: IS_NULL, BOOLEAN: BOOLEAN, INTEGER: INTEGER, NUMBER: NUMBER, TIME:TIME, INTERVAL:INTERVAL, STRING: STRING, OBJECT: OBJECT, NESTED: NESTED, EXISTS: EXISTS}
 JSON_TYPES = (BOOLEAN, INTEGER, NUMBER, STRING, OBJECT)
-NUMBER_TYPES = (INTEGER, NUMBER)
+NUMBER_TYPES = (INTEGER, TIME, INTERVAL, NUMBER)
 PRIMITIVE = (EXISTS, BOOLEAN, INTEGER, NUMBER, TIME, INTERVAL, STRING)
 INTERNAL = (EXISTS, OBJECT, NESTED)
 STRUCT = (OBJECT, NESTED)
@@ -398,22 +398,43 @@ else:
     def bytes2hex(value, separator=" "):
         return separator.join('{:02X}'.format(x) for x in value)
 
+if PY2:
+    def datetime2unix(d):
+        try:
+            if d == None:
+                return None
+            elif isinstance(d, datetime):
+                epoch = datetime(1970, 1, 1, 0, 0, 0, 0)
+            elif isinstance(d, date):
+                epoch = date(1970, 1, 1)
+            else:
+                Log.error("Can not convert {{value}} of type {{type}}", value=d, type=d.__class__)
 
-def datetime2unix(d):
-    try:
-        if d == None:
-            return None
-        elif isinstance(d, datetime):
-            epoch = datetime(1970, 1, 1)
-        elif isinstance(d, date):
-            epoch = date(1970, 1, 1)
-        else:
-            Log.error("Can not convert {{value}} of type {{type}}",  value= d,  type= d.__class__)
+            diff = d - epoch
+            return float(diff.total_seconds())
+        except Exception as e:
+            Log.error("Can not convert {{value}}", value=d, cause=e)
+else:
+    from datetime import timezone
 
-        diff = d - epoch
-        return float(diff.total_seconds())
-    except Exception as e:
-        Log.error("Can not convert {{value}}",  value= d, cause=e)
+    def datetime2unix(d):
+        try:
+            if d == None:
+                return None
+            elif isinstance(d, datetime):
+                if d.tzinfo == None:
+                    epoch = datetime(1970, 1, 1, 0, 0, 0, 0)
+                else:
+                    epoch = datetime(1970, 1, 1, 0, 0, 0, 0, timezone.utc)
+            elif isinstance(d, date):
+                epoch = date(1970, 1, 1)
+            else:
+                Log.error("Can not convert {{value}} of type {{type}}", value=d, type=d.__class__)
+
+            diff = d - epoch
+            return float(diff.total_seconds())
+        except Exception as e:
+            Log.error("Can not convert {{value}}", value=d, cause=e)
 
 
 python_type_to_json_type = {
@@ -445,19 +466,35 @@ for k, v in items(python_type_to_json_type):
     python_type_to_json_type[k.__name__] = v
 
 _merge_order = {
+    IS_NULL: 0,
     BOOLEAN: 1,
     INTEGER: 2,
+    TIME: 3,
+    INTERVAL: 3,
     NUMBER: 3,
-    STRING: 4,
-    OBJECT: 5,
-    NESTED: 6
+    STRING: 6,
+    OBJECT: 7,
+    NESTED: 8
 }
 
 
-def _merge_json_type(A, B):
-    a = _merge_order[A]
-    b = _merge_order[B]
-    return A if a >= b else B
+def same_json_type(A, B):
+    return A == B or (A in NUMBER_TYPES and B in NUMBER_TYPES)
+
+
+def merge_json_type(*types):
+    output = IS_NULL
+    m = 0
+    for t in types:
+        o = _merge_order[t]
+        if o > m:
+            m = o
+            if m == 3:
+                # SNAP TO NUMBER
+                output = NUMBER
+            else:
+                output = t
+    return output
 
 
 from mo_json.decoder import json_decoder

@@ -15,10 +15,9 @@ import os
 import sys
 import tempfile
 
-import mo_json_config
-from mo_dots import coalesce, listwrap, unwrap, to_data
-from mo_files import File
-from mo_logs import Log
+from mo_dots import coalesce, listwrap, unwrap, to_data, Null
+
+Log = Null  # IMPORT
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
 # https://docs.python.org/dev/library/argparse.html#the-add-argument-method
@@ -62,6 +61,9 @@ def read_settings(defs=None, filename=None, default_filename=None, complain=True
     :param default_filename: A config file from an environment variable (a fallback config file, if no other provided)
     :parma complain: Complain about args mismatch
     """
+    from mo_files import File
+    import mo_json_config
+
     # READ SETTINGS
     defs = listwrap(defs)
     defs.append({

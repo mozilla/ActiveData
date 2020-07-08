@@ -113,7 +113,9 @@ def datawrap(v):
         return FlatList(v)
     elif type_ is list:
         return FlatList(v)
-    elif type_ in (Data, DataObject, none_type, FlatList, text, binary_type, int, float, Decimal, datetime, date, NullType, none_type):
+    elif type_ in (Data, DataObject, FlatList, NullType):
+        return v
+    elif type_ in (none_type, text, binary_type, int, float, Decimal, datetime, date):
         return v
     elif type_ in generator_types:
         return (to_data(vv) for vv in v)
@@ -161,7 +163,7 @@ def params_pack(params, *args):
                 continue
             settings[k] = v
 
-    output = {str(k): unwrap(settings[k]) for k in params if k in settings}
+    output = {str(k): from_data(settings[k]) for k in params if k in settings}
     return output
 
 

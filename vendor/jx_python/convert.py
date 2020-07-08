@@ -61,7 +61,6 @@ def list2table(rows, column_names=None):
         "data": output
     })
 
-
 def table2csv(table_data):
     """
     :param table_data: expecting a list of tuples

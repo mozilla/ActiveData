@@ -28,8 +28,17 @@ none_type = type(None)
 boolean_type = type(True)
 
 if PY3:
-    STDOUT = sys.stdout.buffer
-    STDERR = sys.stderr.buffer
+    try:
+        STDOUT = sys.stdout.buffer
+    except Exception as e:
+        # WE HOPE WHATEVER REPLACED sys.stdout CAN HANDLE BYTES IN UTF8
+        STDOUT = sys.stdout
+
+    try:
+        STDERR = sys.stderr.buffer
+    except Exception as e:
+        # WE HOPE WHATEVER REPLACED sys.stderr CAN HANDLE BYTES IN UTF8
+        STDERR = sys.stderr
 
     import itertools
     from collections import OrderedDict, UserDict

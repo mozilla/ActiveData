@@ -161,3 +161,10 @@ class Expression(BaseExpression):
     def __str__(self):
         return value2json(self.__data__(), pretty=True)
 
+    def __getattr__(self, item):
+        Log.error(
+            "{{type}} object has no attribute {{item}}, did you .register_ops() for {{type}}?",
+            type=self.__class__.__name__,
+            item=item
+        )
+

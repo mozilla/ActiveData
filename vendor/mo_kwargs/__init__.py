@@ -162,6 +162,8 @@ def override(kwargs=None):
     if is_text(kwargs):
         # COMPLEX VERSION @override(kwargs="other")
         return output
+    elif kwargs == None:
+        raise NotImplementedError("use @override without calling")
     else:
         # SIMPLE VERSION @override
         func, kwargs = kwargs, KWARGS

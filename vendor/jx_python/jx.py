@@ -626,7 +626,10 @@ def pairwise(values):
     RETURN [(a, b), (b, c), (c, d), ...]
     """
     i = iter(values)
-    a = next(i)
+    try:
+        a = next(i)
+    except StopIteration:
+        return
 
     for b in i:
         yield (a, b)

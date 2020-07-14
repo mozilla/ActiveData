@@ -18,12 +18,14 @@ from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
 from mo_dots import Null, to_data, join_field, split_field
 from mo_future import first
+from mo_future.exports import expect
 from mo_json import EXISTS
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp, InnerJoinOp = [Null] * 6  # IMPORTS
+InnerJoinOp, = expect("InnerJoinOp")
+MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [Null] * 5  # IMPORTS
 
 
 def _inequality_to_esfilter(self, schema):
@@ -142,6 +144,7 @@ def split_expression_by_path_for_setop(expr, schema, split_select):
         for c in cs:
             paths_to_cols[c.nested_path[0]].append(c)
 
+    # JSON QUERY EXPRESSIONS ASSUME OUTER JOIN
     # ACCOUNT FOR WHEN NESTED RECORDS ARE MISSING
     deeper_path = None
     deeper_cols = None

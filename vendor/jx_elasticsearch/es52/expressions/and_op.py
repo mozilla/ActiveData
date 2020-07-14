@@ -9,17 +9,13 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AndOp as AndOp_, TRUE, FALSE, simplified
-from jx_base.language import is_op
+from jx_base.expressions import AndOp as AndOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
-from jx_elasticsearch.es52.expressions.boolean_op import BooleanOp
-from jx_elasticsearch.es52.expressions.not_op import NotOp
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from mo_dots import dict_to_data
-from mo_json import BOOLEAN
+from mo_future.exports import expect
 
-
-InnerJoinOp = None
+(InnerJoinOp,) = expect("InnerJoinOp")
 
 
 class AndOp(AndOp_):

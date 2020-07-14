@@ -626,11 +626,15 @@ def listwrap(value):
     if value == None:
         return FlatList()
     elif is_list(value):
-        return list_to_data(value)
+        if isinstance(value, list):
+            return list_to_data(value)
+        else:
+            return value
     elif is_many(value):
         return list_to_data(list(value))
     else:
         return list_to_data([from_data(value)])
+
 
 def unwraplist(v):
     """

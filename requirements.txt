@@ -1,9 +1,9 @@
 beautifulsoup4==4.6.0
-boto==2.48.0
-Flask==0.10.1
-hjson==3.0.1
+boto
+Flask
+hjson
 moz-sql-parser
-pymysql==0.8.0
-requests==2.18.4
-urllib3==1.22
+pymysql
+requests
+urllib3
 

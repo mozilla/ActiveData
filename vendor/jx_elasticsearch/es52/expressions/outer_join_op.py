@@ -9,11 +9,14 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import InnerJoinOp as InnerJoinOp_
-from mo_future.exports import export
+from jx_base.expressions import OuterJoinOp as OuterJoinOp_
 
 
-class InnerJoinOp(InnerJoinOp_):
+class OuterJoinOp(OuterJoinOp_):
+
+    def partial_eval(self):
+
+
     def to_esfilter(self, schema):
         if self.frum.var == ".":
             return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}
@@ -27,9 +30,3 @@ class InnerJoinOp(InnerJoinOp_):
                     else None,
                 }
             }
-
-
-export("jx_elasticsearch.es52.expressions.and_op", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions.or_op", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions._utils", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions.eq_op", InnerJoinOp)

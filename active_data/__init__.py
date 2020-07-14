@@ -8,7 +8,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import to_data, coalesce, dict_to_data
+from mo_dots import coalesce, dict_to_data
 from mo_files import File
 from mo_json import value2json
 from mo_logs import Log

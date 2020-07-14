@@ -175,7 +175,7 @@ def add_version(flask_app):
                 "commit": rev,
             },
             pretty=True,
-        ).encode('utf8') + text("\n")
+        ).encode('utf8') + b"\n"
 
         Log.note("Using github version\n{{version}}", version=version_info)
 

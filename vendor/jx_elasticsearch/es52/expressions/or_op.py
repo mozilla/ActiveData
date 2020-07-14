@@ -12,8 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import OrOp as OrOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
 from mo_dots import dict_to_data, Null
+from mo_future.exports import expect
 
-NotOp, es_not, es_and, InnerJoinOp = [Null] * 4  # IMPORTS
+InnerJoinOp, = expect("InnerJoinOp")
+NotOp, es_not, es_and = [Null] * 3  # IMPORTS
 
 
 class OrOp(OrOp_):

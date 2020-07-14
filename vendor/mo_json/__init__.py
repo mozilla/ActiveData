@@ -11,16 +11,14 @@ from __future__ import absolute_import, division, unicode_literals
 
 import math
 import re
-from collections import deque
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from test.test_deque import Deque
 
 from hjson import loads as hjson2value
 
 from mo_dots import Data, FlatList, Null, NullType, SLOT, is_data, to_data, leaves_to_data
 from mo_dots.objects import DataObject
-from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text
+from mo_future import PY2, integer_types, is_binary, is_text, items, long, none_type, text, PY3
 from mo_logs import Except, Log, strings
 from mo_logs.strings import expand_template
 from mo_times import Date, Duration
@@ -247,7 +245,7 @@ def value2json(obj, pretty=False, sort_keys=False, keep_whitespace=True):
     :return:
     """
     if FIND_LOOPS:
-        obj = scrub(obj, scrub_text=_keep_whitespace if keep_whitespace else trim_whitespace())
+        obj = scrub(obj, scrub_text=_keep_whitespace if keep_whitespace else trim_whitespace)
     try:
         json = json_encoder(obj, pretty=pretty)
         if json == None:
@@ -391,51 +389,41 @@ def json2value(json_string, params=Null, flexible=False, leaves=False):
             char_str = " "
         Log.error(CAN_NOT_DECODE_JSON + ":\n{{char_str}}\n{{hexx_str}}\n", char_str=char_str, hexx_str=hexx_str, cause=e)
 
-if PY2:
-    def bytes2hex(value, separator=" "):
-        return separator.join('{:02X}'.format(ord(x)) for x in value)
-else:
+if PY3:
     def bytes2hex(value, separator=" "):
         return separator.join('{:02X}'.format(x) for x in value)
-
-if PY2:
-    def datetime2unix(d):
-        try:
-            if d == None:
-                return None
-            elif isinstance(d, datetime):
-                epoch = datetime(1970, 1, 1, 0, 0, 0, 0)
-            elif isinstance(d, date):
-                epoch = date(1970, 1, 1)
-            else:
-                Log.error("Can not convert {{value}} of type {{type}}", value=d, type=d.__class__)
-
-            diff = d - epoch
-            return float(diff.total_seconds())
-        except Exception as e:
-            Log.error("Can not convert {{value}}", value=d, cause=e)
 else:
+    def bytes2hex(value, separator=" "):
+        return separator.join('{:02X}'.format(ord(x)) for x in value)
+
+
+if PY3:
     from datetime import timezone
+    DATETIME_EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+else:
+    DATETIME_EPOCH = datetime(1970, 1, 1)
+DATE_EPOCH = date(1970, 1, 1)
 
-    def datetime2unix(d):
-        try:
-            if d == None:
-                return None
-            elif isinstance(d, datetime):
-                if d.tzinfo == None:
-                    epoch = datetime(1970, 1, 1, 0, 0, 0, 0)
-                else:
-                    epoch = datetime(1970, 1, 1, 0, 0, 0, 0, timezone.utc)
-            elif isinstance(d, date):
-                epoch = date(1970, 1, 1)
+
+def datetime2unix(value):
+    try:
+        if value == None:
+            return None
+        elif isinstance(value, datetime):
+            if value.tzinfo:
+                diff = value - DATETIME_EPOCH
             else:
-                Log.error("Can not convert {{value}} of type {{type}}", value=d, type=d.__class__)
-
-            diff = d - epoch
-            return float(diff.total_seconds())
-        except Exception as e:
-            Log.error("Can not convert {{value}}", value=d, cause=e)
-
+                diff = value - DATETIME_EPOCH.replace(tzinfo=None)
+            return diff.total_seconds()
+        elif isinstance(value, date):
+            diff = value - DATE_EPOCH
+            return diff.total_seconds()
+        else:
+            from mo_logs import Log
+            Log.error("Can not convert {{value}} of type {{type}}", value=value, type=value.__class__)
+    except Exception as e:
+        from mo_logs import Log
+        Log.error("Can not convert {{value}}", value=value, cause=e)
 
 python_type_to_json_type = {
     int: INTEGER,

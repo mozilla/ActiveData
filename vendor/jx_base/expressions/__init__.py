@@ -1,4 +1,5 @@
-from jx_base.expressions._utils import simplified, extend, jx_expression, merge_types, operators, language, _jx_expression
+from jx_base.expressions._utils import simplified, extend, jx_expression, merge_types, operators, language, \
+    _jx_expression
 from jx_base.expressions.abs_op import AbsOp
 from jx_base.expressions.add_op import AddOp
 from jx_base.expressions.and_op import AndOp
@@ -21,7 +22,6 @@ from jx_base.expressions.count_op import CountOp
 from jx_base.expressions.date_op import DateOp
 from jx_base.expressions.div_op import DivOp
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.inner_join_op import InnerJoinOp
 from jx_base.expressions.es_script import EsScript
 from jx_base.expressions.exists_op import ExistsOp
 from jx_base.expressions.exp_op import ExpOp
@@ -35,6 +35,7 @@ from jx_base.expressions.get_op import GetOp
 from jx_base.expressions.gt_op import GtOp
 from jx_base.expressions.gte_op import GteOp
 from jx_base.expressions.in_op import InOp
+from jx_base.expressions.inner_join_op import InnerJoinOp
 from jx_base.expressions.integer_op import IntegerOp
 from jx_base.expressions.is_boolean_op import IsBooleanOp
 from jx_base.expressions.is_integer_op import IsIntegerOp
@@ -60,6 +61,7 @@ from jx_base.expressions.null_op import NullOp, NULL
 from jx_base.expressions.number_op import NumberOp
 from jx_base.expressions.offset_op import OffsetOp
 from jx_base.expressions.or_op import OrOp
+from jx_base.expressions.outer_join_op import OuterJoinOp
 from jx_base.expressions.prefix_op import PrefixOp
 from jx_base.expressions.python_script import PythonScript
 from jx_base.expressions.query_op import QueryOp

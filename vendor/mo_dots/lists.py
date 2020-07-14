@@ -327,7 +327,8 @@ container_types = (list, FlatList, set)
 sequence_types = (list, FlatList, tuple) + generator_types
 many_types = tuple(set(list_types + container_types + sequence_types))
 
-not_many_names = ("str", "unicode", "binary", "NullType", "NoneType", "dict", "Data")  # ITERATORS THAT ARE CONSIDERED PRIMITIVE
+# ITERATORS THAT ARE CONSIDERED PRIMITIVE
+not_many_names = ("str", "unicode", "binary", "NullType", "NoneType", "dict", "Data")
 
 
 def is_list(l):

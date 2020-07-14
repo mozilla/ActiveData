@@ -376,7 +376,7 @@ class Log(object):
         stack_depth
     ):
         """
-        :param itemt:  A LogItemTHE TYPE OF MESSAGE
+        :param item:  A LogItem THE TYPE OF MESSAGE
         :param stack_depth: FOR TRACKING WHAT LINE THIS CAME FROM
         :return:
         """

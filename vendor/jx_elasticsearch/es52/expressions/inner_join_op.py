@@ -10,11 +10,18 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import InnerJoinOp as InnerJoinOp_
+from mo_dots import Data
 from mo_future.exports import export
 
 
 class InnerJoinOp(InnerJoinOp_):
     def to_esfilter(self, schema):
+        selection = Data(
+            _source=self.get_source,
+            stored_fields=self.fields if not self.get_source else None,
+            script_fields=self.scripts if self.scripts else None,
+        )
+
         if self.frum.var == ".":
             return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}
         else:
@@ -27,6 +34,7 @@ class InnerJoinOp(InnerJoinOp_):
                     else None,
                 }
             }
+
 
 
 export("jx_elasticsearch.es52.expressions.and_op", InnerJoinOp)

@@ -99,36 +99,36 @@ def exists_variable(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def split_expression_by_path_for_setop(expr, schema, split_select):
-    split_select = to_data(split_select)
-
+def split_expression_by_path_for_setop(where, schema, split_select):
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
-    expr_vars = expr.vars()
+    expr_vars = where.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
 
+    # FROM DEEPEST TO SHALLOWEST
     all_paths = list(
         reversed(
             sorted(
                 set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
                 | {"."}
                 | set(schema.query_path)
-                | split_select.keys()
+                | set(split_select.keys())
             )
         )
     )
 
-    exprs = [expr]
+    wheres = [where]
 
+    # WE DO THIS EXPANSION TO CAPTURE A VARIABLE OVER DIFFERENT NESTED LEVELS
     # EXPAND VARS TO COLUMNS, MULTIPLY THE EXPRESSIONS
     for v, cols in var_to_columns.items():
         more_exprs = []
         if not cols:
-            for e in exprs:
+            for e in wheres:
                 more_exprs.append(e.map({v: NULL}))
         else:
             for c in cols:
                 path = c.nested_path[0]
-                for e in exprs:
+                for e in wheres:
                     if path == ".":
                         more_exprs.append(
                             e.map({v: Variable(c.es_column)})
@@ -137,22 +137,27 @@ def split_expression_by_path_for_setop(expr, schema, split_select):
                         more_exprs.append(
                             e.map({v: InnerJoinOp(frum=Variable(path), select=Variable(c.es_column))})
                         )
-        exprs = more_exprs
+        wheres = more_exprs
 
+    # SPLIT EXPRESSIONS BY DEPTH
     paths_to_cols = OrderedDict((n, []) for n in all_paths)
     for v, cs in var_to_columns.items():
         for c in cs:
             paths_to_cols[c.nested_path[0]].append(c)
 
     # JSON QUERY EXPRESSIONS ASSUME OUTER JOIN
+    # ES ONLY HAS INNER JOIN
     # ACCOUNT FOR WHEN NESTED RECORDS ARE MISSING
+    paths2query = OrderedDict((n, []) for n in all_paths)
+
     deeper_path = None
     deeper_cols = None
     for path, cols in paths_to_cols.items():
         more_exprs = []
-        for e in exprs:
+        for e in wheres:
             more_exprs.append(e)
             if deeper_path:
+                # assume the deeper is null
                 set_null = {
                     d.es_column: NULL
                     for d in deeper_cols
@@ -160,23 +165,19 @@ def split_expression_by_path_for_setop(expr, schema, split_select):
                 set_null[deeper_path] = NULL
                 deeper_is_missing = e.map(set_null)
                 more_exprs.append(deeper_is_missing)
-        exprs = more_exprs
+        paths2query[path].append(
+            InnerJoinOp(
+                frum=Variable(path),
+                select=split_select[path],
+                where=OrOp(more_exprs).partial_eval()
+            )
+        )
+
+        wheres = more_exprs
         deeper_path = path
         deeper_cols = cols
 
-    # SIMPLIFY
-    simpler = OrOp(exprs).partial_eval()
-
-    # NEST THE CLAUSES
-
-    # INSERT SELECTION INTO EACH OF THE NESTED
-
-
-    return simpler
-
-    es_query = es_query_proto(split_select, op, split_wheres, schema)
-
-
+    return paths2query
 
 
 def split_expression_by_path(expr, schema, lang=Language):

@@ -9,6 +9,7 @@ from jx_elasticsearch.es52.expressions.concat_op import ConcatOp
 from jx_elasticsearch.es52.expressions.div_op import DivOp
 from jx_elasticsearch.es52.expressions.eq_op import EqOp
 from jx_elasticsearch.es52.expressions.inner_join_op import InnerJoinOp
+from jx_elasticsearch.es52.expressions.es_select_op import ESSelectOp
 from jx_elasticsearch.es52.expressions.exists_op import ExistsOp
 from jx_elasticsearch.es52.expressions.find_op import FindOp
 from jx_elasticsearch.es52.expressions.gt_op import GtOp

@@ -13,18 +13,16 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import AndOp
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
+from jx_base.expressions.es_select_op import default_select
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import ZERO
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
-from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
 from mo_dots import Null, startswith_field, coalesce, listwrap
 from mo_json import BOOLEAN
-
-default_select = {"name":".", "value":IDENTITY},
 
 
 class InnerJoinOp(Expression):

@@ -23,6 +23,7 @@ from jx_base.expressions.date_op import DateOp
 from jx_base.expressions.div_op import DivOp
 from jx_base.expressions.eq_op import EqOp
 from jx_base.expressions.es_script import EsScript
+from jx_base.expressions.es_select_op import ESSelectOp
 from jx_base.expressions.exists_op import ExistsOp
 from jx_base.expressions.exp_op import ExpOp
 from jx_base.expressions.expression import Expression

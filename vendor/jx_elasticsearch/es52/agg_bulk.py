@@ -53,6 +53,7 @@ def is_bulk_agg(esq, query):
 
 
 def es_bulkaggsop(esq, frum, query):
+    # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
     query = query.copy()  # WE WILL MARK UP THIS QUERY
 
     chunk_size = min(coalesce(query.chunk_size, MAX_CHUNK_SIZE), MAX_CHUNK_SIZE)

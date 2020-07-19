@@ -10,16 +10,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.nested_op import NestedOp
-
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.basic_eq_op import BasicEqOp
-from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.exists_op import ExistsOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import is_literal
+from jx_base.expressions.nested_op import NestedOp
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.variable import Variable, IDENTITY

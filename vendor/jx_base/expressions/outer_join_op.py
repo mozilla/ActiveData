@@ -12,11 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
-from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
 from mo_json import BOOLEAN
-
-default_select = {"name":".", "value":IDENTITY},
 
 
 class OuterJoinOp(Expression):
@@ -26,7 +23,7 @@ class OuterJoinOp(Expression):
     __slots__ = ["frum", "nests"]
 
     def __init__(self, frum, nests):
-        Expression.__init__(self, [frum]+nests)
+        Expression.__init__(self, [frum] + nests)
         self.frum = frum
         self.nests = nests
 
@@ -34,7 +31,7 @@ class OuterJoinOp(Expression):
         return {
             "outerjoin": {
                 "from": self.frum.__data__(),
-                "nests": [n.__data__() for n in self.nests]
+                "nests": [n.__data__() for n in self.nests],
             }
         }
 
@@ -55,18 +52,16 @@ class OuterJoinOp(Expression):
         )
 
     def map(self, mapping):
-        return OuterJoinOp(
-            frum=self.frum.map(mapping),
-            nests=self.nests.map(mapping),
-        )
+        return OuterJoinOp(frum=self.frum.map(mapping), nests=self.nests.map(mapping),)
 
     def invert(self):
         return self.missing()
 
     def missing(self):
-        return OrOp([self.frum.missing()] + [n.missing() for n in self.nests]).partial_eval()
+        return OrOp(
+            [self.frum.missing()] + [n.missing() for n in self.nests]
+        ).partial_eval()
 
     @property
     def many(self):
         return True
-

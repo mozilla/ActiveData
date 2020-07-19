@@ -12,11 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
-from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions.outer_join_op import OuterJoinOp
 from mo_json import BOOLEAN
-
-default_select = {"name":".", "value":IDENTITY},
 
 
 class InnerJoinOp(Expression):
@@ -26,7 +24,7 @@ class InnerJoinOp(Expression):
     __slots__ = ["frum", "nests"]
 
     def __init__(self, frum, nests):
-        Expression.__init__(self, [frum]+nests)
+        Expression.__init__(self, [frum] + nests)
         self.frum = frum
         self.nests = nests
 
@@ -55,7 +53,7 @@ class InnerJoinOp(Expression):
         )
 
     def map(self, mapping):
-        return OuterJoinOp(
+        return InnerJoinOp(
             frum=self.frum.map(mapping),
             nests=self.nests.map(mapping),
         )
@@ -69,4 +67,3 @@ class InnerJoinOp(Expression):
     @property
     def many(self):
         return True
-

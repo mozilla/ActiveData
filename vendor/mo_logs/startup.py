@@ -15,9 +15,10 @@ import os
 import sys
 import tempfile
 
-from mo_dots import coalesce, listwrap, unwrap, to_data, Null
+from mo_dots import coalesce, listwrap, unwrap, to_data
+from mo_future.exports import expect
 
-Log = Null  # IMPORT
+Log, = expect("Log")
 
 # PARAMETERS MATCH argparse.ArgumentParser.add_argument()
 # https://docs.python.org/dev/library/argparse.html#the-add-argument-method

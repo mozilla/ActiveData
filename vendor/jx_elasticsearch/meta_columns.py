@@ -9,10 +9,11 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-import jx_base
-from jx_base import Column, Table
-from jx_base.meta_columns import META_COLUMNS_NAME, META_COLUMNS_TYPE_NAME, SIMPLE_METADATA_COLUMNS, META_COLUMNS_DESC
+from jx_base import Column
+from jx_base.table import Table
+from jx_base.container import Container
 from jx_base.schema import Schema
+from jx_base.meta_columns import META_COLUMNS_NAME, META_COLUMNS_TYPE_NAME, SIMPLE_METADATA_COLUMNS, META_COLUMNS_DESC
 from jx_python import jx
 from mo_dots import Data, Null, is_data, is_list, unwraplist, to_data, listwrap, split_field
 from mo_dots.lists import last
@@ -32,7 +33,7 @@ COLUMN_EXTRACT_PERIOD = 2 * 60
 ID = {"field": ["es_index", "es_column"], "version": "last_updated"}
 
 
-class ColumnList(Table, jx_base.Container):
+class ColumnList(Table, Container):
     """
     CENTRAL CONTAINER FOR ALL COLUMNS
     SYNCHRONIZED WITH ELASTICSEARCH

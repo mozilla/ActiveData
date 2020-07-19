@@ -12,23 +12,26 @@ from __future__ import absolute_import, division, unicode_literals
 import itertools
 from copy import copy
 
-import jx_base
-from jx_base import Container
+from jx_base.container import Container
 from jx_base.expressions import TRUE, Variable
 from jx_base.language import is_expression, is_op
 from jx_base.meta_columns import get_schema_from_list
+from jx_base.namespace import Namespace
 from jx_base.schema import Schema
+from jx_base.table import Table
+from jx_python import jx
 from jx_python.convert import list2cube, list2table
 from jx_python.expressions import jx_expression_to_function
 from jx_python.lists.aggs import is_aggs, list_aggs
 from mo_collections import UniqueIndex
 from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, to_data, coalesce, dict_to_data
 from mo_future import first, sort_using_key
+from mo_future.exports import export
 from mo_logs import Log
 from mo_threads import Lock
 
 
-class ListContainer(Container, jx_base.Namespace, jx_base.Table):
+class ListContainer(Container, Namespace, Table):
     """
     A CONTAINER WITH ONLY ONE TABLE
     """
@@ -293,10 +296,11 @@ def _exec(code):
         Log.error("Could not execute {{code|quote}}", code=code, cause=e)
 
 
-from jx_python import jx
-
 DUAL = ListContainer(
     name="dual",
     data=[{}],
     schema=Schema(table_name="dual", columns=UniqueIndex(keys=("name",)))
 )
+
+
+export("jx_base.container", ListContainer)

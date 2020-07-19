@@ -12,47 +12,37 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy
 from importlib import import_module
 
-import jx_base
 import mo_math
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, Domain, SetDomain
 from jx_base.expressions import Expression, FALSE, LeavesOp, QueryOp as QueryOp_, ScriptOp, Variable, jx_expression
 from jx_base.language import is_expression, is_op
+from jx_base.table import Table
 from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
     literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data, list_to_data
 from mo_dots.lists import EMPTY
 from mo_future import is_text, text
+from mo_future.exports import expect, export
 from mo_json import INTERNAL
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND, UNION, is_number
+
+Column, = expect("Column")
+
 
 BAD_SELECT = "Expecting `value` or `aggregate` in select clause not {{select}}"
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 10000
 DEFAULT_SELECT = Data(name="count", value=jx_expression("."), aggregate="count", default=0)
 
-_jx = None
-_Column = None
-
-
-def _late_import():
-    global _jx
-    global _Column
-
-    from jx_base import Column as _Column
-    from jx_python import jx as _jx
-
-    _ = _jx
-    _ = _Column
-
 
 class QueryOp(QueryOp_):
     __slots__ = ["frum", "select", "edges", "groupby", "where", "window", "sort", "limit", "format", "chunk_size", "destination"]
 
     def __init__(self,frum, select=None, edges=None, groupby=None, window=None, where=None, sort=None, limit=None, format=None, chunk_size=None, destination=None):
-        if isinstance(frum, jx_base.Table):
+        if isinstance(frum, Table):
             pass
         else:
             Expression.__init__(self,frum)
@@ -325,9 +315,6 @@ def _normalize_select(select, frum, schema=None):
     :param schema: SCHEMA TO LOOKUP NAMES FOR DEFINITIONS
     :return: AN ARRAY OF SELECT COLUMNS
     """
-    if not _Column:
-        _late_import()
-
     if is_text(select):
         canonical = select = Data(value=select)
     else:
@@ -391,9 +378,6 @@ def _normalize_select_no_context(select, schema=None):
     """
     SAME NORMALIZE, BUT NO SOURCE OF COLUMNS
     """
-    if not _Column:
-        _late_import()
-
     if is_text(select):
         select = Data(value=select)
     else:
@@ -451,9 +435,6 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
     :param schema: for context
     :return: a normalized edge
     """
-    if not _Column:
-        _late_import()
-
     if not edge:
         Log.error("Edge has no value, or expression is empty")
     elif is_text(edge):
@@ -469,7 +450,7 @@ def _normalize_edge(edge, dim_index, limit, schema=None):
                         domain=_normalize_domain(None, limit)
                     )
                 ]
-            elif isinstance(leaves, _Column):
+            elif isinstance(leaves, Column):
                 return [Data(
                     name=edge,
                     value=jx_expression(edge, schema=schema),
@@ -602,7 +583,7 @@ def _normalize_group(edge, dim_index, limit, schema=None):
 def _normalize_domain(domain=None, limit=None, schema=None):
     if not domain:
         return Domain(type="default", limit=limit)
-    elif isinstance(domain, _Column):
+    elif isinstance(domain, Column):
         if domain.partitions and domain.multi <= 1:  # MULTI FIELDS ARE TUPLES, AND THERE ARE TOO MANY POSSIBLE COMBOS AT THIS TIME
             return SetDomain(partitions=domain.partitions.limit(limit))
         else:
@@ -813,3 +794,4 @@ sort_direction = {
 }
 
 
+export("jx_base.container", QueryOp)

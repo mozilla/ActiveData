@@ -8,7 +8,7 @@ from jx_elasticsearch.es52.expressions.coalesce_op import CoalesceOp
 from jx_elasticsearch.es52.expressions.concat_op import ConcatOp
 from jx_elasticsearch.es52.expressions.div_op import DivOp
 from jx_elasticsearch.es52.expressions.eq_op import EqOp
-from jx_elasticsearch.es52.expressions.inner_join_op import InnerJoinOp
+from jx_elasticsearch.es52.expressions.nested_op import NestedOp
 from jx_elasticsearch.es52.expressions.es_select_op import ESSelectOp
 from jx_elasticsearch.es52.expressions.exists_op import ExistsOp
 from jx_elasticsearch.es52.expressions.find_op import FindOp
@@ -28,6 +28,8 @@ from jx_elasticsearch.es52.expressions.prefix_op import PrefixOp
 from jx_elasticsearch.es52.expressions.reg_exp_op import RegExpOp
 from jx_elasticsearch.es52.expressions.script_op import ScriptOp
 from jx_elasticsearch.es52.expressions.suffix_op import SuffixOp
+from jx_elasticsearch.es52.expressions.true_op import TrueOp, MATCH_ALL
+from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE, FalseOp
 from jx_elasticsearch.es52.expressions.variable import Variable
 from jx_elasticsearch.es52.expressions.when_op import WhenOp
 

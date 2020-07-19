@@ -17,6 +17,7 @@ from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.literal import is_literal
 from mo_dots import is_many
+from mo_future.exports import export
 from mo_json import OBJECT
 
 
@@ -61,4 +62,4 @@ class TupleOp(Expression):
         return self
 
 
-_utils.TupleOp=TupleOp
+export("jx_base.expressions._utils", TupleOp)

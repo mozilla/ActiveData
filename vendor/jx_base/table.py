@@ -20,3 +20,5 @@ class Table(object):
 
     def __data__(self):
         return self.name
+
+

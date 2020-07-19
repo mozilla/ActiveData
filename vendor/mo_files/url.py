@@ -7,7 +7,7 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-from mo_dots import Data, Null, coalesce, is_data, is_list, to_data, is_many, unwraplist
+from mo_dots import Data, Null, coalesce, is_data, is_list, to_data
 from mo_future import PY2, is_text, text, unichr, urlparse, is_binary
 from mo_logs import Log
 
@@ -57,26 +57,12 @@ class URL(object):
             Log.error(u"problem parsing {{value}} to URL", value=value, cause=e)
 
     def __nonzero__(self):
-        if (
-            self.scheme
-            or self.host
-            or self.port
-            or self.path
-            or self.query
-            or self.fragment
-        ):
+        if self.scheme or self.host or self.port or self.path or self.query or self.fragment:
             return True
         return False
 
     def __bool__(self):
-        if (
-            self.scheme
-            or self.host
-            or self.port
-            or self.path
-            or self.query
-            or self.fragment
-        ):
+        if self.scheme or self.host or self.port or self.path or self.query or self.fragment:
             return True
         return False
 
@@ -84,7 +70,7 @@ class URL(object):
         if not is_text(other):
             Log.error(u"Expecting text path")
         output = self.__copy__()
-        output.path = output.path.rstrip("/") + "/" + other.lstrip("/")
+        output.path = output.path.rstrip('/') + "/" + other.lstrip('/')
         return output
 
     def __add__(self, other):
@@ -95,7 +81,7 @@ class URL(object):
         return output
 
     def __unicode__(self):
-        return self.__str__().decode("utf8")  # ASSUME chr<128 ARE VALID UNICODE
+        return self.__str__().decode('utf8')  # ASSUME chr<128 ARE VALID UNICODE
 
     def __copy__(self):
         output = URL(None)
@@ -107,7 +93,7 @@ class URL(object):
         output.fragment = self.fragment
         return output
 
-    def decode(self, encoding=""):
+    def decode(self, encoding=''):
         return text(self).decode(encoding)
 
     def __data__(self):
@@ -124,7 +110,7 @@ class URL(object):
         if self.host:
             url = self.host
         if self.scheme:
-            url = self.scheme + "://" + url
+            url = self.scheme + "://"+url
         if self.port:
             url = url + ":" + str(self.port)
         if self.path:
@@ -149,21 +135,18 @@ def hex2chr(hex):
     except Exception as e:
         raise e
 
-
 if PY2:
     _map2url = {chr(i): chr(i) for i in range(32, 128)}
-    for c in "{}<>;/?:@&=+$%,+":
+    for c in " {}<>;/?:@&=+$,":
         _map2url[c] = "%" + str(int2hex(ord(c), 2))
     for i in range(128, 256):
         _map2url[chr(i)] = "%" + str(int2hex(i, 2))
-    _map2url[chr(32)] = "+"
 else:
     _map2url = {i: unichr(i) for i in range(32, 128)}
-    for c in b"{}<>;/?:@&=+$%,+":
+    for c in b" {}<>;/?:@&=+$,":
         _map2url[c] = "%" + int2hex(c, 2)
     for i in range(128, 256):
         _map2url[i] = "%" + str(int2hex(i, 2))
-    _map2url[32] = "+"
 
 
 names = ["path", "query", "fragment"]
@@ -180,11 +163,7 @@ def parse(output, suffix, curr, next):
         parse(output, suffix, curr, next + 1)
     else:
         output.__setattr__(names[curr], suffix[:e:])
-        parse(output, suffix[e + 1 : :], next, next + 1)
-
-
-def hex2byte(v):
-    return bytes([int(v, 16)])
+        parse(output, suffix[e + 1::], next, next + 1)
 
 
 def url_param2value(param):
@@ -196,99 +175,30 @@ def url_param2value(param):
     if param == None:
         return Null
 
-    def _decode(vs):
-        from mo_json import json2value
+    def _decode(v):
+        output = []
+        i = 0
+        while i < len(v):
+            c = v[i]
+            if c == "%":
+                d = hex2chr(v[i + 1:i + 3])
+                output.append(d)
+                i += 3
+            else:
+                output.append(c)
+                i += 1
 
-        results = []
-        for v in vs.split(","):
-            output = []
-            i = 0
-            utf_remaining = 0
-            start = 0
-            while i < len(v):
-                c = v[i]
-                if utf_remaining:
-                    if c == "%":
-                        try:
-                            hex = v[i + 1 : i + 3]
-                            if hex.strip() == hex:
-                                d = int(v[i + 1: i + 3], 16)
-                                if d & 0xC0 == 0x80:  # 10XX xxxx
-                                    utf_remaining -= 1
-                                    b = bytes([d])
-                                    output.append(b)
-                                    i += 3
-                                    continue
-                        except Exception:
-                            pass
-                    # missing continuation byte, try again
-                    output = output[:-utf_remaining]
-                    utf_remaining = 0
-                    i = start
-                    output.append(b"%")
-                    i += 1
-                else:
-                    if c == "+":
-                        output.append(b" ")
-                        i += 1
-                    elif c == "%":
-                        try:
-                            hex = v[i + 1 : i + 3]
-                            if hex.strip() != hex:
-                                output.append(b"%")
-                                i += 1
-                                continue
+        output = text("".join(output))
+        try:
+            from mo_json import json2value
 
-                            d = int(v[i + 1: i + 3], 16)
-                            if d & 0xE0 == 0xC0:  # 110X xxxx
-                                utf_remaining = 1
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0xF0 == 0xE0:  # 1110 xxxx
-                                utf_remaining = 2
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0xF8 == 0xF0:  # 1111 0xxx
-                                utf_remaining = 3
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0x80 == 0x80:
-                                output.append(b"%")
-                                i += 1
-                            else:
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                        except Exception:
-                            output.append(b"%")
-                            i += 1
-                    else:
-                        try:
-                            output.append(c.encode("latin1"))
-                        except Exception:
-                            output.append(c.encode('utf8'))
-                        i += 1
-
-            if utf_remaining:
-                # missing continuation byte, try again
-                output = output[:-utf_remaining] + [v[start:].encode("latin1")]
-
-            output = b"".join(output).decode("utf8")
-            try:
-                output = json2value(output)
-            except Exception:
-                pass
-            results.append(output)
-        return unwraplist(results)
+            return json2value(output)
+        except Exception:
+            pass
+        return output
 
     query = Data()
-    for p in param.split("&"):
+    for p in param.split('&'):
         if not p:
             continue
         if p.find("=") == -1:
@@ -296,7 +206,6 @@ def url_param2value(param):
             v = True
         else:
             k, v = p.split("=")
-            k = _decode(k)
             v = _decode(v)
 
         u = query.get(k)
@@ -315,34 +224,26 @@ def value2url_param(value):
     :param value:
     :return: ascii URL
     """
-    from mo_json import value2json, json2value
-
-    def _encode(value):
-        return "".join(_map2url[c] for c in value.encode("utf8"))
-
     if value == None:
-        return None
+        Log.error("Can not encode None into a URL")
 
     if is_data(value):
+        from mo_json import value2json
+
         value_ = to_data(value)
         output = "&".join(
-            kk + "=" + vv
+            value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
             for k, v in sorted(value_.leaves(), key=lambda p: p[0])
-            for kk, vv in [(value2url_param(k), value2url_param(v))]
-            if vv or vv == 0
         )
     elif is_text(value):
-        try:
-            json2value(value)
-            output = _encode(value2json(value))
-        except Exception:
-            output = _encode(value)
+        output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif is_binary(value):
         output = "".join(_map2url[c] for c in value)
-    elif is_many(value):
-        output = ",".join(
-            vv for v in value for vv in [value2url_param(v)] if vv or vv == 0
-        )
+    elif hasattr(value, "__iter__"):
+        output = ",".join(value2url_param(v) for v in value)
     else:
-        output = _encode(value2json(value))
+        output = str(value)
     return output
+
+
+

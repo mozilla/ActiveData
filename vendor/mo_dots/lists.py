@@ -12,10 +12,14 @@ from __future__ import absolute_import, division, unicode_literals
 import types
 from copy import deepcopy
 
-from mo_future import generator_types, first
-
 from mo_dots import CLASS, coalesce, to_data, from_data
 from mo_dots.nones import Null
+from mo_future import generator_types, first
+from mo_future.exports import export, expect
+
+Log = Null
+datawrap, = expect("datawrap")
+
 
 _list = str("list")
 _get = object.__getattribute__
@@ -23,25 +27,17 @@ _set = object.__setattr__
 _emit_slice_warning = True
 
 
-Log, _datawrap = [None]*2
-
-
 def _get_list(self):
     return _get(self, _list)
 
 
 def _late_import():
-    global _datawrap
     global Log
-
-    from mo_dots.objects import datawrap as _datawrap
 
     try:
         from mo_logs import Log
     except Exception:
         from mo_dots.utils import PoorLogger as Log
-
-    _ = _datawrap
 
 
 class FlatList(object):
@@ -116,7 +112,7 @@ class FlatList(object):
 
         return FlatList(
             vals=[
-                from_data(coalesce(_datawrap(v), Null)[key])
+                from_data(coalesce(datawrap(v), Null)[key])
                 for v in _get_list(self)
             ]
         )
@@ -364,3 +360,6 @@ def is_many(value):
         Log.warning("is_many() can not detect generator {{type}}", type=type_.__name__)
         return True
     return False
+
+
+export("mo_dots.nones", is_sequence)

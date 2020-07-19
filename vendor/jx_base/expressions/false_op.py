@@ -10,11 +10,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import literal, expression
 from jx_base.expressions.literal import Literal
+from mo_future.exports import export, expect
 from mo_json import BOOLEAN
 
-TRUE = None
+TRUE, = expect("TRUE")
 
 
 class FalseOp(Literal):
@@ -66,5 +66,5 @@ class FalseOp(Literal):
 
 FALSE = FalseOp()
 
-expression.FALSE = FALSE
-literal.FALSE = FALSE
+export("jx_base.expressions.expression", FALSE)
+export("jx_base.expressions.literal", FALSE)

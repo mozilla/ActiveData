@@ -12,7 +12,7 @@ import sys
 
 from mo_dots import _set_attr as mo_dots_set_attr, split_field, to_data
 
-DEBUG = True
+DEBUG = False
 
 
 def set(constants):

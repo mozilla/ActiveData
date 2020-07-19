@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import _utils, expression
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.missing_op import MissingOp
@@ -19,6 +18,7 @@ from jx_base.utils import get_property_name
 from mo_dots import is_sequence, split_field
 from mo_dots.lists import last
 from mo_future import is_text
+from mo_future.exports import export
 from mo_json.typed_encoder import inserter_type_to_json_type
 
 
@@ -92,5 +92,5 @@ class Variable(Expression):
 
 IDENTITY = Variable(".")
 
-_utils.Variable = Variable
-expression.Variable = Variable
+export("jx_base.expressions._utils", Variable)
+export("jx_base.expressions.expression", Variable)

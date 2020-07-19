@@ -14,6 +14,7 @@ import sys
 from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict, none_type
 
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
+from mo_future.exports import export
 
 _module_type = type(sys.modules[__name__])
 _builtin_zip = zip
@@ -660,13 +661,12 @@ def tuplewrap(value):
     return from_data(value),
 
 
+# EXPORT
+export("mo_dots.nones", to_data)
+
+
 from mo_dots.datas import Data, SLOT, data_types, is_data
 from mo_dots.nones import Null, NullType
 from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
 from mo_dots.objects import DataObject
 
-# EXPORT
-import mo_dots.nones as temp
-temp.to_data = to_data
-temp.is_sequence = is_sequence
-del temp

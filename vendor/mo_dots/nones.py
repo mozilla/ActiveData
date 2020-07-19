@@ -9,12 +9,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_binary, text, none_type
-
-from mo_dots import to_data
 from mo_dots.utils import CLASS, OBJ
+from mo_future import is_binary, text, none_type
+from mo_future.exports import expect
 
-is_sequence = None
+to_data, is_sequence = expect("to_data", "is_sequence")
+
 _get = object.__getattribute__
 _set = object.__setattr__
 _zero_list = []

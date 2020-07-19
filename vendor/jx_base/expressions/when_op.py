@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import first_op, eq_op, not_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.boolean_op import BooleanOp
@@ -23,7 +22,8 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES, same_json_type, merge_json_type
+from mo_future.exports import export
+from mo_json import OBJECT, same_json_type, merge_json_type
 from mo_logs import Log
 
 
@@ -111,6 +111,5 @@ class WhenOp(Expression):
         return self.lang[WhenOp(when, **{"then": then, "else": els_})]
 
 
-first_op.WhenOp = WhenOp
-eq_op.WhenOp = WhenOp
-not_op.WhenOp = WhenOp
+export("jx_base.expressions.first_op", WhenOp)
+export("jx_base.expressions.eq_op", WhenOp)

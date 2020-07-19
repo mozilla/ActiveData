@@ -14,6 +14,7 @@ from jx_base.expressions import literal
 from jx_base.expressions.literal import Literal
 from mo_dots import coalesce
 from mo_future import is_text
+from mo_future.exports import export
 from mo_json import NUMBER
 from mo_times.dates import unicode2Date, Date
 
@@ -45,4 +46,4 @@ class DateOp(Literal):
         return Date(self.date)
 
 
-literal.DateOp=DateOp
+export("jx_base.expressions.literal", DateOp)

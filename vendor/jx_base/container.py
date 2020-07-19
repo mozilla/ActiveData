@@ -13,31 +13,13 @@ from copy import copy
 
 from mo_dots import Data, is_data, is_many, join_field, set_default, split_field, to_data
 from mo_future import is_text
+from mo_future.exports import expect
 from mo_logs import Log
+
+ListContainer, Cube, run, QueryOp = expect("ListContainer", "Cube", "run", "QueryOp")
 
 type2container = Data()
 config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE
-_ListContainer = None
-_Cube = None
-_run = None
-_Query = None
-
-
-def _delayed_imports():
-    global _ListContainer
-    global _Cube
-    global _run
-    global _Query
-
-    from jx_python.containers.list_usingPythonList import ListContainer as _ListContainer
-    from jx_python.containers.cube import Cube as _Cube
-    from jx_python.jx import run as _run
-    from jx_base.query import QueryOp as _Query
-
-    _ = _ListContainer
-    _ = _Cube
-    _ = _run
-    _ = _Query
 
 
 class Container(object):
@@ -46,24 +28,19 @@ class Container(object):
     GENERAL JSON QUERY EXPRESSIONS ON ITS CONTENTS
     METADATA FOR A Container IS CALLED A Namespace
     """
-
-
     @classmethod
     def new_instance(type, frum, schema=None):
         """
         Factory!
         """
-        if not type2container:
-            _delayed_imports()
-
         if isinstance(frum, Container):
             return frum
-        elif isinstance(frum, _Cube):
+        elif isinstance(frum, Cube):
             return frum
-        elif isinstance(frum, _Query):
-            return _run(frum)
+        elif isinstance(frum, QueryOp):
+            return run(frum)
         elif is_many(frum):
-            return _ListContainer(frum)
+            return ListContainer(frum)
         elif is_text(frum):
             # USE DEFAULT STORAGE TO FIND Container
             if not config.default.settings:
@@ -85,7 +62,7 @@ class Container(object):
             elif frum["from"]:
                 frum = copy(frum)
                 frum["from"] = Container(frum["from"])
-                return _Query.wrap(frum)
+                return QueryOp.wrap(frum)
             else:
                 Log.error("Do not know how to handle {{frum|json}}", frum=frum)
         else:

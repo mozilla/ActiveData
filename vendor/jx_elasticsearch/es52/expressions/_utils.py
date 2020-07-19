@@ -11,8 +11,13 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import OrderedDict
 
-from jx_base.expressions import FALSE, Variable as Variable_, MissingOp, Variable, BasicEqOp
-from jx_base.expressions.literal import is_literal, TRUE, NULL, ONE, Literal
+from jx_base.expressions import (
+    FALSE,
+    Variable as Variable_,
+    MissingOp,
+    Variable,
+)
+from jx_base.expressions.literal import is_literal, TRUE, NULL
 from jx_base.language import Language, is_op
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
@@ -24,8 +29,9 @@ from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-InnerJoinOp, = expect("InnerJoinOp")
-MATCH_NONE, MATCH_ALL, Painlesss, AndOp, OrOp = [Null] * 5  # IMPORTS
+MATCH_NONE, MATCH_ALL, AndOp, OrOp, NestedOp, = expect(
+    "MATCH_NONE", "MATCH_ALL", "AndOp", "OrOp", "NestedOp",
+)
 
 
 def _inequality_to_esfilter(self, schema):
@@ -130,12 +136,17 @@ def split_expression_by_path_for_setop(where, schema, split_select):
                 path = c.nested_path[0]
                 for e in wheres:
                     if path == ".":
-                        more_exprs.append(
-                            e.map({v: Variable(c.es_column)})
-                        )
+                        more_exprs.append(e.map({v: Variable(c.es_column)}))
                     else:
                         more_exprs.append(
-                            e.map({v: InnerJoinOp(frum=Variable(path), select=Variable(c.es_column))})
+                            e.map(
+                                {
+                                    v: NestedOp(
+                                        frum=Variable(path),
+                                        select=Variable(c.es_column),
+                                    )
+                                }
+                            )
                         )
         wheres = more_exprs
 
@@ -158,18 +169,15 @@ def split_expression_by_path_for_setop(where, schema, split_select):
             more_exprs.append(e)
             if deeper_path:
                 # assume the deeper is null
-                set_null = {
-                    d.es_column: NULL
-                    for d in deeper_cols
-                }
+                set_null = {d.es_column: NULL for d in deeper_cols}
                 set_null[deeper_path] = NULL
                 deeper_is_missing = e.map(set_null)
                 more_exprs.append(deeper_is_missing)
         paths2query[path].append(
-            InnerJoinOp(
+            NestedOp(
                 frum=Variable(path),
                 select=split_select[path],
-                where=OrOp(more_exprs).partial_eval()
+                where=OrOp(more_exprs).partial_eval(),
             )
         )
 

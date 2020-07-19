@@ -19,6 +19,7 @@ from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, leaves_to_
     dict_to_data
 from mo_dots.lists import EMPTY
 from mo_future import is_text, transpose
+from mo_future.exports import export
 from mo_logs import Log
 from mo_math import MAX, OR
 
@@ -472,3 +473,6 @@ class Cube(Container):
             data={k: v.cube for k, v in self.data.items()},
             meta=self.meta
         )
+
+
+export("jx_base.container", Cube)

@@ -10,10 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import and_op, exists_op, expression
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.language import is_op
+from mo_future.exports import export
 from mo_json import BOOLEAN
 
 
@@ -49,6 +49,6 @@ class NotOp(Expression):
         return self.term.invert()
 
 
-and_op.NotOp = NotOp
-exists_op.NotOp = NotOp
-expression.NotOp = NotOp
+export("jx_base.expressions.and_op", NotOp)
+export("jx_base.expressions.exists_op", NotOp)
+export("jx_base.expressions.expression", NotOp)

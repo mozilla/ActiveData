@@ -10,14 +10,22 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import operators, jx_expression, _jx_expression, simplified
+from jx_base.expressions._utils import (
+    operators,
+    jx_expression,
+    _jx_expression,
+    simplified,
+)
 from jx_base.language import BaseExpression, ID, is_expression, is_op
 from mo_dots import is_data, is_sequence, is_container
 from mo_future import items as items_, text
+from mo_future.exports import expect
 from mo_json import BOOLEAN, OBJECT, value2json
 from mo_logs import Log
 
-FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = [None]*7
+FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = expect(
+    "FALSE", "Literal", "is_literal", "MissingOp", "NotOp", "NULL", "Variable"
+)
 
 
 class Expression(BaseExpression):
@@ -165,6 +173,5 @@ class Expression(BaseExpression):
         Log.error(
             "{{type}} object has no attribute {{item}}, did you .register_ops() for {{type}}?",
             type=self.__class__.__name__,
-            item=item
+            item=item,
         )
-

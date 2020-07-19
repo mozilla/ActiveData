@@ -55,6 +55,7 @@ from jx_base.expressions.missing_op import MissingOp
 from jx_base.expressions.mod_op import ModOp
 from jx_base.expressions.mul_op import MulOp
 from jx_base.expressions.ne_op import NeOp
+from jx_base.expressions.nested_op import NestedOp
 from jx_base.expressions.not_left_op import NotLeftOp
 from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.not_right_op import NotRightOp

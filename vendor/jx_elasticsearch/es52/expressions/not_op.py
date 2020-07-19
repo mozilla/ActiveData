@@ -20,6 +20,7 @@ from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.or_op import es_or
 from mo_dots import dict_to_data
 from mo_future import first
+from mo_future.exports import export
 from mo_json import STRUCT
 
 
@@ -44,9 +45,5 @@ def es_not(term):
     return dict_to_data({"bool": {"must_not": term}})
 
 
-# EXPORT
-from jx_elasticsearch.es52.expressions import literal, or_op
-
-literal.es_not = es_not
-or_op.es_not = es_not
-or_op.NotOp = NotOp
+export("jx_elasticsearch.es52.expressions.or_op", es_not)
+export("jx_elasticsearch.es52.expressions.or_op", NotOp)

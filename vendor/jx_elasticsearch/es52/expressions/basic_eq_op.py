@@ -13,7 +13,7 @@ from jx_base.expressions import (
     BasicEqOp as BasicEqOp_,
     Variable as Variable_,
     is_literal,
-    InnerJoinOp,
+    NestedOp,
     IDENTITY, AndOp)
 from jx_base.language import is_op
 from jx_elasticsearch.es52.painless import Painless
@@ -23,9 +23,9 @@ from mo_future import first
 
 class BasicEqOp(BasicEqOp_):
     def partial_eval(self):
-        if is_op(self.lhs, InnerJoinOp):
-            return self.lang[InnerJoinOp(
-                frum=self.lhs.frum.partial_eval(),
+        if is_op(self.lhs, NestedOp):
+            return self.lang[NestedOp(
+                path=self.lhs.frum.partial_eval(),
                 select=IDENTITY,
                 where=AndOp([self.lhs.where, BasicEqOp(self.lhs.select, self.rhs)]).partial_eval(),
                 sort=self.lhs.sort.partial_eval(),

@@ -11,9 +11,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_logs import Log
+from mo_future.exports import expect
 from mo_logs.exceptions import suppress_exception, Except
 from mo_logs.log_usingNothing import StructuredLogger
+
+Log, = expect("Log")
 
 
 class StructuredLogger_usingMulti(StructuredLogger):

@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import first_op, eq_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.expression import Expression
@@ -23,6 +22,7 @@ from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
 from mo_dots import is_sequence
 from mo_future import first
+from mo_future.exports import export
 from mo_json import OBJECT, BOOLEAN
 from mo_logs import Log
 
@@ -113,5 +113,6 @@ class CaseOp(Expression):
             return first(types)
 
 
-first_op.CaseOp = CaseOp
-eq_op.CaseOp = CaseOp
+export("jx_base.expressions.eq_op", CaseOp)
+export("jx_base.expressions.first_op", CaseOp)
+

@@ -21,6 +21,7 @@ from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op
 from mo_dots import is_many
+from mo_future.exports import export
 from mo_json import BOOLEAN
 
 
@@ -73,4 +74,4 @@ class InOp(Expression):
     def missing(self):
         return FALSE
 
-eq_op.InOp = InOp
+export("jx_base.expressions.eq_op", InOp)

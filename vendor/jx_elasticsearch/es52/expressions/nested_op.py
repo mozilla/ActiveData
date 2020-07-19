@@ -9,12 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import InnerJoinOp as InnerJoinOp_
+from jx_base.expressions import NestedOp as _NestedOp
 from mo_dots import Data
 from mo_future.exports import export
 
 
-class InnerJoinOp(InnerJoinOp_):
+class NestedOp(_NestedOp):
     def to_esfilter(self, schema):
         selection = Data(
             _source=self.get_source,
@@ -22,12 +22,12 @@ class InnerJoinOp(InnerJoinOp_):
             script_fields=self.scripts if self.scripts else None,
         )
 
-        if self.frum.var == ".":
+        if self.path.var == ".":
             return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}
         else:
             return {
                 "nested": {
-                    "path": self.frum.var,
+                    "path": self.path.var,
                     "query": self.where.to_esfilter(schema),
                     "inner_hits": (self.select.to_es() | {"size": 100000})
                     if self.select
@@ -36,8 +36,7 @@ class InnerJoinOp(InnerJoinOp_):
             }
 
 
-
-export("jx_elasticsearch.es52.expressions.and_op", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions.or_op", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions._utils", InnerJoinOp)
-export("jx_elasticsearch.es52.expressions.eq_op", InnerJoinOp)
+export("jx_elasticsearch.es52.expressions._utils", NestedOp)
+export("jx_elasticsearch.es52.expressions.and_op", NestedOp)
+export("jx_elasticsearch.es52.expressions.or_op", NestedOp)
+export("jx_elasticsearch.es52.expressions.eq_op", NestedOp)

@@ -10,12 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import literal, _utils, expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import TYPE_ORDER
 from mo_dots import Null
+from mo_future.exports import export
 from mo_json import IS_NULL, OBJECT
 from mo_logs import Log
 
@@ -102,6 +102,6 @@ NULL = NullOp()
 TYPE_ORDER[NullOp] = 9
 TYPE_ORDER[NULL] = 9
 
-literal.NULL = NULL
-_utils.NULL = NULL
-expression.NULL=NULL
+export("jx_base.expressions._utils", NULL)
+export("jx_base.expressions.literal", NULL)
+export("jx_base.expressions.expression", NULL)

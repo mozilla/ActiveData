@@ -15,22 +15,21 @@ from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, Variable as Variable_
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es52 import agg_format
 from jx_elasticsearch.es52.agg_format import agg_formatters
 from jx_elasticsearch.es52.agg_op_field import agg_field
 from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
-from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
+from jx_elasticsearch.es52.expressions import ES52, split_expression_by_path
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
 from mo_future import first, next
+from mo_future.exports import export
 from mo_logs import Log
 from mo_times.timer import Timer
 
 DEBUG = False
-
 
 
 def is_aggsop(es, query):
@@ -338,6 +337,5 @@ def count_dim(aggs, es_query, decoders):
     return [d.edge for d in decoders]
 
 
-# EXPORT
-agg_format.aggs_iterator = aggs_iterator
-agg_format.count_dim = count_dim
+export("jx_elasticsearch.es52.agg_format", aggs_iterator)
+export("jx_elasticsearch.es52.agg_format", count_dim)

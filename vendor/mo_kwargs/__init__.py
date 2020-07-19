@@ -9,16 +9,16 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import sys
 from functools import update_wrapper
 
-from mo_dots import get_logger, is_data, to_data, zip as dict_zip, set_default
+from mo_dots import get_logger, is_data, to_data
 from mo_future import (
     get_function_arguments,
     get_function_defaults,
     get_function_name,
     text,
     is_text)
-from mo_logs import Except
 
 KWARGS = str("kwargs")
 
@@ -50,9 +50,9 @@ def override(kwargs=None):
             }
 
         def raise_error(e, a, k):
-            packed = set_default(dict(zip(params, a)), k)
+            packed = k.copy()
+            packed.update(dict(zip(params, a)))
             err = text(e)
-            e = Except.wrap(e)
             if err.startswith(func_name) and (
                     "takes at least" in err
                     or "takes exactly " in err
@@ -97,13 +97,18 @@ def override(kwargs=None):
                 elif kwargs in given_kwargs and is_data(given_kwargs[kwargs]):
                     # PUT args INTO given_kwargs
                     a, k = params_pack(
-                        params, defaults, given_kwargs[kwargs], dict_zip(params, given_args), given_kwargs
+                        params, defaults, given_kwargs[kwargs], dict(zip(params, given_args)), given_kwargs
                     )
                 else:
-                    a, k = params_pack(params, defaults, dict_zip(params, given_args), given_kwargs)
+                    a, k = params_pack(params, defaults, dict(zip(params, given_args)), given_kwargs)
                 try:
                     return func(*a, **k)
                 except TypeError as e:
+                    tb = getattr(e, '__traceback__', None)
+                    if tb is not None:
+                        trace = _parse_traceback(tb)
+                    else:
+                        trace = get_traceback(0)
                     raise_error(e, a, k)
 
             return update_wrapper(w_bound_method, func)
@@ -117,11 +122,11 @@ def override(kwargs=None):
                 elif kwargs in given_kwargs and is_data(given_kwargs[kwargs]):
                     # PUT given_args INTO given_kwargs
                     a, k = params_pack(
-                        params, defaults, given_kwargs[kwargs], dict_zip(params, given_args), given_kwargs
+                        params, defaults, given_kwargs[kwargs], dict(zip(params, given_args)), given_kwargs
                     )
                 else:
                     # PULL kwargs OUT INTO PARAMS
-                    a, k = params_pack(params, defaults, dict_zip(params, given_args), given_kwargs)
+                    a, k = params_pack(params, defaults, dict(zip(params, given_args)), given_kwargs)
                 try:
                     return func(*a, **k)
                 except TypeError as e:
@@ -168,3 +173,30 @@ def override(kwargs=None):
         # SIMPLE VERSION @override
         func, kwargs = kwargs, KWARGS
         return output(func)
+
+
+def get_traceback(start):
+    """
+    SNAGGED FROM traceback.py
+
+    RETURN list OF dicts DESCRIBING THE STACK TRACE
+    """
+    tb = sys.exc_info()[2]
+    for i in range(start):
+        tb = tb.tb_next
+    return _parse_traceback(tb)
+
+
+def _parse_traceback(tb):
+    trace = []
+    while tb is not None:
+        f = tb.tb_frame
+        trace.append({
+            "file": f.f_code.co_filename,
+            "line": tb.tb_lineno,
+            "method": f.f_code.co_name
+        })
+        tb = tb.tb_next
+    trace.reverse()
+    return trace
+

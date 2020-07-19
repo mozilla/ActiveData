@@ -10,18 +10,10 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AndOp
-from jx_base.expressions._utils import simplified
-from jx_base.expressions.eq_op import EqOp
 from jx_base.expressions.expression import Expression
-from jx_base.expressions.literal import ZERO
-from jx_base.expressions.not_op import NotOp
-from jx_base.expressions.null_op import NULL
 from jx_base.expressions.or_op import OrOp
-from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import IDENTITY
 from jx_base.language import is_op
-from mo_dots import Null, startswith_field, coalesce, listwrap
 from mo_json import BOOLEAN
 
 default_select = {"name":".", "value":IDENTITY},
@@ -31,79 +23,18 @@ class OuterJoinOp(Expression):
     data_type = BOOLEAN
     has_simple_form = False
 
-    __slots__ = ["frum", "select", "where", "sort", "limit"]
+    __slots__ = ["frum", "nests"]
 
-    def __init__(self, frum, select=default_select, where=TRUE, sort=Null, limit=NULL):
-        Expression.__init__(self, [frum, select, where, sort, limit])
+    def __init__(self, frum, nests):
+        Expression.__init__(self, [frum]+nests)
         self.frum = frum
-        self.select = select
-        self.where = where
-        self.sort = sort
-        self.limit = limit
-
-    @simplified
-    def partial_eval(self):
-        if self.missing() is TRUE:
-            return NULL
-
-        return self.lang[
-            OuterJoinOp(
-                self.frum.partial_eval(),
-                self.select.partial_eval(),
-                self.where.partial_eval(),
-                self.sort.partial_eval(),
-                self.limit.partial_eval()
-            )
-        ]
-
-    def __and__(self, other):
-        """
-        MERGE TWO  OuterJoinOp
-        """
-        if not is_op(other, OuterJoinOp):
-            return AndOp([self, other])
-
-        # MERGE
-        elif self.frum == other.frum:
-            return OuterJoinOp(
-                self.frum,
-                listwrap(self.select) + listwrap(other.select),
-                AndOp([self.where, other.where]),
-                coalesce(self.sort, other.sort),
-                coalesce(self.limit, other.limit),
-            )
-
-        # NEST
-        elif startswith_field(other.frum.var, self.frum.var):
-            # WE ACHIEVE INTERSECTION BY LIMITING OURSELF TO ONLY THE DEEP OBJECTS
-            # WE ASSUME frum SELECTS WHOLE DOCUMENT, SO self.select IS POSSIBLE
-            return OuterJoinOp(
-                other,
-                self.select,
-                self.where,
-                self.sort,
-                self.limit,
-            )
-
-        elif startswith_field(self.frum.var, other.frum.var):
-            return OuterJoinOp(
-                self,
-                other.select,
-                other.where,
-                other.sort,
-                other.limit,
-            )
-        else:
-            return AndOp([self, other])
+        self.nests = nests
 
     def __data__(self):
         return {
-            "es.nested": {
+            "outerjoin": {
                 "from": self.frum.__data__(),
-                "select": self.select.__data__(),
-                "where": self.where.__data__(),
-                "sort": self.sort.__data__(),
-                "limit": self.limit.__data__(),
+                "nests": [n.__data__() for n in self.nests]
             }
         }
 
@@ -111,16 +42,13 @@ class OuterJoinOp(Expression):
         return (
             is_op(other, OuterJoinOp)
             and self.frum == other.frum
-            and self.select == other.select
-            and self.where == other.where
-            and self.sort == other.sort
-            and self.limit == other.limit
+            and self.nests == other.nests
         )
 
     def vars(self):
         return (
             self.frum.vars()
-            | self.select.vars()
+            | self.nests.vars()
             | self.where.vars()
             | self.sort.vars()
             | self.limit.vars()
@@ -129,22 +57,14 @@ class OuterJoinOp(Expression):
     def map(self, mapping):
         return OuterJoinOp(
             frum=self.frum.map(mapping),
-            select=self.select.map(mapping),
-            where=self.where.map(mapping),
-            sort=self.sort.map(mapping),
-            limit=self.limit.map(mapping),
+            nests=self.nests.map(mapping),
         )
 
     def invert(self):
         return self.missing()
 
     def missing(self):
-        return OrOp([
-            NotOp(self.where),
-            self.frum.missing(),
-            self.select.missing(),
-            EqOp([self.limit,  ZERO])
-         ]).partial_eval()
+        return OrOp([self.frum.missing()] + [n.missing() for n in self.nests]).partial_eval()
 
     @property
     def many(self):

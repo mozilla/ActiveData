@@ -154,7 +154,6 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
         )
 
 
-
 Painless = Language("Painless")
 
 

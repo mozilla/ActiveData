@@ -19,10 +19,11 @@ from jx_base.expressions.literal import is_literal
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op, value_compare
-from mo_dots import is_many, Null
+from mo_dots import is_many
+from mo_future.exports import expect
 from mo_json import BOOLEAN
 
-CaseOp, InOp, WhenOp = [Null] * 3  # IMPORT
+CaseOp, InOp, WhenOp = expect("CaseOp", "InOp", "WhenOp")
 
 
 class EqOp(Expression):

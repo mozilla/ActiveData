@@ -34,7 +34,7 @@ from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES
 from mo_logs import Log
 
 
-InnerJoinOp, = expect("InnerJoinOp")
+NestedOp, = expect("NestedOp")
 
 
 class EqOp(EqOp_):
@@ -52,8 +52,8 @@ class EqOp(EqOp_):
         if lhs.type != rhs.type and (lhs.type not in NUMBER_TYPES or rhs.type not in NUMBER_TYPES):
             return FALSE
 
-        if is_op(lhs, InnerJoinOp):
-            return self.lang[InnerJoinOp(
+        if is_op(lhs, NestedOp):
+            return self.lang[NestedOp(
                 frum=lhs.frum,
                 where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
             )]

@@ -11,11 +11,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import OrOp as OrOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
-from mo_dots import dict_to_data, Null
-from mo_future.exports import expect
+from mo_dots import dict_to_data
+from mo_future.exports import expect, export
 
-InnerJoinOp, = expect("InnerJoinOp")
-NotOp, es_not, es_and = [Null] * 3  # IMPORTS
+NestedOp, NotOp, es_not, es_and = expect("NestedOp", "NotOp", "es_not", "es_and")
 
 
 class OrOp(OrOp_):
@@ -45,8 +44,4 @@ def es_or(terms):
     return dict_to_data({"bool": {"should": terms}})
 
 
-# EXPORT
-from jx_elasticsearch.es52.expressions import _utils
-
-_utils.OrOp = OrOp
-del _utils
+export("jx_elasticsearch.es52.expressions._utils", OrOp)

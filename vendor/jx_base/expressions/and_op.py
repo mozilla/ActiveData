@@ -16,11 +16,12 @@ from jx_base.expressions.expression import Expression, NULL
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
-from mo_dots import is_many, Null
+from mo_dots import is_many
 from mo_future import zip_longest
+from mo_future.exports import expect
 from mo_json import BOOLEAN
 
-NotOp, OrOp = [Null] * 2
+NotOp, OrOp = expect("NotOp", "OrOp")
 
 
 class AndOp(Expression):

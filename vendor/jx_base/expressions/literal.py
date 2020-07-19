@@ -14,9 +14,10 @@ from jx_base.expressions import _utils, expression
 from jx_base.expressions._utils import simplified, value2json
 from jx_base.expressions.expression import Expression
 from mo_dots import Null, is_data
+from mo_future.exports import expect, export
 from mo_json import python_type_to_json_type
 
-DateOp, FALSE, TRUE, NULL = [None]*4
+DateOp, FALSE, TRUE, NULL = expect("DateOp", "FALSE", "TRUE", "NULL")
 
 
 class Literal(Expression):
@@ -132,6 +133,6 @@ def is_literal(l):
         return False
 
 
-_utils.Literal = Literal
-expression.Literal = Literal
-expression.is_literal=is_literal
+export("jx_base.expressions._utils", Literal)
+export("jx_base.expressions.expression", Literal)
+export("jx_base.expressions.expression", is_literal)

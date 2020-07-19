@@ -13,9 +13,9 @@ from jx_base.expressions import AndOp as AndOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from mo_dots import dict_to_data
-from mo_future.exports import expect
+from mo_future.exports import expect, export
 
-(InnerJoinOp,) = expect("InnerJoinOp")
+(NestedOp,) = expect("NestedOp")
 
 
 class AndOp(AndOp_):
@@ -30,11 +30,5 @@ def es_and(terms):
     return dict_to_data({"bool": {"filter": terms}})
 
 
-# EXPORT
-from jx_elasticsearch.es52.expressions import or_op
-or_op.es_and = es_and
-del or_op
-
-from jx_elasticsearch.es52.expressions import _utils
-_utils.AndOp = AndOp
-del _utils
+export("jx_elasticsearch.es52.expressions.or_op", es_and)
+export("jx_elasticsearch.es52.expressions._utils",  AndOp)

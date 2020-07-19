@@ -10,9 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import literal, false_op, _utils
-from jx_base.expressions.literal import Literal
 from jx_base.expressions.false_op import FALSE
+from jx_base.expressions.literal import Literal
+from mo_future.exports import export
 from mo_json import BOOLEAN
 
 
@@ -65,6 +65,8 @@ class TrueOp(Literal):
 
 TRUE = TrueOp()
 
-literal.TRUE = TRUE
-false_op.TRUE = TRUE
-_utils.TRUE = TRUE
+
+export("jx_base.expressions.literal", TRUE)
+export("jx_base.expressions.false_op", TRUE)
+export("jx_base.expressions._utils", TRUE)
+

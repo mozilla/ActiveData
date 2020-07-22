@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import OrderedDict
 
+from jx_base.expressions._utils import simplified
+
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
 from jx_base.language import is_op
@@ -63,16 +65,18 @@ class OuterJoinOp(Expression):
         )
 
     def map(self, mapping):
-        return OuterJoinOp(frum=self.frum.map(mapping), nests=self.nests.map(mapping),)
+        return OuterJoinOp(frum=self.frum.map(mapping), nests=self.nests.map(mapping))
 
     def invert(self):
         return self.missing()
 
     def missing(self):
-        return OrOp(
-            [self.frum.missing()] + [self.nests[-1].missing()]
-        ).partial_eval()
+        return OrOp([self.frum.missing()] + [self.nests[-1].missing()]).partial_eval()
 
     @property
     def many(self):
         return True
+
+    @simplified
+    def partial_eval(self):
+        return OuterJoinOp(frum=self.frum.partial_eval(), nests=self.nests.partial_eval())

@@ -16,7 +16,7 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
     split_expression_by_path,
     NestedOp, ESSelectOp)
-from jx_elasticsearch.es52.expressions._utils import split_expression_by_path_for_setop
+from jx_elasticsearch.es52.expressions._utils import setop_to_es_queries
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
@@ -297,12 +297,15 @@ def get_selects(query):
 def es_setop(es, query):
     schema = query.frum.schema
     new_select, split_select = get_selects(query)
-    es_query = split_expression_by_path_for_setop(query, split_select)
-    es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
-    es_query.sort = jx_sort_to_es_sort(query.sort, schema)
+    es_query = setop_to_es_queries(query, split_select)
+    size = coalesce(query.limit, DEFAULT_LIMIT)
+    sort = jx_sort_to_es_sort(query.sort, schema)
+    for q in es_query:
+        q.size = size
+        q.sort = sort
 
     with Timer("call to ES", verbose=DEBUG) as call_timer:
-        result = es.search(es_query)
+        result = es.search(es_query[0])
 
     T = result.hits.hits
 

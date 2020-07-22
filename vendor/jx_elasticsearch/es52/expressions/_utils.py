@@ -107,7 +107,7 @@ def exists_variable(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def split_expression_by_path_for_setop(query, split_select):
+def setop_to_es_queries(query, split_select):
     frum = query.frum
     schema = frum.schema
     where = query.where
@@ -205,7 +205,7 @@ def split_expression_by_path_for_setop(query, split_select):
             Log.error("do not know what to do yet")
     concat_inner = outer_to_inner(concat_outer)
 
-    es_query = ES52[concat_inner].partial_eval().to_es(schema)
+    es_query = [ES52[t.partial_eval()].to_es(schema) for t in concat_inner.terms]
 
     return es_query
 

@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import jx_expression
+from jx_base.expressions._utils import jx_expression, simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import Literal
@@ -59,6 +59,10 @@ class ConcatOp(Expression):
                 }
             )
         ]
+
+    @simplified
+    def partial_eval(self):
+        return self.lang[ConcatOp([t.partial_eval() for t in self.terms])]
 
     def __data__(self):
         f, s = self.terms[0], self.terms[1]

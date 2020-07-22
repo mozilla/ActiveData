@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_elasticsearch.es52.expressions._utils import ES52
+
 from jx_base.expressions import NestedOp as _NestedOp
 from mo_future.exports import export
 
@@ -16,7 +18,7 @@ from mo_future.exports import export
 class NestedOp(_NestedOp):
     def to_es(self, schema):
         if self.path.var == ".":
-            return self.select.to_es() | {"query": self.where.to_es(schema), "from": 0}
+            return ES52[self.select].to_es() | {"query": self.where.to_es(schema), "from": 0}
         else:
             return {
                 "nested": {

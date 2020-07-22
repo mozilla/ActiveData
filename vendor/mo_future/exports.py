@@ -23,7 +23,7 @@ DEBUG = False
 locker = allocate_lock()
 expectations = []
 expiry = time() + 10
-monitor = None
+monitor_thread = None
 
 
 def expect(*names):
@@ -34,6 +34,7 @@ def expect(*names):
     :param names: MODULE VARIABLES THAT WILL BE FILLED BY ANOTHER MODULE
     :return: PLACEHOLDERS THAT CAN BE USED UNTIL FILL HAPPENS len(output)==len(names)
     """
+    global monitor_thread, expiry
 
     # GET MODULE OF THE CALLER
     caller_frame = inspect.stack()[1]
@@ -45,6 +46,13 @@ def expect(*names):
         desc = Expecting(caller, name, caller_frame)
         setattr(caller, name, desc)
         output.append(desc)
+
+    with locker:
+        expiry = time() + 10
+        expectations.extend(output)
+        if not monitor_thread:
+            monitor_thread = Thread(target=worker)
+            monitor_thread.start()
 
     if DEBUG:
         for name in names:
@@ -66,17 +74,9 @@ class Expecting(object):
         :param name:
         :param frame:
         """
-        global monitor, expiry
-
         _set(self, "module", module)
         _set(self, "name", name)
         _set(self, "frame", frame)
-        with locker:
-            expiry = time() + 10
-            expectations.append(self)
-            if not monitor:
-                monitor = Thread(target=worker)
-                monitor.start()
 
     def __call__(self, *args, **kwargs):
         raise Exception(
@@ -158,7 +158,7 @@ def export(module, name, value=None):
 
 
 def worker():
-    global expectations, monitor
+    global expectations, monitor_thread
 
     if DEBUG:
         print(">>> expectation thread started")
@@ -168,7 +168,7 @@ def worker():
             if expiry >= time():
                 continue
 
-            monitor = None
+            monitor_thread = None
             if not expectations:
                 break
 

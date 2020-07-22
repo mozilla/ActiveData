@@ -60,7 +60,7 @@ def es_deepop(es, query):
     # SPLIT WHERE CLAUSE BY DEPTH
     wheres = split_expression_by_depth(query.where, schema)
     for f, w in zip_longest(es_filters, wheres):
-        script = ES52[AndOp(w)].partial_eval().to_es(schema)
+        script = ES52[AndOp(w).partial_eval()].to_es(schema)
         set_default(f, script)
 
     if not wheres[1]:

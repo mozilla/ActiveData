@@ -14,9 +14,6 @@ from jx_base.expressions import OuterJoinOp as OuterJoinOp_
 
 class OuterJoinOp(OuterJoinOp_):
 
-    def partial_eval(self):
-
-
     def to_esfilter(self, schema):
         if self.frum.var == ".":
             return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}

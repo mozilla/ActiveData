@@ -21,7 +21,6 @@ from jx_base.table import Table
 from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
     literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data, list_to_data
-from mo_dots.lists import EMPTY
 from mo_future import is_text, text
 from mo_future.exports import expect, export
 from mo_json import INTERNAL
@@ -761,7 +760,7 @@ def _normalize_sort(sort=None):
     """
 
     if sort == None:
-        return EMPTY
+        return Null
 
     output = FlatList()
     for s in listwrap(sort):

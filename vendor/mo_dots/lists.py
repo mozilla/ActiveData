@@ -47,8 +47,6 @@ class FlatList(object):
     https://github.com/klahnakoski/mo-dots/tree/dev/docs#flatlist-is-flat
     """
 
-    EMPTY = None
-
     def __init__(self, vals=None):
         """ USE THE vals, NOT A COPY """
         # list.__init__(self)
@@ -264,7 +262,7 @@ class FlatList(object):
         if num == None:
             return self
         if num <= 0:
-            return EMPTY
+            return Null
 
         return FlatList(_get_list(self)[:-num:])
 
@@ -315,8 +313,6 @@ def last(values):
 
     return values
 
-
-EMPTY = Null
 
 list_types = (list, FlatList)
 container_types = (list, FlatList, set)

@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import AndOp
+from jx_base.expressions import AndOp, FALSE
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
 from jx_base.expressions.es_select_op import default_select
@@ -42,15 +42,18 @@ class NestedOp(Expression):
     @simplified
     def partial_eval(self):
         if self.missing() is TRUE:
-            return NULL
-
-        return self.lang[
             NestedOp(
                 self.path.partial_eval(),
                 self.select,
                 self.where.partial_eval(),
                 self.sort.partial_eval(),
                 self.limit.partial_eval()
+            )
+
+        return self.lang[
+            NestedOp(
+                path=self.path.partial_eval(),
+                where=FALSE
             )
         ]
 
@@ -96,7 +99,7 @@ class NestedOp(Expression):
 
     def __data__(self):
         return {
-            "es.nested": {
+            "nested": {
                 "path": self.path.__data__(),
                 "select": self.select.__data__(),
                 "where": self.where.__data__(),

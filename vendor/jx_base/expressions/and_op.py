@@ -62,20 +62,10 @@ class AndOp(Expression):
 
     @simplified
     def partial_eval(self):
-
         # MERGE IDENTICAL NESTED QUERIES
-
         # NEST DEEP NESTED QUERIES
-
-
-
         or_terms = [[]]  # LIST OF TUPLES FOR or-ing and and-ing
         for i, t in enumerate(self.terms):
-            try:
-                if t.terms[1].frum is NULL:
-                    pass
-            except Exception as cause:
-                pass
             simple = self.lang[BooleanOp(t)].partial_eval()
             if simple.type != BOOLEAN:
                 simple = simple.exists()

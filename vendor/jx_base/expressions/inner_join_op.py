@@ -10,6 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_base.expressions._utils import simplified
+
 from mo_logs import Log
 
 from mo_dots import startswith_field
@@ -40,7 +42,7 @@ class InnerJoinOp(Expression):
 
     def __data__(self):
         return {
-            "outerjoin": {
+            "innerjoin": {
                 "from": self.frum.__data__(),
                 "nests": [n.__data__() for n in self.nests],
             }
@@ -76,3 +78,10 @@ class InnerJoinOp(Expression):
     @property
     def many(self):
         return True
+
+    @simplified
+    def partial_eval(self):
+        return self.lang[InnerJoinOp(
+            frum=self.frum,
+            nests=[n.partial_eval() for n in self.nests],
+        )]

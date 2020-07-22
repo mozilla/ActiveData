@@ -21,7 +21,7 @@ from jx_base.expressions import (
 )
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions import BasicEqOp
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.case_op import CaseOp
 from jx_elasticsearch.es52.expressions.or_op import OrOp
 from jx_elasticsearch.es52.expressions.when_op import WhenOp

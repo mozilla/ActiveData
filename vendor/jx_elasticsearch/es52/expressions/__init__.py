@@ -1,4 +1,4 @@
-from jx_elasticsearch.es52.expressions._utils import ES52, split_expression_by_path, split_expression_by_depth
+from jx_elasticsearch.es52.expressions.utils import ES52, split_expression_by_path, split_expression_by_depth
 from jx_elasticsearch.es52.expressions.and_op import AndOp, es_and
 from jx_elasticsearch.es52.expressions.basic_eq_op import BasicEqOp
 from jx_elasticsearch.es52.expressions.basic_starts_with_op import BasicStartsWithOp

@@ -22,4 +22,4 @@ def to_es(self, schema):
 
 MATCH_ALL = dict_to_data({"match_all": {}})
 
-export("jx_elasticsearch.es52.expressions._utils", MATCH_ALL)
+export("jx_elasticsearch.es52.expressions.utils", MATCH_ALL)

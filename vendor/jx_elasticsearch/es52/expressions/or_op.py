@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import OrOp as OrOp_
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_dots import dict_to_data
 from mo_future.exports import expect, export
 
@@ -44,4 +44,4 @@ def es_or(terms):
     return dict_to_data({"bool": {"should": terms}})
 
 
-export("jx_elasticsearch.es52.expressions._utils", OrOp)
+export("jx_elasticsearch.es52.expressions.utils", OrOp)

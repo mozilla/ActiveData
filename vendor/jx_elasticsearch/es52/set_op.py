@@ -16,7 +16,7 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
     split_expression_by_path,
     NestedOp, ESSelectOp)
-from jx_elasticsearch.es52.expressions._utils import setop_to_es_queries
+from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort

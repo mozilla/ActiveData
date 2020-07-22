@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import AndOp as AndOp_
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from mo_dots import dict_to_data
 from mo_future.exports import export
@@ -29,4 +29,4 @@ def es_and(terms):
 
 
 export("jx_elasticsearch.es52.expressions.or_op", es_and)
-export("jx_elasticsearch.es52.expressions._utils",  AndOp)
+export("jx_elasticsearch.es52.expressions.utils",  AndOp)

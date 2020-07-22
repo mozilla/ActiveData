@@ -19,7 +19,7 @@ from jx_base.expressions import (
     simplified,
     BooleanOp)
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.not_op import NotOp
 from jx_elasticsearch.es52.painless import Painless
 from mo_future.exports import export

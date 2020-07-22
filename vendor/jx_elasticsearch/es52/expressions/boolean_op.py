@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BooleanOp as BooleanOp_, Variable as Variable_
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.painless import Painless
 from mo_future.exports import expect

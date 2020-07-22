@@ -9,9 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_elasticsearch.es52.expressions._utils import ES52
-
 from jx_base.expressions import NestedOp as _NestedOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_future.exports import export
 
 
@@ -31,5 +30,5 @@ class NestedOp(_NestedOp):
             }
 
 
-export("jx_elasticsearch.es52.expressions._utils", NestedOp)
+export("jx_elasticsearch.es52.expressions.utils", NestedOp)
 export("jx_elasticsearch.es52.expressions.eq_op", NestedOp)

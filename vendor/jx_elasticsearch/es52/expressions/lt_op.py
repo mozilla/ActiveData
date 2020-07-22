@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import LtOp as LtOp_
-from jx_elasticsearch.es52.expressions._utils import _inequality_to_esfilter
+from jx_elasticsearch.es52.expressions.utils import _inequality_to_esfilter
 
 
 class LtOp(LtOp_):

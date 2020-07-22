@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.es52 import agg_bulk
 from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
-from jx_elasticsearch.es52.expressions._utils import setop_to_es_queries
+from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries
 from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
 from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort

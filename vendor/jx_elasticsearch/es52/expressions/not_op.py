@@ -15,7 +15,7 @@ from jx_base.expressions import (
     Variable as Variable_,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions._utils import ES52
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.or_op import es_or
 from mo_dots import dict_to_data

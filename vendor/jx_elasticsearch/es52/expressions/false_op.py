@@ -21,4 +21,4 @@ def to_es(self, schema):
 
 MATCH_NONE = {"bool": {"must_not": {"match_all": {}}}}
 
-export("jx_elasticsearch.es52.expressions._utils", MATCH_NONE)
+export("jx_elasticsearch.es52.expressions.utils", MATCH_NONE)

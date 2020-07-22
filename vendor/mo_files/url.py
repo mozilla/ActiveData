@@ -224,25 +224,30 @@ def value2url_param(value):
     :param value:
     :return: ascii URL
     """
+    from mo_json import json2value, value2json
+
     if value == None:
         Log.error("Can not encode None into a URL")
 
     if is_data(value):
-        from mo_json import value2json
-
         value_ = to_data(value)
         output = "&".join(
-            value2url_param(k) + "=" + (value2url_param(v) if is_text(v) else value2url_param(value2json(v)))
+            value2url_param(k) + "=" + value2url_param(v)
             for k, v in sorted(value_.leaves(), key=lambda p: p[0])
         )
     elif is_text(value):
+        try:
+            json2value(value)
+            value = value2json(value)
+        except Exception:
+            pass
         output = "".join(_map2url[c] for c in value.encode('utf8'))
     elif is_binary(value):
         output = "".join(_map2url[c] for c in value)
     elif hasattr(value, "__iter__"):
         output = ",".join(value2url_param(v) for v in value)
     else:
-        output = str(value)
+        output = "".join(_map2url[c] for c in value2json(value).encode('utf8'))
     return output
 
 

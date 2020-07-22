@@ -32,5 +32,6 @@ from jx_elasticsearch.es52.expressions.script_op import ScriptOp
 from jx_elasticsearch.es52.expressions.suffix_op import SuffixOp
 from jx_elasticsearch.es52.expressions.variable import Variable
 from jx_elasticsearch.es52.expressions.when_op import WhenOp
+from jx_elasticsearch.es52.expressions.when_op import WhenOp
 
 ES52.register_ops(vars())

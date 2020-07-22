@@ -52,8 +52,7 @@ from jx_elasticsearch.es52.painless.when_op import WhenOp
 from jx_elasticsearch.es52.painless.false_op import FalseOp, false_script
 from jx_elasticsearch.es52.painless.true_op import TrueOp, true_script
 from jx_elasticsearch.es52.painless.null_op import NullOp, null_script
+from jx_elasticsearch.es52.painless.es_script import EsScript
 
 
 Painless.register_ops(vars())
-
-

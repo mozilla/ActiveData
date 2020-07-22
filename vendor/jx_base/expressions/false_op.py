@@ -66,5 +66,6 @@ class FalseOp(Literal):
 
 FALSE = FalseOp()
 
+export("jx_base.expressions._utils", FALSE)
 export("jx_base.expressions.expression", FALSE)
 export("jx_base.expressions.literal", FALSE)

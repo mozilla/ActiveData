@@ -115,6 +115,9 @@ def setop_to_es_queries(query, split_select):
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = where.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
+    for v, cs in list(var_to_columns.items()):
+        for c in cs:
+            var_to_columns[c.es_column] = [c]
 
     # FROM DEEPEST TO SHALLOWEST
     all_paths = list(
@@ -228,13 +231,13 @@ def query_to_outer_joins(frum, expr, all_paths, var_to_columns, split_select):
         expr = expr.partial_eval()
 
         if is_op(expr, AndOp):
+            acc = [tuple([] for _ in all_paths)]
             for t in expr.terms:
-                acc = [[[] for _ in all_paths]]
                 next = []
                 for c in split(t):
                     for a in acc:
-                        next.append([n + an for n, an in zip(c, a)])
-                    acc= next
+                        next.append(tuple(n + an for n, an in zip(c, a)))
+                acc = next
             return acc
         elif is_op(expr, OrOp):
             output = []
@@ -249,16 +252,16 @@ def query_to_outer_joins(frum, expr, all_paths, var_to_columns, split_select):
             set(
                 c.nested_path[0]
                 for v in expr.vars()
-                for c in var_to_columns[v]
+                for c in frum.schema.values(v.var)
             )
         )
 
         if len(all_nests) > 1:
             Log.error("do not know how to handle")
         elif not all_nests:
-            return [[[expr] if p == '.' else [] for p in all_paths]]
+            return [tuple([expr] if p == '.' else [] for p in all_paths)]
         else:
-            return [[[expr] if p == all_nests[0] else [] for p in all_paths]]
+            return [tuple([expr] if p == all_nests[0] else [] for p in all_paths)]
 
     concat_outer_and = split(expr)
 

@@ -35,7 +35,7 @@ class InnerJoinOp(Expression):
         self.nests = nests
         last = "."
         for n in reversed(nests):
-            path = n.path
+            path = n.path.var
             if not startswith_field(path, last):
                 Log.error("Expecting nests to be reverse nested order")
             last = path

@@ -15,13 +15,14 @@ from jx_base.expressions.basic_starts_with_op import BasicStartsWithOp
 from jx_base.expressions.case_op import CaseOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
-from jx_base.expressions.literal import is_literal
+from jx_base.expressions.literal import is_literal, Literal
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import Variable
 from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
 from mo_dots import is_data
+from mo_future import first
 from mo_json import BOOLEAN
 
 
@@ -29,15 +30,25 @@ class PrefixOp(Expression):
     has_simple_form = True
     data_type = BOOLEAN
 
-    def __init__(self, term):
-        Expression.__init__(self, term)
+    def __init__(self, expr, prefix):
+        Expression.__init__(self, (expr, prefix))
+        self.expr = expr
+        self.prefix = prefix
+
+    _patterns = [
+        {"prefix": {"expr": "prefix"}},
+        {"prefix": ["expr", "prefix"]}
+    ]
+    @classmethod
+    def define(cls, expr):
+        term = expr.prefix
         if not term:
-            self.expr = NULL
-            self.prefix = NULL
+            return PrefixOp(NULL, NULL)
         elif is_data(term):
-            self.expr, self.prefix = term.items()[0]
+            expr, const = first(term.items())
+            return PrefixOp(Variable(expr), Literal(const))
         else:
-            self.expr, self.prefix = term
+            return PrefixOp(*term)
 
     def __data__(self):
         if not self.expr:
@@ -56,7 +67,7 @@ class PrefixOp(Expression):
         if not self.expr:
             return self
         else:
-            return self.lang[PrefixOp([self.expr.map(map_), self.prefix.map(map_)])]
+            return self.lang[PrefixOp(self.expr.map(map_), self.prefix.map(map_))]
 
     def missing(self):
         return FALSE

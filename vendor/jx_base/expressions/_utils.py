@@ -31,8 +31,8 @@ from mo_times import Date
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
 
-Literal, TRUE, NULL, TupleOp, Variable = expect(
-    "Literal", "TRUE", "NULL", "TupleOp", "Variable"
+Literal, TRUE, FALSE, NULL, TupleOp, Variable = expect(
+    "Literal", "TRUE", "FALSE", "NULL", "TupleOp", "Variable"
 )
 
 

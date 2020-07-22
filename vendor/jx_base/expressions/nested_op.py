@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import AndOp, FALSE
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.es_select_op import default_select
+from jx_base.expressions.es_select_op import ESSelectOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import ZERO
 from jx_base.expressions.not_op import NotOp
@@ -24,6 +24,8 @@ from jx_base.language import is_op
 from mo_dots import Null, startswith_field, coalesce, listwrap
 from mo_json import BOOLEAN
 
+select_nothing = ESSelectOp()
+
 
 class NestedOp(Expression):
     data_type = BOOLEAN
@@ -31,8 +33,8 @@ class NestedOp(Expression):
 
     __slots__ = ["path", "select", "where", "sort", "limit"]
 
-    def __init__(self, path, select=default_select, where=TRUE, sort=Null, limit=NULL):
-        Expression.__init__(self, [path, where])
+    def __init__(self, path, select=select_nothing, where=TRUE, sort=Null, limit=NULL):
+        Expression.__init__(self, [path, select, where])
         self.path = path
         self.select = select
         self.where = where
@@ -42,20 +44,19 @@ class NestedOp(Expression):
     @simplified
     def partial_eval(self):
         if self.missing() is TRUE:
-            NestedOp(
-                self.path.partial_eval(),
-                self.select,
-                self.where.partial_eval(),
-                self.sort.partial_eval(),
-                self.limit.partial_eval()
-            )
-
-        return self.lang[
-            NestedOp(
-                path=self.path.partial_eval(),
-                where=FALSE
-            )
-        ]
+            return self.lang[
+                NestedOp(
+                    path=self.path.partial_eval(),
+                    where=FALSE
+                )
+            ]
+        return NestedOp(
+            self.path.partial_eval(),
+            self.select.partial_eval(),
+            self.where.partial_eval(),
+            self.sort.partial_eval(),
+            self.limit.partial_eval()
+        )
 
     def __and__(self, other):
         """

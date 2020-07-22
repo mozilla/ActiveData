@@ -9,9 +9,6 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_elasticsearch.es52.expressions import es_or
-from mo_logs import Log
-
 from jx_base.expressions import (
     FALSE,
     NULL,
@@ -23,28 +20,26 @@ from jx_base.expressions import (
     simplified,
 )
 from jx_base.language import is_op
+from jx_elasticsearch.es52.expressions import es_or
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
-from jx_elasticsearch.es52.painless import (
-    StringOp as PainlessStringOp,
-    PrefixOp as PainlessPrefixOp,
-)
-from mo_future import first
-from mo_json import STRING, STRUCT, INTERNAL
+from jx_elasticsearch.es52.painless._utils import Painless
+from mo_json import STRING, INTERNAL
+from mo_logs import Log
 
 
 class PrefixOp(PrefixOp_):
     @simplified
     def partial_eval(self):
-        expr = PainlessStringOp(self.expr).partial_eval()
-        prefix = PainlessStringOp(self.prefix).partial_eval()
+        expr = self.expr.partial_eval()
+        prefix = self.prefix.partial_eval()
 
         if prefix is NULL:
             return TRUE
         if expr is NULL:
             return FALSE
 
-        return PrefixOp([expr, prefix])
+        return PrefixOp(expr, prefix)
 
     def to_es(self, schema):
         if is_literal(self.prefix) and not self.prefix.value:
@@ -81,4 +76,4 @@ class PrefixOp(PrefixOp_):
             else:
                 return es_or(acc)
         else:
-            return PainlessPrefixOp.to_es_script(self, schema).to_es(schema)
+            return Painless[self].to_es_script(schema).to_es(schema)

@@ -23,7 +23,7 @@ class ESSelectOp(Expression):
     data_type = OBJECT
     has_simple_form = False
 
-    def __init__(self, path):
+    def __init__(self, path="."):
         Expression.__init__(self, [])
         self.path = path
         self.get_source = False

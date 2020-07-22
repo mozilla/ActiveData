@@ -14,4 +14,4 @@ from jx_elasticsearch.es52.expressions._utils import _inequality_to_esfilter
 
 
 class GtOp(GtOp_):
-    to_esfilter = _inequality_to_esfilter
+    to_es = _inequality_to_esfilter

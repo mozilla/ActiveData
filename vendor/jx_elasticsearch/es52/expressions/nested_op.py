@@ -10,25 +10,18 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NestedOp as _NestedOp
-from mo_dots import Data
 from mo_future.exports import export
 
 
 class NestedOp(_NestedOp):
-    def to_esfilter(self, schema):
-        selection = Data(
-            _source=self.get_source,
-            stored_fields=self.fields if not self.get_source else None,
-            script_fields=self.scripts if self.scripts else None,
-        )
-
+    def to_es(self, schema):
         if self.path.var == ".":
-            return self.select.to_es() | {"query": self.where.to_esfilter(schema), "from": 0}
+            return self.select.to_es() | {"query": self.where.to_es(schema), "from": 0}
         else:
             return {
                 "nested": {
                     "path": self.path.var,
-                    "query": self.where.to_esfilter(schema),
+                    "query": self.where.to_es(schema),
                     "inner_hits": (self.select.to_es() | {"size": 100000})
                     if self.select
                     else None,
@@ -37,6 +30,4 @@ class NestedOp(_NestedOp):
 
 
 export("jx_elasticsearch.es52.expressions._utils", NestedOp)
-export("jx_elasticsearch.es52.expressions.and_op", NestedOp)
-export("jx_elasticsearch.es52.expressions.or_op", NestedOp)
 export("jx_elasticsearch.es52.expressions.eq_op", NestedOp)

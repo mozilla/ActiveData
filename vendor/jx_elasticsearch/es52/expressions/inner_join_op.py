@@ -7,19 +7,18 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import TrueOp, extend
+from jx_base.expressions import InnerJoinOp as InnerJoinOp_
+from jx_elasticsearch.es52.expressions import es_and
 from mo_dots import dict_to_data
-from mo_future.exports import export
 
 
-@extend(TrueOp)
-def to_es(self, schema):
-    return MATCH_ALL
+class InnerJoinOp(InnerJoinOp_):
 
-
-MATCH_ALL = dict_to_data({"match_all": {}})
-
-export("jx_elasticsearch.es52.expressions._utils", MATCH_ALL)
+    def to_es(self, schema):
+        acc = None
+        for nest in self.nests:
+            es = nest.to_es(schema)
+            acc = dict_to_data({"query":es_and([es.query, acc])}) | es
+        return acc

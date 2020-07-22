@@ -46,7 +46,7 @@ class PrefixOp(PrefixOp_):
 
         return PrefixOp([expr, prefix])
 
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_literal(self.prefix) and not self.prefix.value:
             return MATCH_ALL
 
@@ -81,4 +81,4 @@ class PrefixOp(PrefixOp_):
             else:
                 return es_or(acc)
         else:
-            return PainlessPrefixOp.to_es_script(self, schema).to_esfilter(schema)
+            return PainlessPrefixOp.to_es_script(self, schema).to_es(schema)

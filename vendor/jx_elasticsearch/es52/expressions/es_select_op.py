@@ -14,7 +14,7 @@ from jx_base.expressions import ESSelectOp as _ESSelectOp
 
 
 class ESSelectOp(_ESSelectOp):
-    def to_esfilter(self):
+    def to_es(self):
         return Data(
             _source=self.get_source,
             stored_fields=self.fields if not self.get_source else None,

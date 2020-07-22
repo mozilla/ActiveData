@@ -25,7 +25,7 @@ from mo_json import STRUCT
 
 
 class NotOp(NotOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.term, MissingOp_) and is_op(self.term.expr, Variable_):
             # PREVENT RECURSIVE LOOP
             v = self.term.expr.var
@@ -37,7 +37,7 @@ class NotOp(NotOp_):
             else:
                 return es_or([{"exists": {"field": c.es_column}} for c in cols])
         else:
-            operand = ES52[self.term].to_esfilter(schema)
+            operand = ES52[self.term].to_es(schema)
             return es_not(operand)
 
 

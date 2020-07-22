@@ -17,11 +17,11 @@ from pyLibrary.convert import string2regexp
 from jx_elasticsearch.es52.painless import SuffixOp as PainlessSuffixOp
 
 class SuffixOp(SuffixOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if not self.suffix:
             return MATCH_ALL
         elif is_op(self.expr, Variable_) and is_literal(self.suffix):
             var = first(schema.leaves(self.expr.var)).es_column
             return {"regexp": {var: ".*" + string2regexp(self.suffix.value)}}
         else:
-            return PainlessSuffixOp.to_es_script(self, schema).to_esfilter(schema)
+            return PainlessSuffixOp.to_es_script(self, schema).to_es(schema)

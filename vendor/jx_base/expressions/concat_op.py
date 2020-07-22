@@ -70,6 +70,9 @@ class ConcatOp(Expression):
             output["separator"] = self.separator.__data__()
         return output
 
+    def invert(self):
+        return self.missing()
+
     def vars(self):
         if not self.terms:
             return set()

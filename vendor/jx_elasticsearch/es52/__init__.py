@@ -258,7 +258,7 @@ class ES52(Container):
 
         # DELETE BY QUERY, IF NEEDED
         if "." in listwrap(command['clear']):
-            es_filter = ES52Lang[jx_expression(command.where)].partial_eval().to_esfilter(schema)
+            es_filter = ES52Lang[jx_expression(command.where)].partial_eval().to_es(schema)
             self.es.delete_record(es_filter)
             return
 

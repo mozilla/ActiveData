@@ -20,10 +20,10 @@ FindOp, = expect("FindOp")
 
 
 class BooleanOp(BooleanOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.term, Variable_):
             return es_exists(self.term.var)
         elif is_op(self.term, FindOp):
-            return ES52[self.term].to_esfilter(schema)
+            return ES52[self.term].to_es(schema)
         else:
-            return Painless[self].to_es_script(schema).to_esfilter(schema)
+            return Painless[self].to_es_script(schema).to_es(schema)

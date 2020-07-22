@@ -13,5 +13,5 @@ from jx_base.expressions import Literal as Literal_
 
 
 class Literal(Literal_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         return self.json

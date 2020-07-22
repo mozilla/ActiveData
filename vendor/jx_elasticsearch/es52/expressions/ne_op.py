@@ -19,7 +19,7 @@ from mo_logs import Log
 
 
 class NeOp(NeOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             columns = schema.values(self.lhs.var)
             if len(columns) == 0:
@@ -48,24 +48,24 @@ class NeOp(NeOp_):
                                 + lhs.expr
                                 + ")"
                             )
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )
                 else:
                     return es_not(
                         ScriptOp(
                             "(" + lhs.expr + ").contains(" + rhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )
             else:
                 if rhs.many:
                     return es_not(
                         ScriptOp(
                             "(" + rhs.expr + ").contains(" + lhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )
                 else:
                     return es_not(
                         ScriptOp(
                             "(" + lhs.expr + ") != (" + rhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )

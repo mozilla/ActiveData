@@ -64,7 +64,7 @@ class EsScript(EsScript_):
     if PY2:
         __unicode__ = __str__
 
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         return {"script": es_script(text(self))}
 
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):

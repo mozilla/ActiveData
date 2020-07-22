@@ -146,7 +146,7 @@ class FilterAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filter'] = ES52[self.filter].partial_eval().to_esfilter(schema)
+        output['filter'] = ES52[self.filter].partial_eval().to_es(schema)
         return output
 
     def copy(self):
@@ -177,7 +177,7 @@ class FiltersAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filters'] = {"filters": [f.partial_eval().to_esfilter(schema) for f in self.filters]}
+        output['filters'] = {"filters": [f.partial_eval().to_es(schema) for f in self.filters]}
         return output
 
     def copy(self):

@@ -10,10 +10,14 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_logs import Log
+
+from mo_dots import startswith_field
+
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions.outer_join_op import OuterJoinOp
+from jx_base.expressions.outer_join_op import OuterJoinOp
 from mo_json import BOOLEAN
 
 
@@ -24,15 +28,21 @@ class InnerJoinOp(Expression):
     __slots__ = ["frum", "nests"]
 
     def __init__(self, frum, nests):
-        Expression.__init__(self, [frum] + nests)
+        Expression.__init__(self, nests)
         self.frum = frum
         self.nests = nests
+        last = "."
+        for n in reversed(nests):
+            path = n.path
+            if not startswith_field(path, last):
+                Log.error("Expecting nests to be reverse nested order")
+            last = path
 
     def __data__(self):
         return {
             "outerjoin": {
                 "from": self.frum.__data__(),
-                "nests": [n.__data__() for n in self.nests]
+                "nests": [n.__data__() for n in self.nests],
             }
         }
 
@@ -53,16 +63,15 @@ class InnerJoinOp(Expression):
         )
 
     def map(self, mapping):
-        return InnerJoinOp(
-            frum=self.frum.map(mapping),
-            nests=self.nests.map(mapping),
-        )
+        return InnerJoinOp(frum=self.frum.map(mapping), nests=self.nests.map(mapping),)
 
     def invert(self):
         return self.missing()
 
     def missing(self):
-        return OrOp([self.frum.missing()] + [n.missing() for n in self.nests]).partial_eval()
+        return OrOp(
+            [self.frum.missing()] + [n.missing() for n in self.nests]
+        ).partial_eval()
 
     @property
     def many(self):

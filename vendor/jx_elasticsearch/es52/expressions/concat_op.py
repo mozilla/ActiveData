@@ -15,10 +15,10 @@ from pyLibrary.convert import string2regexp
 
 
 class ConcatOp(ConcatOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.value, Variable_) and is_literal(self.find):
             return {
                 "regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}
             }
         else:
-            return self.to_es_script(schema).script(schema).to_esfilter(schema)
+            return self.to_es_script(schema).script(schema).to_es(schema)

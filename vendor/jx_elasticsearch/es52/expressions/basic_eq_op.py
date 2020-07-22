@@ -33,7 +33,7 @@ class BasicEqOp(BasicEqOp_):
             )]
         return self.lang[BasicEqOp([self.lhs.partial_eval(), self.rhs.partial_eval()])]
 
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             lhs = self.lhs.var
             cols = schema.leaves(lhs)
@@ -48,4 +48,4 @@ class BasicEqOp(BasicEqOp_):
             else:
                 return {"term": {lhs: rhs}}
         else:
-            return Painless[self].to_es_script(schema).to_esfilter(schema)
+            return Painless[self].to_es_script(schema).to_es(schema)

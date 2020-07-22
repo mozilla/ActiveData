@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 import operator
 
 from jx_base.language import is_expression, Language
-from mo_dots import Null, is_sequence
+from mo_dots import is_sequence
 from mo_future import (
     first,
     get_function_name,
@@ -31,7 +31,10 @@ from mo_times import Date
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
 
-Literal, TRUE, NULL, TupleOp, Variable = expect("Literal", "TRUE", "NULL", "TupleOp", "Variable")
+Literal, TRUE, NULL, TupleOp, Variable = expect(
+    "Literal", "TRUE", "NULL", "TupleOp", "Variable"
+)
+
 
 def extend(cls):
     """

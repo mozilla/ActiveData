@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.painless import BasicStartsWithOp as PainlessBasicSta
 
 
 class BasicStartsWithOp(BasicStartsWithOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if not self.value:
             return MATCH_ALL
         elif is_op(self.value, Variable_) and is_literal(self.prefix):

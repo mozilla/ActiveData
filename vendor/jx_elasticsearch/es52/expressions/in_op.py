@@ -27,7 +27,7 @@ from pyLibrary.convert import value2boolean
 
 
 class InOp(InOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.value, Variable_):
             var = self.value.var
             cols = schema.leaves(var)
@@ -51,7 +51,7 @@ class InOp(InOp_):
                 return (
                     OrOp([EqOp([self.value, s]) for s in self.superset.terms])
                     .partial_eval()
-                    .to_esfilter(schema)
+                    .to_es(schema)
                 )
         # THE HARD WAY
-        return Painless[self].to_es_script(schema).to_esfilter(schema)
+        return Painless[self].to_es_script(schema).to_es(schema)

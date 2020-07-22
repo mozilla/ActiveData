@@ -18,7 +18,7 @@ from mo_future import first
 
 
 class MissingOp(MissingOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.expr, Variable_):
             cols = schema.leaves(self.expr.var)
             if not cols:
@@ -28,7 +28,7 @@ class MissingOp(MissingOp_):
             else:
                 return es_and([es_missing(c.es_column) for c in cols])
         else:
-            return PainlessMissingOp.to_es_script(self, schema).to_esfilter(schema)
+            return PainlessMissingOp.to_es_script(self, schema).to_es(schema)
 
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}

@@ -27,7 +27,7 @@ from mo_json import STRING
 
 
 class FindOp(FindOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if (
             is_op(self.value, Variable_)
             and is_literal(self.find)
@@ -44,7 +44,7 @@ class FindOp(FindOp_):
                 }
         # CONVERT TO SCRIPT, SIMPLIFY, AND THEN BACK TO FILTER
         self.simplified = False
-        return ES52[Painless[self].partial_eval()].to_esfilter(schema)
+        return ES52[Painless[self].partial_eval()].to_es(schema)
 
     @simplified
     def partial_eval(self):

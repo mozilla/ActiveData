@@ -17,7 +17,7 @@ from mo_logs import Log
 
 
 class RegExpOp(RegExpOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_literal(self.pattern) and is_op(self.var, Variable_):
             cols = schema.leaves(self.var.var)
             if len(cols) == 0:

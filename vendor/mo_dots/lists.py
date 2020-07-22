@@ -12,13 +12,13 @@ from __future__ import absolute_import, division, unicode_literals
 import types
 from copy import deepcopy
 
-from mo_dots import CLASS, coalesce, to_data, from_data
-from mo_dots.nones import Null
-from mo_future import generator_types, first
-from mo_future.exports import export, expect
+from mo_dots.utils import CLASS
 
-Log = Null
-datawrap, = expect("datawrap")
+from mo_future import generator_types, first
+from mo_future.exports import expect
+
+Log = None
+datawrap, coalesce, to_data, from_data, Null = expect("datawrap", "coalesce", "to_data", "from_data", "Null")
 
 
 _list = str("list")
@@ -362,4 +362,3 @@ def is_many(value):
     return False
 
 
-export("mo_dots.nones", is_sequence)

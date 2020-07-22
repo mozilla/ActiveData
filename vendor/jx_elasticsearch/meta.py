@@ -21,6 +21,7 @@ from jx_base.meta_columns import (
     META_TABLES_DESC,
     META_TABLES_NAME,
 )
+from jx_base.table import Table as BaseTable
 from jx_base.namespace import Namespace
 from jx_base.query import QueryOp
 from jx_elasticsearch import elasticsearch
@@ -1226,9 +1227,9 @@ class Schema(jx_base.Schema):
         return output
 
 
-class Table(jx_base.Table):
+class Table(BaseTable):
     def __init__(self, full_name, container):
-        jx_base.Table.__init__(self, full_name)
+        BaseTable.__init__(self, full_name)
         self.container = container
         self.schema = container.namespace.get_schema(full_name)
 

@@ -14,5 +14,5 @@ from jx_elasticsearch.es52.painless.es_script import es_script
 
 
 class ScriptOp(ScriptOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         return {"script": es_script(self.script)}

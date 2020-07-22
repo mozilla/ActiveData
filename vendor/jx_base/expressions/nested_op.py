@@ -32,7 +32,7 @@ class NestedOp(Expression):
     __slots__ = ["path", "select", "where", "sort", "limit"]
 
     def __init__(self, path, select=default_select, where=TRUE, sort=Null, limit=NULL):
-        Expression.__init__(self, [path, select, where])
+        Expression.__init__(self, [path, where])
         self.path = path
         self.select = select
         self.where = where
@@ -47,7 +47,7 @@ class NestedOp(Expression):
         return self.lang[
             NestedOp(
                 self.path.partial_eval(),
-                self.select.partial_eval(),
+                self.select,
                 self.where.partial_eval(),
                 self.sort.partial_eval(),
                 self.limit.partial_eval()

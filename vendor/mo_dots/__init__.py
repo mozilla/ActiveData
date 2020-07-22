@@ -11,9 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 import sys
 
-from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict, none_type
-
+from mo_dots.datas import Data, SLOT, data_types, is_data
+from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
+from mo_dots.nones import Null, NullType
+from mo_dots.objects import DataObject
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
+from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict, none_type
 from mo_future.exports import export
 
 _module_type = type(sys.modules[__name__])
@@ -664,9 +667,19 @@ def tuplewrap(value):
 # EXPORT
 export("mo_dots.nones", to_data)
 
+export("mo_dots.datas", to_data)
+export("mo_dots.datas", from_data)
+export("mo_dots.datas", coalesce)
+export("mo_dots.datas", _getdefault)
+export("mo_dots.datas", hash_value)
+export("mo_dots.datas", listwrap)
+export("mo_dots.datas", literal_field)
 
-from mo_dots.datas import Data, SLOT, data_types, is_data
-from mo_dots.nones import Null, NullType
-from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
-from mo_dots.objects import DataObject
+export("mo_dots.lists", to_data)
+export("mo_dots.lists", coalesce)
+export("mo_dots.lists", from_data)
 
+export("mo_dots.objects", to_data)
+export("mo_dots.objects", from_data)
+export("mo_dots.objects", get_attr)
+export("mo_dots.objects", set_attr)

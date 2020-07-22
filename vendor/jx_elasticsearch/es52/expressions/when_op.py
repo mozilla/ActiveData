@@ -17,7 +17,7 @@ from jx_elasticsearch.es52.expressions.or_op import OrOp
 
 
 class WhenOp(WhenOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         output = OrOp(
             [
                 AndOp([self.when, BooleanOp(self.then)]),
@@ -25,4 +25,4 @@ class WhenOp(WhenOp_):
             ]
         ).partial_eval()
 
-        return output.to_esfilter(schema)
+        return output.to_es(schema)

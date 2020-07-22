@@ -15,7 +15,7 @@ from mo_future.exports import export
 
 
 @extend(FalseOp)
-def to_esfilter(self, schema):
+def to_es(self, schema):
     return MATCH_NONE
 
 

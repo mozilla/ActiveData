@@ -13,17 +13,15 @@ from jx_base.expressions import AndOp as AndOp_
 from jx_elasticsearch.es52.expressions._utils import ES52
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
 from mo_dots import dict_to_data
-from mo_future.exports import expect, export
-
-(NestedOp,) = expect("NestedOp")
+from mo_future.exports import export
 
 
 class AndOp(AndOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if not len(self.terms):
             return MATCH_ALL
         else:
-            return es_and([ES52[t].to_esfilter(schema) for t in self.terms])
+            return es_and([ES52[t].to_es(schema) for t in self.terms])
 
 
 def es_and(terms):

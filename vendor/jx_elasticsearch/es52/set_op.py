@@ -296,13 +296,8 @@ def get_selects(query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-
     new_select, split_select = get_selects(query)
-
-    es_query = split_expression_by_path_for_setop(query.where, schema, split_select)
-
-
-
+    es_query = split_expression_by_path_for_setop(query, split_select)
     es_query.size = coalesce(query.limit, DEFAULT_LIMIT)
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
 
@@ -403,8 +398,8 @@ def es_query_proto(selects, op, wheres, schema):
         select = selects.get(p, Null)
 
         es_where = op([es_query, where])
-        es_query = NestedOp(Variable(p), query=es_where, select=select)
-    return es_query.partial_eval().to_esfilter(schema)
+        es_query = NestedOp(path=Variable(p), query=es_where, select=select)
+    return es_query.partial_eval().to_es(schema)
 
 expected = {
     "_source": False,

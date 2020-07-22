@@ -9,11 +9,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_dots.lists import is_sequence
 from mo_dots.utils import CLASS, OBJ
 from mo_future import is_binary, text, none_type
-from mo_future.exports import expect
+from mo_future.exports import expect, export
 
-to_data, is_sequence = expect("to_data", "is_sequence")
+to_data, = expect("to_data")
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -297,3 +298,4 @@ def _setdefault(obj, key, value):
     return v
 
 
+export("mo_dots.lists", Null)

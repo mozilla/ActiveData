@@ -12,10 +12,39 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy, deepcopy
 from decimal import Decimal
 
-from mo_future import generator_types, iteritems, long, none_type, text, MutableMapping, OrderedDict
-
-from mo_dots import _getdefault, coalesce, get_logger, hash_value, listwrap, literal_field, from_data
+from mo_dots.lists import is_list, FlatList
+from mo_dots.nones import Null, NullType
 from mo_dots.utils import CLASS
+from mo_dots.utils import get_logger
+from mo_future import (
+    generator_types,
+    iteritems,
+    long,
+    none_type,
+    text,
+    MutableMapping,
+    OrderedDict,
+)
+from mo_future.exports import expect
+
+(
+    _getdefault,
+    coalesce,
+    hash_value,
+    listwrap,
+    literal_field,
+    from_data,
+    to_data,
+) = expect(
+    "_getdefault",
+    "coalesce",
+    "hash_value",
+    "listwrap",
+    "literal_field",
+    "from_data",
+    "to_data",
+)
+
 
 _get = object.__getattribute__
 _set = object.__setattr__
@@ -141,13 +170,14 @@ class Data(object):
                     d.pop(seq[-1], None)
                 except Exception as _:
                     pass
-            elif d==None:
+            elif d == None:
                 d[literal_field(seq[-1])] = value
             else:
                 d[seq[-1]] = value
             return self
         except Exception as e:
             from mo_logs import Log
+
             Log.error("can not set key={{key}}", key=key, cause=e)
 
     def __getattr__(self, key):
@@ -266,7 +296,11 @@ class Data(object):
 
     def items(self):
         d = self._internal_dict
-        return [(k, to_data(v)) for k, v in d.items() if v != None or _get(v, CLASS) in data_types]
+        return [
+            (k, to_data(v))
+            for k, v in d.items()
+            if v != None or _get(v, CLASS) in data_types
+        ]
 
     def leaves(self, prefix=None):
         """
@@ -350,7 +384,7 @@ class Data(object):
 
     def __repr__(self):
         try:
-            return "Data("+dict.__repr__(self._internal_dict)+")"
+            return "Data(" + dict.__repr__(self._internal_dict) + ")"
         except Exception as e:
             return "Data()"
 
@@ -392,13 +426,13 @@ def _str(value, depth):
     FOR DEBUGGING POSSIBLY RECURSIVE STRUCTURES
     """
     output = []
-    if depth >0 and _get(value, CLASS) in data_types:
+    if depth > 0 and _get(value, CLASS) in data_types:
         for k, v in value.items():
             output.append(str(k) + "=" + _str(v, depth - 1))
         return "{" + ",\n".join(output) + "}"
-    elif depth >0 and is_list(value):
+    elif depth > 0 and is_list(value):
         for v in value:
-            output.append(_str(v, depth-1))
+            output.append(_str(v, depth - 1))
         return "[" + ",\n".join(output) + "]"
     else:
         return str(type(value))
@@ -424,7 +458,7 @@ def _iadd(self, other):
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
                     stype=_get(sv, CLASS).__name__,
-                    otype=_get(ov, CLASS).__name__
+                    otype=_get(ov, CLASS).__name__,
                 )
             elif is_list(sv):
                 d[ok].append(ov)
@@ -441,14 +475,14 @@ def _iadd(self, other):
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
                     stype=_get(sv, CLASS).__name__,
-                    otype=_get(ov, CLASS).__name__
+                    otype=_get(ov, CLASS).__name__,
                 )
         else:
             if _get(sv, CLASS) in data_types:
                 get_logger().error(
                     "can not add {{stype}} with {{otype}",
                     stype=_get(sv, CLASS).__name__,
-                    otype=_get(ov, CLASS).__name__
+                    otype=_get(ov, CLASS).__name__,
                 )
             else:
                 d[ok].append(ov)
@@ -475,6 +509,3 @@ def is_data(d):
     return d.__class__ in data_types
 
 
-from mo_dots.nones import Null, NullType
-from mo_dots.lists import is_list, FlatList
-from mo_dots import to_data

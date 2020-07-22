@@ -13,11 +13,14 @@ from collections import Mapping
 from datetime import date, datetime
 from decimal import Decimal
 
-from mo_dots import Data, FlatList, NullType, SLOT, get_attr, set_attr, to_data, from_data
-from mo_dots.datas import register_data
+from mo_dots.datas import register_data, Data, SLOT
+from mo_dots.lists import FlatList
+from mo_dots.nones import NullType
 from mo_dots.utils import CLASS, OBJ
 from mo_future import binary_type, generator_types, get_function_arguments, get_function_defaults, none_type, text
-from mo_future.exports import export
+from mo_future.exports import export, expect
+
+get_attr, set_attr, to_data, from_data = expect("get_attr", "set_attr", "to_data", "from_data")
 
 _get = object.__getattribute__
 _set = object.__setattr__

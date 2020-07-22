@@ -54,13 +54,13 @@ class EqOp(EqOp_):
 
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
-                frum=lhs.frum,
+                path=lhs.frum,
                 where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
             )]
 
         return EqOp([lhs, rhs])
 
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             rhs = self.rhs.value
             lhs = self.lhs.var
@@ -84,7 +84,7 @@ class EqOp(EqOp_):
                         for c in cols:
                             if jx_type == c.jx_type or (jx_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES):
                                 return {"terms": {c.es_column: values}}
-                        return FALSE.to_esfilter(schema)
+                        return FALSE.to_es(schema)
                     else:
                         return (
                             OrOp(
@@ -94,7 +94,7 @@ class EqOp(EqOp_):
                                 ]
                             )
                             .partial_eval()
-                            .to_esfilter(schema)
+                            .to_es(schema)
                         )
 
             for c in cols:
@@ -103,7 +103,7 @@ class EqOp(EqOp_):
                 rhs_type = python_type_to_json_type[rhs.__class__]
                 if rhs_type == c.jx_type or (rhs_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES):
                     return {"term": {c.es_column: rhs}}
-            return FALSE.to_esfilter(schema)
+            return FALSE.to_es(schema)
         else:
             return (
                 ES52[
@@ -116,5 +116,5 @@ class EqOp(EqOp_):
                     )
                     .partial_eval()
                 ]
-                .to_esfilter(schema)
+                .to_es(schema)
             )

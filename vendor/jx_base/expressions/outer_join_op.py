@@ -10,10 +10,15 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from collections import OrderedDict
+
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
 from jx_base.language import is_op
+from mo_dots import startswith_field
+from mo_future import sort_using_key
 from mo_json import BOOLEAN
+from mo_logs import Log
 
 
 class OuterJoinOp(Expression):
@@ -23,9 +28,15 @@ class OuterJoinOp(Expression):
     __slots__ = ["frum", "nests"]
 
     def __init__(self, frum, nests):
-        Expression.__init__(self, [frum] + nests)
+        Expression.__init__(self, nests)
         self.frum = frum
         self.nests = nests
+        last = "."
+        for n in reversed(nests):
+            path = n.path
+            if not startswith_field(path, last):
+                Log.error("Expecting nests to be reverse nested order")
+            last = path
 
     def __data__(self):
         return {
@@ -59,7 +70,7 @@ class OuterJoinOp(Expression):
 
     def missing(self):
         return OrOp(
-            [self.frum.missing()] + [n.missing() for n in self.nests]
+            [self.frum.missing()] + [self.nests[-1].missing()]
         ).partial_eval()
 
     @property

@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import literal
 from jx_base.expressions.literal import Literal
 from mo_dots import coalesce
 from mo_future import is_text

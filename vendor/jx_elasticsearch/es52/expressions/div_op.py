@@ -14,5 +14,5 @@ from jx_elasticsearch.es52.expressions.not_op import NotOp
 
 
 class DivOp(DivOp_):
-    def to_esfilter(self, schema):
-        return NotOp(self.missing()).partial_eval().to_esfilter(schema)
+    def to_es(self, schema):
+        return NotOp(self.missing()).partial_eval().to_es(schema)

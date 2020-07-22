@@ -18,7 +18,7 @@ from mo_json import BOOLEAN, STRUCT
 
 
 class Variable(Variable_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         v = self.var
         cols = schema.values(v, STRUCT)
         if len(cols) == 0:

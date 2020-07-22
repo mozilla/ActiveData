@@ -14,11 +14,11 @@ from jx_elasticsearch.es52.expressions._utils import ES52
 from mo_dots import dict_to_data
 from mo_future.exports import expect, export
 
-NestedOp, NotOp, es_not, es_and = expect("NestedOp", "NotOp", "es_not", "es_and")
+NotOp, es_not, es_and = expect("NotOp", "es_not", "es_and")
 
 
 class OrOp(OrOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
 
         if schema.snowflake.namespace.es_cluster.version.startswith("5."):
             # VERSION 5.2.x
@@ -29,14 +29,14 @@ class OrOp(OrOp_):
             # OR(x) == NOT(AND(NOT(xi) for xi in x))
             output = es_not(
                 es_and(
-                    [NotOp(t).partial_eval().to_esfilter(schema) for t in self.terms]
+                    [NotOp(t).partial_eval().to_es(schema) for t in self.terms]
                 )
             )
             return output
         else:
             # VERSION 6.2+
             return es_or(
-                [ES52[t].partial_eval().to_esfilter(schema) for t in self.terms]
+                [ES52[t].partial_eval().to_es(schema) for t in self.terms]
             )
 
 

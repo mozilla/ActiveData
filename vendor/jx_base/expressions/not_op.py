@@ -39,14 +39,14 @@ class NotOp(Expression):
         return self.lang[NotOp(self.term.map(map_))]
 
     def missing(self):
-        return self.term.missing()
+        return self.lang[self.term].missing()
 
     def invert(self):
         return self.lang[self.term].partial_eval()
 
     @simplified
     def partial_eval(self):
-        return self.term.invert()
+        return self.lang[self.term].invert()
 
 
 export("jx_base.expressions.and_op", NotOp)

@@ -57,8 +57,6 @@ class EqOp(EqOp_):
                 return FALSE
             rhs = Literal(rhs)
             return EqOp([lhs, rhs])
-        if not same_json_type(lhs.type, rhs.type):
-            return FALSE
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
                 path=lhs.frum,

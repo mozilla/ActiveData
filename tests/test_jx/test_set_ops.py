@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skip, skipIf
 
+from mo_future import first
+
 import mo_math
 from jx_base.expressions import NULL
 from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
@@ -630,7 +632,7 @@ class TestSetOps(BaseTestCase):
 
         self.utils.fill_container(test)
         result = self.utils.execute_query(test.query)
-        self.assertEqual(result.meta.es_query.size, MAX_LIMIT)
+        self.assertEqual(first(result.meta.es_query.size), MAX_LIMIT)
 
     def test_default_limit(self):
         test = dict_to_data({

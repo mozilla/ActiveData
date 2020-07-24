@@ -186,7 +186,7 @@ def setop_to_es_queries(query, split_select):
             # THE MAIN INNER JOIN
             output = [InnerJoinOp(expr.frum, expr.nests)]
             # ALL THE OUTER JOIN RESIDUES
-            for deepest in expr.nests:
+            for deepest in expr.nests[:-1]:  # LAST '.' NOT NEEDED
                 deepest_path = deepest.path.var
                 inner_join = InnerJoinOp(expr.frum, [])
                 deeper_conditions = TRUE

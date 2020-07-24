@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import NestedOp as _NestedOp
+from jx_base.expressions import NestedOp as _NestedOp, NULL
 from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_imports import export
 
@@ -24,7 +24,7 @@ class NestedOp(_NestedOp):
                     "path": self.path.var,
                     "query": self.where.to_es(schema),
                     "inner_hits": (ES52[self.select].to_es() | {"size": 100000})
-                    if self.select
+                    if self.select and self.select is not NULL
                     else None,
                 }
             }

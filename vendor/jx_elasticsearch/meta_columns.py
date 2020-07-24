@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base import Column
+from jx_base.schema import Schema as BaseSchema
 from jx_base.table import Table
 from jx_base.container import Container
 from jx_base.schema import Schema
@@ -521,7 +522,7 @@ class ColumnList(Table, Container):
         return ListContainer(
             self.name,
             data=output,
-            schema=jx_base.Schema(META_COLUMNS_NAME, SIMPLE_METADATA_COLUMNS),
+            schema=BaseSchema(META_COLUMNS_NAME, SIMPLE_METADATA_COLUMNS),
         )
 
 

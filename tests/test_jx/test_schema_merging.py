@@ -369,7 +369,6 @@ class TestSchemaMerging(BaseTestCase):
         }
         self.utils.execute_tests(test)
 
-    # @skip("For Orange query")
     def test_edge(self):
         test = {
             "data": [

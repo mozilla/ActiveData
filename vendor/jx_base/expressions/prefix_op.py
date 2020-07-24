@@ -41,7 +41,7 @@ class PrefixOp(Expression):
     ]
     @classmethod
     def define(cls, expr):
-        term = expr.prefix
+        term = expr.get('prefix')
         if not term:
             return PrefixOp(NULL, NULL)
         elif is_data(term):

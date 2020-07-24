@@ -33,6 +33,9 @@ class BasicEqOp(Expression):
     def missing(self):
         return FALSE
 
+    def vars(self):
+        return self.lhs.vars() | self.rhs.vars()
+
     def __eq__(self, other):
         if not is_op(other, BasicEqOp):
             return False

@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_elasticsearch.es52.painless._utils import Painless
+
 from jx_base.expressions import CoalesceOp as CoalesceOp_, FALSE, NULL, TRUE
 from jx_elasticsearch.es52.painless import first_op
 from jx_elasticsearch.es52.painless.and_op import AndOp
@@ -28,7 +30,7 @@ class CoalesceOp(CoalesceOp_):
         acc = FirstOp(v).partial_eval().to_es_script(schema)
         for v in reversed(self.terms[:-1]):
             m = v.missing().partial_eval()
-            e = NotOp(m).partial_eval().to_es_script(schema)
+            e = Painless[NotOp(m).partial_eval()].to_es_script(schema)
             r = FirstOp(v).partial_eval().to_es_script(schema)
 
             if r.miss is TRUE:

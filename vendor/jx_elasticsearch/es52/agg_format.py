@@ -17,7 +17,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, split_field, to_data
 from mo_files import mimetype
 from mo_future import sort_using_key, next
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import value2json
 from mo_logs import Log
 from mo_logs.strings import quote

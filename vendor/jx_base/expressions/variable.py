@@ -18,7 +18,7 @@ from jx_base.utils import get_property_name
 from mo_dots import is_sequence, split_field
 from mo_dots.lists import last
 from mo_future import is_text
-from mo_future.exports import export
+from mo_imports import export
 from mo_json.typed_encoder import inserter_type_to_json_type
 
 

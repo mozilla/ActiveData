@@ -22,7 +22,7 @@ from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.not_op import NotOp
 from jx_elasticsearch.es52.painless import Painless
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import STRING
 
 

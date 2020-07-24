@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
+from jx_base.expressions._utils import simplified, TRUE
 
 from mo_logs import Log
 
@@ -71,6 +71,9 @@ class InnerJoinOp(Expression):
         return self.missing()
 
     def missing(self):
+        if not self.nests:
+            return TRUE
+
         return OrOp(
             [self.frum.missing()] + [n.missing() for n in self.nests]
         ).partial_eval()

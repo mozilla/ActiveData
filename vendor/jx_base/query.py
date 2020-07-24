@@ -22,7 +22,7 @@ from jx_base.utils import is_variable_name
 from mo_dots import Data, FlatList, Null, coalesce, concat_field, is_container, is_data, is_list, listwrap, \
     literal_field, relative_field, set_default, unwrap, unwraplist, is_many, dict_to_data, to_data, list_to_data
 from mo_future import is_text, text
-from mo_future.exports import expect, export
+from mo_imports import expect, export
 from mo_json import INTERNAL
 from mo_json.typed_encoder import untype_path
 from mo_logs import Log

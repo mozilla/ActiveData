@@ -25,7 +25,7 @@ from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
 from mo_future import first, next
-from mo_future.exports import export
+from mo_imports import export
 from mo_logs import Log
 from mo_times.timer import Timer
 

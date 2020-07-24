@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from uuid import uuid4
 
-from mo_future.exports import export, expect
+from mo_imports import export, expect
 from mo_json.typed_encoder import EXISTS_TYPE
 
 from jx_base.expressions import jx_expression

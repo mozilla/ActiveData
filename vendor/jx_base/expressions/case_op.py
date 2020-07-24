@@ -22,7 +22,7 @@ from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
 from mo_dots import is_sequence
 from mo_future import first
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import OBJECT, BOOLEAN
 from mo_logs import Log
 

@@ -15,6 +15,7 @@ from decimal import Decimal
 
 import jx_base
 from jx_base import TableDesc, Column
+from jx_base.expressions import FALSE
 from jx_base.meta_columns import (
     META_COLUMNS_DESC,
     META_COLUMNS_NAME,
@@ -1232,6 +1233,9 @@ class Table(BaseTable):
         BaseTable.__init__(self, full_name)
         self.container = container
         self.schema = container.namespace.get_schema(full_name)
+
+    def missing(self):
+        return FALSE
 
 
 def _counting_query(c):

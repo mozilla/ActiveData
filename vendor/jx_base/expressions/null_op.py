@@ -15,7 +15,7 @@ from jx_base.expressions.literal import Literal
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import TYPE_ORDER
 from mo_dots import Null
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import IS_NULL, OBJECT
 from mo_logs import Log
 

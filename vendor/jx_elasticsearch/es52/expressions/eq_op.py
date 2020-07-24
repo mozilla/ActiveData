@@ -29,7 +29,7 @@ from jx_elasticsearch.es52.util import pull_functions
 from jx_python.jx import value_compare
 from mo_dots import Data, is_container
 from mo_future import first
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES
 from mo_logs import Log
 

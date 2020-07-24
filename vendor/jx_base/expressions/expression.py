@@ -19,7 +19,7 @@ from jx_base.expressions._utils import (
 from jx_base.language import BaseExpression, ID, is_expression, is_op
 from mo_dots import is_data, is_sequence, is_container
 from mo_future import items as items_, text
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import BOOLEAN, OBJECT, value2json
 from mo_logs import Log
 

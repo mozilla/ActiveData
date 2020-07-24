@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.language import is_op
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import BOOLEAN
 
 

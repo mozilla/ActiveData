@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 from mo_dots import coalesce, listwrap, unwrap, to_data
-from mo_future.exports import expect
+from mo_imports import expect
 
 Log, = expect("Log")
 

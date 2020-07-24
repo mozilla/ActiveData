@@ -21,7 +21,7 @@ from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op
 from mo_dots import is_many
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import BOOLEAN
 
 

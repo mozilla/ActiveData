@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from itertools import chain
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE
 from jx_base.language import is_op
@@ -305,9 +307,11 @@ def es_setop(es, query):
         q.sort = sort
 
     with Timer("call to ES", verbose=DEBUG) as call_timer:
-        result = es.search(es_query[0])
+        results = es.multisearch(es_query)
 
-    T = result.hits.hits
+    T = []
+    for result in results:
+        T.extend(result.hits.hits)
 
     try:
         formatter, _, mime_type = set_formatters[query.format]

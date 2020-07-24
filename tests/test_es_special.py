@@ -28,7 +28,6 @@ class TestESSpecial(BaseTestCase):
     """
     TESTS THAT COVER ES SPECIAL FEATURES
     """
-
     def test_query_on_es_base_field(self):
         schema = {
             "settings": {
@@ -68,11 +67,21 @@ class TestESSpecial(BaseTestCase):
 
         test = {
             "schema": schema,
-            "data": [{"bug_id": 123, "status_whiteboard": "[test][fx21]"}],
-            "query": {"select": ["status_whiteboard"], "from": TEST_TABLE},
+            "data": [{
+                "bug_id": 123,
+                "status_whiteboard": "[test][fx21]"
+            }],
+            "query": {
+                "select": ["status_whiteboard"],
+                "from": TEST_TABLE
+            },
             "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [{"status_whiteboard": "[test][fx21]"}],
+                "meta": {
+                    "format": "list"
+                },
+                "data": [{
+                    "status_whiteboard": "[test][fx21]"
+                }],
             },
         }
         self.utils.execute_tests(test)
@@ -115,20 +124,39 @@ class TestESSpecial(BaseTestCase):
         }
 
         test = {
-            "schema": schema,
+            "schema":
+            schema,
             "data": [
-                {"bug_id": 123, "status_whiteboard": "[test][fx21]"},
-                {"bug_id": 124, "status_whiteboard": "[test]"},
-                {"bug_id": 125},
+                {
+                    "bug_id": 123,
+                    "status_whiteboard": "[test][fx21]"
+                },
+                {
+                    "bug_id": 124,
+                    "status_whiteboard": "[test]"
+                },
+                {
+                    "bug_id": 125
+                },
             ],
             "query": {
                 "select": ["bug_id"],
                 "from": TEST_TABLE,
-                "where": {"eq": {"status_whiteboard.tokenized": "test"}},
+                "where": {
+                    "eq": {
+                        "status_whiteboard.tokenized": "test"
+                    }
+                },
             },
             "expecting_list": {
-                "meta": {"format": "list"},
-                "data": [{"bug_id": 123}, {"bug_id": 124}],
+                "meta": {
+                    "format": "list"
+                },
+                "data": [{
+                    "bug_id": 123
+                }, {
+                    "bug_id": 124
+                }],
             },
         }
         self.utils.execute_tests(test)
@@ -137,7 +165,12 @@ class TestESSpecial(BaseTestCase):
         schema = {
             "mappings": {
                 "test_result": {
-                    "properties": {"name": {"type": "keyword", "store": True}}
+                    "properties": {
+                        "name": {
+                            "type": "keyword",
+                            "store": True
+                        }
+                    }
                 }
             }
         }
@@ -146,27 +179,57 @@ class TestESSpecial(BaseTestCase):
             "schema": schema,
             "data": [],
             "query": {
-                "where": {"prefix": {"no_name": "something"}},
+                "where": {
+                    "prefix": {
+                        "no_name": "something"
+                    }
+                },
                 "from": TEST_TABLE,
             },
-            "expecting_list": {"meta": {"format": "list"}, "data": []},
+            "expecting_list": {
+                "meta": {
+                    "format": "list"
+                },
+                "data": []
+            },
         }
         self.utils.execute_tests(test)
 
     def test_prefix_uses_prefix(self):
         test = {
-            "data": [{"a": "test"}, {"a": "testkyle"}, {"a": None}],
-            "query": {"from": TEST_TABLE, "where": {"prefix": {"a": "test"}}},
+            "data": [{
+                "a": "test"
+            }, {
+                "a": "testkyle"
+            }, {
+                "a": None
+            }],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {
+                    "prefix": {
+                        "a": "test"
+                    }
+                }
+            },
             "expecting_list": {
                 "meta": {
                     "format": "list",
                     "es_query": {
                         "from": 0,
-                        "query": {"prefix": {"a.~s~": "test"}},
+                        "query": {
+                            "prefix": {
+                                "a.~s~": "test"
+                            }
+                        },
                         "size": 10,
                     },
                 },
-                "data": [{"a": "test"}, {"a": "testkyle"}],
+                "data": [{
+                    "a": "test"
+                }, {
+                    "a": "testkyle"
+                }],
             },
         }
 
@@ -197,10 +260,15 @@ class TestESSpecial(BaseTestCase):
         # COLUMN WITH ZERO RECORDS
         index1 = cluster.create_index(
             index=index1,
-            schema= {
+            schema={
                 "mappings": {
                     "test": {
-                        "properties": {"missing_value": {"type": "keyword", "store": True}}
+                        "properties": {
+                            "missing_value": {
+                                "type": "keyword",
+                                "store": True
+                            }
+                        }
                     }
                 }
             },
@@ -211,10 +279,15 @@ class TestESSpecial(BaseTestCase):
         # INDEX WITH ONE RECORD
         index2 = cluster.create_index(
             index=index2,
-            schema= {
+            schema={
                 "mappings": {
                     "test": {
-                        "properties": {"one_value": {"type": "keyword", "store": True}}
+                        "properties": {
+                            "one_value": {
+                                "type": "keyword",
+                                "store": True
+                            }
+                        }
                     }
                 }
             },
@@ -234,15 +307,21 @@ class TestESSpecial(BaseTestCase):
 
         # THE one_value GOT PICKED UP
         self.assertEqual(
-            schema1,
-            {"mappings": {"test": {"properties": {"one_value": {"type": "keyword", "store": True}}}}}
+            schema1, {
+                "mappings": {
+                    "test": {
+                        "properties": {
+                            "one_value": {
+                                "type": "keyword",
+                                "store": True
+                            }
+                        }
+                    }
+                }
+            }
         )
         # THE missing_value DID NOT GET PICKED UP
-        self.assertEqual(
-            schema2,
-            {"mappings": {"test": {"properties": {"missing_value": NULL}}}}
-        )
-
+        self.assertEqual(schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}})
 
         try:
             cluster.delete_index(index1)
@@ -264,7 +343,9 @@ class TestESSpecial(BaseTestCase):
                 "limit": len(data),
                 "sort": "a"
             },
-            "expecting_list": {"data": data},  # DUMMY, TO ENSURE LOADED
+            "expecting_list": {
+                "data": data
+            },  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
         test.query.clear = "."
@@ -276,6 +357,7 @@ class TestESSpecial(BaseTestCase):
                 url=self.utils.testing.query,
                 json=test.query,
             )
+
         self.assertRaises(Exception, result)
 
     def test_missing_column_removed_from_metadata(self):
@@ -301,8 +383,7 @@ class TestESSpecial(BaseTestCase):
             read_only=False,
             typed=True,
             type=cluster.settings.type,
-            schema= {},
-
+            schema={},
         )
 
         # MAKE INDEX WITH ALIAS
@@ -310,10 +391,7 @@ class TestESSpecial(BaseTestCase):
             cluster.delete_index(index_name)
         except Exception:
             pass
-        index1 = cluster.create_index(
-            index=index_name,
-            kwargs=common
-        )
+        index1 = cluster.create_index(index=index_name, kwargs=common)
         index1.add_alias(common.alias)
 
         # ADD DATA
@@ -335,10 +413,7 @@ class TestESSpecial(BaseTestCase):
             pass
 
         # MAKE NEW INDEX, WITH SAME NAME
-        index1 = cluster.create_index(
-            index=index_name,
-            kwargs=common
-        )
+        index1 = cluster.create_index(index=index_name, kwargs=common)
         index1.add_alias(common.alias)
 
         # ADD OTHER DATA
@@ -352,5 +427,7 @@ class TestESSpecial(BaseTestCase):
         new_found_container = find_container(alias, after=Date.now())
 
         # VERIFY OLD SCHEMA DOES NOT EXIST
-        columns = list_to_data([c for c in new_found_container.snowflake.columns if c.cardinality != 0])
+        columns = list_to_data([
+            c for c in new_found_container.snowflake.columns if c.cardinality != 0
+        ])
         self.assertEqual(columns.get("es_column"), {'.', '_id', 'b', 'b.~n~', '~e~'})

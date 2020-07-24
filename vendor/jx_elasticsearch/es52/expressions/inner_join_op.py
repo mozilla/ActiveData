@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import InnerJoinOp as InnerJoinOp_
 from jx_elasticsearch.es52.expressions import es_and
 from jx_elasticsearch.es52.expressions.utils import ES52
-from mo_dots import dict_to_data
 
 
 class InnerJoinOp(InnerJoinOp_):
@@ -24,5 +23,6 @@ class InnerJoinOp(InnerJoinOp_):
             if not acc:
                 acc = es
             else:
-                acc = dict_to_data({"query": es_and([es.query, acc])}) | es
+                es['query'] = es_and([es.query, acc])
+                acc = es
         return acc

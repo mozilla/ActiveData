@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.literal import Literal
-from mo_future.exports import export, expect
+from mo_imports import export, expect
 from mo_json import BOOLEAN
 
 TRUE, = expect("TRUE")

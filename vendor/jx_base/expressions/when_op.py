@@ -22,7 +22,7 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import OBJECT, same_json_type, merge_json_type
 from mo_logs import Log
 

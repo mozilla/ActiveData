@@ -20,7 +20,7 @@ from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.or_op import es_or
 from mo_dots import dict_to_data
 from mo_future import first
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import STRUCT
 
 

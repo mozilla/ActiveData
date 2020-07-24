@@ -25,7 +25,7 @@ from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
 from mo_dots import Null, to_data, join_field, split_field, coalesce
 from mo_future import first
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import EXISTS
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
@@ -115,9 +115,7 @@ def setop_to_es_queries(query, split_select):
     # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
     expr_vars = where.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
-    for v, cs in list(var_to_columns.items()):
-        for c in cs:
-            var_to_columns[c.es_column] = [c]
+
 
     # FROM DEEPEST TO SHALLOWEST
     all_paths = list(
@@ -153,11 +151,18 @@ def setop_to_es_queries(query, split_select):
                                     v: NestedOp(
                                         path=Variable(deepest),
                                         select=Variable(c.es_column),
+                                        where=Variable(c.es_column).exists()
                                     )
                                 }
                             )
                         )
         wheres = more_exprs
+        var_to_columns = {
+            c.es_column: [c]
+            for cs in var_to_columns.values()
+            for c in cs
+        }
+
 
     concat_outer = query_to_outer_joins(frum, OrOp(wheres), all_paths, var_to_columns, split_select)
 
@@ -184,25 +189,36 @@ def setop_to_es_queries(query, split_select):
             for deepest in expr.nests:
                 deepest_path = deepest.path.var
                 inner_join = InnerJoinOp(expr.frum, [])
+                deeper_conditions = TRUE
                 for nest in expr.nests:
                     nest_path = nest.path.var
                     if len(nest_path) < len(deepest_path):
-                        inner_join.nests.append(nest)
+                        new_nest = NestedOp(
+                            path=nest.path,
+                            select=nest.select,
+                            where=AndOp([deeper_conditions, nest.where]),
+                            sort=nest.sort,
+                            limit=nest.limit
+                        )
+                        inner_join.nests.append(new_nest)
+                        deeper_conditions = TRUE
                     elif nest_path == deepest_path:
                         # assume the deeper is null
                         set_null = {d.es_column: NULL for d in paths_to_cols[deepest_path]}
                         set_null[deepest_path] = NULL
-                        deeper_is_missing = nest.where.map(set_null)
-                        new_nest = NestedOp(
-                            path=nest.path,
-                            select=nest.select,
-                            where=AndOp([
-                                Variable(exists_variable(nest_path)).missing(),
-                                deeper_is_missing
-                            ]).partial_eval()
-                        )
-                        inner_join.nests.append(new_nest)
-                output.append(inner_join)
+                        deeper_exists = nest.where.map(set_null).partial_eval()
+
+                        if deeper_exists is FALSE:
+                            # WHERE CAN NOT BE SATISFIED IF NESTED IS NULL
+                            deeper_conditions = FALSE
+                        else:
+                            # ENSURE THIS IS NOT "OPTIMIZED" TO FALSE
+                            deeper_conditions = NotOp(NestedOp(path=Variable(nest_path), where=TRUE))
+                            deeper_conditions.simplified = True
+
+                inner_join = inner_join.partial_eval()
+                if inner_join.missing() is not TRUE:
+                    output.append(inner_join)
             return ConcatOp(output)
         else:
             Log.error("do not know what to do yet")

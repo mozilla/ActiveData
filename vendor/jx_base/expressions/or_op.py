@@ -17,7 +17,7 @@ from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import BOOLEAN
 
 

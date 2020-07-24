@@ -26,7 +26,7 @@ from jx_python.lists.aggs import is_aggs, list_aggs
 from mo_collections import UniqueIndex
 from mo_dots import Data, Null, is_data, is_list, listwrap, unwrap, unwraplist, to_data, coalesce, dict_to_data
 from mo_future import first, sort_using_key
-from mo_future.exports import export
+from mo_imports import export
 from mo_logs import Log
 from mo_threads import Lock
 

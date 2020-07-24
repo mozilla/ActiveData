@@ -13,7 +13,7 @@ from copy import copy
 
 from mo_dots import Data, is_data, is_many, join_field, set_default, split_field, to_data
 from mo_future import is_text
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_logs import Log
 
 ListContainer, Cube, run, QueryOp = expect("ListContainer", "Cube", "run", "QueryOp")

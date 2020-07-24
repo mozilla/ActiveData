@@ -17,7 +17,7 @@ from mo_dots.nones import Null, NullType
 from mo_dots.objects import DataObject
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
 from mo_future import binary_type, generator_types, is_binary, is_text, text, OrderedDict, none_type
-from mo_future.exports import export
+from mo_imports import export
 
 _module_type = type(sys.modules[__name__])
 _builtin_zip = zip

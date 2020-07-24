@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import FalseOp, extend
-from mo_future.exports import export
+from mo_imports import export
 
 
 @extend(FalseOp)

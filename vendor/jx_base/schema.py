@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from copy import copy
 
 from mo_dots import Null, relative_field, set_default, startswith_field, dict_to_data
-from mo_future.exports import export
+from mo_imports import export
 from mo_json import EXISTS, NESTED, OBJECT, INTERNAL
 from mo_json.typed_encoder import unnest_path, untype_path
 from mo_logs import Log

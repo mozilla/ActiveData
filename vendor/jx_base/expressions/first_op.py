@@ -15,7 +15,7 @@ from jx_base.expressions.expression import Expression
 from jx_base.expressions.last_op import LastOp
 from jx_base.expressions.literal import is_literal
 from jx_base.language import is_op
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import OBJECT
 from mo_logs import Log
 

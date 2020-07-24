@@ -48,10 +48,22 @@ STALE_METADATA = HOUR
 DATA_KEY = text("data")
 
 
-def iterable(func):
-    output = object()
-    setattr(object, "__iter__", func)
-    return output
+class IterHandle(object):
+    __slots__ = ["iter"]
+
+    def __init__(self, iter):
+        self.iter = iter
+
+    def __iter__(self):
+        return self.iter()
+
+
+def iterable(iter):
+    """
+    RETURN REUSABLE ITERABLE, USING iter AS THE CONSTRUCTOR
+    :param iter:
+    """
+    return IterHandle(iter)
 
 
 class Index(object):
@@ -1293,6 +1305,55 @@ class Alias(object):
                 path=self.path + "/_search",
                 query=query,
                 cause=e
+            )
+
+    def multisearch(self, queries, timeout=None, retry=None):
+        queries = listwrap(queries)
+        try:
+            url = self.cluster.url / self.path / "_msearch"
+
+            @iterable
+            def content():
+                for q in queries:
+                    yield b"{}\n"
+                    yield value2json(q).encode("utf8")
+                    yield b"\n"
+
+            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=queries)
+            response = http.get(
+                url,
+                headers={"Content-Type": "application/x-ndjson"},
+                data=content,
+                timeout=coalesce(timeout, self.settings.timeout),
+                retry=retry
+            )
+            if response.status_code not in [200, 201]:
+                Log.error(
+                    "Problem with search (url={{url}}):\n{{query|indent}}",
+                    url=url,
+                    query=queries
+                )
+
+            responses = json2value(response.content.decode('utf8')).responses
+
+            for details in responses:
+                if details.error:
+                    Log.error(quote2string(details.error))
+                    if details._shards.failed > 0:
+                        Log.error(
+                            "{{num}} orf {{total}} shard failures {{failures|indent}}",
+                            failures=details._shards.failures.reason,
+                            num=details._shards.failed,
+                            total=details._shards.total
+                        )
+
+            return responses
+        except Exception as cause:
+            Log.error(
+                "Problem with search (path={{path}}):\n{{query|indent}}",
+                path=self.path + "/_msearch",
+                query=queries,
+                cause=cause
             )
 
     def scroll(self, scroll_id):

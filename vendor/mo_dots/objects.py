@@ -18,7 +18,7 @@ from mo_dots.lists import FlatList
 from mo_dots.nones import NullType
 from mo_dots.utils import CLASS, OBJ
 from mo_future import binary_type, generator_types, get_function_arguments, get_function_defaults, none_type, text
-from mo_future.exports import export, expect
+from mo_imports import export, expect
 
 get_attr, set_attr, to_data, from_data = expect("get_attr", "set_attr", "to_data", "from_data")
 

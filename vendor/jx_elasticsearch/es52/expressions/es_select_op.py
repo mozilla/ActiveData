@@ -20,3 +20,6 @@ class ESSelectOp(_ESSelectOp):
             stored_fields=self.fields if not self.get_source else None,
             script_fields=self.scripts if self.scripts else None,
         )
+
+    def __bool__(self):
+        return not self.get_source or self.stored_fields or self.script_fields

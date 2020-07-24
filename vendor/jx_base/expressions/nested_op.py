@@ -143,7 +143,7 @@ class NestedOp(Expression):
     def missing(self):
         return OrOp([
             NotOp(self.where),
-            self.path.missing(),
+            # self.path.missing(), ASSUME PATH TO TABLES, WHICH ASSUMED TO HAVE DATA (EXISTS)
             self.select.missing(),
             EqOp([self.limit,  ZERO])
          ]).partial_eval()

@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions._utils import simplified, value2json
 from jx_base.expressions.expression import Expression
 from mo_dots import Null, is_data
-from mo_future.exports import expect, export
+from mo_imports import expect, export
 from mo_json import python_type_to_json_type
 
 DateOp, FALSE, TRUE, NULL = expect("DateOp", "FALSE", "TRUE", "NULL")

@@ -15,7 +15,7 @@ from copy import deepcopy
 from mo_dots.utils import CLASS
 
 from mo_future import generator_types, first
-from mo_future.exports import expect
+from mo_imports import expect
 
 Log = None
 datawrap, coalesce, to_data, from_data, Null = expect("datawrap", "coalesce", "to_data", "from_data", "Null")

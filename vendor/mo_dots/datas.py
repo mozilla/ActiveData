@@ -25,7 +25,7 @@ from mo_future import (
     MutableMapping,
     OrderedDict,
 )
-from mo_future.exports import expect
+from mo_imports import expect
 
 (
     _getdefault,

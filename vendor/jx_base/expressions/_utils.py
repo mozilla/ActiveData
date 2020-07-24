@@ -22,7 +22,7 @@ from mo_future import (
     text,
     utf8_json_encoder,
 )
-from mo_future.exports import expect
+from mo_imports import expect
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, scrub
 from mo_logs import Except, Log
 from mo_math import is_number

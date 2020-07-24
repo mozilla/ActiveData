@@ -18,7 +18,7 @@ from mo_collections.matrix import Matrix
 from mo_dots import Data, FlatList, Null, is_data, is_list, listwrap, leaves_to_data, to_data, list_to_data, \
     dict_to_data
 from mo_future import is_text, transpose
-from mo_future.exports import export
+from mo_imports import export
 from mo_logs import Log
 from mo_math import MAX, OR
 

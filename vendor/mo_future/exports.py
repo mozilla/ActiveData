@@ -21,8 +21,8 @@ DEBUG = False
 
 
 locker = allocate_lock()
-expectations = []
-expiry = time() + 10
+_expectations = []
+_expiry = time() + 10
 monitor_thread = None
 
 
@@ -34,7 +34,7 @@ def expect(*names):
     :param names: MODULE VARIABLES THAT WILL BE FILLED BY ANOTHER MODULE
     :return: PLACEHOLDERS THAT CAN BE USED UNTIL FILL HAPPENS len(output)==len(names)
     """
-    global monitor_thread, expiry
+    global monitor_thread, _expiry
 
     # GET MODULE OF THE CALLER
     caller_frame = inspect.stack()[1]
@@ -49,7 +49,7 @@ def expect(*names):
 
     with locker:
         expiry = time() + 10
-        expectations.extend(output)
+        _expectations.extend(output)
         if not monitor_thread:
             monitor_thread = Thread(target=worker)
             monitor_thread.start()
@@ -143,9 +143,9 @@ def export(module, name, value=None):
     desc = getattr(module, name, None)
     if isinstance(desc, Expecting):
         with locker:
-            for i, e in enumerate(expectations):
+            for i, e in enumerate(_expectations):
                 if desc is e:
-                    del expectations[i]
+                    del _expectations[i]
                     break
             else:
                 raise Exception(module.__name__ + " is not expecting an export to " + name)
@@ -158,14 +158,14 @@ def export(module, name, value=None):
 
 
 def worker():
-    global expectations, monitor_thread
+    global _expectations, monitor_thread
 
     if DEBUG:
         print(">>> expectation thread started")
     while True:
-        sleep(expiry - time())
+        sleep(_expiry - time())
         with locker:
-            if expiry >= time():
+            if _expiry >= time():
                 continue
 
             monitor_thread = None

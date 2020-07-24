@@ -454,7 +454,7 @@ class ColumnList(Table, Container):
                 )
             snapshot = self._all_columns()
 
-        from jx_python.containers.list_usingPythonList import ListContainer
+        from jx_python.containers.list import ListContainer
 
         query.frum = ListContainer(META_COLUMNS_NAME, snapshot, self._schema)
         return jx.run(query)
@@ -517,7 +517,7 @@ class ColumnList(Table, Container):
                 if c.jx_type not in INTERNAL  # and c.es_column != "_id"
             ]
 
-        from jx_python.containers.list_usingPythonList import ListContainer
+        from jx_python.containers.list import ListContainer
 
         return ListContainer(
             self.name,

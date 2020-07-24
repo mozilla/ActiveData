@@ -1137,3 +1137,4 @@ from jx_python.lists.aggs import is_aggs, list_aggs
 
 
 export("jx_base.container", run)
+export("jx_python.containers.list", "jx")

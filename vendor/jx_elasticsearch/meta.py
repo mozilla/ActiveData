@@ -32,7 +32,7 @@ from jx_elasticsearch.elasticsearch import (
 )
 from jx_elasticsearch.meta_columns import ColumnList
 from jx_python import jx
-from jx_python.containers.list_usingPythonList import ListContainer
+from jx_python.containers.list import ListContainer
 from mo_dots import (
     Data,
     FlatList,

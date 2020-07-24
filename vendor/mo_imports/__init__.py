@@ -20,10 +20,12 @@ from mo_future import text, allocate_lock
 DEBUG = False
 
 
-locker = allocate_lock()
-expectations = []
-expiry = time() + 10
-monitor = None
+_locker = allocate_lock()
+_expectations = []
+_expiry = time() + 10
+_monitor = None
+_nothing = object()
+_set = object.__setattr__
 
 
 def expect(*names):
@@ -66,17 +68,17 @@ class Expecting(object):
         :param name:
         :param frame:
         """
-        global monitor, expiry
+        global _monitor, _expiry
 
         _set(self, "module", module)
         _set(self, "name", name)
         _set(self, "frame", frame)
-        with locker:
-            expiry = time() + 10
-            expectations.append(self)
-            if not monitor:
-                monitor = Thread(target=worker)
-                monitor.start()
+        with _locker:
+            _expiry = time() + 10
+            _expectations.append(self)
+            if not _monitor:
+                _monitor = Thread(target=worker)
+                _monitor.start()
 
     def __call__(self, *args, **kwargs):
         raise Exception(
@@ -98,7 +100,7 @@ class Expecting(object):
         return "Expect: " + self.module.__name__ + "." + self.name
 
 
-def export(module, name, value=None):
+def export(module, name, value=_nothing):
     """
 
     MUCH LIKE setattr(module, name, value) BUT WITH CONSISTENCY CHECKS AND MORE CONVENIENCE
@@ -139,13 +141,17 @@ def export(module, name, value=None):
             raise Exception(
                 "Can not find variable holding a " + value.__class__.__name__
             )
+    if value is _nothing:
+        # ASSUME CALLER MODULE IS USED
+        frame = inspect.stack()[1]
+        value = inspect.getmodule(frame[0])
 
     desc = getattr(module, name, None)
     if isinstance(desc, Expecting):
-        with locker:
-            for i, e in enumerate(expectations):
+        with _locker:
+            for i, e in enumerate(_expectations):
                 if desc is e:
-                    del expectations[i]
+                    del _expectations[i]
                     break
             else:
                 raise Exception(module.__name__ + " is not expecting an export to " + name)
@@ -158,21 +164,21 @@ def export(module, name, value=None):
 
 
 def worker():
-    global expectations, monitor
+    global _expectations, _monitor
 
     if DEBUG:
         print(">>> expectation thread started")
     while True:
-        sleep(expiry - time())
-        with locker:
-            if expiry >= time():
+        sleep(_expiry - time())
+        with _locker:
+            if _expiry >= time():
                 continue
 
-            monitor = None
-            if not expectations:
+            _monitor = None
+            if not _expectations:
                 break
 
-            done, expectations = expectations, []
+            done, _expectations = _expectations, []
 
         for d in done:
             sys.stderr.write(
@@ -184,4 +190,6 @@ def worker():
         print(">>> expectation thread ended")
 
 
-_set = object.__setattr__
+
+
+

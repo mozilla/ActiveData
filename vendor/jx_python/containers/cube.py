@@ -26,7 +26,7 @@ from mo_math import MAX, OR
 class Cube(Container):
     """
     A CUBE IS LIKE A NUMPY ARRAY, ONLY WITH THE DIMENSIONS TYPED AND NAMED.
-    CUBES ARE BETTER THAN PANDAS BECAUSE THEY DEAL WITH NULLS GRACEFULLY
+    CUBES ARE EASIER TO WORK WITH THAN PANDAS BECAUSE THEY DEAL WITH NULLS GRACEFULLY
     """
 
     def __init__(self, select, edges, data, frum=None):
@@ -117,7 +117,7 @@ class Cube(Container):
         columns = dot.dict_to_data({s.name: s for s in self.select + self.edges})
 
         # DEFER TO ListContainer
-        from jx_python.containers.list_usingPythonList import ListContainer
+        from jx_python.containers.list import ListContainer
 
         frum = ListContainer(name="", data=frum.values(), schema=columns)
         return frum.query(q)

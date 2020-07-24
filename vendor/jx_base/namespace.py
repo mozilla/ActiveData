@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.query import QueryOp
 from mo_dots import is_data
-from mo_imports import export
 
 
 class Namespace(object):
@@ -59,5 +58,3 @@ def convert_list(operator, operand):
     else:
         return list(map(operator, operand))
 
-
-export("jx_base", Namespace)

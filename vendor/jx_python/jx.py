@@ -10,13 +10,16 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import mo_dots
+import mo_math
 from jx_base import query
 from jx_base.container import Container
 from jx_base.expressions import FALSE, TRUE
-from jx_base.query import QueryOp, _normalize_selects
 from jx_base.language import is_op, value_compare
+from jx_base.query import QueryOp, _normalize_selects
 from jx_python import expressions as _expressions, flat_list, group_by
 from jx_python.containers.cube import Cube
+from jx_python.containers.list import ListContainer
 from jx_python.convert import list2table, list2cube
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.expression_compiler import compile_expression
@@ -24,13 +27,12 @@ from jx_python.expressions import jx_expression_to_function as get
 from jx_python.flat_list import PartFlatList
 from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
-import mo_dots
-from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
+from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, \
+    set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
 from mo_imports import export
 from mo_logs import Log
-import mo_math
 from mo_math import MIN, UNION
 
 # A COLLECTION OF DATABASE OPERATORS (RELATIONAL ALGEBRA OPERATORS)
@@ -54,16 +56,16 @@ def run(query, container=Null):
         container = to_data(query)["from"]
         query_op = QueryOp.wrap(query, container=container, namespace=container.schema)
     else:
-        query_op = QueryOp.wrap(query, container, container.namespace)
+        query_op = QueryOp.wrap(query, container=container, namespace=container.namespace)
 
     if container == None:
-        from jx_python.containers.list_usingPythonList import DUAL
+        from jx_python.containers.list import DUAL
 
         return DUAL.query(query_op)
     elif isinstance(container, Container):
         return container.query(query_op)
     elif is_many(container):
-        container = to_data(list(container))
+        container = ListContainer(name=None, data=list(container))
     elif isinstance(container, Cube):
         if is_aggs(query_op):
             return cube_aggs(container, query_op)

@@ -11,23 +11,22 @@ from __future__ import absolute_import, division, unicode_literals
 
 from uuid import uuid4
 
-from mo_imports import export, expect
-from mo_json.typed_encoder import EXISTS_TYPE
-
 from jx_base.expressions import jx_expression
-from jx_base.table import Table
-from jx_base.snowflake import Snowflake
 from jx_base.facts import Facts
+from jx_base.namespace import Namespace
+from jx_base.schema import Schema
+from jx_base.snowflake import Snowflake
+from jx_base.table import Table
 from jx_python.expressions import Literal, Python
 from mo_dots import coalesce, listwrap, to_data
 from mo_dots.datas import register_data
 from mo_dots.lists import last
 from mo_future import is_text, text
+from mo_imports import export
 from mo_json import value2json, true, false, null, EXISTS, OBJECT, NESTED
+from mo_json.typed_encoder import EXISTS_TYPE
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
-
-Namespace, Schema = expect("Namespace", "Schema")
 
 ENABLE_CONSTRAINTS = True
 

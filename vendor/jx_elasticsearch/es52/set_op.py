@@ -18,7 +18,7 @@ from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
     split_expression_by_path,
     NestedOp, ESSelectOp)
-from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries
+from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries, pre_process
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_format import set_formatters
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
@@ -298,8 +298,9 @@ def get_selects(query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-    new_select, split_select = get_selects(query)
-    es_query = setop_to_es_queries(query, split_select)
+    new_select, split_select, all_paths, var_to_columns = pre_process(query)
+
+    es_query = setop_to_es_queries(query, split_select, all_paths, var_to_columns)
     size = coalesce(query.limit, DEFAULT_LIMIT)
     sort = jx_sort_to_es_sort(query.sort, schema)
     for q in es_query:
@@ -407,23 +408,23 @@ def es_query_proto(selects, op, wheres, schema):
         es_where = op([es_query, where])
         es_query = NestedOp(path=Variable(p), query=es_where, select=select)
     return es_query.partial_eval().to_es(schema)
-
-expected = {
-    "_source": False,
-    "from": 0,
-    "query": {"bool": {"should": [
-        {"bool": {"should": [{"exists": {"field": "a._a.v.~s~"}}]}},
-        {"nested": {
-            "inner_hits": {
-                "_source": False,
-                "size": 100000,
-                "stored_fields": ["a._a.~N~.v.~s~"]
-            },
-            "path": "a._a.~N~",
-            "query": {"match_all": {}}
-        }}
-    ]}},
-    "size": 10,
-    "sort": [],
-    "stored_fields": ["o.~n~", "a._a.v.~s~"]
-}
+#
+# expected = {
+#     "_source": False,
+#     "from": 0,
+#     "query": {"bool": {"should": [
+#         {"bool": {"should": [{"exists": {"field": "a._a.v.~s~"}}]}},
+#         {"nested": {
+#             "inner_hits": {
+#                 "_source": False,
+#                 "size": 100000,
+#                 "stored_fields": ["a._a.~N~.v.~s~"]
+#             },
+#             "path": "a._a.~N~",
+#             "query": {"match_all": {}}
+#         }}
+#     ]}},
+#     "size": 10,
+#     "sort": [],
+#     "stored_fields": ["o.~n~", "a._a.v.~s~"]
+# }

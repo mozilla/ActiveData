@@ -93,11 +93,11 @@ class AndOp(Expression):
                 ]
                 continue
             for and_terms in list(or_terms):
-                if self.lang[NotOp(simple)].partial_eval() in and_terms:
+                inv = self.lang[NotOp(simple)].partial_eval()
+                if inv in and_terms:
                     or_terms.remove(and_terms)
                 elif simple not in and_terms:
                     and_terms.append(simple)
-
         if len(or_terms) == 0:
             return FALSE
         elif len(or_terms) == 1:

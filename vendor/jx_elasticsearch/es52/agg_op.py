@@ -11,8 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import deque
 
+from jx_base.expressions.false_op import FALSE
+
+from jx_base.expressions.true_op import TRUE
+
 from jx_base.domains import SetDomain
-from jx_base.expressions import NULL, Variable as Variable_
+from jx_base.expressions import NULL, Variable as Variable_, ESSelectOp
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.agg_format import agg_formatters
@@ -21,6 +25,7 @@ from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
 from jx_elasticsearch.es52.expressions import ES52, split_expression_by_path
+from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
@@ -144,31 +149,40 @@ def extract_aggs(select, query_path, schema):
     return acc
 
 
-def build_es_query(select, query_path, schema, query):
-    acc = extract_aggs(select, query_path, schema)
-    acc = NestedAggs(query_path).add(acc)
+def aggop_to_es_queries(select, query_path, schema, query):
+    base_agg = extract_aggs(select, query_path, schema)
+    base_agg = NestedAggs(query_path).add(base_agg)
     split_decoders = get_decoders_by_path(query)
-    op, split_wheres = split_expression_by_path(query.where, schema=schema, lang=ES52)
+
+    new_select, split_select, all_paths, var_to_columns = pre_process(query)
+    union_inner = setop_to_inner_joins(query, {".": ESSelectOp(".")}, all_paths, var_to_columns)
+
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
-    paths = list(reversed(sorted(set(split_wheres.keys()) | set(split_decoders.keys()))))
-    for path in paths:
-        decoder = split_decoders.get(path, Null)
-        where = split_wheres.get(path, Null)
+    output = NestedAggs(".")
+    for inner in union_inner.terms:
+        acc = base_agg
+        for path in all_paths:
+            decoder = split_decoders.get(path, Null)
 
-        for d in decoder:
-            decoders[d.edge.dim] = d
-            acc = d.append_query(path, acc)
-            start += d.num_columns
+            for d in decoder:
+                decoders[d.edge.dim] = d
+                acc = d.append_query(path, acc)
+                start += d.num_columns
 
-        if where:
-            acc = FilterAggs("_filter", where, None).add(acc)
-        acc = NestedAggs(path).add(acc)
-    acc = NestedAggs('.').add(acc)
-    acc = simplify(acc)
-    es_query = to_data(acc.to_es(schema))
+            where = first(nest.where for nest in inner.nests if nest.path == path)
+            if where is FALSE:
+                continue
+            elif not where or where is TRUE:
+                pass
+            else:
+                acc = FilterAggs("_filter", where, None).add(acc)
+            acc = NestedAggs(path).add(acc)
+        output.add(acc)
+    output = simplify(output)
+    es_query = to_data(output.to_es(schema))
     es_query.size = 0
-    return acc, decoders, es_query
+    return output, decoders, es_query
 
 
 def es_aggsop(es, frum, query):
@@ -177,7 +191,7 @@ def es_aggsop(es, frum, query):
     query_path = schema.query_path[0]
     selects = listwrap(query.select)
 
-    acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
+    acc, decoders, es_query = aggop_to_es_queries(selects, query_path, schema, query)
 
     with Timer("ES query time", verbose=DEBUG) as es_duration:
         result = es.search(es_query)

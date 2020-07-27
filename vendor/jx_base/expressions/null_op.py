@@ -97,6 +97,10 @@ class NullOp(Literal):
     def __bool__(self):
         Log.error("Detecting truthiness of NullOp is too confusing to be allowed")
 
+    def __nonzero__(self):
+        Log.error("Detecting truthiness of NullOp is too confusing to be allowed")
+
+
 
 NULL = NullOp()
 TYPE_ORDER[NullOp] = 9

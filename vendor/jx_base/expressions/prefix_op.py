@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
+from jx_base.expressions._utils import simplified, jx_expression
 from jx_base.expressions.basic_starts_with_op import BasicStartsWithOp
 from jx_base.expressions.case_op import CaseOp
 from jx_base.expressions.expression import Expression
@@ -48,7 +48,8 @@ class PrefixOp(Expression):
             expr, const = first(term.items())
             return PrefixOp(Variable(expr), Literal(const))
         else:
-            return PrefixOp(*term)
+            expr, const = term
+            return PrefixOp(jx_expression(expr), jx_expression(const))
 
     def __data__(self):
         if not self.expr:

@@ -10,10 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import eq_op
 from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.expression import Expression
+from jx_base.expressions.expression import Expression, NotOp
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.literal import is_literal
@@ -63,6 +62,8 @@ class InOp(Expression):
         superset = self.superset.partial_eval()
         if superset is NULL:
             return FALSE
+        elif value is NULL:
+            return FALSE
         elif is_literal(value) and is_literal(superset):
             return self.lang[Literal(self())]
         else:
@@ -73,5 +74,6 @@ class InOp(Expression):
 
     def missing(self):
         return FALSE
+
 
 export("jx_base.expressions.eq_op", InOp)

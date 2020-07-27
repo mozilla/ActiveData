@@ -14,7 +14,7 @@ from jx_base.expressions._utils import (
     operators,
     jx_expression,
     _jx_expression,
-    simplified,
+    simplified
 )
 from jx_base.language import BaseExpression, ID, is_expression, is_op
 from mo_dots import is_data, is_sequence, is_container
@@ -23,8 +23,8 @@ from mo_imports import expect
 from mo_json import BOOLEAN, OBJECT, value2json
 from mo_logs import Log
 
-FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = expect(
-    "FALSE", "Literal", "is_literal", "MissingOp", "NotOp", "NULL", "Variable"
+TRUE, FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = expect(
+    "TRUE", "FALSE", "Literal", "is_literal", "MissingOp", "NotOp", "NULL", "Variable"
 )
 
 
@@ -143,7 +143,13 @@ class Expression(BaseExpression):
         """
         :return: TRUE IF FALSE
         """
-        return self.lang[NotOp(self)]
+        inv = self.partial_eval()
+        if inv is TRUE:
+            return FALSE
+        elif inv is FALSE:
+            return TRUE
+        else:
+            return self.lang[NotOp(inv)]
 
     @simplified
     def partial_eval(self):

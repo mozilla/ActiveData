@@ -62,6 +62,9 @@ class TrueOp(Literal):
     def __bool__(self):
         return True
 
+    def __nonzero__(self):
+        return True
+
 
 TRUE = TrueOp()
 
@@ -69,4 +72,5 @@ TRUE = TrueOp()
 export("jx_base.expressions.literal", TRUE)
 export("jx_base.expressions.false_op", TRUE)
 export("jx_base.expressions._utils", TRUE)
+export("jx_base.expressions.expression", TRUE)
 

@@ -66,7 +66,196 @@ def iterable(iter):
     return IterHandle(iter)
 
 
-class Index(object):
+class Alias(object):
+    """
+    REPRESENT MULTIPLE INDICES, ALL WITH THE SAME INDEX
+    """
+
+    @override
+    def __init__(
+        self,
+        alias,  # NAME OF THE ALIAS
+        index=None,  # NO LONGER USED
+        type=None,  # SCHEMA NAME, WILL HUNT FOR ONE IF None
+        explore_metadata=True,  # IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
+        debug=False,
+        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
+        kwargs=None
+    ):
+        if alias == None:
+            Log.error("alias can not be None")
+        if index != None:
+            Log.error("index is no longer accepted")
+        self.debug = debug
+        self.settings = kwargs
+        self.cluster = Cluster(kwargs)
+
+        if type == None:
+            if not explore_metadata:
+                Log.error("Alias() was given no `type` (aka schema) and not allowed to explore metadata.  Do not know what to do now.")
+
+            if not self.settings.alias or self.settings.alias == self.settings.index:
+                alias_list = self.cluster.get("/_alias")
+                candidates = (
+                    [(name, i) for name, i in alias_list.items() if self.settings.index in i.aliases.keys()] +
+                    [(name, Null) for name, i in alias_list.items() if self.settings.index == name]
+                )
+                full_name = jx.sort(candidates, 0).last()[0]
+                if not full_name:
+                    Log.error("No index by name of {{name}}", name=self.settings.index)
+                settings = self.cluster.get("/" + full_name + "/_mapping")[full_name]
+            else:
+                index = self.cluster.get_best_matching_index(alias).index
+                settings = self.cluster.get_metadata().indices[literal_field(index)]
+
+            # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
+            type, props = _get_best_type_from_mapping(settings.mappings)
+            if type == None:
+                Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
+
+        self.debug and Log.alert("Elasticsearch debugging on {{alias|quote}} is on", alias=alias)
+        self.path = "/" + alias + "/" + type
+
+    @property
+    def url(self):
+        return self.cluster.url / self.path
+
+    def get_snowflake(self, retry=True):
+        # TODO: merge this with Index.get_properties()
+        if self.settings.explore_metadata:
+            indices = self.cluster.get_metadata().indices
+            if not self.settings.alias or self.settings.alias == self.settings.index:
+                # PARTIALLY DEFINED settings
+                candidates = [(name, i) for name, i in indices.items() if self.settings.index in i.aliases]
+                # TODO: MERGE THE mappings OF ALL candidates, DO NOT JUST PICK THE LAST ONE
+
+                index = "dummy value"
+                schema = dict_to_data({"properties": {}})
+                for _, ind in jx.sort(candidates, {"value": 0, "sort": -1}):
+                    mapping = ind.mappings[self.settings.type]
+                    schema.properties = _merge_mapping(schema.properties, mapping.properties)
+            else:
+                # FULLY DEFINED settings
+                index = indices[self.settings.index]
+                schema = index.mappings[self.settings.type]
+
+            if index == None and retry:
+                # TRY AGAIN, JUST IN CASE
+                self.cluster.info = None
+                return self.get_schema(retry=False)
+
+            # TODO: REMOVE THIS BUG CORRECTION
+            if not schema and self.settings.type == "test_result":
+                schema = index.mappings["test_results"]
+            # DONE BUG CORRECTION
+
+            if not schema:
+                Log.error(
+                    "ElasticSearch index ({{index}}) does not have type ({{type}})",
+                    index=self.settings.index,
+                    type=self.settings.type
+                )
+            return schema
+        else:
+            mapping = self.cluster.get(self.path + "/_mapping")
+            if not mapping[self.settings.type]:
+                Log.error("{{index}} does not have type {{type}}", self.settings)
+            return dict_to_data({"mappings": mapping[self.settings.type]})
+
+    def search(self, query, timeout=None, retry=None, scroll=None):
+        query = to_data(query)
+        try:
+            suffix = "/_search?scroll=" + scroll if scroll else "/_search"
+            url = self.path + suffix
+
+            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=query)
+            return self.cluster.post(
+                url,
+                data=query,
+                timeout=coalesce(timeout, self.settings.timeout),
+                retry=retry
+            )
+        except Exception as e:
+            Log.error(
+                "Problem with search (path={{path}}):\n{{query|indent}}",
+                path=self.path + "/_search",
+                query=query,
+                cause=e
+            )
+
+    def multisearch(self, queries, timeout=None, retry=None):
+        queries = listwrap(queries)
+        try:
+            url = self.cluster.url / self.path / "_msearch"
+
+            @iterable
+            def content():
+                for q in queries:
+                    yield b"{}\n"
+                    yield value2json(q).encode("utf8")
+                    yield b"\n"
+
+            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=queries)
+            response = http.get(
+                url,
+                headers={"Content-Type": "application/x-ndjson"},
+                data=content,
+                timeout=coalesce(timeout, self.settings.timeout),
+                retry=retry
+            )
+            if response.status_code not in [200, 201]:
+                Log.error(
+                    "Problem with search (url={{url}}):\n{{query|indent}}",
+                    url=url,
+                    query=queries
+                )
+
+            responses = json2value(response.content.decode('utf8')).responses
+
+            for details in responses:
+                if details.error:
+                    Log.error(quote2string(details.error))
+                    if details._shards.failed > 0:
+                        Log.error(
+                            "{{num}} orf {{total}} shard failures {{failures|indent}}",
+                            failures=details._shards.failures.reason,
+                            num=details._shards.failed,
+                            total=details._shards.total
+                        )
+
+            return responses
+        except Exception as cause:
+            Log.error(
+                "Problem with search (path={{path}}):\n{{query|indent}}",
+                path=self.path + "/_msearch",
+                query=queries,
+                cause=cause
+            )
+
+    def scroll(self, scroll_id):
+        try:
+            # POST /_search/scroll
+            # {
+            #     "scroll" : "1m",
+            #     "scroll_id" : "DXF1ZXJ5QW5kRmV0Y2gBAAAAAAAAAD4WYm9laVYtZndUQlNsdDcwakFMNjU1QQ=="
+            # }
+            return self.cluster.post(
+                "_search/scroll",
+                data={"scroll": "5m", "scroll_id": scroll_id}
+            )
+        except Exception as e:
+            Log.error(
+                "Problem with scroll (scroll_id={{scroll_id}})",
+                path= "_search/scroll",
+                scroll_id=scroll_id,
+                cause=e
+            )
+
+    def refresh(self):
+        self.cluster.post("/" + self.settings.alias + "/_refresh")
+
+
+class Index(Alias):
     """
     AN ElasticSearch INDEX LIFETIME MANAGEMENT TOOL
 
@@ -161,10 +350,6 @@ class Index(object):
                 self.encode = TypedInserter(self, id_info).typed_encode
             else:
                 self.encode = get_encoder(id_info)
-
-    @property
-    def url(self):
-        return self.cluster.url / self.path
 
     def get_properties(self, retry=True):
         if self.settings.explore_metadata:
@@ -420,9 +605,6 @@ class Index(object):
             else:
                raise e
 
-    def refresh(self):
-        self.cluster.post("/" + self.settings.index + "/_refresh")
-
     def set_refresh_interval(self, seconds, **kwargs):
         """
         :param seconds:  -1 FOR NO REFRESH
@@ -447,68 +629,6 @@ class Index(object):
                 })
         else:
             Log.error("Do not know how to handle ES version {{version}}", version=self.cluster.version)
-
-    def multisearch(self, queries, timeout=None, retry=None):
-        queries = listwrap(queries)
-        try:
-            suffix = "/_msearch"
-            url = self.path + suffix
-
-            @iterable
-            def content():
-                for q in queries:
-                    yield b"{}\n"
-                    yield value2json(q).encode("utf8")
-                    yield b"\n"
-
-            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=queries)
-            response = http.get(
-                url,
-                headers={"Content-Type": "application/x-ndjson"},
-                data=content(),
-                timeout=coalesce(timeout, self.settings.timeout),
-                retry=retry
-            )
-            if response.status_code not in [200, 201]:
-                Log.error(
-                    "Problem with search (path={{path}}):\n{{query|indent}}",
-                    path=self.path + "/_msearch",
-                    query=queries
-                )
-            # TODO: CHECK EACH LINE FOR ERRORS
-            return [
-                value2json(line.decode('utf8'))
-                for line in response.content.splitlines()
-            ]
-        except Exception as cause:
-            Log.error(
-                "Problem with search (path={{path}}):\n{{query|indent}}",
-                path=self.path + "/_msearch",
-                query=queries,
-                cause=cause
-            )
-
-    def search(self, query, timeout=None, retry=None, scroll=None):
-        query = to_data(query)
-        try:
-            suffix = "/_search?scroll=" + scroll if scroll else "/_search"
-            url = self.path + suffix
-
-            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=query)
-            return self.cluster.post(
-                url,
-                data=query,
-                timeout=coalesce(timeout, self.settings.timeout),
-                retry=retry
-            )
-        except Exception as e:
-            Log.error(
-                "Problem with search (path={{path}}):\n{{query|indent}}",
-                path=self.path + "/_search",
-                query=query,
-                cause=e
-            )
-
 
     def threaded_queue(self, batch_size=None, max_size=None, period=None, silent=False):
         """
@@ -1190,193 +1310,6 @@ def _scrub(r):
             return r
     except Exception as e:
         Log.warning("Can not scrub: {{json}}", json=r, cause=e)
-
-
-class Alias(object):
-    """
-    REPRESENT MULTIPLE INDICES, ALL WITH THE SAME INDEX
-    """
-
-    @override
-    def __init__(
-        self,
-        alias,  # NAME OF THE ALIAS
-        index=None,  # NO LONGER USED
-        type=None,  # SCHEMA NAME, WILL HUNT FOR ONE IF None
-        explore_metadata=True,  # IF PROBING THE CLUSTER FOR METADATA IS ALLOWED
-        debug=False,
-        timeout=None,  # NUMBER OF SECONDS TO WAIT FOR RESPONSE, OR SECONDS TO WAIT FOR DOWNLOAD (PASSED TO requests)
-        kwargs=None
-    ):
-        if alias == None:
-            Log.error("alias can not be None")
-        if index != None:
-            Log.error("index is no longer accepted")
-        self.debug = debug
-        self.settings = kwargs
-        self.cluster = Cluster(kwargs)
-
-        if type == None:
-            if not explore_metadata:
-                Log.error("Alias() was given no `type` (aka schema) and not allowed to explore metadata.  Do not know what to do now.")
-
-            if not self.settings.alias or self.settings.alias == self.settings.index:
-                alias_list = self.cluster.get("/_alias")
-                candidates = (
-                    [(name, i) for name, i in alias_list.items() if self.settings.index in i.aliases.keys()] +
-                    [(name, Null) for name, i in alias_list.items() if self.settings.index == name]
-                )
-                full_name = jx.sort(candidates, 0).last()[0]
-                if not full_name:
-                    Log.error("No index by name of {{name}}", name=self.settings.index)
-                settings = self.cluster.get("/" + full_name + "/_mapping")[full_name]
-            else:
-                index = self.cluster.get_best_matching_index(alias).index
-                settings = self.cluster.get_metadata().indices[literal_field(index)]
-
-            # FIND MAPPING WITH MOST PROPERTIES (AND ASSUME THAT IS THE CANONICAL TYPE)
-            type, props = _get_best_type_from_mapping(settings.mappings)
-            if type == None:
-                Log.error("Can not find schema type for index {{index}}", index=coalesce(self.settings.alias, self.settings.index))
-
-        self.debug and Log.alert("Elasticsearch debugging on {{alias|quote}} is on", alias=alias)
-        self.path = "/" + alias + "/" + type
-
-    @property
-    def url(self):
-        return self.cluster.url / self.path
-
-    def get_snowflake(self, retry=True):
-        if self.settings.explore_metadata:
-            indices = self.cluster.get_metadata().indices
-            if not self.settings.alias or self.settings.alias == self.settings.index:
-                # PARTIALLY DEFINED settings
-                candidates = [(name, i) for name, i in indices.items() if self.settings.index in i.aliases]
-                # TODO: MERGE THE mappings OF ALL candidates, DO NOT JUST PICK THE LAST ONE
-
-                index = "dummy value"
-                schema = dict_to_data({"properties": {}})
-                for _, ind in jx.sort(candidates, {"value": 0, "sort": -1}):
-                    mapping = ind.mappings[self.settings.type]
-                    schema.properties = _merge_mapping(schema.properties, mapping.properties)
-            else:
-                # FULLY DEFINED settings
-                index = indices[self.settings.index]
-                schema = index.mappings[self.settings.type]
-
-            if index == None and retry:
-                # TRY AGAIN, JUST IN CASE
-                self.cluster.info = None
-                return self.get_schema(retry=False)
-
-            # TODO: REMOVE THIS BUG CORRECTION
-            if not schema and self.settings.type == "test_result":
-                schema = index.mappings["test_results"]
-            # DONE BUG CORRECTION
-
-            if not schema:
-                Log.error(
-                    "ElasticSearch index ({{index}}) does not have type ({{type}})",
-                    index=self.settings.index,
-                    type=self.settings.type
-                )
-            return schema
-        else:
-            mapping = self.cluster.get(self.path + "/_mapping")
-            if not mapping[self.settings.type]:
-                Log.error("{{index}} does not have type {{type}}", self.settings)
-            return dict_to_data({"mappings": mapping[self.settings.type]})
-
-    def search(self, query, timeout=None, scroll=None):
-        query = to_data(query)
-        try:
-            suffix = "/_search?scroll=" + scroll if scroll else "/_search"
-            path = self.path + suffix
-            self.debug and Log.note("Query {{path}}\n{{query|indent}}", path=path, query=query)
-
-            return self.cluster.post(
-                path,
-                data=query,
-                timeout=coalesce(timeout, self.settings.timeout)
-            )
-        except Exception as e:
-            Log.error(
-                "Problem with search (path={{path}}):\n{{query|indent}}",
-                path=self.path + "/_search",
-                query=query,
-                cause=e
-            )
-
-    def multisearch(self, queries, timeout=None, retry=None):
-        queries = listwrap(queries)
-        try:
-            url = self.cluster.url / self.path / "_msearch"
-
-            @iterable
-            def content():
-                for q in queries:
-                    yield b"{}\n"
-                    yield value2json(q).encode("utf8")
-                    yield b"\n"
-
-            self.debug and Log.note("Query: {{url}}\n{{query|indent}}", url=url, query=queries)
-            response = http.get(
-                url,
-                headers={"Content-Type": "application/x-ndjson"},
-                data=content,
-                timeout=coalesce(timeout, self.settings.timeout),
-                retry=retry
-            )
-            if response.status_code not in [200, 201]:
-                Log.error(
-                    "Problem with search (url={{url}}):\n{{query|indent}}",
-                    url=url,
-                    query=queries
-                )
-
-            responses = json2value(response.content.decode('utf8')).responses
-
-            for details in responses:
-                if details.error:
-                    Log.error(quote2string(details.error))
-                    if details._shards.failed > 0:
-                        Log.error(
-                            "{{num}} orf {{total}} shard failures {{failures|indent}}",
-                            failures=details._shards.failures.reason,
-                            num=details._shards.failed,
-                            total=details._shards.total
-                        )
-
-            return responses
-        except Exception as cause:
-            Log.error(
-                "Problem with search (path={{path}}):\n{{query|indent}}",
-                path=self.path + "/_msearch",
-                query=queries,
-                cause=cause
-            )
-
-    def scroll(self, scroll_id):
-        try:
-            # POST /_search/scroll
-            # {
-            #     "scroll" : "1m",
-            #     "scroll_id" : "DXF1ZXJ5QW5kRmV0Y2gBAAAAAAAAAD4WYm9laVYtZndUQlNsdDcwakFMNjU1QQ=="
-            # }
-            return self.cluster.post(
-                "_search/scroll",
-                data={"scroll": "5m", "scroll_id": scroll_id}
-            )
-        except Exception as e:
-            Log.error(
-                "Problem with scroll (scroll_id={{scroll_id}})",
-                path= "_search/scroll",
-                scroll_id=scroll_id,
-                cause=e
-            )
-
-    def refresh(self):
-        self.cluster.post("/" + self.settings.alias + "/_refresh")
 
 
 def parse_properties(parent_index_name, parent_name, nested_path, esProperties):

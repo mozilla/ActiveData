@@ -63,6 +63,9 @@ class FalseOp(Literal):
     def __bool__(self):
         return False
 
+    def __nonzero__(self):
+        return False
+
 
 FALSE = FalseOp()
 

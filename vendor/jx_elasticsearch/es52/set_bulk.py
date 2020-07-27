@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.es52 import agg_bulk
 from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
-from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries
+from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries, pre_process
 from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
 from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
@@ -46,9 +46,10 @@ def es_bulksetop(esq, frum, query):
     abs_limit = MIN([query.limit, MAX_DOCUMENTS])
     guid = Random.base64(32, extra="-_")
 
-    schema = query.frum.schema
-    new_select, split_select = get_selects(query)
-    op, split_wheres = setop_to_es_queries(query.where, schema)
+    schema = frum.schema
+    new_select, split_select, all_paths, var_to_columns = pre_process(query)
+
+    op, split_wheres = setop_to_es_queries(query, split_select, all_paths, var_to_columns)
     es_query = es_query_proto(split_select, op, split_wheres, schema)
     es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)

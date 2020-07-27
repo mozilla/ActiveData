@@ -201,8 +201,9 @@ def es_aggsop(es, frum, query):
     try:
         format_time = Timer("formatting", verbose=DEBUG)
         with format_time:
-            # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)
-            # IT APPEARS THE OLD doc_count IS GONE
+            if result.aggregations == None:
+                # IT APPEARS THE OLD doc_count IS GONE
+                result.aggregations.doc_count = result.hits.total
             aggs = unwrap(result.aggregations)
 
             edges_formatter, groupby_formatter, value_fomratter, mime_type = agg_formatters[query.format]

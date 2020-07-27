@@ -18,7 +18,7 @@ class NestedOp(_NestedOp):
     def to_es(self, schema):
         if self.path.var == ".":
             return ES52[self.select].to_es() | {"query": ES52[self.where].to_es(schema), "from": 0}
-        elif bool(self.select) and self.select is not NULL:
+        elif self.select is not NULL and bool(self.select):
             return {
                 "nested": {
                     "path": self.path.var,

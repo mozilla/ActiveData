@@ -111,12 +111,14 @@ def exists_variable(path):
     return join_field(steps + [EXISTS_TYPE])
 
 
-def setop_to_inner_joins(query, split_select, all_paths, var_to_columns):
-    frum = query.frum
-    where = query.where
-    focal_path = frum.schema.query_path[0]
-    # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
-
+def split_nested_inner_variables(where, focal_path, var_to_columns):
+    """
+    SOME VARIABLES ARE BOTH NESTED AND INNER, EXPAND QUERY TO HANDLE BOTH
+    :param where:
+    :param focal_path:
+    :param var_to_columns:
+    :return:
+    """
     wheres = [where]
 
     # WE DO THIS EXPANSION TO CAPTURE A VARIABLE OVER DIFFERENT NESTED LEVELS
@@ -149,7 +151,11 @@ def setop_to_inner_joins(query, split_select, all_paths, var_to_columns):
             c.es_column: [c] for cs in var_to_columns.values() for c in cs
         }
 
-    concat_outer = query_to_outer_joins(frum, OrOp(wheres), all_paths, split_select)
+    return OrOp(wheres)
+
+
+def setop_to_inner_joins(query, all_paths, split_select, var_to_columns):
+    concat_outer = query_to_outer_joins(query, all_paths, split_select, var_to_columns)
 
     # SPLIT COLUMNS BY DEPTH
     paths_to_cols = OrderedDict((n, []) for n in all_paths)
@@ -241,18 +247,18 @@ def pre_process(query):
         )
     )
 
-    return new_select, split_select, all_paths, var_to_columns
+    return new_select, all_paths, split_select, var_to_columns
 
 
-def setop_to_es_queries(query, split_select, all_paths, var_to_columns):
+def setop_to_es_queries(query, all_paths, split_select, var_to_columns):
     schema = query.frum.schema
-    concat_inner = setop_to_inner_joins(query, split_select, all_paths, var_to_columns)
+    concat_inner = setop_to_inner_joins(query, all_paths, split_select, var_to_columns)
     es_query = [ES52[t.partial_eval()].to_es(schema) for t in concat_inner.terms]
 
     return es_query
 
 
-def query_to_outer_joins(frum, expr, all_paths, split_select):
+def query_to_outer_joins(query, all_paths, split_select, var_to_columns):
     """
     CONVERT FROM JSON QUERY EXPRESSION TO A NUMBER OF OUTER JOINS
     :param frum:
@@ -300,7 +306,13 @@ def query_to_outer_joins(frum, expr, all_paths, split_select):
         else:
             return [tuple([expr] if p == all_nests[0] else [] for p in all_paths)]
 
-    concat_outer_and = split(expr)
+    frum = query.frum
+    where = query.where
+    focal_path = frum.schema.query_path[0]
+
+    # MAP TO es_columns, INCLUDE NESTED EXISTENCE IN EACH VARIABLE
+    wheres = split_nested_inner_variables(where, focal_path, var_to_columns)
+    concat_outer_and = split(wheres)
 
     # ATTACH SELECTS
     output = ConcatOp([])

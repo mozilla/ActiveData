@@ -43,7 +43,7 @@ class BasicSubstringOp(Expression):
         ])]
 
     def vars(self):
-        return self.value.vars() | self.start.vals() | self.end.vals()
+        return self.value.vars() | self.start.vars() | self.end.vars()
 
     def missing(self):
         return FALSE

@@ -74,16 +74,10 @@ def format_cube(aggs, es_query, query, decoders, all_selects):
 
 
 def _value_drill(agg):
-    while True:
-        deeper = agg.get("_nested")
-        if deeper:
-            agg = deeper
-            continue
-        deeper = agg.get("_filter")
-        if deeper:
-            agg = deeper
-            continue
-        return agg
+    for k, deeper in agg.items():
+        if k.startswith("_filter") or k.startswith("_nested"):
+            return _value_drill(deeper)
+    return agg
 
 
 def format_table(aggs, es_query, query, decoders, all_selects):

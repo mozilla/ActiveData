@@ -298,9 +298,9 @@ def get_selects(query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-    new_select, split_select, all_paths, var_to_columns = pre_process(query)
+    new_select, all_paths, split_select, var_to_columns = pre_process(query)
 
-    es_query = setop_to_es_queries(query, split_select, all_paths, var_to_columns)
+    es_query = setop_to_es_queries(query, all_paths, split_select, var_to_columns)
     size = coalesce(query.limit, DEFAULT_LIMIT)
     sort = jx_sort_to_es_sort(query.sort, schema)
     for q in es_query:

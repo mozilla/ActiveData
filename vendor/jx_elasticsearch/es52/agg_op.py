@@ -25,11 +25,11 @@ from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
 from jx_elasticsearch.es52.expressions import ES52, split_expression_by_path
-from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process
+from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process, query_to_outer_joins
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
-from mo_future import first, next
+from mo_future import first, next, text
 from mo_imports import export
 from mo_logs import Log
 from mo_times.timer import Timer
@@ -154,15 +154,17 @@ def aggop_to_es_queries(select, query_path, schema, query):
     base_agg = NestedAggs(query_path).add(base_agg)
     split_decoders = get_decoders_by_path(query)
 
-    new_select, split_select, all_paths, var_to_columns = pre_process(query)
-    union_inner = setop_to_inner_joins(query, {".": ESSelectOp(".")}, all_paths, var_to_columns)
+    new_select, all_paths, split_select, var_to_columns = pre_process(query)
+
+    # WE LET EACH DIMENSION ADD ITS OWN CODE FOR HANDLING INNER JOINS
+    union_outer = query_to_outer_joins(query, all_paths, split_select, var_to_columns)
 
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
     output = NestedAggs(".")
-    for inner in union_inner.terms:
+    for i, inner in enumerate(union_outer.terms):
         acc = base_agg
-        for path in all_paths:
+        for p, path in enumerate(all_paths):
             decoder = split_decoders.get(path, Null)
 
             for d in decoder:
@@ -176,7 +178,7 @@ def aggop_to_es_queries(select, query_path, schema, query):
             elif not where or where is TRUE:
                 pass
             else:
-                acc = FilterAggs("_filter", where, None).add(acc)
+                acc = FilterAggs("_filter" + text(i) + text(p), where, None).add(acc)
             acc = NestedAggs(path).add(acc)
         output.add(acc)
     output = simplify(output)
@@ -196,12 +198,10 @@ def es_aggsop(es, frum, query):
     with Timer("ES query time", verbose=DEBUG) as es_duration:
         result = es.search(es_query)
 
-    # Log.note("{{result}}", result=result)
-
     try:
         format_time = Timer("formatting", verbose=DEBUG)
         with format_time:
-            if result.aggregations == None:
+            if result.aggregations.doc_count == None:
                 # IT APPEARS THE OLD doc_count IS GONE
                 result.aggregations.doc_count = result.hits.total
             aggs = unwrap(result.aggregations)
@@ -227,15 +227,6 @@ def es_aggsop(es, frum, query):
 
 EMPTY = {}
 EMPTY_LIST = []
-
-
-def drill(agg):
-    while True:
-        deeper = agg.get("_filter")
-        if deeper:
-            agg = deeper
-            continue
-        return agg
 
 
 def _children(agg, children):

@@ -12,13 +12,13 @@ from __future__ import absolute_import, division, unicode_literals
 import types
 from copy import deepcopy
 
+from mo_future import generator_types, first, is_text
+from mo_imports import expect, delay_import
+
 from mo_dots.utils import CLASS
 
-from mo_future import generator_types, first
-from mo_imports import expect
-
-Log = None
-datawrap, coalesce, to_data, from_data, Null = expect("datawrap", "coalesce", "to_data", "from_data", "Null")
+Log = delay_import("mo_logs.Log")
+datawrap, coalesce, list_to_data, to_data, from_data, Null = expect("datawrap", "coalesce", "list_to_data", "to_data", "from_data", "Null")
 
 
 _list = str("list")
@@ -29,15 +29,6 @@ _emit_slice_warning = True
 
 def _get_list(self):
     return _get(self, _list)
-
-
-def _late_import():
-    global Log
-
-    try:
-        from mo_logs import Log
-    except Exception:
-        from mo_dots.utils import PoorLogger as Log
 
 
 class FlatList(object):
@@ -61,8 +52,6 @@ class FlatList(object):
         if _get(index, CLASS) is slice:
             # IMPLEMENT FLAT SLICES (for i not in range(0, len(self)): assert self[i]==None)
             if index.step is not None:
-                if not Log:
-                    _late_import()
                 Log.error(
                     "slice step must be None, do not know how to deal with values"
                 )
@@ -85,16 +74,18 @@ class FlatList(object):
         return to_data(_get_list(self)[index])
 
     def __setitem__(self, i, y):
-        try:
-            _list = _get_list(self)
+        _list = _get_list(self)
+        if is_text(i):
+            for v in _list:
+                to_data(v)[i] = y
+            return
+        elif isinstance(i, int):
             if i <= len(_list):
                 for i in range(len(_list), i):
                     _list.append(None)
             _list[i] = from_data(y)
-        except Exception as e:
-            if not Log:
-                _late_import()
-            Log.error("problem", cause=e)
+        else:
+            Log.error("can not set index of type {{type}}", type=i.__class__.__name__)
 
     def __getattr__(self, key):
         if key in ["__json__", "__call__"]:
@@ -105,19 +96,16 @@ class FlatList(object):
         """
         simple `select`
         """
-        if not Log:
-            _late_import()
-
-        return FlatList(
-            vals=[
-                from_data(coalesce(datawrap(v), Null)[key])
-                for v in _get_list(self)
-            ]
-        )
+        output = []
+        for v in _get_list(self):
+            element = coalesce(datawrap(v), Null).get(key)
+            if element.__class__ == FlatList:
+                output.extend(from_data(element))
+            else:
+                output.append(from_data(element))
+        return list_to_data(output)
 
     def select(self, key):
-        if not Log:
-            _late_import()
         Log.error("Not supported.  Use `get()`")
 
     def filter(self, _filter):
@@ -126,8 +114,6 @@ class FlatList(object):
         )
 
     def __delslice__(self, i, j):
-        if not Log:
-            _late_import()
         Log.error(
             "Can not perform del on slice: modulo arithmetic was performed on the parameters.  You can try using clear()"
         )
@@ -157,8 +143,6 @@ class FlatList(object):
 
         if _emit_slice_warning:
             _emit_slice_warning = False
-            if not Log:
-                _late_import()
             Log.warning(
                 "slicing is broken in Python 2.7: a[i:j] == a[i+len(a), j] sometimes. Use [start:stop:step] (see "
                 "https://github.com/klahnakoski/mo-dots/tree/dev/docs#the-slice-operator-in-python27-is-inconsistent"
@@ -197,11 +181,9 @@ class FlatList(object):
 
     def __eq__(self, other):
         lst = _get_list(self)
-        if other == None and len(lst) == 0:
-            return True
-        other_class = _get(other, CLASS)
-        if other_class is FlatList:
-            other = _get_list(other)
+        if other == None:
+            return len(lst) == 0
+
         try:
             if len(lst) != len(other):
                 return False
@@ -350,8 +332,6 @@ def is_many(value):
         return True
 
     if issubclass(type_, types.GeneratorType):
-        if not Log:
-            _late_import()
         many_types = many_types + (type_,)
         Log.warning("is_many() can not detect generator {{type}}", type=type_.__name__)
         return True

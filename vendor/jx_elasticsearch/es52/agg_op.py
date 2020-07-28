@@ -16,7 +16,7 @@ from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TRUE
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import NULL, Variable as Variable_, ESSelectOp
+from jx_base.expressions import NULL, Variable as Variable_, ESSelectOp, Variable
 from jx_base.language import is_op
 from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.agg_format import agg_formatters
@@ -71,7 +71,7 @@ def get_decoders_by_path(query):
                 if not schema[v.var]:
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.domain.dimension:
-            vars_ |= set(Variable(edge.domain.dimension.fields
+            vars_ |= set(Variable(v) for v in edge.domain.dimension.fields)
             edge.domain.dimension = edge.domain.dimension.copy()
             edge.domain.dimension.fields = [schema[v].es_column for v in vars_]
         elif all(edge.domain.partitions.where):

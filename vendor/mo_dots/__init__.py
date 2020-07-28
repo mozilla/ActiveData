@@ -311,12 +311,14 @@ def _getdefault(obj, key):
     except Exception as f:
         pass
 
+    if is_sequence(obj):
+        return [_getdefault(o, key) for o in obj]
+
     try:
         if obj.__class__ is not dict:
             return getattr(obj, key)
     except Exception as f:
         pass
-
 
     try:
         if float(key) == round(float(key), 0):
@@ -675,10 +677,12 @@ export("mo_dots.datas", hash_value)
 export("mo_dots.datas", listwrap)
 export("mo_dots.datas", literal_field)
 
+export("mo_dots.lists", list_to_data)
 export("mo_dots.lists", to_data)
 export("mo_dots.lists", coalesce)
 export("mo_dots.lists", from_data)
 
+export("mo_dots.objects", list_to_data)
 export("mo_dots.objects", to_data)
 export("mo_dots.objects", from_data)
 export("mo_dots.objects", get_attr)

@@ -63,7 +63,7 @@ def get_decoders_by_path(query):
 
     for edge in to_data(coalesce(query.edges, query.groupby, [])):
         limit = coalesce(edge.domain.limit, query.limit, DEFAULT_LIMIT)
-        vars_ = edge.value.vars()
+        vars_ = coalesce(edge.value.vars(), set())
 
         if edge.range:
             vars_ |= edge.range.min.vars() | edge.range.max.vars()

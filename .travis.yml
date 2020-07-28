@@ -6,7 +6,6 @@ branches:
   only:
   - master
   - dev
-  - frontend6
 
 env:
   global:

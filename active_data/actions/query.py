@@ -26,7 +26,7 @@ from mo_dots import Data, Null, is_data
 from mo_files import File
 from mo_future import binary_type, text
 from mo_json import json2value, value2json
-from mo_logs import Except, Log
+from mo_logs import Except, Log, strings
 from mo_threads import Queue, Signal
 from mo_threads.threads import register_thread, MAIN_THREAD, Thread
 from mo_times.timer import Timer
@@ -81,9 +81,9 @@ def jx_query(path):
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
             timing_replacement = (
                 b'"total":'
-                + binary_type(mo_math.round(total_timer.duration.seconds, digits=4))
+                + strings.round(total_timer.duration.seconds, digits=4).encode('utf8')
                 + b', "jsonification":'
-                + binary_type(mo_math.round(json_timer.duration.seconds, digits=4))
+                + strings.round(json_timer.duration.seconds, digits=4).encode('utf8')
             )
             response_data = response_data.replace(
                 b'"total":"{{TOTAL_TIME}}"', timing_replacement

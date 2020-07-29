@@ -73,8 +73,8 @@ def get_decoders_by_path(query):
         elif edge.domain.dimension:
             vars_ |= set(Variable(v) for v in edge.domain.dimension.fields)
             edge.domain.dimension = edge.domain.dimension.copy()
-            edge.domain.dimension.fields = [schema[v].es_column for v in vars_]
-        elif all(edge.domain.partitions.where):
+            edge.domain.dimension.fields = [schema[v.var].es_column for v in vars_]
+        elif edge.domain.partitions.where and all(edge.domain.partitions.where):
             for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
         else:
@@ -88,7 +88,7 @@ def get_decoders_by_path(query):
         if not depths:
             Log.error(
                 "Do not know of column {{column}}",
-                column=unwraplist([v for v in vars_ if schema[v] == None])
+                column=unwraplist([v for v in vars_ if schema[v.var] == None])
             )
         if len(depths) > 1:
             Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)

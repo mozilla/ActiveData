@@ -168,7 +168,7 @@ def round(value, decimal=0, digits=None):
             if digits <= 0:
                 return sign(value) * pow(10, round(math_log10(abs(value)), 0))
             m = pow(10, math_ceil(math_log10(abs(value))))
-            return _round(value / m, 0) * m
+            return _round(value / m, digits) * m
         except Exception as e:
             from mo_logs import Log
 

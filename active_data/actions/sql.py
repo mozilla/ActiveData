@@ -21,7 +21,7 @@ from jx_python import jx
 from mo_dots import is_data, is_list, listwrap, unwraplist, to_data
 from mo_files import mimetype
 from mo_json import json2value, value2json
-from mo_logs import Log
+from mo_logs import Log, strings
 from mo_logs.exceptions import Except
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads.threads import register_thread, MAIN_THREAD
@@ -90,8 +90,8 @@ def sql_query(path):
         with Timer("post timer", silent=True):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-            timing_replacement = b'"total": ' + str(mo_math.round(query_timer.duration.seconds, digits=4)) +\
-                                 b', "jsonification": ' + str(mo_math.round(json_timer.duration.seconds, digits=4))
+            timing_replacement = b'"total": ' + strings.round(query_timer.duration.seconds, digits=4).encode('utf8') +\
+                                 b', "jsonification": ' + strings.round(json_timer.duration.seconds, digits=4).encode('utf8')
             response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
             Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
 

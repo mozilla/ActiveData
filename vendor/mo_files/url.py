@@ -242,27 +242,17 @@ def url_param2value(param):
                                 continue
 
                             d = int(hex_pair, 16)
-                            if d & 0xE0 == 0xC0:  # 110X XXXX
-                                utf_remaining = 1
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0xF0 == 0xE0:  # 1110 XXXX
-                                utf_remaining = 2
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0xF8 == 0xF0:  # 1111 0xxx
-                                utf_remaining = 3
-                                start = i
-                                b = bytes([d])
-                                output.append(b)
-                                i += 3
-                            elif d & 0x80 == 0x80:
-                                output.append(b"%")
-                                i += 1
+                            if d & 0x80:
+                                p = bin(d)[2:].find("0")
+                                if p <= 1:
+                                    output.append(b"%")
+                                    i += 1
+                                else:
+                                    utf_remaining = p - 1
+                                    start = i
+                                    b = bytes([d])
+                                    output.append(b)
+                                    i += 3
                             else:
                                 b = bytes([d])
                                 output.append(b)

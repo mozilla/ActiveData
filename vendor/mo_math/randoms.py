@@ -12,12 +12,13 @@ SEED = random.Random()
 
 
 def set_seed(seed):
-    globals()["SEED"] = random.Random(seed)
+    global SEED
+    SEED = random.Random(seed)
 
 
 def string(length, alphabet=SIMPLE_ALPHABET):
     result = ""
-    for i in builtin_range(length):
+    for _ in builtin_range(length):
         result += SEED.choice(alphabet)
     return result
 
@@ -51,7 +52,7 @@ def float(*args):
 
 def sample(data, count):
     num = len(data)
-    return [data[int(num)] for i in builtin_range(count)]
+    return [data[int(num)] for _ in builtin_range(count)]
 
 
 def combination(data):
@@ -66,7 +67,7 @@ def combination(data):
 
 
 def bytes(count):
-    output = bytearray(SEED.randrange(256) for i in builtin_range(count))
+    output = bytearray(SEED.randrange(256) for _ in builtin_range(count))
     return output
 
 

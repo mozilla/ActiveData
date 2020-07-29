@@ -18,7 +18,7 @@ from jx_base.expressions.true_op import TRUE
 from jx_base.domains import SetDomain
 from jx_base.expressions import NULL, Variable as Variable_, ESSelectOp, Variable
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT
+from jx_base.expressions.query_op import DEFAULT_LIMIT
 from jx_elasticsearch.es52.agg_format import agg_formatters
 from jx_elasticsearch.es52.agg_op_field import agg_field
 from jx_elasticsearch.es52.agg_op_formula import agg_formula

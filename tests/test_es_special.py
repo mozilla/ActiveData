@@ -419,7 +419,7 @@ class TestESSpecial(BaseTestCase):
         index1.add({"value": {"b": 2}})
         index1.refresh()
 
-        while index1.search({"query": {"match_all": {}}, "size": 0}).hits.hits.total < 1:
+        while index1.search({"query": {"match_all": {}}, "size": 0}).hits.total < 1:
             pass
 
         # FORCE RELOAD

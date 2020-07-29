@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import mo_math
 from jx_base.expressions import Variable
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.expressions.query_op import DEFAULT_LIMIT, MAX_LIMIT
 from jx_elasticsearch.es52.expressions.and_op import es_and
 from mo_dots import Null, coalesce, dict_to_data, list_to_data
 from mo_future import is_text, first

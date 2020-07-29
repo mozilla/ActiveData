@@ -19,7 +19,7 @@ from string import ascii_lowercase
 import jx_elasticsearch
 import mo_json_config
 from jx_base import container as jx_containers
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx

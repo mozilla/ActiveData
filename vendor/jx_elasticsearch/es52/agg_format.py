@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import TupleOp
 from jx_base.language import is_op
-from jx_base.query import canonical_aggregates
+from jx_base.expressions.query_op import canonical_aggregates
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
 from mo_dots import Data, coalesce, is_list, split_field, to_data

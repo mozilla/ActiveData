@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import mo_dots as dot
 from jx_base.container import Container
-from jx_base.query import _normalize_edge
+from jx_base.expressions.query_op import _normalize_edge
 from jx_python.cubes.aggs import cube_aggs
 from jx_python.lists.aggs import is_aggs
 from mo_collections.matrix import Matrix

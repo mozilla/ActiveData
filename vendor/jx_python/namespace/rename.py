@@ -13,7 +13,7 @@ from copy import copy
 
 from jx_base.dimensions import Dimension
 from jx_base.utils import is_variable_name
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_base.language import is_op
 from jx_python.namespace import Namespace, convert_list
 from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, to_data, is_many, dict_to_data

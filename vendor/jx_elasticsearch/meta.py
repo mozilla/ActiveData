@@ -24,7 +24,7 @@ from jx_base.meta_columns import (
 )
 from jx_base.table import Table as BaseTable
 from jx_base.namespace import Namespace
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_elasticsearch import elasticsearch
 from jx_elasticsearch.elasticsearch import (
     _get_best_type_from_mapping,

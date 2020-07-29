@@ -160,7 +160,7 @@ def find_container(frum, after):
             Log.error("Expecting from clause to have a 'type' property")
         return container.type2container[frum.type](frum.settings)
     elif is_data(frum) and (frum["from"] or is_container(frum["from"])):
-        from jx_base.query import QueryOp
+        from jx_base.expressions import QueryOp
 
         return QueryOp.wrap(frum)
     elif is_container(frum):

@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skipIf
 
-from jx_base.query import MAX_LIMIT
+from jx_base.expressions.query_op import MAX_LIMIT
 from jx_elasticsearch.es52 import agg_bulk
 from jx_python import jx
 from mo_dots import to_data, list_to_data

@@ -13,7 +13,7 @@ from jx_base import Column, container
 from jx_base.container import Container
 from jx_base.expressions import jx_expression
 from jx_base.language import is_op
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_elasticsearch import elasticsearch
 from jx_elasticsearch.es52.agg_bulk import is_bulk_agg, es_bulkaggsop
 from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
@@ -130,7 +130,7 @@ class ES52(Container):
                     jx_type=jx_type,
                     cardinality=1,
                     nested_path=nested_path,
-                    multi=1001 if jx_type is NESTED else None,
+                    multi=1001 if jx_type is NESTED else 1,
                     last_updated=Date.now()
                 ))
 

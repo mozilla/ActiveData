@@ -14,7 +14,7 @@ from itertools import chain
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import LeavesOp, Variable, IDENTITY, TRUE
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT
+from jx_base.expressions.query_op import DEFAULT_LIMIT
 from jx_elasticsearch.es52.expressions import (
     split_expression_by_path,
     NestedOp, ESSelectOp)

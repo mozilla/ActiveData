@@ -16,7 +16,7 @@ from mo_future import first
 
 import mo_math
 from jx_base.expressions import NULL
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
+from jx_base.expressions.query_op import DEFAULT_LIMIT, MAX_LIMIT
 from mo_dots import to_data, dict_to_data, list_to_data
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 

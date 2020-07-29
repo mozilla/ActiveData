@@ -15,8 +15,9 @@ from mo_dots import Data, is_data, is_many, join_field, set_default, split_field
 from mo_future import is_text
 from mo_imports import expect
 from mo_logs import Log
+from jx_base.expressions import QueryOp
 
-ListContainer, Cube, run, QueryOp = expect("ListContainer", "Cube", "run", "QueryOp")
+ListContainer, Cube, run = expect("ListContainer", "Cube", "run")
 
 type2container = Data()
 config = Data()   # config.default IS EXPECTED TO BE SET BEFORE CALLS ARE MADE

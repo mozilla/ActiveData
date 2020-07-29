@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, unicode_literals
 
 import mo_dots
 import mo_math
-from jx_base import query
 from jx_base.container import Container
 from jx_base.expressions import FALSE, TRUE
+from jx_base.expressions import QueryOp
+from jx_base.expressions.query_op import _normalize_selects, _normalize_sort
 from jx_base.language import is_op, value_compare
-from jx_base.query import QueryOp, _normalize_selects
 from jx_python import expressions as _expressions, flat_list, group_by
 from jx_python.containers.cube import Cube
 from jx_python.containers.list import ListContainer
@@ -29,6 +29,7 @@ from mo_collections.index import Index
 from mo_collections.unique_index import UniqueIndex
 from mo_dots import Data, FlatList, Null, coalesce, is_container, is_data, is_list, is_many, join_field, listwrap, \
     set_default, split_field, unwrap, to_data, dict_to_data, list_to_data
+from mo_dots import _getdefault
 from mo_dots.objects import DataObject
 from mo_future import is_text, sort_using_cmp
 from mo_imports import export
@@ -221,7 +222,10 @@ def tuple(data, field_name):
         else:
             path = split_field(field_name)
             output = []
-            flat_list._tuple1(data, path, 0, output)
+            for d in data:
+                for p in path:
+                    d = _getdefault(d, p)
+                    output.append((d,))
             return output
     elif is_list(field_name):
         paths = [_select_a_field(f) for f in field_name]
@@ -286,9 +290,6 @@ def select(data, field_name):
         data = (
             data._data.values()
         )  # THE SELECT ROUTINE REQUIRES dicts, NOT Data WHILE ITERATING
-
-    if is_data(data):
-        return select_one(data, field_name)
 
     if is_data(field_name):
         field_name = to_data(field_name)
@@ -559,7 +560,7 @@ def sort(data, fieldnames=None, already_normalized=False):
             if already_normalized:
                 formal = fieldnames
             else:
-                formal = query._normalize_sort(fieldnames)
+                formal = _normalize_sort(fieldnames)
 
             funcs = [(get(f.value), f.sort) for f in formal]
 

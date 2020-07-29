@@ -14,7 +14,7 @@ from copy import deepcopy
 import mo_math
 from jx_base.expressions import Variable, TRUE
 from jx_base.language import is_op
-from jx_base.query import _normalize_group
+from jx_base.expressions.query_op import _normalize_group
 from jx_elasticsearch.es52.agg_format import format_list_from_groupby, format_table_from_groupby
 from jx_elasticsearch.es52.agg_op import aggop_to_es_queries
 from mo_dots import listwrap, unwrap, Null, to_data, coalesce

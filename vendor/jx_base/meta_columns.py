@@ -26,7 +26,8 @@ from mo_dots import (
     listwrap,
     split_field,
     unwraplist,
-    to_data)
+    to_data,
+)
 from mo_future import binary_type, items, long, none_type, reduce, text
 from mo_json import INTEGER, NUMBER, STRING, python_type_to_json_type
 from mo_times.dates import Date
@@ -38,7 +39,9 @@ META_COLUMNS_TYPE_NAME = "column"
 singlton = None
 
 
-def get_schema_from_list(table_name, frum, native_type_to_json_type=python_type_to_json_type):
+def get_schema_from_list(
+    table_name, frum, native_type_to_json_type=python_type_to_json_type
+):
     """
     SCAN THE LIST FOR COLUMN TYPES
     """
@@ -60,7 +63,7 @@ def _get_schema_from_list(
     parent,  # parent path
     nested_path,  # each nested array, in reverse order
     columns,  # map from full name to column definition
-    native_type_to_json_type  # dict from storage type name to json type name
+    native_type_to_json_type,  # dict from storage type name to json type name
 ):
     for d in frum:
         row_type = python_type_to_json_type[d.__class__]
@@ -117,7 +120,12 @@ def _get_schema_from_list(
 
                 if this_type_name in {"object", "dict", "Mapping", "Data"}:
                     _get_schema_from_list(
-                        [value], table_name, full_name, nested_path, columns, native_type_to_json_type
+                        [value],
+                        table_name,
+                        full_name,
+                        nested_path,
+                        columns,
+                        native_type_to_json_type,
                     )
                 elif this_type_name in {"list", "FlatList"}:
                     np = listwrap(nested_path)
@@ -150,12 +158,12 @@ META_COLUMNS_DESC = TableDesc(
                 jx_type=STRING,
                 last_updated=Date.now(),
                 nested_path=ROOT_PATH,
+                multi=1,
             )
             for c in [
                 "name",
                 "es_type",
                 "jx_type",
-                "nested_path",
                 "es_column",
                 "es_index",
                 "partitions",
@@ -170,10 +178,21 @@ META_COLUMNS_DESC = TableDesc(
                 jx_type=INTEGER,
                 last_updated=Date.now(),
                 nested_path=ROOT_PATH,
+                multi=1
             )
             for c in ["count", "cardinality", "multi"]
         ]
         + [
+            Column(
+                name="nested_path",
+                es_index=META_COLUMNS_NAME,
+                es_column="nested_path",
+                es_type="keyword",
+                jx_type=STRING,
+                last_updated=Date.now(),
+                nested_path=ROOT_PATH,
+                multi=4,
+            ),
             Column(
                 name="last_updated",
                 es_index=META_COLUMNS_NAME,
@@ -181,11 +200,11 @@ META_COLUMNS_DESC = TableDesc(
                 es_type="double",
                 jx_type=NUMBER,
                 last_updated=Date.now(),
-                nested_path=ROOT_PATH
-            )
+                nested_path=ROOT_PATH,
+                multi=1
+            ),
         ]
-    )
-
+    ),
 )
 
 META_TABLES_DESC = TableDesc(
@@ -202,14 +221,12 @@ META_TABLES_DESC = TableDesc(
                 es_type="string",
                 jx_type=STRING,
                 last_updated=Date.now(),
-                nested_path=ROOT_PATH
+                nested_path=ROOT_PATH,
+                multi=1
             )
-            for c in [
-                "name",
-                "url",
-                "query_path"
-            ]
-        ] + [
+            for c in ["name", "url", "query_path"]
+        ]
+        + [
             Column(
                 name=c,
                 es_index=META_TABLES_NAME,
@@ -217,15 +234,13 @@ META_TABLES_DESC = TableDesc(
                 es_type="integer",
                 jx_type=INTEGER,
                 last_updated=Date.now(),
-                nested_path=ROOT_PATH
+                nested_path=ROOT_PATH,
+                multi=1
             )
-            for c in [
-                "timestamp"
-            ]
+            for c in ["timestamp"]
         ]
-    )
+    ),
 )
-
 
 
 SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO ANOTHER DATASTORE
@@ -238,8 +253,10 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO 
             jx_type=STRING,
             last_updated=Date.now(),
             nested_path=ROOT_PATH,
+            multi=1
+
         )
-        for c in ["table", "name", "type", "nested_path"]
+        for c in ["table", "name", "type"]
     ]
     + [
         Column(
@@ -250,6 +267,7 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO 
             jx_type=INTEGER,
             last_updated=Date.now(),
             nested_path=ROOT_PATH,
+            multi=1
         )
         for c in ["count", "cardinality", "multi"]
     ]
@@ -262,6 +280,18 @@ SIMPLE_METADATA_COLUMNS = (  # FOR PURELY INTERNAL PYTHON LISTS, NOT MAPPING TO 
             jx_type=NUMBER,
             last_updated=Date.now(),
             nested_path=ROOT_PATH,
+            multi=1
+        ),
+        Column(
+            name="nested_path",
+            es_index=META_COLUMNS_NAME,
+            es_column="nested_path",
+            es_type="string",
+            jx_type=STRING,
+            last_updated=Date.now(),
+            nested_path=ROOT_PATH,
+            multi=4
+
         )
     ]
 )

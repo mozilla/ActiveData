@@ -16,7 +16,7 @@ from copy import copy
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import Domain
-from jx_base.query import QueryOp, get_all_vars
+from jx_base.expressions import QueryOp, get_all_vars
 from jx_python.containers import Container
 from jx_python.expressions import TRUE
 from jx_python.namespace import Namespace, convert_list

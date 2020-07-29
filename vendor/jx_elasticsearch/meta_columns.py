@@ -545,7 +545,10 @@ def doc_to_column(doc):
                 Log.warning("{{doc}} has no es_type", doc=doc)
 
         # FIX
-        doc.multi = 1001 if doc.es_type == "nested" else doc.multi
+        if doc.es_type == "nested":
+            doc.multi = 1001
+        if doc.multi == None:
+            doc.multi = 1
 
         # FIX
         if doc.es_column.endswith("."+NESTED_TYPE):

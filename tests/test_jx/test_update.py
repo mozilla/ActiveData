@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
-from mo_dots import to_data, dict_to_data
+from mo_dots import dict_to_data
 from tests.test_jx import BaseTestCase
 
 

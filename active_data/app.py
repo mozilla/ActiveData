@@ -89,7 +89,7 @@ def _default(path):
     record_request(flask.request, None, flask.request.get_data(), None)
 
     return Response(
-        OVERVIEW.encode('utf8'),
+        OVERVIEW,
         status=200,
         headers={
             "Content-Type": "text/html"
@@ -214,7 +214,7 @@ def _exit():
     Log.note("Got request to shutdown")
     try:
         return Response(
-            OVERVIEW.encode('utf8'),
+            OVERVIEW,
             status=400,
             headers={
                 "Content-Type": "text/html"

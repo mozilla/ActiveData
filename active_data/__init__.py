@@ -16,7 +16,7 @@ from mo_times.dates import Date
 
 request_log_queue = None
 
-OVERVIEW = File("active_data/public/index.html").read()
+OVERVIEW = File("active_data/public/index.html").read_bytes()
 
 
 def record_request(request, query_, data, error):

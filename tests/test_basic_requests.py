@@ -33,7 +33,7 @@ class TestBasicRequests(BaseTestCase):
         url = str(url)
         response = self.utils.try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.all_content, OVERVIEW)
+        self.assertEqual(response.content, OVERVIEW)
 
     def test_favicon(self):
         url = URL(self.utils.testing.query)
@@ -60,7 +60,7 @@ class TestBasicRequests(BaseTestCase):
 
         response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.all_content, OVERVIEW)
+        self.assertEqual(response.content, OVERVIEW)
 
     def test_rest_get(self):
         data = [

@@ -20,7 +20,6 @@ from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestBasicRequests(BaseTestCase):
-
     def test_empty_request(self):
         response = self.utils.try_till_response(self.utils.testing.query, data=b"")
         self.assertEqual(response.status_code, 400)

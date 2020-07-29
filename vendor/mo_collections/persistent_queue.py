@@ -10,12 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+import mo_json
 from mo_dots import Data, to_data
 from mo_files import File
-import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Lock, Signal, THREAD_STOP
 
 DEBUG = True
@@ -172,7 +172,7 @@ class PersistentQueue(object):
                 for i in range(self.db.status.start, self.start):
                     self._add_pending({"remove": str(i)})
 
-                if self.db.status.end - self.start < 10 or Random.range(0, 1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
+                if self.db.status.end - self.start < 10 or randoms.range(0, 1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
                     # SIMPLY RE-WRITE FILE
                     if DEBUG:
                         Log.note("Re-write {{num_keys}} keys to persistent queue", num_keys=self.db.status.end - self.start)

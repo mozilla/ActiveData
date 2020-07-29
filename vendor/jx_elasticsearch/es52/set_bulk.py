@@ -13,14 +13,13 @@ from jx_elasticsearch.es52 import agg_bulk
 from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
 from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries, pre_process
 from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
-from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
+from jx_elasticsearch.es52.set_op import es_query_proto
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
 from mo_dots import to_data, Null
 from mo_files import TempFile
 from mo_json import value2json
 from mo_logs import Log, Except
-from mo_math import MIN
-from mo_math.randoms import Random
+from mo_math import MIN, randoms
 from mo_threads import Thread
 from mo_times import Date, Timer
 
@@ -44,7 +43,7 @@ def is_bulk_set(esq, query):
 
 def es_bulksetop(esq, frum, query):
     abs_limit = MIN([query.limit, MAX_DOCUMENTS])
-    guid = Random.base64(32, extra="-_")
+    guid = randoms.base64(32, extra="-_")
 
     schema = frum.schema
     new_select, all_paths, split_select, var_to_columns = pre_process(query)

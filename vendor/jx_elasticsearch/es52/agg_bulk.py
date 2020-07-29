@@ -22,7 +22,7 @@ from mo_files import TempFile, URL, mimetype
 from mo_future import first
 from mo_json import value2json
 from mo_logs import Log, Except
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Thread
 from mo_times import Timer, Date
@@ -103,7 +103,7 @@ def es_bulkaggsop(esq, frum, query):
             num_partitions = 1
 
         acc, decoders, es_query = aggop_to_es_queries(selects, query_path, schema, query)
-        guid = Random.base64(32, extra="-_")
+        guid = randoms.base64(32, extra="-_")
         abs_limit = mo_math.MIN((query.limit, first(query.groupby).domain.limit))
         formatter = formatters[query.format](abs_limit)
 

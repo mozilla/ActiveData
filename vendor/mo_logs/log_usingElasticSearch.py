@@ -9,9 +9,10 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from datetime import date, datetime
 import sys
+from datetime import date, datetime
 
+from jx_elasticsearch.rollover_index import RolloverIndex
 from jx_python import jx
 from mo_dots import coalesce, listwrap, set_default, to_data, is_data, is_sequence
 from mo_future import number_types, text, is_text, is_binary
@@ -20,12 +21,11 @@ from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import Duration, MINUTE
 from mo_times.dates import datetime2unix
 from pyLibrary.convert import bytes2base64
-from jx_elasticsearch.rollover_index import RolloverIndex
 
 MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000
@@ -52,7 +52,7 @@ class StructuredLogger_usingElasticSearch(StructuredLogger):
         kwargs.timeout = Duration(coalesce(kwargs.timeout, "30second")).seconds
         kwargs.retry.times = coalesce(kwargs.retry.times, 3)
         kwargs.retry.sleep = Duration(coalesce(kwargs.retry.sleep, MINUTE)).seconds
-        kwargs.host = Random.sample(listwrap(host), 1)[0]
+        kwargs.host = randoms.sample(listwrap(host), 1)[0]
 
         rollover_interval = coalesce(kwargs.rollover.interval, kwargs.rollover.max, "year")
         rollover_max = coalesce(kwargs.rollover.max, kwargs.rollover.interval, "year")

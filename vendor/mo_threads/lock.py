@@ -14,7 +14,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from mo_future import allocate_lock as _allocate_lock, decorate
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads.signals import Signal
 
 _Log, _Except, _Thread, _extract_stack = [None] * 4
@@ -56,7 +56,7 @@ class Lock(object):
         self.waiting = None
 
     def __enter__(self):
-        if self.sample and Random.int(100) == 0:
+        if self.sample and randoms.int(100) == 0:
             _Log.warning("acquire  lock {{name|quote}}", name=self.name)
 
         self.debug and _Log.note("acquire  lock {{name|quote}}", name=self.name)

@@ -9,16 +9,16 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import namedtuple
 import gc
+from collections import namedtuple
 from types import FunctionType
 
+import mo_json
 from mo_dots import Null, _get_attr, set_default
 from mo_future import get_function_arguments, get_function_name, is_text, text
-import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Lock
 from mo_times.dates import Date
 from mo_times.durations import DAY
@@ -150,7 +150,7 @@ def wrap_function(cache_store, func_):
                 _cache = {}
                 setattr(self, attr_name, _cache)
 
-            if Random.int(100) == 0:
+            if randoms.int(100) == 0:
                 # REMOVE OLD CACHE
                 _cache = {k: v for k, v in _cache.items() if v.timeout == None or v.timeout > now}
                 setattr(self, attr_name, _cache)

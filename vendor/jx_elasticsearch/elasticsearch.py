@@ -27,8 +27,7 @@ from mo_json.typed_encoder import BOOLEAN_TYPE, EXISTS_TYPE, NESTED_TYPE, NUMBER
 from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except, suppress_exception
-from mo_math import is_integer, is_number
-from mo_math.randoms import Random
+from mo_math import is_integer, is_number, randoms
 from mo_threads import Lock, ThreadedQueue, Till, THREAD_STOP, Thread, MAIN_THREAD
 from mo_times import Date, Timer, HOUR, Duration
 
@@ -1485,7 +1484,7 @@ def get_encoder(id_info):
 
 
 def random_id():
-    return Random.base64(25, extra="-_")
+    return randoms.base64(25, extra="-_")
 
 
 def _merge_mapping(a, b):

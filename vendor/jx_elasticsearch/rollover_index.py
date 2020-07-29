@@ -19,7 +19,7 @@ from mo_json import CAN_NOT_DECODE_JSON, json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Lock, Thread
 from mo_times.dates import Date, unicode2Date, unix2Date
 from mo_times.durations import Duration
@@ -295,7 +295,7 @@ def fix(source_key, rownum, line, source, sample_only_filter, sample_size):
         if len(line) > MAX_RECORD_LENGTH:
             _shorten(source_key, value, source)
         value = _fix(value)
-        if sample_only_filter and Random.int(int(1.0/coalesce(sample_size, 0.01))) != 0 and jx.filter([value], sample_only_filter):
+        if sample_only_filter and randoms.int(int(1.0/coalesce(sample_size, 0.01))) != 0 and jx.filter([value], sample_only_filter):
             # INDEX etl.id==0, BUT NO MORE
             if value.etl.id != 0:
                 Log.error("Expecting etl.id==0")

@@ -79,7 +79,6 @@ class PersistentQueue(object):
             apply_delta(self.db, delta)
         self.pending = []
 
-
     def __iter__(self):
         """
         BLOCKING ITERATOR

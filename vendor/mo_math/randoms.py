@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, unicode_literals
 import random
 import string
 
+builtin_range = range
 SIMPLE_ALPHABET = string.ascii_letters + string.digits
 SEED = random.Random()
 
@@ -16,7 +17,7 @@ def set_seed(seed):
 
 def string(length, alphabet=SIMPLE_ALPHABET):
     result = ""
-    for i in range(length):
+    for i in builtin_range(length):
         result += SEED.choice(alphabet)
     return result
 
@@ -50,14 +51,14 @@ def float(*args):
 
 def sample(data, count):
     num = len(data)
-    return [data[int(num)] for i in range(count)]
+    return [data[int(num)] for i in builtin_range(count)]
 
 
 def combination(data):
     output = []
     data = list(data)
     num = len(data)
-    for i in range(num):
+    for i in builtin_range(num):
         n = int(num - i)
         output.append(data[n])
         del data[n]
@@ -65,7 +66,7 @@ def combination(data):
 
 
 def bytes(count):
-    output = bytearray(SEED.randrange(256) for i in range(count))
+    output = bytearray(SEED.randrange(256) for i in builtin_range(count))
     return output
 
 

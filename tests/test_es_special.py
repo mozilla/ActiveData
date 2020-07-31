@@ -28,208 +28,114 @@ class TestESSpecial(BaseTestCase):
     """
     TESTS THAT COVER ES SPECIAL FEATURES
     """
+
     def test_query_on_es_base_field(self):
         schema = {
-            "settings": {
-                "analysis": {
-                    "analyzer": {
-                        "whiteboard_tokens": {
-                            "type": "custom",
-                            "tokenizer": "whiteboard_tokens_pattern",
-                            "filter": ["stop"],
-                        }
-                    },
-                    "tokenizer": {
-                        "whiteboard_tokens_pattern": {
-                            "type": "pattern",
-                            "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
-                        }
-                    },
-                }
-            },
-            "mappings": {
-                "test_result": {
-                    "properties": {
-                        "status_whiteboard": {
-                            "type": "keyword",
-                            "store": True,
-                            "fields": {
-                                "tokenized": {
-                                    "type": "text",
-                                    "analyzer": "whiteboard_tokens",
-                                }
-                            },
-                        }
-                    }
-                }
-            },
+            "settings": {"analysis": {
+                "analyzer": {"whiteboard_tokens": {
+                    "type": "custom",
+                    "tokenizer": "whiteboard_tokens_pattern",
+                    "filter": ["stop"],
+                }},
+                "tokenizer": {"whiteboard_tokens_pattern": {
+                    "type": "pattern",
+                    "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
+                }},
+            }},
+            "mappings": {"test_result": {"properties": {"status_whiteboard": {
+                "type": "keyword",
+                "store": True,
+                "fields": {"tokenized": {
+                    "type": "text",
+                    "analyzer": "whiteboard_tokens",
+                }},
+            }}}},
         }
 
         test = {
             "schema": schema,
-            "data": [{
-                "bug_id": 123,
-                "status_whiteboard": "[test][fx21]"
-            }],
-            "query": {
-                "select": ["status_whiteboard"],
-                "from": TEST_TABLE
-            },
+            "data": [{"bug_id": 123, "status_whiteboard": "[test][fx21]"}],
+            "query": {"select": ["status_whiteboard"], "from": TEST_TABLE},
             "expecting_list": {
-                "meta": {
-                    "format": "list"
-                },
-                "data": [{
-                    "status_whiteboard": "[test][fx21]"
-                }],
+                "meta": {"format": "list"},
+                "data": [{"status_whiteboard": "[test][fx21]"}],
             },
         }
         self.utils.execute_tests(test)
 
     def test_query_on_es_sub_field(self):
         schema = {
-            "settings": {
-                "analysis": {
-                    "analyzer": {
-                        "whiteboard_tokens": {
-                            "type": "custom",
-                            "tokenizer": "whiteboard_tokens_pattern",
-                            "filter": ["stop"],
-                        }
-                    },
-                    "tokenizer": {
-                        "whiteboard_tokens_pattern": {
-                            "type": "pattern",
-                            "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
-                        }
-                    },
-                }
-            },
-            "mappings": {
-                "test_result": {
-                    "properties": {
-                        "status_whiteboard": {
-                            "type": "keyword",
-                            "store": True,
-                            "fields": {
-                                "tokenized": {
-                                    "type": "text",
-                                    "analyzer": "whiteboard_tokens",
-                                }
-                            },
-                        }
-                    }
-                }
-            },
+            "settings": {"analysis": {
+                "analyzer": {"whiteboard_tokens": {
+                    "type": "custom",
+                    "tokenizer": "whiteboard_tokens_pattern",
+                    "filter": ["stop"],
+                }},
+                "tokenizer": {"whiteboard_tokens_pattern": {
+                    "type": "pattern",
+                    "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
+                }},
+            }},
+            "mappings": {"test_result": {"properties": {"status_whiteboard": {
+                "type": "keyword",
+                "store": True,
+                "fields": {"tokenized": {
+                    "type": "text",
+                    "analyzer": "whiteboard_tokens",
+                }},
+            }}}},
         }
 
         test = {
-            "schema":
-            schema,
+            "schema": schema,
             "data": [
-                {
-                    "bug_id": 123,
-                    "status_whiteboard": "[test][fx21]"
-                },
-                {
-                    "bug_id": 124,
-                    "status_whiteboard": "[test]"
-                },
-                {
-                    "bug_id": 125
-                },
+                {"bug_id": 123, "status_whiteboard": "[test][fx21]"},
+                {"bug_id": 124, "status_whiteboard": "[test]"},
+                {"bug_id": 125},
             ],
             "query": {
                 "select": ["bug_id"],
                 "from": TEST_TABLE,
-                "where": {
-                    "eq": {
-                        "status_whiteboard.tokenized": "test"
-                    }
-                },
+                "where": {"eq": {"status_whiteboard.tokenized": "test"}},
             },
             "expecting_list": {
-                "meta": {
-                    "format": "list"
-                },
-                "data": [{
-                    "bug_id": 123
-                }, {
-                    "bug_id": 124
-                }],
+                "meta": {"format": "list"},
+                "data": [{"bug_id": 123}, {"bug_id": 124}],
             },
         }
         self.utils.execute_tests(test)
 
     def test_query_on_null_startswith(self):
-        schema = {
-            "mappings": {
-                "test_result": {
-                    "properties": {
-                        "name": {
-                            "type": "keyword",
-                            "store": True
-                        }
-                    }
-                }
-            }
-        }
+        schema = {"mappings": {"test_result": {"properties": {"name": {
+            "type": "keyword",
+            "store": True,
+        }}}}}
 
         test = {
             "schema": schema,
             "data": [],
             "query": {
-                "where": {
-                    "prefix": {
-                        "no_name": "something"
-                    }
-                },
+                "where": {"prefix": {"no_name": "something"}},
                 "from": TEST_TABLE,
             },
-            "expecting_list": {
-                "meta": {
-                    "format": "list"
-                },
-                "data": []
-            },
+            "expecting_list": {"meta": {"format": "list"}, "data": []},
         }
         self.utils.execute_tests(test)
 
     def test_prefix_uses_prefix(self):
         test = {
-            "data": [{
-                "a": "test"
-            }, {
-                "a": "testkyle"
-            }, {
-                "a": None
-            }],
-            "query": {
-                "from": TEST_TABLE,
-                "where": {
-                    "prefix": {
-                        "a": "test"
-                    }
-                }
-            },
+            "data": [{"a": "test"}, {"a": "testkyle"}, {"a": None}],
+            "query": {"from": TEST_TABLE, "where": {"prefix": {"a": "test"}}},
             "expecting_list": {
                 "meta": {
                     "format": "list",
                     "es_query": {
                         "from": 0,
-                        "query": {
-                            "prefix": {
-                                "a.~s~": "test"
-                            }
-                        },
+                        "query": {"prefix": {"a.~s~": "test"}},
                         "size": 10,
                     },
                 },
-                "data": [{
-                    "a": "test"
-                }, {
-                    "a": "testkyle"
-                }],
+                "data": [{"a": "test"}, {"a": "testkyle"}],
             },
         }
 
@@ -243,7 +149,7 @@ class TestESSpecial(BaseTestCase):
             limit_replicas=True,
             limit_replicas_warning=False,
             read_only=False,
-            typed=False
+            typed=False,
         )
 
         cluster = self.utils._es_cluster
@@ -260,38 +166,22 @@ class TestESSpecial(BaseTestCase):
         # COLUMN WITH ZERO RECORDS
         index1 = cluster.create_index(
             index=index1,
-            schema={
-                "mappings": {
-                    "test": {
-                        "properties": {
-                            "missing_value": {
-                                "type": "keyword",
-                                "store": True
-                            }
-                        }
-                    }
-                }
-            },
-            kwargs=common
+            schema={"mappings": {"test": {"properties": {"missing_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
+            kwargs=common,
         )
         index1.add_alias(common.alias)
 
         # INDEX WITH ONE RECORD
         index2 = cluster.create_index(
             index=index2,
-            schema={
-                "mappings": {
-                    "test": {
-                        "properties": {
-                            "one_value": {
-                                "type": "keyword",
-                                "store": True
-                            }
-                        }
-                    }
-                }
-            },
-            kwargs=common
+            schema={"mappings": {"test": {"properties": {"one_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
+            kwargs=common,
         )
         index2.add_alias(common.alias)
         index2.add({"value": {"one_value": "a value!"}})
@@ -307,21 +197,16 @@ class TestESSpecial(BaseTestCase):
 
         # THE one_value GOT PICKED UP
         self.assertEqual(
-            schema1, {
-                "mappings": {
-                    "test": {
-                        "properties": {
-                            "one_value": {
-                                "type": "keyword",
-                                "store": True
-                            }
-                        }
-                    }
-                }
-            }
+            schema1,
+            {"mappings": {"test": {"properties": {"one_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
         )
         # THE missing_value DID NOT GET PICKED UP
-        self.assertEqual(schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}})
+        self.assertEqual(
+            schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}}
+        )
 
         try:
             cluster.delete_index(index1)
@@ -338,24 +223,17 @@ class TestESSpecial(BaseTestCase):
 
         test = dict_to_data({
             "data": data,
-            "query": {
-                "from": TEST_TABLE,
-                "limit": len(data),
-                "sort": "a"
-            },
-            "expecting_list": {
-                "data": data
-            },  # DUMMY, TO ENSURE LOADED
+            "query": {"from": TEST_TABLE, "limit": len(data), "sort": "a"},
+            "expecting_list": {"data": data},  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
         test.query.clear = "."
-        test.query.update = test.query['from']
-        test.query['from'] = None
+        test.query.update = test.query["from"]
+        test.query["from"] = None
 
         def result():
             http.post_json(
-                url=self.utils.testing.query,
-                json=test.query,
+                url=self.utils.testing.query, json=test.query,
             )
 
         self.assertRaises(Exception, result)
@@ -403,7 +281,7 @@ class TestESSpecial(BaseTestCase):
 
         # VERIFY SCHEMA OF DATA
         columns = found_container.snowflake.columns
-        self.assertEqual(columns.get("es_column"), {'.', '_id', 'a', 'a.~n~', '~e~'})
+        self.assertEqual(columns.get("es_column"), {".", "_id", "a", "a.~n~", "~e~"})
 
         # DROP INDEX
         try:
@@ -429,4 +307,4 @@ class TestESSpecial(BaseTestCase):
         columns = list_to_data([
             c for c in new_found_container.snowflake.columns if c.cardinality != 0
         ])
-        self.assertEqual(columns.get("es_column"), {'.', '_id', 'b', 'b.~n~', '~e~'})
+        self.assertEqual(columns.get("es_column"), {".", "_id", "b", "b.~n~", "~e~"})

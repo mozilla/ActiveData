@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import sys
 
 from mo_dots.datas import Data, SLOT, data_types, is_data
-from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many
+from mo_dots.lists import FlatList, is_list, is_sequence, is_container, is_many, LIST
 from mo_dots.nones import Null, NullType
 from mo_dots.objects import DataObject
 from mo_dots.utils import CLASS, OBJ, get_logger, get_module
@@ -484,7 +484,7 @@ def list_to_data(v):
     to_data, BUT WITHOUT CHECKS
     """
     output = _new(FlatList)
-    output.list = v
+    _set(output, LIST, v)
     return output
 
 
@@ -504,9 +504,9 @@ def to_data(v):
     elif type_ is none_type:
         return Null
     elif type_ is list:
-        return FlatList(v)
+        return list_to_data(v)
     elif type_ in generator_types:
-        return FlatList(list(from_data(vv) for vv in v))
+        return list_to_data(list(from_data(vv) for vv in v))
     else:
         return v
 

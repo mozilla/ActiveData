@@ -21,14 +21,10 @@ Log = delay_import("mo_logs.Log")
 datawrap, coalesce, list_to_data, to_data, from_data, Null = expect("datawrap", "coalesce", "list_to_data", "to_data", "from_data", "Null")
 
 
-_list = str("list")
+LIST = str("list")
 _get = object.__getattribute__
 _set = object.__setattr__
 _emit_slice_warning = True
-
-
-def _get_list(self):
-    return _get(self, _list)
 
 
 class FlatList(object):
@@ -42,11 +38,11 @@ class FlatList(object):
         """ USE THE vals, NOT A COPY """
         # list.__init__(self)
         if vals == None:
-            self.list = []
+            _set(self, LIST, [])
         elif vals.__class__ is FlatList:
-            self.list = vals.list
+            _set(self, LIST, vals.list)
         else:
-            self.list = vals
+            _set(self, LIST, vals)
 
     def __getitem__(self, index):
         if _get(index, CLASS) is slice:
@@ -55,7 +51,7 @@ class FlatList(object):
                 Log.error(
                     "slice step must be None, do not know how to deal with values"
                 )
-            length = len(_get_list(self))
+            length = len(_get(self, LIST))
 
             i = index.start
             if i is None:
@@ -67,25 +63,31 @@ class FlatList(object):
                 j = length
             else:
                 j = max(min(j, length), 0)
-            return FlatList(_get_list(self)[i:j])
+            return FlatList(_get(self, LIST)[i:j])
 
-        if not isinstance(index, int) or index < 0 or len(_get_list(self)) <= index:
+        if not isinstance(index, int) or index < 0 or len(_get(self, LIST)) <= index:
             return Null
-        return to_data(_get_list(self)[index])
+        return to_data(_get(self, LIST)[index])
 
-    def __setitem__(self, i, y):
-        _list = _get_list(self)
-        if is_text(i):
+    def __setitem__(self, key, value):
+        _list = _get(self, LIST)
+        if is_text(key):
             for v in _list:
-                to_data(v)[i] = y
+                to_data(v)[key] = value
             return
-        elif isinstance(i, int):
-            if i <= len(_list):
-                for i in range(len(_list), i):
+        elif isinstance(key, int):
+            if key <= len(_list):
+                for key in range(len(_list), key):
                     _list.append(None)
-            _list[i] = from_data(y)
+            _list[key] = from_data(value)
         else:
-            Log.error("can not set index of type {{type}}", type=i.__class__.__name__)
+            Log.error("can not set index of type {{type}}", type=key.__class__.__name__)
+
+    def __setattr__(self, key, value):
+        _list = _get(self, LIST)
+        for v in _list:
+            to_data(v)[key] = value
+        return
 
     def __getattr__(self, key):
         if key in ["__json__", "__call__"]:
@@ -97,7 +99,7 @@ class FlatList(object):
         simple `select`
         """
         output = []
-        for v in _get_list(self):
+        for v in _get(self, LIST):
             element = coalesce(datawrap(v), Null).get(key)
             if element.__class__ == FlatList:
                 output.extend(from_data(element))
@@ -110,7 +112,7 @@ class FlatList(object):
 
     def filter(self, _filter):
         return FlatList(
-            vals=[from_data(u) for u in (to_data(v) for v in _get_list(self)) if _filter(u)]
+            vals=[from_data(u) for u in (to_data(v) for v in _get(self, LIST)) if _filter(u)]
         )
 
     def __delslice__(self, i, j):
@@ -119,24 +121,24 @@ class FlatList(object):
         )
 
     def __clear__(self):
-        self.list = []
+        _set(self, LIST, [])
 
     def __iter__(self):
-        temp = [to_data(v) for v in _get_list(self)]
+        temp = [to_data(v) for v in _get(self, LIST)]
         return iter(temp)
 
     def __contains__(self, item):
-        return list.__contains__(_get_list(self), item)
+        return list.__contains__(_get(self, LIST), item)
 
     def append(self, val):
-        _get_list(self).append(from_data(val))
+        _get(self, LIST).append(from_data(val))
         return self
 
     def __str__(self):
-        return _get_list(self).__str__()
+        return _get(self, LIST).__str__()
 
     def __len__(self):
-        return _get_list(self).__len__()
+        return _get(self, LIST).__len__()
 
     def __getslice__(self, i, j):
         global _emit_slice_warning
@@ -154,33 +156,33 @@ class FlatList(object):
         return self.list
 
     def copy(self):
-        return FlatList(list(_get_list(self)))
+        return FlatList(list(_get(self, LIST)))
 
     def __copy__(self):
-        return FlatList(list(_get_list(self)))
+        return FlatList(list(_get(self, LIST)))
 
     def __deepcopy__(self, memo):
-        d = _get_list(self)
+        d = _get(self, LIST)
         return to_data(deepcopy(d, memo))
 
     def remove(self, x):
-        _get_list(self).remove(x)
+        _get(self, LIST).remove(x)
         return self
 
     def extend(self, values):
-        lst = _get_list(self)
+        lst = _get(self, LIST)
         for v in values:
             lst.append(from_data(v))
         return self
 
     def pop(self, index=None):
         if index is None:
-            return to_data(_get_list(self).pop())
+            return to_data(_get(self, LIST).pop())
         else:
-            return to_data(_get_list(self).pop(index))
+            return to_data(_get(self, LIST).pop(index))
 
     def __eq__(self, other):
-        lst = _get_list(self)
+        lst = _get(self, LIST)
         if other == None:
             return len(lst) == 0
 
@@ -194,18 +196,18 @@ class FlatList(object):
     def __add__(self, value):
         if value == None:
             return self
-        output = list(_get_list(self))
+        output = list(_get(self, LIST))
         output.extend(value)
         return FlatList(vals=output)
 
     def __or__(self, value):
-        output = list(_get_list(self))
+        output = list(_get(self, LIST))
         output.append(value)
         return FlatList(vals=output)
 
     def __radd__(self, other):
         output = list(other)
-        output.extend(_get_list(self))
+        output.extend(_get(self, LIST))
         return FlatList(vals=output)
 
     def __iadd__(self, other):
@@ -224,7 +226,7 @@ class FlatList(object):
         if num <= 0:
             return Null
 
-        return FlatList(_get_list(self)[-num:])
+        return FlatList(_get(self, LIST)[-num:])
 
     def limit(self, num=None):
         """
@@ -235,7 +237,7 @@ class FlatList(object):
         if num <= 0:
             return Null
 
-        return FlatList(_get_list(self)[:num])
+        return FlatList(_get(self, LIST)[:num])
 
     def not_right(self, num):
         """
@@ -246,7 +248,7 @@ class FlatList(object):
         if num <= 0:
             return Null
 
-        return FlatList(_get_list(self)[:-num:])
+        return FlatList(_get(self, LIST)[:-num:])
 
     def not_left(self, num):
         """
@@ -257,22 +259,22 @@ class FlatList(object):
         if num <= 0:
             return self
 
-        return FlatList(_get_list(self)[num::])
+        return FlatList(_get(self, LIST)[num::])
 
     def last(self):
         """
         RETURN LAST ELEMENT IN FlatList [-1]
         """
-        lst = _get_list(self)
+        lst = _get(self, LIST)
         if lst:
             return to_data(lst[-1])
         return Null
 
     def map(self, oper, includeNone=True):
         if includeNone:
-            return FlatList([oper(v) for v in _get_list(self)])
+            return FlatList([oper(v) for v in _get(self, LIST)])
         else:
-            return FlatList([oper(v) for v in _get_list(self) if v != None])
+            return FlatList([oper(v) for v in _get(self, LIST) if v != None])
 
 
 def last(values):

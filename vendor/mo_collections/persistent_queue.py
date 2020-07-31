@@ -10,7 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-import mo_json
+from mo_json import json2value
+
 from mo_dots import Data, to_data
 from mo_files import File
 from mo_logs import Log
@@ -44,7 +45,7 @@ class PersistentQueue(object):
         if self.file.exists:
             for line in self.file:
                 with suppress_exception:
-                    delta = mo_json.json2value(line)
+                    delta = json2value(line)
                     apply_delta(self.db, delta)
             if self.db.status.start == None:  # HAPPENS WHEN ONLY ADDED TO QUEUE, THEN CRASH
                 self.db.status.start = 0
@@ -180,14 +181,14 @@ class PersistentQueue(object):
                                 continue
                             Log.error("Not expecting {{key}}", key=k)
                     self._commit()
-                    self.file.write(mo_json.value2json({"add": self.db}) + "\n")
+                    self.file.write(value2json({"add": self.db}) + "\n")
                 else:
                     self._commit()
             except Exception as e:
                 raise e
 
     def _commit(self):
-        self.file.append("\n".join(mo_json.value2json(p) for p in self.pending))
+        self.file.append("\n".join(value2json(p) for p in self.pending))
         self._apply_pending()
 
     def close(self):
@@ -207,7 +208,7 @@ class PersistentQueue(object):
                     self._add_pending({"add": {"status.start": self.start}})
                     for i in range(self.db.status.start, self.start):
                         self._add_pending({"remove": str(i)})
-                    self.file.write(mo_json.value2json({"add": self.db}) + "\n" + ("\n".join(mo_json.value2json(p) for p in self.pending)) + "\n")
+                    self.file.write(value2json({"add": self.db}) + "\n" + ("\n".join(value2json(p) for p in self.pending)) + "\n")
                     self._apply_pending()
                 except Exception as e:
                     raise e

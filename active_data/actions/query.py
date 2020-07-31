@@ -81,9 +81,9 @@ def jx_query(path):
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
             timing_replacement = (
                 b'"total":'
-                + strings.round(total_timer.duration.seconds, digits=4).encode('utf8')
+                + strings.round(total_timer.duration.seconds, digits=4).encode("utf8")
                 + b', "jsonification":'
-                + strings.round(json_timer.duration.seconds, digits=4).encode('utf8')
+                + strings.round(json_timer.duration.seconds, digits=4).encode("utf8")
             )
             response_data = response_data.replace(
                 b'"total":"{{TOTAL_TIME}}"', timing_replacement
@@ -142,7 +142,9 @@ def execute(query, output, is_done):
         )
         result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
     except Exception as cause:
-        Log.error("could not execute expression {{expression}}", expression=query, cause=cause)
+        Log.error(
+            "could not execute expression {{expression}}", expression=query, cause=cause
+        )
     finally:
         is_done.go()
 
@@ -158,10 +160,7 @@ def execute_tuple_op(query, output, is_done):
                 output.append([])
                 return
             items = [items]
-        work = [
-            (q, [], Signal())
-            for q in items
-        ]
+        work = [(q, [], Signal()) for q in items]
         todo.extend(work)
         # IF THERE IS MORE WORK, MIGHT AS WELL DO IT WHILE WE WAIT
         more = todo.pop_one()
@@ -182,7 +181,4 @@ def worker(please_stop):
         execute(*work)
 
 
-threads = [
-    Thread.run("query thread " + text(i), worker)
-    for i in range(NUM_THREADS)
-]
+threads = [Thread.run("query thread " + text(i), worker) for i in range(NUM_THREADS)]

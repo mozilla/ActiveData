@@ -35,13 +35,7 @@ def download(filename):
     try:
         record_request(flask.request, None, flask.request.get_data(), None)
         content, status, mimetype = _read_file(filename)
-        return Response(
-            content,
-            status=status,
-            headers={
-                "Content-Type": mimetype
-            }
-        )
+        return Response(content, status=status, headers={"Content-Type": mimetype})
     except Exception as e:
         Log.error("Could not get file {{file}}", file=filename, cause=e)
 
@@ -53,11 +47,7 @@ def send_favicon():
         record_request(flask.request, None, flask.request.get_data(), None)
         content, status, mimetype = _read_file("favicon.ico")
         return Response(
-            content,
-            status=status,
-            headers={
-                "Content-Type": "image/x-icon"
-            }
+            content, status=status, headers={"Content-Type": "image/x-icon"}
         )
     except Exception as e:
         Log.error("Could not get file {{file}}", file="favicon.ico", cause=e)

@@ -80,9 +80,7 @@ def test_mode_wait(query, please_stop):
             while not timeout:
                 # GET FRESH VERSIONS
                 cols = metadata_manager.get_columns(
-                    table_name=alias,
-                    after=after,
-                    timeout=timeout
+                    table_name=alias, after=after, timeout=timeout
                 )
                 not_ready = [
                     c
@@ -95,7 +93,10 @@ def test_mode_wait(query, please_stop):
                 ]
                 if not_ready:
                     Log.note(
-                        "wait for column (table={{col.es_index}}, name={{col.es_column}}, cardinality={{col.cardinality|json}}, last_updated={{col.last_updated|datetime}}) metadata to arrive",
+                        "wait for column (table={{col.es_index}},"
+                        " name={{col.es_column}}, cardinality={{col.cardinality|json}},"
+                        " last_updated={{col.last_updated|datetime}}) metadata to"
+                        " arrive",
                         col=first(not_ready),
                     )
                 else:
@@ -120,7 +121,8 @@ def find_container(frum, after):
     if not namespace:
         if not container.config.default.settings:
             Log.error(
-                "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
+                "expecting jx_base.container.config.default.settings to contain default"
+                " elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
     if not frum:

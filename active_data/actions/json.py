@@ -37,24 +37,21 @@ def get_raw_json(path):
             args.limit = None
 
             frum = find_container(path, after=None)
-            result = jx.run({
-                "from": path,
-                "where": {"eq": args},
-                "limit": limit,
-                "format": "list"
-            }, frum)
+            result = jx.run(
+                {"from": path, "where": {"eq": args}, "limit": limit, "format": "list"},
+                frum,
+            )
 
-            if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+            if isinstance(
+                result, Container
+            ):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                 result = result.format("list")
 
         result.meta.active_data_response_time = active_data_timer.duration
 
-        response_data = value2json(result.data, pretty=True).encode('utf8')
+        response_data = value2json(result.data, pretty=True).encode("utf8")
         Log.note("Response is {{num}} bytes", num=len(response_data))
-        return Response(
-            response_data,
-            status=200
-        )
+        return Response(response_data, status=200)
     except Exception as e:
         e = Except.wrap(e)
         return send_error(active_data_timer, body, e)

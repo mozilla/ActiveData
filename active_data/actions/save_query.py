@@ -79,28 +79,24 @@ class SaveQueries(object):
 
         if es.created > Date.now() - MINUTE:
             # ADD DUMMY RECORD
-            self.queue.add(
-                {
-                    "value": {
-                        "hash": "~~~~~~",
-                        "create_time": Date.now(),
-                        "last_used": Date.now(),
-                        "query": "{}",
-                    },
-                }
-            )
+            self.queue.add({
+                "value": {
+                    "hash": "~~~~~~",
+                    "create_time": Date.now(),
+                    "last_used": Date.now(),
+                    "query": "{}",
+                },
+            })
             self.es.namespace.get_columns(self.es.settings.alias, after=Date.now())
 
     def find(self, hash):
-        result = self.es.query(
-            {
-                "select": ["hash", "query"],
-                "from": "saved_queries",
-                "where": {"prefix": {"hash": hash}},
-                "limit": 100,
-                "format": "list",
-            }
-        )
+        result = self.es.query({
+            "select": ["hash", "query"],
+            "from": "saved_queries",
+            "where": {"prefix": {"hash": hash}},
+            "limit": 100,
+            "format": "list",
+        })
 
         try:
             hash = result.data[0].hash
@@ -110,13 +106,11 @@ class SaveQueries(object):
         except Exception:
             return None
 
-        self.es.update(
-            {
-                "update": self.es.name,
-                "set": {"last_used": Date.now()},
-                "where": {"eq": {"hash": hash}},
-            }
-        )
+        self.es.update({
+            "update": self.es.name,
+            "set": {"last_used": Date.now()},
+            "where": {"eq": {"hash": hash}},
+        })
 
         return query
 
@@ -140,13 +134,11 @@ class SaveQueries(object):
         short_hashes = [bytes2base64URL(h[0:6]) for h in hashes]
         available = {h: True for h in short_hashes}
 
-        existing = self.es.query(
-            {
-                "from": "saved_queries",
-                "where": {"terms": {"hash": short_hashes}},
-                "meta": {"timeout": "2second"},
-            }
-        )
+        existing = self.es.query({
+            "from": "saved_queries",
+            "where": {"terms": {"hash": short_hashes}},
+            "meta": {"timeout": "2second"},
+        })
 
         for e in Cube(
             select=existing.select, edges=existing.edges, data=existing.data
@@ -158,29 +150,25 @@ class SaveQueries(object):
         # THIS WILL THROW AN ERROR IF THERE ARE NONE, HOW UNLUCKY!
         best = first(h for h in short_hashes if available[h])
 
-        self.queue.add(
-            {
-                "id": best,
-                "value": {
-                    "hash": best,
-                    "create_time": Date.now(),
-                    "last_used": Date.now(),
-                    "query": json,
-                },
-            }
-        )
+        self.queue.add({
+            "id": best,
+            "value": {
+                "hash": best,
+                "create_time": Date.now(),
+                "last_used": Date.now(),
+                "query": json,
+            },
+        })
 
         if meta.testing:
             while True:
-                verify = self.es.query(
-                    {
-                        "from": "saved_queries",
-                        "where": {"terms": {"hash": best}},
-                        "meta": {"timeout": "2second"},
-                        "select": "query",
-                        "format": "list",
-                    }
-                )
+                verify = self.es.query({
+                    "from": "saved_queries",
+                    "where": {"terms": {"hash": best}},
+                    "meta": {"timeout": "2second"},
+                    "select": "query",
+                    "format": "list",
+                })
                 if verify.data:
                     break
                 Log.alert("wait for saved query")
@@ -205,15 +193,11 @@ SCHEMA = {
     "settings": {"index.number_of_shards": 3, "index.number_of_replicas": 2},
     "mappings": {
         "_default_": {
-            "dynamic_templates": [
-                {
-                    "values_strings": {
-                        "match": "*",
-                        "match_mapping_type": "string",
-                        "mapping": {"type": "keyword"},
-                    }
-                }
-            ],
+            "dynamic_templates": [{"values_strings": {
+                "match": "*",
+                "match_mapping_type": "string",
+                "mapping": {"type": "keyword"},
+            }}],
         },
         "query": {
             "_all": {"enabled": False},
@@ -223,7 +207,7 @@ SCHEMA = {
                 "last_used": {"type": "double", "store": True},
                 "hash": {"type": "keyword", "store": True},
                 "query": {"type": "keyword", "store": True},
-            }
-        }
+            },
+        },
     },
 }

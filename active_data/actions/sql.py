@@ -41,17 +41,16 @@ def sql_query(path):
                 if flask.request.headers.get("content-length", "") in ["", "0"]:
                     # ASSUME A BROWSER HIT THIS POINT, SEND text/html RESPONSE BACK
                     return Response(
-                        BLANK,
-                        status=400,
-                        headers={
-                            "Content-Type": "text/html"
-                        }
+                        BLANK, status=400, headers={"Content-Type": "text/html"}
                     )
                 elif int(flask.request.headers["content-length"]) > QUERY_SIZE_LIMIT:
-                    Log.error("Query must be under {{limit}}mb", limit=QUERY_SIZE_LIMIT / 1024 / 1024)
+                    Log.error(
+                        "Query must be under {{limit}}mb",
+                        limit=QUERY_SIZE_LIMIT / 1024 / 1024,
+                    )
 
                 request_body = flask.request.get_data().strip()
-                text = request_body.decode('utf8')
+                text = request_body.decode("utf8")
                 data = json2value(text)
                 record_request(flask.request, data, None, None)
 
@@ -60,14 +59,16 @@ def sql_query(path):
                 if not data.sql:
                     Log.error("Expecting a `sql` parameter")
                 jx_query = parse_sql(data.sql)
-                if jx_query['from'] != None:
+                if jx_query["from"] != None:
                     if data.meta.testing:
                         test_mode_wait(jx_query, MAIN_THREAD.please_stop)
-                    frum = find_container(jx_query['from'], after=None)
+                    frum = find_container(jx_query["from"], after=None)
                 else:
                     frum = None
                 result = jx.run(jx_query, container=frum)
-                if isinstance(result, Container):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
+                if isinstance(
+                    result, Container
+                ):  # TODO: REMOVE THIS CHECK, jx SHOULD ALWAYS RETURN Containers
                     result = result.format(jx_query.format)
                 result.meta.jx_query = jx_query
 
@@ -79,28 +80,40 @@ def sql_query(path):
                     except Exception as e:
                         Log.warning("Unexpected save problem", cause=e)
 
-            result.meta.timing.preamble = mo_math.round(preamble_timer.duration.seconds, digits=4)
-            result.meta.timing.sql_translate = mo_math.round(sql_translate_timer.duration.seconds, digits=4)
-            result.meta.timing.save = mo_math.round(save_timer.duration.seconds, digits=4)
+            result.meta.timing.preamble = mo_math.round(
+                preamble_timer.duration.seconds, digits=4
+            )
+            result.meta.timing.sql_translate = mo_math.round(
+                sql_translate_timer.duration.seconds, digits=4
+            )
+            result.meta.timing.save = mo_math.round(
+                save_timer.duration.seconds, digits=4
+            )
             result.meta.timing.total = "{{TOTAL_TIME}}"  # TIMING PLACEHOLDER
 
             with Timer("jsonification", silent=True) as json_timer:
-                response_data = value2json(result).encode('utf8')
+                response_data = value2json(result).encode("utf8")
 
         with Timer("post timer", silent=True):
             # IMPORTANT: WE WANT TO TIME OF THE JSON SERIALIZATION, AND HAVE IT IN THE JSON ITSELF.
             # WE CHEAT BY DOING A (HOPEFULLY FAST) STRING REPLACEMENT AT THE VERY END
-            timing_replacement = b'"total": ' + strings.round(query_timer.duration.seconds, digits=4).encode('utf8') +\
-                                 b', "jsonification": ' + strings.round(json_timer.duration.seconds, digits=4).encode('utf8')
-            response_data = response_data.replace(b'"total":"{{TOTAL_TIME}}"', timing_replacement)
-            Log.note("Response is {{num}} bytes in {{duration}}", num=len(response_data), duration=query_timer.duration)
+            timing_replacement = (
+                b'"total": '
+                + strings.round(query_timer.duration.seconds, digits=4).encode("utf8")
+                + b', "jsonification": '
+                + strings.round(json_timer.duration.seconds, digits=4).encode("utf8")
+            )
+            response_data = response_data.replace(
+                b'"total":"{{TOTAL_TIME}}"', timing_replacement
+            )
+            Log.note(
+                "Response is {{num}} bytes in {{duration}}",
+                num=len(response_data),
+                duration=query_timer.duration,
+            )
 
             return Response(
-                response_data,
-                status=200,
-                headers={
-                    "Content-Type": mimetype.JSON
-                }
+                response_data, status=200, headers={"Content-Type": mimetype.JSON}
             )
     except Exception as e:
         e = Except.wrap(e)
@@ -121,7 +134,7 @@ def parse_sql(sql):
     redundant_select = []
     # PULL OUT THE AGGREGATES
     for s in listwrap(query.select):
-        val = s if s == '*' else s.value
+        val = s if s == "*" else s.value
 
         # EXTRACT KNOWN AGGREGATE FUNCTIONS
         if is_data(val):

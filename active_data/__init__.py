@@ -24,7 +24,7 @@ def record_request(request, query_, data, error):
         if request_log_queue == None:
             return
 
-        if data and len(data)>10000:
+        if data and len(data) > 10000:
             data = data[:10000]
 
         log = dict_to_data({
@@ -34,14 +34,14 @@ def record_request(request, query_, data, error):
             "referer": request.headers.get("x-referer"),
             "path": request.headers.environ["werkzeug.request"].full_path,
             "content_length": request.headers.get("content_length"),
-            "remote_addr": coalesce(request.headers.get("x-remote-addr"), request.remote_addr),
+            "remote_addr": coalesce(
+                request.headers.get("x-remote-addr"), request.remote_addr
+            ),
             "query_text": value2json(query_) if query_ else None,
             "data": data if data else None,
-            "error": value2json(error) if error else None
+            "error": value2json(error) if error else None,
         })
-        log["from"] = request.headers.get('from')
+        log["from"] = request.headers.get("from")
         request_log_queue.add({"value": log})
     except Exception as e:
         Log.warning("Can not record", cause=e)
-
-

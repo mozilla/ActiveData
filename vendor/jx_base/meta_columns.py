@@ -73,54 +73,60 @@ def _get_schema_from_list(
             full_name = parent
             column = columns[full_name]
             if not column:
+                es_type = d.__class__
+
                 column = Column(
                     name=concat_field(table_name, full_name),
                     es_column=full_name,
                     es_index=".",
-                    es_type=d.__class__.__name__,
-                    jx_type=None,  # WILL BE SET BELOW
+                    es_type=es_type,
+                    jx_type=native_type_to_json_type[es_type],
                     last_updated=Date.now(),
                     nested_path=nested_path,
                     multi=1,
                 )
                 columns.add(column)
-            column.es_type = _merge_python_type(column.es_type, d.__class__)
-            column.jx_type = native_type_to_json_type[column.es_type]
+            else:
+                column.es_type = _merge_python_type(column.es_type, d.__class__)
+                column.jx_type = native_type_to_json_type[column.es_type]
         else:
             for name, value in d.items():
                 full_name = concat_field(parent, name)
                 column = columns[full_name]
+
+                if is_container(value):  # GET TYPE OF MULTIVALUE
+                    v = list(value)
+                    if len(v) == 0:
+                        es_type = none_type.__name__
+                    elif len(v) == 1:
+                        es_type = v[0].__class__.__name__
+                    else:
+                        es_type = reduce(
+                            _merge_python_type, (vi.__class__.__name__ for vi in value)
+                        )
+                else:
+                    es_type = value.__class__.__name__
+
                 if not column:
                     column = Column(
                         name=concat_field(table_name, full_name),
                         es_column=full_name,
                         es_index=".",
-                        es_type=value.__class__.__name__,
-                        jx_type=None,  # WILL BE SET BELOW
+                        es_type=es_type,
+                        jx_type=native_type_to_json_type[es_type],
                         last_updated=Date.now(),
                         nested_path=nested_path,
-                        multi=1,
+                        multi=1
                     )
                     columns.add(column)
-                if is_container(value):  # GET TYPE OF MULTIVALUE
-                    v = list(value)
-                    if len(v) == 0:
-                        this_type_name = none_type.__name__
-                    elif len(v) == 1:
-                        this_type_name = v[0].__class__.__name__
-                    else:
-                        this_type_name = reduce(
-                            _merge_python_type, (vi.__class__.__name__ for vi in value)
-                        )
                 else:
-                    this_type_name = value.__class__.__name__
-                column.es_type = _merge_python_type(column.es_type, this_type_name)
-                try:
-                    column.jx_type = native_type_to_json_type[column.es_type]
-                except Exception as e:
-                    raise e
+                    column.es_type = _merge_python_type(column.es_type, es_type)
+                    try:
+                        column.jx_type = native_type_to_json_type[column.es_type]
+                    except Exception as e:
+                        raise e
 
-                if this_type_name in {"object", "dict", "Mapping", "Data"}:
+                if es_type in {"object", "dict", "Mapping", "Data"}:
                     _get_schema_from_list(
                         [value],
                         table_name,
@@ -129,7 +135,7 @@ def _get_schema_from_list(
                         columns,
                         native_type_to_json_type,
                     )
-                elif this_type_name in {"list", "FlatList"}:
+                elif es_type in {"list", "FlatList"}:
                     np = listwrap(nested_path)
                     newpath = unwraplist([join_field(split_field(np[0]) + [name])] + np)
                     _get_schema_from_list(

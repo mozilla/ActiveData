@@ -315,4 +315,6 @@ class decorate(object):
         return update_wrapper(caller, self.func)
 
 
+function_type = (lambda: 0).__class__
+
 _keep_imports = (ConfigParser, zip_longest, reduce, transpose, izip, HTMLParser, urlparse, StringIO, BytesIO, allocate_lock, get_ident, start_new_thread, interrupt_main)

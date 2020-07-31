@@ -38,6 +38,9 @@ def expect(*names):
     :return: PLACEHOLDERS THAT CAN BE USED UNTIL FILL HAPPENS len(output)==len(names)
     """
 
+    if not names:
+        _error("expecting at least one name")
+
     # GET MODULE OF THE CALLER
     caller_frame = inspect.stack()[1]
     caller = inspect.getmodule(caller_frame[0])
@@ -53,7 +56,10 @@ def expect(*names):
         for name in names:
             print(">>> " + desc.module.__name__ + " is expecting " + name)
 
-    return output
+    if len(output) == 1:
+        return output[0]
+    else:
+        return output
 
 
 class Expecting(object):

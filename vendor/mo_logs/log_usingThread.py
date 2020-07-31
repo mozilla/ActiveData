@@ -16,7 +16,7 @@ from mo_logs import Except, Log
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 
-Log, = expect("Log")
+Log = expect("Log")
 
 DEBUG = False
 PERIOD = 0.3

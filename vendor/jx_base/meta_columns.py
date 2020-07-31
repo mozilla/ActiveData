@@ -81,6 +81,7 @@ def _get_schema_from_list(
                     jx_type=None,  # WILL BE SET BELOW
                     last_updated=Date.now(),
                     nested_path=nested_path,
+                    multi=1,
                 )
                 columns.add(column)
             column.es_type = _merge_python_type(column.es_type, d.__class__)
@@ -98,6 +99,7 @@ def _get_schema_from_list(
                         jx_type=None,  # WILL BE SET BELOW
                         last_updated=Date.now(),
                         nested_path=nested_path,
+                        multi=1,
                     )
                     columns.add(column)
                 if is_container(value):  # GET TYPE OF MULTIVALUE

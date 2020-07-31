@@ -15,7 +15,7 @@ from mo_imports import expect
 from mo_logs.exceptions import suppress_exception, Except
 from mo_logs.log_usingNothing import StructuredLogger
 
-Log, = expect("Log")
+Log = expect("Log")
 
 
 class StructuredLogger_usingMulti(StructuredLogger):

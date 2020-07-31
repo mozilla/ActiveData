@@ -29,7 +29,7 @@ from mo_imports import export, expect
 from mo_logs import Log
 from mo_threads import Lock
 
-jx, = expect("jx")
+jx = expect("jx")
 
 
 class ListContainer(Container, Namespace, Table):

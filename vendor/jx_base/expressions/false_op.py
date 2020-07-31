@@ -14,7 +14,7 @@ from jx_base.expressions.literal import Literal
 from mo_imports import export, expect
 from mo_json import BOOLEAN
 
-TRUE, = expect("TRUE")
+TRUE = expect("TRUE")
 
 
 class FalseOp(Literal):

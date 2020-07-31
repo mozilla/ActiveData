@@ -18,7 +18,7 @@ from mo_imports import expect
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
 
-Log, = expect("Log")
+Log = expect("Log")
 
 
 class StructuredLogger_usingFile(StructuredLogger):

@@ -35,7 +35,7 @@ from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
 
-MATCH_NONE, MATCH_ALL, AndOp, OrOp, NestedOp, = expect(
+MATCH_NONE, MATCH_ALL, AndOp, OrOp, NestedOp = expect(
     "MATCH_NONE", "MATCH_ALL", "AndOp", "OrOp", "NestedOp",
 )
 

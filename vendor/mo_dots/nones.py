@@ -14,7 +14,7 @@ from mo_dots.utils import CLASS, OBJ
 from mo_future import is_binary, text, none_type
 from mo_imports import expect, export
 
-to_data, = expect("to_data")
+to_data = expect("to_data")
 
 _get = object.__getattribute__
 _set = object.__setattr__

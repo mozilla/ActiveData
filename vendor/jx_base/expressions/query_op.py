@@ -33,7 +33,7 @@ from mo_json.typed_encoder import untype_path
 from mo_logs import Log
 from mo_math import AND, UNION, is_number
 
-Column, = expect("Column")
+Column = expect("Column")
 
 
 BAD_SELECT = "Expecting `value` or `aggregate` in select clause not {{select}}"

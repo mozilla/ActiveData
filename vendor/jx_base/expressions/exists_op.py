@@ -16,7 +16,7 @@ from jx_base.expressions.false_op import FALSE
 from mo_imports import expect
 from mo_json import BOOLEAN
 
-NotOp, = expect("NotOp")
+NotOp = expect("NotOp")
 
 
 class ExistsOp(Expression):

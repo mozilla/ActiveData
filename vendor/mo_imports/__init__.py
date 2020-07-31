@@ -66,6 +66,7 @@ class Expecting(object):
     """
     CLASS TO USE AS A MODULE EXPORT PLACEHOLDER UNTIL AN ACTUAL VALUE IS INSERTED
     """
+
     __slots__ = ["module", "name", "frame"]
 
     def __init__(self, module, name, frame):
@@ -89,7 +90,11 @@ class Expecting(object):
 
     def __call__(self, *args, **kwargs):
         _error(
-            "missing expected call export(\"" + self.module.__name__ + "\", " + self.name + ")"
+            'missing expected call export("'
+            + self.module.__name__
+            + '", '
+            + self.name
+            + ")"
         )
 
     def __getattr__(self, item):
@@ -145,9 +150,7 @@ def export(module, name, value=_nothing):
             except Exception:
                 pass
         else:
-            _error(
-                "Can not find variable holding a " + value.__class__.__name__
-            )
+            _error("Can not find variable holding a " + value.__class__.__name__)
     if value is _nothing:
         # ASSUME CALLER MODULE IS USED
         frame = inspect.stack()[1]
@@ -189,7 +192,11 @@ def worker():
 
         for d in done:
             sys.stderr.write(
-                "missing expected call export(\"" + d.module.__name__ + "\", " + d.name + ")\n"
+                'missing expected call export("'
+                + d.module.__name__
+                + '", '
+                + d.name
+                + ")\n"
             )
         _error("Missing export() calls")
 
@@ -231,14 +238,10 @@ class DelayedImport(object):
         m = DelayedImport._import_now(self)
         return m()
 
-    def  __getitem__(self, item):
+    def __getitem__(self, item):
         m = DelayedImport._import_now(self)
         return m[item]
 
     def __getattribute__(self, item):
         m = DelayedImport._import_now(self)
         return getattr(m, item)
-
-
-
-

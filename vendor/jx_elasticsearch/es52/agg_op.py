@@ -172,7 +172,7 @@ def aggop_to_es_queries(select, query_path, schema, query):
                 acc = d.append_query(path, acc)
                 start += d.num_columns
 
-            where = first(nest.where for nest in inner.nests if nest.path == path)
+            where = first(nest.where for nest in inner.nests if nest.path == path).partial_eval()
             if where is FALSE:
                 continue
             elif not where or where is TRUE:

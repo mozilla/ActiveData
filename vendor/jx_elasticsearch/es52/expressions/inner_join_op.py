@@ -15,7 +15,6 @@ from jx_elasticsearch.es52.expressions.utils import ES52
 
 
 class InnerJoinOp(InnerJoinOp_):
-
     def to_es(self, schema):
         acc = None
         for nest in self.nests:
@@ -23,6 +22,6 @@ class InnerJoinOp(InnerJoinOp_):
             if not acc:
                 acc = es
             else:
-                es['query'] = es_and([es.query, acc])
+                es["query"] = es_and([es.query, acc])
                 acc = es
         return acc

@@ -19,15 +19,13 @@ class IntegerOp(IntegerOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         value = Painless[self.term].to_es_script(schema)
         if value.many:
-            return IntegerOp(
-                EsScript(
-                    miss=value.missing(),
-                    type=value.type,
-                    expr="(" + value.expr + ")[0]",
-                    frum=value.frum,
-                    schema=schema,
-                )
-            ).to_es_script(schema)
+            return IntegerOp(EsScript(
+                miss=value.missing(),
+                type=value.type,
+                expr="(" + value.expr + ")[0]",
+                frum=value.frum,
+                schema=schema,
+            )).to_es_script(schema)
         elif value.type == BOOLEAN:
             return EsScript(
                 miss=value.missing(),

@@ -23,22 +23,18 @@ class BooleanOp(BooleanOp_):
         except Exception as e:
             raise e
         if value.many:
-            return BooleanOp(
-                EsScript(
-                    miss=value.miss,
-                    type=value.type,
-                    expr="(" + value.expr + ")[0]",
-                    frum=value.frum,
-                    schema=schema,
-                )
-            ).to_es_script(schema)
+            return BooleanOp(EsScript(
+                miss=value.miss,
+                type=value.type,
+                expr="(" + value.expr + ")[0]",
+                frum=value.frum,
+                schema=schema,
+            )).to_es_script(schema)
         elif value.type == BOOLEAN:
             miss = value.miss
             value.miss = FALSE
-            return (
-                WhenOp(miss, **{"then": FALSE, "else": value})
-                .partial_eval()
-                .to_es_script(schema)
-            )
+            return WhenOp(
+                miss, **{"then": FALSE, "else": value}
+            ).partial_eval().to_es_script(schema)
         else:
             return NotOp(value.miss).partial_eval().to_es_script(schema)

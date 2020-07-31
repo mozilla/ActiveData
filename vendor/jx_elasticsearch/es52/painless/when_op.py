@@ -81,4 +81,4 @@ class WhenOp(WhenOp_):
             return self.partial_eval().to_es_script(schema)
 
 
-_utils.WhenOp=WhenOp
+_utils.WhenOp = WhenOp

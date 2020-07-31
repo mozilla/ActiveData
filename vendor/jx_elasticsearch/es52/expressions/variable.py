@@ -31,11 +31,9 @@ class Variable(Variable_):
                 else es_exists(c.es_column)
             )
         else:
-            return es_and(
-                [
-                    {"term": {c.es_column: True}}
-                    if c.es_type == BOOLEAN
-                    else es_exists(c.es_column)
-                    for c in cols
-                ]
-            )
+            return es_and([
+                {"term": {c.es_column: True}}
+                if c.es_type == BOOLEAN
+                else es_exists(c.es_column)
+                for c in cols
+            ])

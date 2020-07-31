@@ -16,7 +16,7 @@ from jx_elasticsearch.es52.expressions.exists_op import es_exists
 from jx_elasticsearch.es52.painless import Painless
 from mo_imports import expect
 
-FindOp, = expect("FindOp")
+(FindOp,) = expect("FindOp")
 
 
 class BooleanOp(BooleanOp_):

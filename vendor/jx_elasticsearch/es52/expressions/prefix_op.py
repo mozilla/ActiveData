@@ -65,7 +65,8 @@ class PrefixOp(PrefixOp_):
                     acc.append({"prefix": {col.es_column: self.prefix.value}})
                 else:
                     Log.error(
-                        'do not know how to {"prefix":{{column|quote}}} of type {{type}}',
+                        'do not know how to {"prefix":{{column|quote}}} of type'
+                        " {{type}}",
                         column=col.name,
                         type=col.jx_type,
                     )

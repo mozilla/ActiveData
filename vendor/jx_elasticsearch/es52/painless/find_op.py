@@ -22,40 +22,32 @@ from jx_elasticsearch.es52.painless.when_op import WhenOp
 class FindOp(FindOp_):
     @simplified
     def partial_eval(self):
-        index = self.lang[
-            BasicIndexOfOp([self.value, self.find, self.start])
-        ].partial_eval()
+        index = self.lang[BasicIndexOfOp([
+            self.value,
+            self.find,
+            self.start,
+        ])].partial_eval()
 
-        output = self.lang[
-            WhenOp(
-                OrOp(
-                    [
-                        self.value.missing(),
-                        self.find.missing(),
-                        BasicEqOp([index, Literal(-1)]),
-                    ]
-                ),
-                **{"then": self.default, "else": index}
-            )
-        ].partial_eval()
+        output = self.lang[WhenOp(
+            OrOp([
+                self.value.missing(),
+                self.find.missing(),
+                BasicEqOp([index, Literal(-1)]),
+            ]),
+            **{"then": self.default, "else": index}
+        )].partial_eval()
         return output
 
     def missing(self):
-        output = AndOp(
-            [
-                self.default.missing(),
-                OrOp(
-                    [
-                        self.value.missing(),
-                        self.find.missing(),
-                        EqOp(
-                            [
-                                BasicIndexOfOp([self.value, self.find, self.start]),
-                                Literal(-1),
-                            ]
-                        ),
-                    ]
-                ),
-            ]
-        ).partial_eval()
+        output = AndOp([
+            self.default.missing(),
+            OrOp([
+                self.value.missing(),
+                self.find.missing(),
+                EqOp([
+                    BasicIndexOfOp([self.value, self.find, self.start]),
+                    Literal(-1),
+                ]),
+            ]),
+        ]).partial_eval()
         return output

@@ -135,17 +135,11 @@ def split_nested_inner_variables(where, focal_path, var_to_columns):
                     if startswith_field(focal_path, deepest):
                         more_exprs.append(e.map({v: Variable(c.es_column)}))
                     else:
-                        more_exprs.append(
-                            e.map(
-                                {
-                                    v: NestedOp(
-                                        path=Variable(deepest),
-                                        select=Variable(c.es_column),
-                                        where=Variable(c.es_column).exists(),
-                                    )
-                                }
-                            )
-                        )
+                        more_exprs.append(e.map({v: NestedOp(
+                            path=Variable(deepest),
+                            select=Variable(c.es_column),
+                            where=Variable(c.es_column).exists(),
+                        )}))
         wheres = more_exprs
         var_to_columns = {
             c.es_column: [c] for cs in var_to_columns.values() for c in cs
@@ -206,9 +200,9 @@ def setop_to_inner_joins(query, all_paths, split_select, var_to_columns):
                             deeper_conditions = FALSE
                         else:
                             # ENSURE THIS IS NOT "OPTIMIZED" TO FALSE
-                            deeper_conditions = NotOp(
-                                NestedOp(path=Variable(nest_path), where=TRUE)
-                            )
+                            deeper_conditions = NotOp(NestedOp(
+                                path=Variable(nest_path), where=TRUE
+                            ))
                             deeper_conditions.simplified = True
 
                 inner_join = inner_join.partial_eval()
@@ -236,16 +230,12 @@ def pre_process(query):
     var_to_columns = {v.var: schema.values(v.var) for v in where_vars}
 
     # FROM DEEPEST TO SHALLOWEST
-    all_paths = list(
-        reversed(
-            sorted(
-                set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
-                | {"."}
-                | set(schema.query_path)
-                | set(split_select.keys())
-            )
-        )
-    )
+    all_paths = list(reversed(sorted(
+        set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
+        | {"."}
+        | set(schema.query_path)
+        | set(split_select.keys())
+    )))
 
     return new_select, all_paths, split_select, var_to_columns
 
@@ -293,11 +283,9 @@ def query_to_outer_joins(query, all_paths, split_select, var_to_columns):
                 exclude.append(NotOp(t))
             return output
 
-        all_nests = list(
-            set(
-                c.nested_path[0] for v in expr.vars() for c in frum.schema.values(v.var)
-            )
-        )
+        all_nests = list(set(
+            c.nested_path[0] for v in expr.vars() for c in frum.schema.values(v.var)
+        ))
 
         if len(all_nests) > 1:
             Log.error("do not know how to handle")
@@ -427,9 +415,9 @@ def split_expression_by_path(expr, schema, lang=Language):
 
     acc = {}
     for e in exprs:
-        nestings = list(
-            set(c.nested_path[0] for v in e.vars() for c in var_to_columns[v])
-        )
+        nestings = list(set(
+            c.nested_path[0] for v in e.vars() for c in var_to_columns[v]
+        ))
         if not nestings:
             a = acc.get(".")
             if not a:

@@ -30,6 +30,6 @@ class MissingOp(MissingOp_):
         else:
             return PainlessMissingOp.to_es_script(self, schema).to_es(schema)
 
+
 def es_missing(term):
     return {"bool": {"must_not": {"exists": {"field": term}}}}
-

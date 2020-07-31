@@ -17,22 +17,21 @@ from mo_imports import export
 class NestedOp(_NestedOp):
     def to_es(self, schema):
         if self.path.var == ".":
-            return ES52[self.select].to_es() | {"query": ES52[self.where].to_es(schema), "from": 0}
+            return ES52[self.select].to_es() | {
+                "query": ES52[self.where].to_es(schema),
+                "from": 0,
+            }
         elif self.select is not NULL and bool(self.select):
-            return {
-                "nested": {
-                    "path": self.path.var,
-                    "query": ES52[self.where].to_es(schema),
-                    "inner_hits": (ES52[self.select].to_es() | {"size": 100000})
-                }
-            }
+            return {"nested": {
+                "path": self.path.var,
+                "query": ES52[self.where].to_es(schema),
+                "inner_hits": (ES52[self.select].to_es() | {"size": 100000}),
+            }}
         else:
-            return {
-                "nested": {
-                    "path": self.path.var,
-                    "query": ES52[self.where].to_es(schema)
-                }
-            }
+            return {"nested": {
+                "path": self.path.var,
+                "query": ES52[self.where].to_es(schema),
+            }}
 
 
 export("jx_elasticsearch.es52.expressions.utils", NestedOp)

@@ -22,4 +22,3 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 
 
 false_script = EsScript(type=BOOLEAN, expr="false", frum=FALSE, schema=Null)
-

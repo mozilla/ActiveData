@@ -35,7 +35,7 @@ from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES, same_json_t
 from mo_logs import Log
 from pyLibrary.convert import string2boolean
 
-NestedOp, = expect("NestedOp")
+(NestedOp,) = expect("NestedOp")
 
 
 class EqOp(EqOp_):
@@ -59,8 +59,7 @@ class EqOp(EqOp_):
             return EqOp([lhs, rhs])
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
-                path=lhs.frum,
-                where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
+                path=lhs.frum, where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
             )]
 
         return EqOp([lhs, rhs])
@@ -91,35 +90,22 @@ class EqOp(EqOp_):
                                 return {"terms": {c.es_column: values}}
                         return FALSE.to_es(schema)
                     else:
-                        return (
-                            OrOp(
-                                [
-                                    EqOp([self.lhs, values])
-                                    for t, values in types.items()
-                                ]
-                            )
-                            .partial_eval()
-                            .to_es(schema)
-                        )
+                        return OrOp([
+                            EqOp([self.lhs, values]) for t, values in types.items()
+                        ]).partial_eval().to_es(schema)
 
             for c in cols:
                 if c.jx_type == BOOLEAN:
                     rhs = pull_functions[c.jx_type](rhs)
                 rhs_type = python_type_to_json_type[rhs.__class__]
-                if rhs_type == c.jx_type or (rhs_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES):
+                if rhs_type == c.jx_type or (
+                    rhs_type in NUMBER_TYPES and c.jx_type in NUMBER_TYPES
+                ):
                     return {"term": {c.es_column: rhs}}
             return FALSE.to_es(schema)
         else:
-            return (
-                ES52[
-                    CaseOp(
-                        [
-                            WhenOp(self.lhs.missing(), **{"then": self.rhs.missing()}),
-                            WhenOp(self.rhs.missing(), **{"then": FALSE}),
-                            BasicEqOp([self.lhs, self.rhs]),
-                        ]
-                    )
-                    .partial_eval()
-                ]
-                .to_es(schema)
-            )
+            return ES52[CaseOp([
+                WhenOp(self.lhs.missing(), **{"then": self.rhs.missing()}),
+                WhenOp(self.rhs.missing(), **{"then": FALSE}),
+                BasicEqOp([self.lhs, self.rhs]),
+            ]).partial_eval()].to_es(schema)

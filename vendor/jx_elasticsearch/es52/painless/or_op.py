@@ -30,4 +30,4 @@ class OrOp(OrOp_):
         )
 
 
-_utils.OrOp=OrOp
+_utils.OrOp = OrOp

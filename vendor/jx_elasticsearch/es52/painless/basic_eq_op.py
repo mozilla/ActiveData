@@ -26,22 +26,20 @@ class BasicEqOp(BasicEqOp_):
 
         if lhs.many:
             if rhs.many:
-                return AndOp(
-                    [
-                        EsScript(
-                            type=BOOLEAN,
-                            expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()",
-                            frum=self,
-                            schema=schema,
-                        ),
-                        EsScript(
-                            type=BOOLEAN,
-                            expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")",
-                            frum=self,
-                            schema=schema,
-                        ),
-                    ]
-                ).to_es_script(schema)
+                return AndOp([
+                    EsScript(
+                        type=BOOLEAN,
+                        expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()",
+                        frum=self,
+                        schema=schema,
+                    ),
+                    EsScript(
+                        type=BOOLEAN,
+                        expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")",
+                        frum=self,
+                        schema=schema,
+                    ),
+                ]).to_es_script(schema)
             else:
                 if lhs.type == BOOLEAN:
                     if is_literal(simple_rhs) and simple_rhs.value in ("F", False):

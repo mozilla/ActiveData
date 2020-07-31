@@ -16,6 +16,7 @@ from mo_future import first
 from pyLibrary.convert import string2regexp
 from jx_elasticsearch.es52.painless import SuffixOp as PainlessSuffixOp
 
+
 class SuffixOp(SuffixOp_):
     def to_es(self, schema):
         if not self.suffix:

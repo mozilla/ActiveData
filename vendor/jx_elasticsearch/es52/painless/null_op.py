@@ -22,4 +22,3 @@ def to_es_script(self, schema, not_null=False, boolean=False, many=True):
 
 
 null_script = EsScript(type=IS_NULL, expr="null", frum=NULL, miss=TRUE, schema=Null)
-

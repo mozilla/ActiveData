@@ -29,4 +29,4 @@ def es_and(terms):
 
 
 export("jx_elasticsearch.es52.expressions.or_op", es_and)
-export("jx_elasticsearch.es52.expressions.utils",  AndOp)
+export("jx_elasticsearch.es52.expressions.utils", AndOp)

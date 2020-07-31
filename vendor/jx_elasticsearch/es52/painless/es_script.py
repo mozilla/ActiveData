@@ -102,5 +102,3 @@ def box(script):
 
 def es_script(term):
     return dict_to_data({"script": {"lang": "painless", "source": term}})
-
-

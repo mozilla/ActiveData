@@ -29,12 +29,10 @@ class NumberOp(NumberOp_):
         value = term.to_es_script(schema)
 
         if is_op(value.frum, CoalesceOp_):
-            return CoalesceOp(
-                [
-                    NumberOp(t).partial_eval().to_es_script(schema)
-                    for t in value.frum.terms
-                ]
-            ).to_es_script(schema)
+            return CoalesceOp([
+                NumberOp(t).partial_eval().to_es_script(schema)
+                for t in value.frum.terms
+            ]).to_es_script(schema)
 
         if value is null_script:
             return Literal(0).to_es_script(schema)
@@ -90,4 +88,4 @@ class NumberOp(NumberOp_):
             )
 
 
-_utils.NumberOp=NumberOp
+_utils.NumberOp = NumberOp

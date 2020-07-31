@@ -40,27 +40,23 @@ class Variable(Variable_):
                 frum = Variable(c.es_column)
                 q = quote(varname)
                 if c.multi > 1:
-                    acc.append(
-                        EsScript(
-                            miss=frum.missing(),
-                            type=c.jx_type,
-                            expr="doc[" + q + "].values",
-                            frum=frum,
-                            schema=schema,
-                            many=True
-                        )
-                    )
+                    acc.append(EsScript(
+                        miss=frum.missing(),
+                        type=c.jx_type,
+                        expr="doc[" + q + "].values",
+                        frum=frum,
+                        schema=schema,
+                        many=True,
+                    ))
                 else:
-                    acc.append(
-                        EsScript(
-                            miss=frum.missing(),
-                            type=c.jx_type,
-                            expr="doc[" + q + "].value",
-                            frum=frum,
-                            schema=schema,
-                            many=False
-                        )
-                    )
+                    acc.append(EsScript(
+                        miss=frum.missing(),
+                        type=c.jx_type,
+                        expr="doc[" + q + "].value",
+                        frum=frum,
+                        schema=schema,
+                        many=False,
+                    ))
 
             if len(acc) == 0:
                 return NULL.to_es_script(schema)
@@ -70,4 +66,4 @@ class Variable(Variable_):
                 return CoalesceOp(acc).to_es_script(schema)
 
 
-first_op.Variable=Variable
+first_op.Variable = Variable

@@ -22,9 +22,10 @@ class SuffixOp(SuffixOp_):
             return true_script
         else:
             return EsScript(
-                miss=OrOp(
-                    [MissingOp(self.expr), MissingOp(self.suffix)]
-                ).partial_eval(),
+                miss=OrOp([
+                    MissingOp(self.expr),
+                    MissingOp(self.suffix),
+                ]).partial_eval(),
                 expr="("
                 + self.expr.to_es_script(schema)
                 + ").endsWith("

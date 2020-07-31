@@ -17,7 +17,8 @@ from jx_base.expressions import (
     Variable as Variable_,
     is_literal,
     simplified,
-    BooleanOp)
+    BooleanOp,
+)
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.not_op import NotOp
@@ -37,11 +38,9 @@ class FindOp(FindOp_):
         ):
             columns = [c for c in schema.leaves(self.value.var) if c.jx_type == STRING]
             if len(columns) == 1:
-                return {
-                    "regexp": {
-                        columns[0].es_column: ".*" + re.escape(self.find.value) + ".*"
-                    }
-                }
+                return {"regexp": {
+                    columns[0].es_column: ".*" + re.escape(self.find.value) + ".*"
+                }}
         # CONVERT TO SCRIPT, SIMPLIFY, AND THEN BACK TO FILTER
         self.simplified = False
         return ES52[Painless[self].partial_eval()].to_es(schema)

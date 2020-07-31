@@ -25,9 +25,9 @@ class StringOp(StringOp_):
         value = term.to_es_script(schema)
 
         if is_op(value.frum, CoalesceOp_):
-            return CoalesceOp(
-                [StringOp(t).partial_eval() for t in value.frum.terms]
-            ).to_es_script(schema)
+            return CoalesceOp([
+                StringOp(t).partial_eval() for t in value.frum.terms
+            ]).to_es_script(schema)
 
         if value.miss is TRUE:
             return empty_string_script

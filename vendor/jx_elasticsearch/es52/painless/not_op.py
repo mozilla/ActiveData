@@ -30,10 +30,5 @@ class NotOp(NotOp_):
             return null_script
 
         return EsScript(
-            type=BOOLEAN,
-            expr="!("
-            + value.expr
-            + ")",
-            frum=self,
-            schema=schema,
+            type=BOOLEAN, expr="!(" + value.expr + ")", frum=self, schema=schema,
         )

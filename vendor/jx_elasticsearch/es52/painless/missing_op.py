@@ -28,21 +28,15 @@ class MissingOp(MissingOp_):
                 return EsScript(type=BOOLEAN, expr="false", frum=self, schema=schema)
             else:
                 columns = schema.leaves(self.expr.var)
-                return (
-                    AndOp(
-                        [
-                            EsScript(
-                                type=BOOLEAN,
-                                expr="doc[" + quote(c.es_column) + "].empty",
-                                frum=self,
-                                schema=schema,
-                            )
-                            for c in columns
-                        ]
+                return AndOp([
+                    EsScript(
+                        type=BOOLEAN,
+                        expr="doc[" + quote(c.es_column) + "].empty",
+                        frum=self,
+                        schema=schema,
                     )
-                    .partial_eval()
-                    .to_es_script(schema)
-                )
+                    for c in columns
+                ]).partial_eval().to_es_script(schema)
         elif is_literal(self.expr):
             return self.expr.missing().to_es_script(schema)
         else:

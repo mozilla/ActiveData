@@ -41,17 +41,17 @@ class InOp(InOp_):
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: value2boolean(self.superset.value)}}
                     else:
-                        return {"terms": {var: list(map(value2boolean, self.superset.value))}}
+                        return {"terms": {var: list(map(
+                            value2boolean, self.superset.value
+                        ))}}
                 else:
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: self.superset.value}}
                     else:
                         return {"terms": {var: self.superset.value}}
             elif is_op(self.superset, TupleOp):
-                return (
-                    OrOp([EqOp([self.value, s]) for s in self.superset.terms])
-                    .partial_eval()
-                    .to_es(schema)
-                )
+                return OrOp([
+                    EqOp([self.value, s]) for s in self.superset.terms
+                ]).partial_eval().to_es(schema)
         # THE HARD WAY
         return Painless[self].to_es_script(schema).to_es(schema)

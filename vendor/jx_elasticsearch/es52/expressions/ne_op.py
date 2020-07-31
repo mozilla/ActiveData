@@ -34,38 +34,28 @@ class NeOp(NeOp_):
 
             if lhs.many:
                 if rhs.many:
-                    return es_not(
-                        ScriptOp(
-                            (
-                                "("
-                                + lhs.expr
-                                + ").size()==("
-                                + rhs.expr
-                                + ").size() && "
-                                + "("
-                                + rhs.expr
-                                + ").containsAll("
-                                + lhs.expr
-                                + ")"
-                            )
-                        ).to_es(schema)
-                    )
+                    return es_not(ScriptOp((
+                        "("
+                        + lhs.expr
+                        + ").size()==("
+                        + rhs.expr
+                        + ").size() && "
+                        + "("
+                        + rhs.expr
+                        + ").containsAll("
+                        + lhs.expr
+                        + ")"
+                    )).to_es(schema))
                 else:
-                    return es_not(
-                        ScriptOp(
-                            "(" + lhs.expr + ").contains(" + rhs.expr + ")"
-                        ).to_es(schema)
-                    )
+                    return es_not(ScriptOp(
+                        "(" + lhs.expr + ").contains(" + rhs.expr + ")"
+                    ).to_es(schema))
             else:
                 if rhs.many:
-                    return es_not(
-                        ScriptOp(
-                            "(" + rhs.expr + ").contains(" + lhs.expr + ")"
-                        ).to_es(schema)
-                    )
+                    return es_not(ScriptOp(
+                        "(" + rhs.expr + ").contains(" + lhs.expr + ")"
+                    ).to_es(schema))
                 else:
-                    return es_not(
-                        ScriptOp(
-                            "(" + lhs.expr + ") != (" + rhs.expr + ")"
-                        ).to_es(schema)
-                    )
+                    return es_not(ScriptOp(
+                        "(" + lhs.expr + ") != (" + rhs.expr + ")"
+                    ).to_es(schema))

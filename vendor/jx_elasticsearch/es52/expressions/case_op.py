@@ -19,13 +19,9 @@ from mo_logs import Log
 class CaseOp(CaseOp_):
     def to_es(self, schema):
         if self.type == BOOLEAN:
-            return (
-                OrOp(
-                    [AndOp([w.when, w.then]) for w in self.whens[:-1]] + self.whens[-1:]
-                )
-                .partial_eval()
-                .to_es(schema)
-            )
+            return OrOp(
+                [AndOp([w.when, w.then]) for w in self.whens[:-1]] + self.whens[-1:]
+            ).partial_eval().to_es(schema)
         else:
             Log.error("do not know how to handle")
             return self.to_es_script(schema).script(schema).to_es(schema)

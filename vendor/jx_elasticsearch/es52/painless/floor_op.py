@@ -37,17 +37,13 @@ class FloorOp(FloorOp_):
                 + ")"
             )
 
-        output = (
-            WhenOp(
-                OrOp([lhs.missing(), rhs.missing(), EqOp([self.rhs, ZERO])]),
-                **{
-                    "then": self.default,
-                    "else": EsScript(
-                        type=NUMBER, expr=script, frum=self, miss=FALSE, schema=schema
-                    ),
-                }
-            )
-            .partial_eval()
-            .to_es_script(schema)
-        )
+        output = WhenOp(
+            OrOp([lhs.missing(), rhs.missing(), EqOp([self.rhs, ZERO])]),
+            **{
+                "then": self.default,
+                "else": EsScript(
+                    type=NUMBER, expr=script, frum=self, miss=FALSE, schema=schema
+                ),
+            }
+        ).partial_eval().to_es_script(schema)
         return output

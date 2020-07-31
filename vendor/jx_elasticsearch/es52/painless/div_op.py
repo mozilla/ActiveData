@@ -30,18 +30,12 @@ class DivOp(DivOp_):
             + ")"
         )
 
-        output = (
-            WhenOp(
-                OrOp([lhs.missing(), rhs.missing(), EqOp([rhs, ZERO])]),
-                **{
-                    "then": self.default,
-                    "else": EsScript(
-                        type=NUMBER, expr=script, frum=self, schema=schema
-                    ),
-                }
-            )
-            .partial_eval()
-            .to_es_script(schema)
-        )
+        output = WhenOp(
+            OrOp([lhs.missing(), rhs.missing(), EqOp([rhs, ZERO])]),
+            **{
+                "then": self.default,
+                "else": EsScript(type=NUMBER, expr=script, frum=self, schema=schema),
+            }
+        ).partial_eval().to_es_script(schema)
 
         return output

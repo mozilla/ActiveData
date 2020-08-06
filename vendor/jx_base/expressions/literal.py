@@ -14,7 +14,7 @@ from jx_base.expressions._utils import simplified, value2json
 from jx_base.expressions.expression import Expression
 from mo_dots import Null, is_data, is_many
 from mo_imports import expect, export
-from mo_json import python_type_to_json_type, same_json_type, merge_json_type
+from mo_json import python_type_to_json_type, merge_json_type
 
 DateOp, FALSE, TRUE, NULL = expect("DateOp", "FALSE", "TRUE", "NULL")
 

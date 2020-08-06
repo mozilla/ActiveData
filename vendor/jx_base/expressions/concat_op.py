@@ -17,7 +17,7 @@ from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op
 from jx_base.utils import is_variable_name
-from mo_dots import is_data, listwrap, is_many
+from mo_dots import is_data, is_many
 from mo_future import first, is_text
 from mo_json import STRING
 from mo_logs import Log
@@ -46,22 +46,31 @@ class ConcatOp(Expression):
         else:
             terms = [jx_expression(t) for t in terms]
 
-        return cls.lang[
-            ConcatOp(
-                terms,
-                **{
-                    k: Literal(v)
-                    if is_text(v) and not is_variable_name(v)
-                    else jx_expression(v)
-                    for k, v in expr.items()
-                    if k in ["default", "separator"]
-                }
-            )
-        ]
+        return cls.lang[ConcatOp(
+            terms,
+            **{
+                k: Literal(v)
+                if is_text(v) and not is_variable_name(v)
+                else jx_expression(v)
+                for k, v in expr.items()
+                if k in ["default", "separator"]
+            }
+        )]
 
     @simplified
     def partial_eval(self):
-        return self.lang[ConcatOp([t.partial_eval() for t in self.terms], self.separator, self.default)]
+        terms = []
+        for t in self.terms:
+            tt = t.partial_eval()
+            if tt is not NULL:
+                terms.append(tt)
+
+        if terms:
+            return self.lang[ConcatOp(terms, self.separator, self.default,)]
+        elif len(terms) == 1:
+            return terms[0]
+        else:
+            return self.default
 
     def __data__(self):
         f, s = self.terms[0], self.terms[1]
@@ -82,11 +91,13 @@ class ConcatOp(Expression):
         return set.union(*(t.vars() for t in self.terms))
 
     def map(self, map_):
-        return self.lang[
-            ConcatOp([t.map(map_) for t in self.terms], self.separator.map(map_), self.default.map(map_))
-        ]
+        return self.lang[ConcatOp(
+            [t.map(map_) for t in self.terms],
+            self.separator.map(map_),
+            self.default.map(map_),
+        )]
 
     def missing(self):
-        return self.lang[
-            AndOp([t.missing() for t in self.terms] + [self.default.missing()])
-        ].partial_eval()
+        return self.lang[AndOp(
+            [t.missing() for t in self.terms] + [self.default.missing()]
+        )].partial_eval()

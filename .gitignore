@@ -35,3 +35,4 @@ version.json
 /metadata*
 /*.pid
 /.coverage
+/app_profile.csv

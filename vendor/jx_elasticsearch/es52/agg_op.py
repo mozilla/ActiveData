@@ -43,14 +43,13 @@ def is_aggsop(es, query):
     return False
 
 
-def get_decoders_by_path(query):
+def get_decoders_by_path(query, schema):
     """
     RETURN MAP FROM QUERY PATH TO LIST OF DECODER ARRAYS
 
     :param query:
     :return:
     """
-    schema = query.frum.schema
     output = {}
 
     if query.edges:
@@ -73,7 +72,7 @@ def get_decoders_by_path(query):
         elif edge.domain.dimension:
             vars_ |= set(Variable(v) for v in edge.domain.dimension.fields)
             edge.domain.dimension = edge.domain.dimension.copy()
-            edge.domain.dimension.fields = [schema[v.var].es_column for v in vars_]
+            edge.domain.dimension.fields = [c.es_column for v in vars_ for c in schema[v.var]]
         elif edge.domain.partitions.where and all(edge.domain.partitions.where):
             for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
@@ -152,17 +151,16 @@ def extract_aggs(select, query_path, schema):
 def aggop_to_es_queries(select, query_path, schema, query):
     base_agg = extract_aggs(select, query_path, schema)
     base_agg = NestedAggs(query_path).add(base_agg)
-    split_decoders = get_decoders_by_path(query)
 
-    new_select, all_paths, split_select, var_to_columns = pre_process(query)
+    new_select, all_paths, split_select, split_decoders, var_to_columns = pre_process(query)
 
     # WE LET EACH DIMENSION ADD ITS OWN CODE FOR HANDLING INNER JOINS
-    union_outer = query_to_outer_joins(query, all_paths, split_select, var_to_columns)
+    concat_outer = query_to_outer_joins(query, all_paths, split_select, var_to_columns)
 
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
     output = NestedAggs(".")
-    for i, inner in enumerate(union_outer.terms):
+    for i, outer in enumerate(concat_outer.terms):
         acc = base_agg
         for p, path in enumerate(all_paths):
             decoder = split_decoders.get(path, Null)
@@ -172,7 +170,7 @@ def aggop_to_es_queries(select, query_path, schema, query):
                 acc = d.append_query(path, acc)
                 start += d.num_columns
 
-            where = first(nest.where for nest in inner.nests if nest.path == path).partial_eval()
+            where = first(nest.where for nest in outer.nests if nest.path == path).partial_eval()
             if where is FALSE:
                 continue
             elif not where or where is TRUE:

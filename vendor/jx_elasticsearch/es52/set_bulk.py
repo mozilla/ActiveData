@@ -46,7 +46,7 @@ def es_bulksetop(esq, frum, query):
     guid = randoms.base64(32, extra="-_")
 
     schema = frum.schema
-    new_select, all_paths, split_select, var_to_columns = pre_process(query)
+    new_select, all_paths, split_select, split_decoders, var_to_columns = pre_process(query)
 
     op, split_wheres = setop_to_es_queries(query, all_paths, split_select, var_to_columns)
     es_query = es_query_proto(split_select, op, split_wheres, schema)

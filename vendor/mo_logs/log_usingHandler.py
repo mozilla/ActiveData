@@ -13,8 +13,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import logging
 
-from mo_logs.log_usingThreadedStream import StructuredLogger_usingThreadedStream
-
+from mo_kwargs import override
 from mo_dots import unwrap, Null
 from mo_logs import Log
 from mo_logs.log_usingNothing import StructuredLogger
@@ -23,6 +22,7 @@ from mo_logs.strings import expand_template
 
 # WRAP PYTHON CLASSIC logger OBJECTS
 class StructuredLogger_usingHandler(StructuredLogger):
+    @override("setings")
     def __init__(self, settings):
         if not _Thread:
             _late_import()
@@ -52,11 +52,7 @@ def make_log_from_settings(settings):
         temp = __import__(path, globals(), locals(), [class_name], 0)
         constructor = object.__getattribute__(temp, class_name)
     except Exception as e:
-        if settings.stream and not constructor:
-            # PROVIDE A DEFAULT STREAM HANLDER
-            constructor = StructuredLogger_usingThreadedStream
-        else:
-            Log.error("Can not find class {{class}}",  {"class": path}, cause=e)
+        Log.error("Can not find class {{class}}",  {"class": path}, cause=e)
 
     # IF WE NEED A FILE, MAKE SURE DIRECTORY EXISTS
     if settings.filename != None:
@@ -67,9 +63,15 @@ def make_log_from_settings(settings):
             f.parent.create()
 
     settings['class'] = None
+    settings['cls'] = None
+    settings['log_type'] = None
+    settings['settings'] = None
     params = unwrap(settings)
-    log_instance = constructor(**params)
-    return log_instance
+    try:
+        log_instance = constructor(**params)
+        return log_instance
+    except Exception as cause:
+        Log.error("problem with making handler", cause=cause)
 
 
 _THREAD_STOP, _Queue, _Thread = [Null] * 3  # IMPORTS

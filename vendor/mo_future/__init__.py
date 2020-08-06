@@ -302,6 +302,8 @@ else:  # PY2
                 d[key] = value
             return d
 
+function_type = (lambda: None).__class__
+
 
 class decorate(object):
     def __init__(self, func):

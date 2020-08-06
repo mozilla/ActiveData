@@ -21,11 +21,10 @@ from mo_kwargs import override
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except, suppress_exception
 from mo_logs.log_usingNothing import StructuredLogger
-from mo_math import randoms
+from mo_math import randoms, bytes2base64
 from mo_threads import Queue, THREAD_STOP, Thread, Till
 from mo_times import Duration, MINUTE
 from mo_times.dates import datetime2unix
-from pyLibrary.convert import bytes2base64
 
 MAX_BAD_COUNT = 5
 LOG_STRING_LENGTH = 2000

@@ -13,14 +13,11 @@ from jx_base.expressions import NULL, Variable as Variable_
 from jx_elasticsearch.es52.painless import first_op
 from jx_elasticsearch.es52.painless.coalesce_op import CoalesceOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
-from mo_json import BOOLEAN, OBJECT, STRING
+from mo_json import OBJECT, STRING
 from mo_logs.strings import quote
 
 
 class Variable(Variable_):
-    def __init__(self, var):
-        Variable_.__init__(self, var)
-
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         if self.var == ".":
             return EsScript(type=OBJECT, expr="_source", frum=self)

@@ -12,9 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 import cProfile
 import pstats
 
-from mo_dots import to_data
-from mo_future import iteritems
 from mo_logs import Log
+from mo_threads.profile_utils import stats2tab
 
 FILENAME = "profile.tab"
 
@@ -83,6 +82,7 @@ def write_profiles(main_thread_profile):
         return
 
     from mo_files import File
+    from mo_times import Date
 
     cprofiler_stats.add(pstats.Stats(main_thread_profile.cprofiler))
     stats = cprofiler_stats.pop_all()
@@ -92,36 +92,7 @@ def write_profiles(main_thread_profile):
     for s in stats[1:]:
         acc.add(s)
 
-    stats = [
-        {
-            "num_calls": d[1],
-            "self_time": d[2],
-            "total_time": d[3],
-            "self_time_per_call": d[2] / d[1],
-            "total_time_per_call": d[3] / d[1],
-            "file": (f[0] if f[0] != "~" else "").replace("\\", "/"),
-            "line": f[1],
-            "method": f[2].lstrip("<").rstrip(">")
-        }
-        for f, d, in iteritems(acc.stats)
-    ]
-    from mo_times import Date
+    tab = stats2tab(acc)
 
-    stats_file = File(FILENAME, suffix=Date.now().format("_%Y%m%d_%H%M%S"))
-    stats_file.write(list2tab(stats))
+    stats_file = File(FILENAME, suffix=Date.now().format("_%Y%m%d_%H%M%S")).write(tab)
     Log.note("profile written to {{filename}}", filename=stats_file.abspath)
-
-
-def list2tab(rows, separator="\t"):
-    from mo_json import value2json
-
-    columns = set()
-    for r in to_data(rows):
-        columns |= set(k for k, v in r.leaves())
-    keys = list(columns)
-
-    output = []
-    for r in to_data(rows):
-        output.append(separator.join(value2json(r[k]) for k in keys))
-
-    return separator.join(keys) + "\n" + "\n".join(output)

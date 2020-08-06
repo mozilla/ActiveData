@@ -24,6 +24,8 @@ class DateOp(Literal):
         return object.__new__(cls)
 
     def __init__(self, term):
+        if is_data(term):
+            term = term['date']  # FOR WHEN WE MIGHT DO Literal({"date":term})
         self.date = term
         Literal.__init__(self, float(Date(self.date)))
 

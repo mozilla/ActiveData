@@ -1830,22 +1830,24 @@ class IterableBytes(object):
 
     def __iter__(self):
         for r in self.records:
-            if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
-                Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
-            id, version, json_text = self.encode(r)
+            try:
+                if '_id' in r or 'value' not in r:  # I MAKE THIS MISTAKE SO OFTEN, I NEED A CHECK
+                    Log.error('Expecting {"id":id, "value":document} form.  Not expecting _id')
+                id, version, json_text = self.encode(r)
 
-            if DEBUG and not json_text.startswith('{'):
-                self.encode(r)
-                Log.error("string {{doc}} will not be accepted as a document", doc=json_text)
+                if DEBUG and not json_text.startswith('{'):
+                    self.encode(r)
+                    Log.error("string {{doc}} will not be accepted as a document", doc=json_text)
 
-            if version:
-                yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
-            else:
-                yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
-            yield LF
-            yield json_text.encode('utf8')
-            yield LF
-
+                if version:
+                    yield value2json({"index": {"_id": id, "version": int(version), "version_type": "external_gte"}}).encode('utf8')
+                else:
+                    yield ('{"index":{"_id": ' + value2json(id) + '}}').encode('utf8')
+                yield LF
+                yield json_text.encode('utf8')
+                yield LF
+            except Exception as cause:
+                Log.error("Can not encode {{record|json}}", record=r, cause=cause)
 
 lists.sequence_types = lists.sequence_types + (IterableBytes,)
 

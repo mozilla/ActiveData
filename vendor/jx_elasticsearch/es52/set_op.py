@@ -271,9 +271,17 @@ def get_selects(query):
 
 def es_setop(es, query):
     schema = query.frum.schema
-    new_select, all_paths, split_select, var_to_columns = pre_process(query)
+    new_select, all_paths, split_select, split_decoders, var_to_columns = pre_process(query)
 
     es_query = setop_to_es_queries(query, all_paths, split_select, var_to_columns)
+    if not es_query:
+        # NO QUERY TO SEND
+        formatter, _, mime_type = set_formatters[query.format]
+        output = formatter([], new_select, query)
+        output.meta.content_type = mime_type
+        output.meta.es_query = es_query
+        return output
+
     size = coalesce(query.limit, DEFAULT_LIMIT)
     sort = jx_sort_to_es_sort(query.sort, schema)
     for q in es_query:
@@ -286,7 +294,6 @@ def es_setop(es, query):
     T = []
     for result in results:
         T.extend(result.hits.hits)
-
     try:
         formatter, _, mime_type = set_formatters[query.format]
 

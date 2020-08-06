@@ -10,17 +10,18 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from collections import OrderedDict
+from jx_base.expressions.null_op import NULL
+
+from jx_base.expressions.false_op import FALSE
 
 from jx_base.expressions._utils import simplified
-
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.or_op import OrOp
 from jx_base.language import is_op
 from mo_dots import startswith_field
-from mo_future import sort_using_key
 from mo_json import BOOLEAN
 from mo_logs import Log
+from mo_math import UNION
 
 
 class OuterJoinOp(Expression):
@@ -35,18 +36,16 @@ class OuterJoinOp(Expression):
         self.nests = nests
         last = "."
         for n in reversed(nests):
-            path = n.path
+            path = n.path.var
             if not startswith_field(path, last):
                 Log.error("Expecting nests to be reverse nested order")
             last = path
 
     def __data__(self):
-        return {
-            "outerjoin": {
-                "from": self.frum.__data__(),
-                "nests": [n.__data__() for n in self.nests],
-            }
-        }
+        return {"outerjoin": {
+            "from": self.frum.__data__(),
+            "nests": [n.__data__() for n in self.nests],
+        }}
 
     def __eq__(self, other):
         return (
@@ -56,12 +55,9 @@ class OuterJoinOp(Expression):
         )
 
     def vars(self):
-        return (
-            self.frum.vars()
-            | self.nests.vars()
-            | self.where.vars()
-            | self.sort.vars()
-            | self.limit.vars()
+        return UNION(
+            [self.frum.vars(), self.where.vars(), self.sort.vars(), self.limit.vars()]
+            + [n.vars() for n in self.nests.vars()]
         )
 
     def map(self, mapping):
@@ -79,4 +75,18 @@ class OuterJoinOp(Expression):
 
     @simplified
     def partial_eval(self):
-        return OuterJoinOp(frum=self.frum.partial_eval(), nests=self.nests.partial_eval())
+
+        nests = []
+        for n in self.nests:
+            n = n.partial_eval()
+            if n.where is FALSE:
+                break  # ALL DEEPER IS NOTHING
+            nests.append(n)
+
+        if nests:
+            return OuterJoinOp(
+                frum=self.frum.partial_eval(), nests=nests
+            )
+        else:
+            return NULL
+

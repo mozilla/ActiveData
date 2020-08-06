@@ -31,7 +31,7 @@ from jx_python.jx import value_compare
 from mo_dots import Data, is_container
 from mo_future import first
 from mo_imports import expect
-from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES, same_json_type
+from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES, same_json_type, OBJECT
 from mo_logs import Log
 from pyLibrary.convert import string2boolean
 
@@ -57,6 +57,9 @@ class EqOp(EqOp_):
                 return FALSE
             rhs = Literal(rhs)
             return EqOp([lhs, rhs])
+        if lhs.type != OBJECT and rhs.type != OBJECT and not same_json_type(lhs.type, rhs.type):
+            # OBJECT MEANS WE REALLY DO NOT KNOW THE TYPE
+            return FALSE
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
                 path=lhs.frum, where=AndOp([lhs.where, EqOp([lhs.select, rhs])])

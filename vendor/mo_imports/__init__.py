@@ -18,11 +18,11 @@ from time import time, sleep
 from mo_future import text, allocate_lock
 
 DEBUG = False
-
+WAIT_FOR_EXPORT = 10  # SECONDS TO WAIT FROM MOST RECENT expect() TO LAST export()
 
 _locker = allocate_lock()
 _expectations = []
-_expiry = time() + 10
+_expiry = None
 _monitor = None
 _nothing = object()
 _set = object.__setattr__
@@ -82,7 +82,7 @@ class Expecting(object):
         _set(self, "name", name)
         _set(self, "frame", frame)
         with _locker:
-            _expiry = time() + 10
+            _expiry = time() + WAIT_FOR_EXPORT
             _expectations.append(self)
             if not _monitor:
                 _monitor = Thread(target=worker)
@@ -209,12 +209,10 @@ def _error(description):
 
 
 def delay_import(module):
+    globals = sys._getframe(1).f_globals
+    caller_name = globals["__name__"]
 
-    # GET MODULE OF THE CALLER
-    caller_frame = inspect.stack()[1]
-    caller = inspect.getmodule(caller_frame[0])
-
-    return DelayedImport(caller, module)
+    return DelayedImport(caller_name, module)
 
 
 class DelayedImport(object):
@@ -226,17 +224,36 @@ class DelayedImport(object):
         _set(self, "module", module)
 
     def _import_now(self):
+        # FIND MODULE VARIABLE THAT HOLDS self
+        caller_name = _get(self, "caller")
+        caller = importlib.import_module(caller_name)
+        names = []
+        for n in dir(caller):
+            try:
+                if getattr(caller, n) is self:
+                    names.append(n)
+            except Exception:
+                pass
+
+        if not names:
+            _error("Can not find variable holding a " + self.__class__.__name__)
+
         module = _get(self, "module")
         path = module.split(".")
-        module_name, short_name = path[:-1], path[-1]
-        m = importlib.import_module(module_name)
+        module_name, short_name = ".".join(path[:-1]), path[-1]
+        try:
+            m = importlib.import_module(module_name)
+            val = getattr(m, short_name)
 
-        setattr(_get(self, "caller"), short_name, m)
-        return m
+            for n in names:
+                setattr(caller, n, val)
+            return val
+        except Exception as cause:
+            _error("Can not load " + _get(self, "module") + " caused by " + text(cause))
 
     def __call__(self, *args, **kwargs):
         m = DelayedImport._import_now(self)
-        return m()
+        return m(*args, **kwargs)
 
     def __getitem__(self, item):
         m = DelayedImport._import_now(self)

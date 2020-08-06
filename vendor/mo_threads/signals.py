@@ -101,8 +101,8 @@ class Signal(object):
             for j in jobs:
                 try:
                     j()
-                except Exception as e:
-                    Log.warning("Trigger on Signal.go() failed!", cause=e)
+                except Exception as cause:
+                    Log.warning("Trigger on Signal.go() failed!", cause=cause)
 
     def then(self, target):
         """

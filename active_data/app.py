@@ -8,10 +8,18 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+import cProfile
+import pstats
+
+PROFILE_IMPORT = False
+if PROFILE_IMPORT:
+    cprofiler = cProfile.Profile()
+    cprofiler.enable()
+
 import os
 from ssl import SSLContext
-
 import flask
+
 from _ssl import PROTOCOL_SSLv23
 from flask import Flask, Response
 
@@ -35,6 +43,16 @@ from mo_threads import Thread, stop_main_thread
 from mo_threads.threads import MAIN_THREAD, register_thread
 from mo_http import http
 from pyLibrary.env.flask_wrappers import cors_wrapper, dockerflow, add_version
+
+
+if PROFILE_IMPORT:
+    cprofiler.disable()
+    acc = pstats.Stats(cprofiler)
+    from mo_threads.profile_utils import stats2tab
+    try:
+        File("app_profile.csv").write(stats2tab(acc, separator=","))
+    except Exception:
+        ...
 
 
 class ActiveDataApp(Flask):
@@ -131,6 +149,10 @@ def setup():
 
     File.new_instance("activedata.pid").write(text(machine_metadata.pid))
 
+    # MAKE FLASK TALK LESS TO logging
+    import logging
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
     # PIPE REQUEST LOGS TO ES DEBUG
     if config.request_logs:
         cluster = elasticsearch.Cluster(config.request_logs)
@@ -140,7 +162,6 @@ def setup():
         )
 
     if config.dockerflow:
-
         def backend_check():
             http.get_json(
                 config.elasticsearch.host + ":" + text(config.elasticsearch.port)

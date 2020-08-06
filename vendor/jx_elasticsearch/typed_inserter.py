@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.elasticsearch import parse_properties, random_id
 from jx_python import jx
-from mo_dots import Data, ROOT_PATH, is_data, unwrap
+from mo_dots import Data, ROOT_PATH, is_data, unwrap, is_many
 from mo_future import text
 from mo_json import json2value, value2json, STRUCT
 from mo_json.encoder import UnicodeBuilder
@@ -45,7 +45,7 @@ class TypedInserter(object):
             value = record.get('value')
             if "json" in record:
                 value = json2value(record["json"])
-            elif is_data(value) or value != None:
+            elif is_data(value) or is_many(value) or value != None:
                 pass
             else:
                 from mo_logs import Log

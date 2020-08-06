@@ -23,19 +23,29 @@ from mo_json.typed_encoder import inserter_type_to_json_type
 
 
 class Variable(Expression):
-    def __init__(self, var):
+    def __init__(self, var, type=None, multi=None):
         """
-        :param var:  DOT DELIMITED PATH INTO A DOCUMENT
 
+        :param var:   DOT DELIMITED PATH INTO A DOCUMENT
+        :param type:  JSON TYPE, IF KNOWN
+        :param multi: NUMBER OF DISTINCT VALUES IN A SLOT
         """
         Expression.__init__(self, None)
 
         # if self.lang != self.__class_.lang:
         #     pass
         self.var = get_property_name(var)
-        jx_type = inserter_type_to_json_type.get(last(split_field(var)))
-        if jx_type:
-            self.data_type = jx_type
+
+        if type == None:
+            jx_type = inserter_type_to_json_type.get(last(split_field(var)))
+            if jx_type:
+                self.data_type = jx_type
+        else:
+            self.data_type = type
+
+        self._many = False
+        if multi and multi > 1:
+            self._many = True
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -52,7 +62,7 @@ class Variable(Expression):
 
     @property
     def many(self):
-        return True
+        return self._many
 
     def vars(self):
         return {self}

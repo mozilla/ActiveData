@@ -29,7 +29,7 @@ from mo_dots import (
     to_data,
 )
 from mo_future import binary_type, items, long, none_type, reduce, text
-from mo_json import INTEGER, NUMBER, STRING, python_type_to_json_type
+from mo_json import INTEGER, NUMBER, STRING, python_type_to_json_type, OBJECT
 from mo_times.dates import Date
 
 DEBUG = False
@@ -108,14 +108,16 @@ def _get_schema_from_list(
                     es_type = value.__class__.__name__
 
                 if not column:
+                    jx_type = native_type_to_json_type[es_type]
                     column = Column(
                         name=concat_field(table_name, full_name),
                         es_column=full_name,
                         es_index=".",
                         es_type=es_type,
-                        jx_type=native_type_to_json_type[es_type],
+                        jx_type=jx_type,
                         last_updated=Date.now(),
                         nested_path=nested_path,
+                        cardinality=1 if jx_type == OBJECT else None,
                         multi=1
                     )
                     columns.add(column)

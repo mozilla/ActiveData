@@ -17,7 +17,6 @@ from jx_base.expressions import QueryOp
 from jx_elasticsearch import elasticsearch
 from jx_elasticsearch.es52.agg_bulk import is_bulk_agg, es_bulkaggsop
 from jx_elasticsearch.es52.agg_op import es_aggsop, is_aggsop
-from jx_elasticsearch.es52.deep import es_deepop, is_deepop
 from jx_elasticsearch.es52.expressions import ES52 as ES52Lang
 from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.set_bulk import is_bulk_set, es_bulksetop
@@ -197,19 +196,17 @@ class ES52(Container):
 
             query.limit = temper_limit(query.limit, query)
 
-            if is_deepop(self.es, query):
-                return es_deepop(self.es, query)
             if is_aggsop(self.es, query):
                 return es_aggsop(self.es, frum, query)
             if is_setop(self.es, query):
                 return es_setop(self.es, query)
             Log.error("Can not handle")
-        except Exception as e:
-            e = Except.wrap(e)
-            if "Data too large, data for" in e:
+        except Exception as cause:
+            cause = Except.wrap(cause)
+            if "Data too large, data for" in cause:
                 http.post(self.es.cluster.url / "_cache/clear")
-                Log.error("Problem (Tried to clear Elasticsearch cache)", e)
-            Log.error("problem", e)
+                Log.error("Problem (Tried to clear Elasticsearch cache)", cause)
+            Log.error("problem", cause=cause)
 
     def update(self, command):
         """

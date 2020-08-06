@@ -583,7 +583,7 @@ class TestDeepOps(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_setop_w_complicated_where(self):
-        # TEST WE CAN PERFORM AGGREGATES ON EXPRESSIONS OF DEEP VARIABLES
+        # TEST WE CAN PERFORM EXPRESSIONS OF DEEP VARIABLES
         test = {
             "data": [
                 {"o": 3, "a": {"_a": [

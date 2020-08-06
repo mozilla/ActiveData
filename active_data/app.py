@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 import cProfile
 import pstats
 
-PROFILE_IMPORT = False
+PROFILE_IMPORT = True
 if PROFILE_IMPORT:
     cprofiler = cProfile.Profile()
     cprofiler.enable()

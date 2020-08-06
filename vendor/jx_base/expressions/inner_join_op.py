@@ -10,6 +10,12 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_math import UNION
+
+from jx_base.expressions.null_op import NULL
+
+from jx_base.expressions.false_op import FALSE
+
 from jx_base.expressions._utils import simplified, TRUE
 
 from mo_logs import Log
@@ -61,12 +67,9 @@ class InnerJoinOp(Expression):
         )
 
     def vars(self):
-        return (
-            self.frum.vars()
-            | self.nests.vars()
-            | self.where.vars()
-            | self.sort.vars()
-            | self.limit.vars()
+        return UNION(
+            [self.frum.vars(), self.where.vars(), self.sort.vars(), self.limit.vars()]
+            + [n.vars() for n in self.nests.vars()]
         )
 
     def map(self, mapping):
@@ -89,6 +92,13 @@ class InnerJoinOp(Expression):
 
     @simplified
     def partial_eval(self):
+        nests = []
+        for n in self.nests:
+            n = n.partial_eval()
+            if n.where is FALSE:
+                return NULL  # IF ANY ARE MISSING, THEN self IS MISSING
+            nests.append(n)
+
         return self.lang[InnerJoinOp(
             frum=self.frum,
             nests=[n.partial_eval() for n in self.nests],

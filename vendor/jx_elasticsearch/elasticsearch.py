@@ -204,9 +204,10 @@ class Alias(object):
             )
             if response.status_code not in [200, 201]:
                 Log.error(
-                    "Problem with search (url={{url}}):\n{{query|indent}}",
+                    "Problem with search (url={{url}}):\n{{details}}\n{{query|indent}}",
                     url=url,
-                    query=queries
+                    query=queries,
+                    details=response.all_content
                 )
 
             responses = json2value(response.content.decode('utf8')).responses

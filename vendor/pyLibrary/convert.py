@@ -44,12 +44,7 @@ def string2datetime(value, format=None):
 
 
 def string2boolean(value):
-    if value in ["true", "T"]:
-        return True
-    elif value in ["false", "F"]:
-        return False
-    else:
-        return None
+    return _v2b.get(value)
 
 
 _v2b = {

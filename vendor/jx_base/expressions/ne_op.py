@@ -70,7 +70,7 @@ class NeOp(Expression):
 
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
-                path=lhs.frum.partial_eval(),
+                path=lhs.path.partial_eval(),
                 select=IDENTITY,
                 where=AndOp([lhs.where, NeOp([lhs.select, rhs])]).partial_eval(),
                 sort=lhs.sort.partial_eval(),

@@ -31,6 +31,11 @@ class OuterJoinOp(Expression):
     __slots__ = ["frum", "nests"]
 
     def __init__(self, frum, nests):
+        """
+        A SEQUENCE OF NESTED (OUTER) JOINS FOR A QUERY
+        :param frum: THE TABLE OF DOCUMENTS
+        :param nests: LIST OF OUTER JOINS (deepest first)
+        """
         Expression.__init__(self, nests)
         self.frum = frum
         self.nests = nests
@@ -67,7 +72,12 @@ class OuterJoinOp(Expression):
         return self.missing()
 
     def missing(self):
-        return OrOp([self.frum.missing()] + [self.nests[-1].missing()]).partial_eval()
+        if not self.nests:
+            return TRUE
+
+        return OrOp(
+            [self.frum.missing()] + [n.missing() for n in self.nests]
+        ).partial_eval()
 
     @property
     def many(self):
@@ -75,18 +85,18 @@ class OuterJoinOp(Expression):
 
     @simplified
     def partial_eval(self):
-
         nests = []
         for n in self.nests:
             n = n.partial_eval()
             if n.where is FALSE:
-                break  # ALL DEEPER IS NOTHING
-            nests.append(n)
+                nests = []  # ALL DEEPER IS NOTHING
+            else:
+                nests.append(n)
 
         if nests:
-            return OuterJoinOp(
+            return self.lang[OuterJoinOp(
                 frum=self.frum.partial_eval(), nests=nests
-            )
+            )]
         else:
             return NULL
 

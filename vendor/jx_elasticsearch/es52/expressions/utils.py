@@ -288,7 +288,12 @@ def query_to_outer_joins(query, all_paths, split_select, var_to_columns):
                     output.append(c)
                 exclude.append(NotOp(t))
             return output
-
+        elif is_op(expr, NestedOp):
+            acc = tuple(
+                [expr.where] if p == expr.path.var else []
+                for i, p in enumerate(all_paths)
+            )
+            return [acc]
         all_nests = list(set(
             c.nested_path[0] for v in expr.vars() for c in frum.schema.values(v.var)
         ))

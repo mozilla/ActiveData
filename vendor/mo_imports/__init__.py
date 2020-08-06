@@ -10,7 +10,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import importlib
-import inspect
 import sys
 from threading import Thread
 from time import time, sleep
@@ -42,13 +41,14 @@ def expect(*names):
         _error("expecting at least one name")
 
     # GET MODULE OF THE CALLER
-    caller_frame = inspect.stack()[1]
-    caller = inspect.getmodule(caller_frame[0])
+    globals = sys._getframe(1).f_globals
+    caller_name = globals["__name__"]
+    caller = importlib.import_module(caller_name)
 
     # REGISTER DESIRED EXPORT
     output = []
     for name in names:
-        desc = Expecting(caller, name, caller_frame)
+        desc = Expecting(caller, name)
         setattr(caller, name, desc)
         output.append(desc)
 
@@ -67,20 +67,18 @@ class Expecting(object):
     CLASS TO USE AS A MODULE EXPORT PLACEHOLDER UNTIL AN ACTUAL VALUE IS INSERTED
     """
 
-    __slots__ = ["module", "name", "frame"]
+    __slots__ = ["module", "name"]
 
-    def __init__(self, module, name, frame):
+    def __init__(self, module, name):
         """
         PLACEHOLDER FOR A LATER VALUE
         :param module:
         :param name:
-        :param frame:
         """
         global _monitor, _expiry
 
         _set(self, "module", module)
         _set(self, "name", name)
-        _set(self, "frame", frame)
         with _locker:
             _expiry = time() + WAIT_FOR_EXPORT
             _expectations.append(self)
@@ -140,8 +138,10 @@ def export(module, name, value=_nothing):
     if not isinstance(name, text):
         # GET MODULE OF THE CALLER TO FIND NAME OF OBJECT
         value = name
-        frame = inspect.stack()[1]
-        caller = inspect.getmodule(frame[0])
+        globals = sys._getframe(1).f_globals
+        caller_name = globals["__name__"]
+        caller = importlib.import_module(caller_name)
+
         for n in dir(caller):
             try:
                 if getattr(caller, n) is value:
@@ -153,8 +153,9 @@ def export(module, name, value=_nothing):
             _error("Can not find variable holding a " + value.__class__.__name__)
     if value is _nothing:
         # ASSUME CALLER MODULE IS USED
-        frame = inspect.stack()[1]
-        value = inspect.getmodule(frame[0])
+        globals = sys._getframe(1).f_globals
+        caller_name = globals["__name__"]
+        value = importlib.import_module(caller_name)
 
     desc = getattr(module, name, None)
     if isinstance(desc, Expecting):

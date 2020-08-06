@@ -285,8 +285,8 @@ def es_setop(es, query):
     size = coalesce(query.limit, DEFAULT_LIMIT)
     sort = jx_sort_to_es_sort(query.sort, schema)
     for q in es_query:
-        q.size = size
-        q.sort = sort
+        q['size'] = size
+        q['sort'] = sort
 
     with Timer("call to ES", verbose=DEBUG) as call_timer:
         results = es.multisearch(es_query)

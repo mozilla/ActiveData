@@ -152,10 +152,10 @@ def aggop_to_es_queries(select, query_path, schema, query):
     base_agg = extract_aggs(select, query_path, schema)
     base_agg = NestedAggs(query_path).add(base_agg)
 
-    new_select, all_paths, split_select, split_decoders, var_to_columns = pre_process(query)
+    all_paths, split_decoders, var_to_columns = pre_process(query)
 
     # WE LET EACH DIMENSION ADD ITS OWN CODE FOR HANDLING INNER JOINS
-    concat_outer = query_to_outer_joins(query, all_paths, split_select, var_to_columns)
+    concat_outer = query_to_outer_joins(query, all_paths, {}, var_to_columns)
 
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))

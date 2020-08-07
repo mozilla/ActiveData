@@ -11,11 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
-from jx_base.expressions import FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
+from jx_base.expressions import FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable, TRUE
+from jx_base.expressions.query_op import DEFAULT_LIMIT, QueryOp
 from jx_base.language import is_op
-from jx_base.expressions.query_op import DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
-from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp, split_expression_by_path
+from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
+from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
@@ -213,12 +214,21 @@ class SetDecoder(AggsDecoder):
         if self.edge.allowNulls:
             # IF ALL NESTED COLUMNS ARE NULL, DOES THE FILTER PASS?
             # MISSING AT THE QUERY DEPTH
-            op, split = split_expression_by_path(NotOp(exists), schema)
-            for i, p in enumerate(reversed(sorted(split.keys()))):
-                e = split.get(p)
-                if e:
-                    not_match = NestedAggs(p).add(FilterAggs("_missing"+text(i), e, self).add(es_query))
-                    output.add(not_match)
+            # columns = schema[value.var]
+            missing_query = QueryOp(frum=self.query.frum, where= NotOp(exists))
+            all_paths, split_decoders, var_to_columns = pre_process(missing_query)
+            concat_inner = setop_to_inner_joins(
+                missing_query,
+                all_paths,
+                {},
+                var_to_columns
+            )
+            for i, term in enumerate(concat_inner.terms):
+                acc = es_query
+                for nest in term.nests:
+                    if nest.where is not TRUE:
+                        acc = NestedAggs(nest.path.var).add(FilterAggs("_missing" + text(i), nest.where, self).add(acc))
+                output.add(acc)
         return output
 
     def get_value(self, index):

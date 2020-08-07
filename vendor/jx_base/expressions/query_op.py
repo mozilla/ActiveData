@@ -245,7 +245,7 @@ class QueryOp(Expression):
 
     @property
     def query_path(self):
-        return "."
+        return self.frum.schema.query_path
 
     @property
     def column_names(self):

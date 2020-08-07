@@ -159,7 +159,7 @@ def format_cube(T, select, query=None):
 
 def scrub_select(select):
     return to_data(
-        [{k: v for k, v in s.items() if k not in ["pull", "put"]} for s in select]
+        [{"name": s.name} for s in select]
     )
 
 set_formatters = {

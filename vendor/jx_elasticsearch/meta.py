@@ -52,7 +52,7 @@ from mo_dots import (
     to_data,
 )
 from mo_dots.lists import last
-from mo_future import first, long, none_type, text
+from mo_future import first, long, none_type, text, sort_using_key
 from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT
 from mo_json.typed_encoder import (
     unnest_path,
@@ -310,6 +310,7 @@ class ElasticsearchMetadata(Namespace):
             for q in query_paths:
                 q.append(".")
             query_paths.append(ROOT_PATH)
+            query_paths = list(reversed(sort_using_key(query_paths, key=lambda x: x[0])))
 
             # ENSURE ALL TABLES HAVE THE QUERY PATHS SET
             self.alias_to_query_paths[alias] = query_paths
@@ -978,15 +979,6 @@ class Snowflake(object):
         Log.error("Can not find index {{index|quote}}", index=self.name)
 
     @property
-    def sorted_query_paths(self):
-        """
-        RETURN A LIST OF ALL SCHEMA'S IN DEPTH-FIRST TOPOLOGICAL ORDER
-        """
-        return list(reversed(sorted(
-            p[0] for p in self.namespace.alias_to_query_paths.get(self.name)
-        )))
-
-    @property
     def columns(self):
         """
         RETURN ALL COLUMNS FROM ORIGIN OF FACT TABLE
@@ -1056,9 +1048,10 @@ class Schema(jx_base.Schema):
         except Exception as e:
             Log.error("logic error", cause=e)
 
-    def leaves(self, column_name):
+    def leaves(self, column_name, exclude_type=(OBJECT, EXISTS)):
         """
         :param column_name:
+        :param exclude_type: SOME COLUMN TYPES ARE NOT NEEDED
         :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
         """
         clean_name = untype_path(column_name)
@@ -1080,6 +1073,7 @@ class Schema(jx_base.Schema):
                     for c in columns
                     if (
                         (c.name != "_id" or column_name == "_id")
+                        and c.jx_type not in exclude_type
                         and startswith_field(relative_field(c.name, path), column_name)
                     )
                 ]
@@ -1098,7 +1092,7 @@ class Schema(jx_base.Schema):
                     if (
                         (c.name != "_id" or clean_name == "_id")
                         and c.cardinality != 0
-                        and c.jx_type not in (OBJECT, EXISTS)
+                        and c.jx_type not in exclude_type
                         and path == c.nested_path[0]  # EVERYTHING AT THIS LEVEL
                     )
                 ]

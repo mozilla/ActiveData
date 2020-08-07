@@ -27,13 +27,13 @@ class ESSelectOp(Expression):
     def __init__(self, path="."):
         Expression.__init__(self, [])
         self.path = path
-        self.get_source = False
+        self.source_path = None
         self.fields = []
         self.scripts = {}
 
     def __data__(self):
         output = [{"name": f, "value": Variable(f)} for f in self.fields]
-        if self.get_source:
+        if self.source_path:
             output = [default_select]
         for n, e in self.scripts.items():
             output.append({"name": n, "value": e})
@@ -46,7 +46,8 @@ class ESSelectOp(Expression):
         return output
 
     def map(self, mapping):
-        Log.error("not supported")
+        return self
+        # Log.error("not supported")
 
     def invert(self):
         return FALSE
@@ -55,7 +56,7 @@ class ESSelectOp(Expression):
         return FALSE
 
     def __bool__(self):
-        return True if self.get_source or self.fields or self.scripts else False
+        return True if self.source_path or self.fields or self.scripts else False
 
 
 if PY2:

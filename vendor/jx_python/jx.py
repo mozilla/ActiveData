@@ -570,8 +570,8 @@ def sort(data, fieldnames=None, already_normalized=False):
                     result = value_compare(func(left), func(right), sort_)
                     if result != 0:
                         return result
-                except Exception as e:
-                    Log.error("problem with compare", e)
+                except Exception as cause:
+                    Log.error("problem with compare", cause)
             return 0
 
         if is_list(data):

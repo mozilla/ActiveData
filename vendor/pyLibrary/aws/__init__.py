@@ -14,7 +14,7 @@ import time
 import requests
 from boto import utils as boto_utils
 
-from mo_dots import coalesce, to_data, dict_to_data
+from mo_dots import coalesce, dict_to_data
 from mo_logs import Log, machine_metadata
 from mo_logs.exceptions import Except, suppress_exception
 from mo_threads import Thread, Till

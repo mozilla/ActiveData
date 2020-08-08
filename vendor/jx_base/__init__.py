@@ -253,6 +253,11 @@ Column = DataClass(
                 "then": {"ne": ["name", {"first": "nested_path"}]},
                 "else": True,
             },
+            {
+                "when": {"eq": {"name": "."}},
+                "then": {"eq": {"jx_type": "nested"}},
+                "else": True,
+            },
             {"not": {"find": {"es_column": "null"}}},
             {"not": {"eq": {"es_column": "string"}}},
             {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},

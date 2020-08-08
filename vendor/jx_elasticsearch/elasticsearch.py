@@ -1319,13 +1319,13 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
     columns = FlatList()
 
     if parent_name == '.':
-        # ROOT PROPERTY IS THE ELASTICSEARCH DOCUMENT (AN OBJECT)
+        # ROOT PROPERTY IS THE ELASTICSEARCH INDEX (A NESTED ARRAY OF OBJECTS)
         columns.append(Column(
             name='.',
             es_index=parent_index_name,
             es_column='.',
-            es_type="object",
-            jx_type=OBJECT,
+            es_type="nested",
+            jx_type=NESTED,
             cardinality=1,
             last_updated=Date.now(),
             nested_path=nested_path,

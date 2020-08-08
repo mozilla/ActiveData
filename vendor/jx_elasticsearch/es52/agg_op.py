@@ -11,21 +11,19 @@ from __future__ import absolute_import, division, unicode_literals
 
 from collections import deque
 
-from jx_base.expressions.false_op import FALSE
-
-from jx_base.expressions.true_op import TRUE
-
 from jx_base.domains import SetDomain
-from jx_base.expressions import NULL, Variable as Variable_, ESSelectOp, Variable
-from jx_base.language import is_op
+from jx_base.expressions import Variable as Variable_, Variable
+from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.query_op import DEFAULT_LIMIT
+from jx_base.expressions.true_op import TRUE
+from jx_base.language import is_op
 from jx_elasticsearch.es52.agg_format import agg_formatters
 from jx_elasticsearch.es52.agg_op_field import agg_field
 from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
-from jx_elasticsearch.es52.expressions import ES52, split_expression_by_path
-from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process, query_to_outer_joins
+from jx_elasticsearch.es52.expressions import split_expression_by_path
+from jx_elasticsearch.es52.expressions.utils import pre_process, query_to_outer_joins
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data

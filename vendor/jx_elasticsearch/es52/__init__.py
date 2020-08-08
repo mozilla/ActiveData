@@ -143,16 +143,15 @@ class ES52(Container):
                 else:
                     nested_path = nested_path_of(p)[1:]
 
-                jx_type = OBJECT if p == "." else NESTED
                 self.namespace.meta.columns.add(Column(
                     name=p,
                     es_column=p,
                     es_index=self.name,
-                    es_type=jx_type,
-                    jx_type=jx_type,
+                    es_type="nested",
+                    jx_type=NESTED,
                     cardinality=1,
                     nested_path=nested_path,
-                    multi=1001 if jx_type is NESTED else 1,
+                    multi=1001,
                     last_updated=Date.now(),
                 ))
 

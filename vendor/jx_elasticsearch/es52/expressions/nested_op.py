@@ -22,7 +22,7 @@ class NestedOp(_NestedOp):
             return dict_to_data({"nested": {
                 "path": self.path.var,
                 "query": ES52[self.where].to_es(schema),
-                "inner_hits": (ES52[self.select].to_es() | {"size": 100000}),
+                "inner_hits": (ES52[self.select].to_es() | {"from": 0, "size": 100000}),
             }})
         else:
             return dict_to_data({"nested": {

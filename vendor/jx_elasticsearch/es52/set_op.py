@@ -284,7 +284,7 @@ def get_selects(query):
             op, split_scripts = split_expression_by_path(
                 select.value, schema, lang=Painless
             )
-            for p, script in split_scripts.items():
+            for pos, (p, script) in enumerate(reversed(list(split_scripts.items()))):
                 es_select = split_select[p]
                 es_select.scripts[select.name] = {"script": text(
                     Painless[script].partial_eval().to_es_script(schema)
@@ -292,7 +292,7 @@ def get_selects(query):
                 new_select.append({
                     "name": select.name,
                     "pull": jx_expression_to_function(join_field([
-                        text(p),
+                        text(pos+1),
                         "fields",
                         select.name,
                     ])),

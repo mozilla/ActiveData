@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from mo_dots import dict_to_data
+
 from jx_base.expressions import NestedOp as _NestedOp, NULL
 from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_imports import export
@@ -16,22 +18,17 @@ from mo_imports import export
 
 class NestedOp(_NestedOp):
     def to_es(self, schema):
-        if self.path.var == ".":
-            return ES52[self.select].to_es() | {
-                "query": ES52[self.where].to_es(schema),
-                "from": 0,
-            }
-        elif self.select is not NULL and bool(self.select):
-            return {"nested": {
+        if self.select is not NULL: # and bool(self.select):
+            return dict_to_data({"nested": {
                 "path": self.path.var,
                 "query": ES52[self.where].to_es(schema),
                 "inner_hits": (ES52[self.select].to_es() | {"size": 100000}),
-            }}
+            }})
         else:
-            return {"nested": {
+            return dict_to_data({"nested": {
                 "path": self.path.var,
                 "query": ES52[self.where].to_es(schema),
-            }}
+            }})
 
 
 export("jx_elasticsearch.es52.expressions.utils", NestedOp)

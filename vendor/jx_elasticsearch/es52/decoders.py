@@ -12,11 +12,11 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
 from jx_base.expressions import FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable, TRUE
-from jx_base.expressions.query_op import DEFAULT_LIMIT, QueryOp
+from jx_base.expressions.query_op import DEFAULT_LIMIT
 from jx_base.language import is_op
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
 from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
-from jx_elasticsearch.es52.expressions.utils import setop_to_inner_joins, pre_process
+from jx_elasticsearch.es52.expressions.utils import split_expression
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
@@ -178,14 +178,12 @@ class SetDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
         domain = self.domain
         domain_key = domain.key
-        value = Painless[self.edge.value]
+        value = self.edge.value
         cnv = pull_functions[value.type]
         include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
         schema = self.schema
-        exists = Painless[AndOp([
-            InOp([value, Literal(include)])
-        ])].partial_eval()
+        exists = InOp([value, Literal(include)]).partial_eval()
 
         limit = coalesce(self.limit, len(domain.partitions))
 
@@ -204,7 +202,7 @@ class SetDecoder(AggsDecoder):
             match = TermsAggs(
                 "_match",
                 {
-                    "script": text(value.to_es_script(schema)),
+                    "script": text(Painless[value].to_es_script(schema)),
                     "size": limit
                 },
                 self
@@ -215,14 +213,7 @@ class SetDecoder(AggsDecoder):
             # IF ALL NESTED COLUMNS ARE NULL, DOES THE FILTER PASS?
             # MISSING AT THE QUERY DEPTH
             # columns = schema[value.var]
-            missing_query = QueryOp(frum=self.query.frum, where= NotOp(exists))
-            all_paths, split_decoders, var_to_columns = pre_process(missing_query)
-            concat_inner = setop_to_inner_joins(
-                missing_query,
-                all_paths,
-                {},
-                var_to_columns
-            )
+            concat_inner = split_expression(NotOp(exists), self.query)
             for i, term in enumerate(concat_inner.terms):
                 acc = es_query
                 for nest in term.nests:

@@ -22,6 +22,6 @@ class ESSelectOp(_ESSelectOp):
         else:
             return Data(
                 _source=False,
-                stored_fields=self.fields if not self.source_path else None,
+                stored_fields=self.fields if self.fields else None,
                 script_fields=self.scripts if self.scripts else None,
             )

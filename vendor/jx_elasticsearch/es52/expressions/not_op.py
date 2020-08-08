@@ -16,7 +16,6 @@ from jx_base.expressions import (
 )
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
-from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_dots import dict_to_data
 from mo_future import first
 from mo_imports import expect
@@ -38,9 +37,14 @@ class NotOp(NotOp_):
             else:
                 return es_or([{"exists": {"field": c.es_column}} for c in cols])
         else:
-            operand = ES52[self.term].to_es(schema)
-            return es_not(operand)
+            if self.simplified:
+                return es_not(self.term.to_es(schema))
+            else:
+                return self.partial_eval().to_es(schema)
 
 
 def es_not(term):
+    not_term = term.bool.must_not
+    if not_term:
+        return not_term
     return dict_to_data({"bool": {"must_not": term}})

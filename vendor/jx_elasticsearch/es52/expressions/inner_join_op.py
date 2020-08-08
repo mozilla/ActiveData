@@ -22,6 +22,8 @@ class InnerJoinOp(InnerJoinOp_):
             if not acc:
                 acc = es
             else:
-                es["query"] = es_and([es.query, acc])
+                es.nested.query = es_and([es.nested.query, acc])
                 acc = es
-        return acc
+
+        return acc.nested.inner_hits | {"query": acc.nested.query}
+

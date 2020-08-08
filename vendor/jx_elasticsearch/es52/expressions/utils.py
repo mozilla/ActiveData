@@ -104,10 +104,10 @@ def split_expression_by_depth(where, schema, output=None, var_to_depth=None):
 def split_expression(where, query):
     """
     :param where: EXPRESSION TO CONVERT TO MULTIPLE ES QUERIES
-    :param query: FOR CONTEXT
+    :param query: FOR CONTEXT (WHAT IS INCLUDED)
     :return: ConcatOp(InnerOp(NestedOp())))
     """
-    query = QueryOp(frum=query.frum, where=where)
+    query = QueryOp(frum=query.frum, where=AndOp([where, query.where]))
     all_paths, split_decoders, var_to_columns = pre_process(query)
     return setop_to_inner_joins(
         query,
@@ -212,7 +212,9 @@ def outer_to_inner(expr, paths_to_cols):
                     else:
                         # ENSURE THIS IS NOT "OPTIMIZED" TO FALSE
                         deeper_conditions = NotOp(NestedOp(
-                            path=Variable(nest_path), where=TRUE
+                            path=Variable(nest_path),
+                            where=TRUE,
+                            select=NULL
                         ))
                         deeper_conditions.simplified = True
 
@@ -254,7 +256,6 @@ def pre_process(query):
     # FROM DEEPEST TO SHALLOWEST
     all_paths = list(reversed(sorted(
         set(c.nested_path[0] for v in where_vars for c in var_to_columns[v.var])
-        | {"."}
         | set(schema.query_path)
         | split_decoders.keys()
     )))

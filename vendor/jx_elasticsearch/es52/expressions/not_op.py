@@ -44,7 +44,7 @@ class NotOp(NotOp_):
 
 
 def es_not(term):
-    not_term = term.bool.must_not
+    not_term = term.get('bool', {}).get('must_not')
     if not_term:
         return not_term
     return dict_to_data({"bool": {"must_not": term}})

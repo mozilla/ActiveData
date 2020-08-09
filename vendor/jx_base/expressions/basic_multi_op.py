@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, builtin_ops
+from jx_base.expressions._utils import builtin_ops
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
@@ -43,15 +43,14 @@ class BasicMultiOp(Expression):
     def __data__(self):
         return {self.op: [t.__data__() for t in self.terms]}
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         acc = None
         terms = []
         for t in self.terms:
-            simple = t.partial_eval()
+            simple = t.partial_eval(lang)
             if simple is NULL:
                 pass
             elif is_op(simple, Literal):
@@ -63,7 +62,7 @@ class BasicMultiOp(Expression):
                 terms.append(simple)
         if len(terms) == 0:
             if acc == None:
-                return self.default.partial_eval()
+                return self.default.partial_eval(lang)
             else:
                 return Literal(acc)
         else:

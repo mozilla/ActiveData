@@ -11,9 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import CoalesceOp as CoalesceOp_, StringOp as StringOp_, TRUE
 from jx_base.language import is_op
-from jx_elasticsearch.es52.painless._utils import empty_string_script, NUMBER_TO_STRING
+from jx_elasticsearch.es52.painless._utils import NUMBER_TO_STRING, Painless
 from jx_elasticsearch.es52.painless.coalesce_op import CoalesceOp
-from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.es_script import EsScript, empty_string_script
 from jx_elasticsearch.es52.painless.first_op import FirstOp
 from mo_json import BOOLEAN, INTEGER, NUMBER, STRING
 from mo_logs.strings import expand_template
@@ -21,19 +21,19 @@ from mo_logs.strings import expand_template
 
 class StringOp(StringOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        term = FirstOp(self.term).partial_eval()
+        term = FirstOp(self.term).partial_eval(Painless)
         value = term.to_es_script(schema)
 
         if is_op(value.frum, CoalesceOp_):
             return CoalesceOp([
-                StringOp(t).partial_eval() for t in value.frum.terms
+                StringOp(t).partial_eval(Painless) for t in value.frum.terms
             ]).to_es_script(schema)
 
         if value.miss is TRUE:
             return empty_string_script
         elif value.type == BOOLEAN:
             return EsScript(
-                miss=self.term.missing().partial_eval(),
+                miss=self.term.missing(Painless).partial_eval(Painless),
                 type=STRING,
                 expr=value.expr + ' ? "T" : "F"',
                 frum=self,
@@ -41,7 +41,7 @@ class StringOp(StringOp_):
             )
         elif value.type == INTEGER:
             return EsScript(
-                miss=self.term.missing().partial_eval(),
+                miss=self.term.missing(Painless).partial_eval(Painless),
                 type=STRING,
                 expr="String.valueOf(" + value.expr + ")",
                 frum=self,
@@ -49,7 +49,7 @@ class StringOp(StringOp_):
             )
         elif value.type == NUMBER:
             return EsScript(
-                miss=self.term.missing().partial_eval(),
+                miss=self.term.missing(Painless).partial_eval(Painless),
                 type=STRING,
                 expr=expand_template(NUMBER_TO_STRING, {"expr": value.expr}),
                 frum=self,
@@ -59,7 +59,7 @@ class StringOp(StringOp_):
             return value
         else:
             return EsScript(
-                miss=self.term.missing().partial_eval(),
+                miss=self.term.missing(Painless).partial_eval(Painless),
                 type=STRING,
                 expr=expand_template(NUMBER_TO_STRING, {"expr": value.expr}),
                 frum=self,

@@ -16,11 +16,9 @@ from jx_base.expressions import (
     NULL,
     Variable as Variable_,
     is_literal,
-    simplified,
     BooleanOp,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.not_op import NotOp
 from jx_elasticsearch.es52.painless import Painless
 from mo_imports import export
@@ -43,18 +41,17 @@ class FindOp(FindOp_):
                 }}
         # CONVERT TO SCRIPT, SIMPLIFY, AND THEN BACK TO FILTER
         self.simplified = False
-        return ES52[Painless[self].partial_eval()].to_es(schema)
+        return self.partial_eval(Painless).to_es(schema)
 
-    @simplified
-    def partial_eval(self):
-        value = self.value.partial_eval()
-        find = self.find.partial_eval()
-        default = self.default.partial_eval()
-        start = self.start.partial_eval()
+    def partial_eval(self, lang):
+        value = self.value.partial_eval(lang)
+        find = self.find.partial_eval(lang)
+        default = self.default.partial_eval(lang)
+        start = self.start.partial_eval(lang)
 
         return FindOp([value, find], default=default, start=start)
 
-    def missing(self):
+    def missing(self, lang):
         return NotOp(self)
 
     def exists(self):

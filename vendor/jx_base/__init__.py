@@ -209,9 +209,7 @@ class {{class_name}}(Mapping):
             "types": "{"
             + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items()))
             + "}",
-            "constraint_expr": Python[
-                jx_expression(not ENABLE_CONSTRAINTS or constraint)
-            ].to_python(),
+            "constraint_expr":                jx_expression(not ENABLE_CONSTRAINTS or constraint).to_python(),
             "constraint": value2json(constraint),
         },
     )

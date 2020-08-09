@@ -17,8 +17,8 @@ class FloorOp(FloorOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "mo_math.floor("
-            + Python[self.lhs].to_python()
+            + (self.lhs).to_python()
             + ", "
-            + Python[self.rhs].to_python()
+            + (self.rhs).to_python()
             + ")"
         )

@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.basic_eq_op import BasicEqOp
 from jx_base.expressions.expression import Expression
@@ -70,26 +69,21 @@ class EqOp(Expression):
     def map(self, map_):
         return self.lang[EqOp([self.lhs.map(map_), self.rhs.map(map_)])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def exists(self):
         return TRUE
 
-    @simplified
-    def partial_eval(self):
-        lhs = self.lang[self.lhs].partial_eval()
-        rhs = self.lang[self.rhs].partial_eval()
+    def partial_eval(self, lang):
+        lhs = (self.lhs).partial_eval(lang)
+        rhs = (self.rhs).partial_eval(lang)
 
         if is_literal(lhs) and is_literal(rhs):
             return FALSE if value_compare(lhs.value, rhs.value) else TRUE
         else:
-            return self.lang[
-                self.lang[CaseOp(
-                    [
-                        WhenOp(lhs.missing(), **{"then": rhs.missing()}),
-                        WhenOp(rhs.missing(), **{"then": FALSE}),
-                        BasicEqOp([lhs, rhs]),
-                    ]
-                )]
-            ].partial_eval()
+            return self.lang[self.lang[CaseOp([
+                WhenOp(lhs.missing(lang), **{"then": rhs.missing(lang)}),
+                WhenOp(rhs.missing(lang), **{"then": FALSE}),
+                BasicEqOp([lhs, rhs]),
+            ])]].partial_eval(lang)

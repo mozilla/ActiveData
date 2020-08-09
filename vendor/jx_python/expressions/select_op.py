@@ -19,7 +19,7 @@ class SelectOp(SelectOp_):
         return (
             "leaves_to_data({"
             + ",".join(
-                quote(t["name"]) + ":" + Python[t["value"]].to_python()
+                quote(t["name"]) + ":" + (t["value"]).to_python()
                 for t in self.terms
             )
             + "})"

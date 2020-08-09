@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.basic_eq_op import BasicEqOp
 from jx_base.expressions.expression import Expression
@@ -51,35 +50,32 @@ class NeOp(Expression):
     def map(self, map_):
         return self.lang[NeOp([self.lhs.map(map_), self.rhs.map(map_)])]
 
-    def missing(self):
-        return (
-            FALSE
-        )  # USING THE decisive EQUALITY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
+    def missing(self, lang):
+        return FALSE  # USING THE decisive EQUALITY https://github.com/mozilla/jx-sqlite/blob/master/docs/Logical%20Equality.md#definitions
 
-    def invert(self):
+    def invert(self, lang):
         return self.lang[OrOp([
-            self.lhs.missing(),
-            self.rhs.missing(),
-            BasicEqOp([self.lhs, self.rhs])
-        ])].partial_eval()
+            self.lhs.missing(lang),
+            self.rhs.missing(lang),
+            BasicEqOp([self.lhs, self.rhs]),
+        ])].partial_eval(lang)
 
-    @simplified
-    def partial_eval(self):
-        lhs = self.lang[self.lhs].partial_eval()
-        rhs = self.lang[self.rhs].partial_eval()
+    def partial_eval(self, lang):
+        lhs = (self.lhs).partial_eval(lang)
+        rhs = (self.rhs).partial_eval(lang)
 
         if is_op(lhs, NestedOp):
             return self.lang[NestedOp(
-                path=lhs.path.partial_eval(),
+                path=lhs.path.partial_eval(lang),
                 select=IDENTITY,
-                where=AndOp([lhs.where, NeOp([lhs.select, rhs])]).partial_eval(),
-                sort=lhs.sort.partial_eval(),
-                limit=lhs.limit.partial_eval()
-            )].partial_eval()
+                where=AndOp([lhs.where, NeOp([lhs.select, rhs])]).partial_eval(lang),
+                sort=lhs.sort.partial_eval(lang),
+                limit=lhs.limit.partial_eval(lang),
+            )].partial_eval(lang)
 
         output = self.lang[AndOp([
             lhs.exists(),
             rhs.exists(),
-            NotOp(BasicEqOp([lhs, rhs]))
-        ])].partial_eval()
+            NotOp(BasicEqOp([lhs, rhs])),
+        ])].partial_eval(lang)
         return output

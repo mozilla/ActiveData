@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import mo_json
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.coalesce_op import CoalesceOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.first_op import FirstOp
@@ -38,21 +37,20 @@ class StringOp(Expression):
     def map(self, map_):
         return self.lang[StringOp(self.term.map(map_))]
 
-    def missing(self):
-        return self.term.missing()
+    def missing(self, lang):
+        return self.term.missing(lang)
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         term = self.term
         if term.type is IS_NULL:
             return NULL
-        term = self.lang[FirstOp(term)].partial_eval()
+        term = (FirstOp(term)).partial_eval(lang)
         if is_op(term, StringOp):
-            return term.term.partial_eval()
+            return term.term.partial_eval(lang)
         elif is_op(term, CoalesceOp):
-            return self.lang[
-                CoalesceOp([self.lang[StringOp(t)].partial_eval() for t in term.terms])
-            ]
+            return self.lang[CoalesceOp([
+                (StringOp(t)).partial_eval(lang) for t in term.terms
+            ])]
         elif is_literal(term):
             if term.type == STRING:
                 return term

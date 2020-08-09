@@ -17,22 +17,19 @@ from jx_base.expressions import (
     TRUE,
     Variable as Variable_,
     is_literal,
-    simplified,
 )
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions import es_or
 from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
-from jx_elasticsearch.es52.painless._utils import Painless
 from mo_json import STRING, INTERNAL
 from mo_logs import Log
 
 
 class PrefixOp(PrefixOp_):
-    @simplified
-    def partial_eval(self):
-        expr = self.expr.partial_eval()
-        prefix = self.prefix.partial_eval()
+    def partial_eval(self, lang):
+        expr = self.expr.partial_eval(lang)
+        prefix = self.prefix.partial_eval(lang)
 
         if prefix is NULL:
             return TRUE
@@ -77,4 +74,4 @@ class PrefixOp(PrefixOp_):
             else:
                 return es_or(acc)
         else:
-            return Painless[self].to_es_script(schema).to_es(schema)
+            return (self).to_es_script(schema).to_es(schema)

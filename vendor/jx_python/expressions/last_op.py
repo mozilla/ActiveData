@@ -15,5 +15,5 @@ from jx_python.expressions._utils import Python
 
 class LastOp(LastOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        term = Python[self.term].to_python()
+        term = (self.term).to_python()
         return "last(" + term + ")"

@@ -18,15 +18,15 @@ from mo_json import NUMBER_TYPES
 
 class NumberOp(NumberOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        term = Python[self.term]
+        term = self.term
         if not_null:
             if term.type in NUMBER_TYPES:
                 return term.to_python(not_null=True)
             else:
-                return "float(" + Python[self.term].to_python(not_null=True) + ")"
+                return "float(" + (self.term).to_python(not_null=True) + ")"
         else:
             exists = self.term.exists()
-            value = Python[self.term].to_python(not_null=True)
+            value = (self.term).to_python(not_null=True)
 
             if exists is TRUE:
                 return "float(" + value + ")"
@@ -35,7 +35,7 @@ class NumberOp(NumberOp_):
                     "float("
                     + value
                     + ") if ("
-                    + Python[exists].to_python()
+                    + (exists).to_python()
                     + ") else None"
                 )
 

@@ -10,9 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
-from jx_base.expressions.expression import Expression, NotOp
+from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.literal import is_literal
@@ -56,10 +55,9 @@ class InOp(Expression):
     def map(self, map_):
         return self.lang[InOp([self.value.map(map_), self.superset.map(map_)])]
 
-    @simplified
-    def partial_eval(self):
-        value = self.value.partial_eval()
-        superset = self.superset.partial_eval()
+    def partial_eval(self, lang):
+        value = self.value.partial_eval(lang)
+        superset = self.superset.partial_eval(lang)
         if superset is NULL:
             return FALSE
         elif value is NULL:
@@ -72,7 +70,7 @@ class InOp(Expression):
     def __call__(self):
         return self.value() in self.superset()
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
 

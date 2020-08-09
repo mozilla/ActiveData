@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NotLeftOp as NotLeftOp_
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.number_op import NumberOp
 from jx_elasticsearch.es52.painless.or_op import OrOp
@@ -19,8 +20,8 @@ from mo_json import STRING
 
 class NotLeftOp(NotLeftOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        v = StringOp(self.value).partial_eval().to_es_script(schema).expr
-        l = NumberOp(self.length).partial_eval().to_es_script(schema).expr
+        v = StringOp(self.value).partial_eval(Painless).to_es_script(schema).expr
+        l = NumberOp(self.length).partial_eval(Painless).to_es_script(schema).expr
 
         expr = (
             "("
@@ -32,7 +33,7 @@ class NotLeftOp(NotLeftOp_):
             + ")))"
         )
         return EsScript(
-            miss=OrOp([self.value.missing(), self.length.missing()]),
+            miss=OrOp([self.value.missing(Painless), self.length.missing(Painless)]),
             type=STRING,
             expr=expr,
             frum=self,

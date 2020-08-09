@@ -10,12 +10,9 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.null_op import NULL
-
-from jx_base.expressions.false_op import FALSE
-
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
+from jx_base.expressions.false_op import FALSE
+from jx_base.expressions.null_op import NULL
 from jx_base.expressions.or_op import OrOp
 from jx_base.language import is_op
 from mo_dots import startswith_field
@@ -68,26 +65,25 @@ class OuterJoinOp(Expression):
     def map(self, mapping):
         return OuterJoinOp(frum=self.frum.map(mapping), nests=self.nests.map(mapping))
 
-    def invert(self):
-        return self.missing()
+    def invert(self, lang):
+        return self.missing(lang)
 
-    def missing(self):
+    def missing(self, lang):
         if not self.nests:
             return TRUE
 
         return OrOp(
-            [self.frum.missing()] + [n.missing() for n in self.nests]
-        ).partial_eval()
+            [self.frum.missing(lang)] + [n.missing(lang) for n in self.nests]
+        ).partial_eval(lang)
 
     @property
     def many(self):
         return True
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         nests = []
         for n in self.nests:
-            n = n.partial_eval()
+            n = n.partial_eval(lang)
             if n.where is FALSE:
                 nests = []  # ALL DEEPER IS NOTHING
             else:
@@ -95,8 +91,7 @@ class OuterJoinOp(Expression):
 
         if nests:
             return self.lang[OuterJoinOp(
-                frum=self.frum.partial_eval(), nests=nests
+                frum=self.frum.partial_eval(lang), nests=nests
             )]
         else:
             return NULL
-

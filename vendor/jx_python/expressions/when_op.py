@@ -18,11 +18,11 @@ class WhenOp(WhenOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "("
-            + Python[self.then].to_python()
+            + (self.then).to_python()
             + ") if ("
-            + Python[self.when].to_python(boolean=True)
+            + (self.when).to_python(boolean=True)
             + ") else ("
-            + Python[self.els_].to_python()
+            + (self.els_).to_python()
             + ")"
         )
 

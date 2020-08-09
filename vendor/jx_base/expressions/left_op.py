@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.basic_substring_op import BasicSubstringOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.length_op import LengthOp
@@ -49,24 +48,22 @@ class LeftOp(Expression):
     def map(self, map_):
         return self.lang[LeftOp([self.value.map(map_), self.length.map(map_)])]
 
-    def missing(self):
-        return self.lang[
-            OrOp([self.value.missing(), self.length.missing()])
-        ].partial_eval()
+    def missing(self, lang):
+        return self.lang[OrOp([
+            self.value.missing(lang),
+            self.length.missing(lang),
+        ])].partial_eval(lang)
 
-    @simplified
-    def partial_eval(self):
-        value = self.lang[self.value].partial_eval()
-        length = self.lang[self.length].partial_eval()
+    def partial_eval(self, lang):
+        value = (self.value).partial_eval(lang)
+        length = (self.length).partial_eval(lang)
         max_length = LengthOp(value)
 
-        return self.lang[
-            WhenOp(
-                self.missing(),
-                **{
-                    "else": BasicSubstringOp(
-                        [value, ZERO, MaxOp([ZERO, MinOp([length, max_length])])]
-                    )
-                }
-            )
-        ].partial_eval()
+        return self.lang[WhenOp(
+            self.missing(lang),
+            **{"else": BasicSubstringOp([
+                value,
+                ZERO,
+                MaxOp([ZERO, MinOp([length, max_length])]),
+            ])}
+        )].partial_eval(lang)

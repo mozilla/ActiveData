@@ -35,6 +35,6 @@ class GetOp(Expression):
         return output
 
     def map(self, map_):
-        return self.lang[
-            GetOp([self.var.map(map_)] + [o.map(map_) for o in self.offsets])
-        ]
+        return self.lang[GetOp(
+            [self.var.map(map_)] + [o.map(map_) for o in self.offsets]
+        )]

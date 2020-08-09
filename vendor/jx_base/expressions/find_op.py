@@ -15,7 +15,7 @@ from jx_base.expressions.literal import ZERO
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
-from jx_base.language import is_op
+from jx_base.language import is_op, JX
 from mo_json import INTEGER
 
 
@@ -31,7 +31,7 @@ class FindOp(Expression):
         Expression.__init__(self, term)
         self.value, self.find = term
         self.default = kwargs.get("default", NULL)
-        self.start = kwargs.get("start", ZERO).partial_eval()
+        self.start = kwargs.get("start", ZERO).partial_eval(JX)
         if self.start is NULL:
             self.start = ZERO
 

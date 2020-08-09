@@ -12152,7 +12152,7 @@ pv.Mark.prototype.mouse = function(){
 			.times(pinst.transform);
 	}
 
-	t = t.invert();
+	t = t.invert(lang);
 	return pv.vector(x * t.k + t.x, y * t.k + t.y);
 };
 

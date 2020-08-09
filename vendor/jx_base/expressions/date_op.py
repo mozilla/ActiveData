@@ -11,7 +11,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.literal import Literal
-from mo_dots import coalesce, Null, is_data
+from mo_dots import coalesce, is_data
 from mo_imports import export
 from mo_json import NUMBER
 from mo_times.dates import Date
@@ -25,7 +25,7 @@ class DateOp(Literal):
 
     def __init__(self, term):
         if is_data(term):
-            term = term['date']  # FOR WHEN WE MIGHT DO Literal({"date":term})
+            term = term["date"]  # FOR WHEN WE MIGHT DO Literal({"date":term})
         self.date = term
         Literal.__init__(self, float(Date(self.date)))
 

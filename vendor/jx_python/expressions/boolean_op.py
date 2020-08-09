@@ -17,6 +17,6 @@ class BooleanOp(BooleanOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return with_var(
             "f",
-            Python[self.term].to_python(),
+            (self.term).to_python(),
             "bool(f)",
         )

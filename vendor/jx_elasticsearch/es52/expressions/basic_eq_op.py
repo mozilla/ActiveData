@@ -18,25 +18,27 @@ from jx_base.expressions import (
     AndOp,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.painless import Painless
 from mo_dots import is_many
 from mo_future import first
 
 
 class BasicEqOp(BasicEqOp_):
-    def partial_eval(self):
+    def partial_eval(self, lang):
         if is_op(self.lhs, NestedOp):
             return self.lang[NestedOp(
-                path=self.lhs.frum.partial_eval(),
+                path=self.lhs.frum.partial_eval(lang),
                 select=IDENTITY,
                 where=AndOp([
                     self.lhs.where,
                     BasicEqOp(self.lhs.select, self.rhs),
-                ]).partial_eval(),
-                sort=self.lhs.sort.partial_eval(),
-                limit=self.limit.partial_eval(),
+                ]).partial_eval(lang),
+                sort=self.lhs.sort.partial_eval(lang),
+                limit=self.limit.partial_eval(lang),
             )]
-        return self.lang[BasicEqOp([self.lhs.partial_eval(), self.rhs.partial_eval()])]
+        return self.lang[BasicEqOp([
+            self.lhs.partial_eval(lang),
+            self.rhs.partial_eval(lang),
+        ])]
 
     def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
@@ -53,4 +55,4 @@ class BasicEqOp(BasicEqOp_):
             else:
                 return {"term": {lhs: rhs}}
         else:
-            return Painless[self].to_es_script(schema).to_es(schema)
+            return (self).to_es_script(schema).to_es(schema)

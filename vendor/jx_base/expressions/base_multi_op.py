@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, builtin_ops, operators
+from jx_base.expressions._utils import builtin_ops, operators
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.coalesce_op import CoalesceOp
 from jx_base.expressions.expression import Expression
@@ -56,15 +56,15 @@ class BaseMultiOp(Expression):
             **{"default": self.default, "nulls": self.nulls}
         )
 
-    def missing(self):
+    def missing(self, lang):
         if self.nulls:
             if self.default is NULL:
-                return self.lang[AndOp([t.missing() for t in self.terms])]
+                return self.lang[AndOp([t.missing(lang) for t in self.terms])]
             else:
                 return TRUE
         else:
             if self.default is NULL:
-                return self.lang[OrOp([t.missing() for t in self.terms])]
+                return self.lang[OrOp([t.missing(lang) for t in self.terms])]
             else:
                 return FALSE
 
@@ -74,12 +74,11 @@ class BaseMultiOp(Expression):
         else:
             return self.lang[AndOp([t.exists() for t in self.terms])]
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         acc = None
         terms = []
         for t in self.terms:
-            simple = t.partial_eval()
+            simple = t.partial_eval(lang)
             if simple is NULL:
                 pass
             elif is_literal(simple):
@@ -93,7 +92,7 @@ class BaseMultiOp(Expression):
         lang = self.lang
         if len(terms) == 0:
             if acc == None:
-                return self.default.partial_eval()
+                return self.default.partial_eval(lang)
             else:
                 return lang[Literal(acc)]
         elif self.nulls:
@@ -101,31 +100,24 @@ class BaseMultiOp(Expression):
             if acc is not None:
                 terms.append(Literal(acc))
 
-            output = lang[
-                WhenOp(
-                    AndOp([t.missing() for t in terms]),
-                    **{
-                        "then": self.default,
-                        "else": operators["basic." + self.op](
-                            [CoalesceOp([t, _jx_identity[self.op]]) for t in terms]
-                        ),
-                    }
-                )
-            ].partial_eval()
+            output = lang[WhenOp(
+                AndOp([t.missing(lang) for t in terms]),
+                **{
+                    "then": self.default,
+                    "else": operators["basic." + self.op]([
+                        CoalesceOp([t, _jx_identity[self.op]]) for t in terms
+                    ]),
+                }
+            )].partial_eval(lang)
         else:
             # CONSERVATIVE
             if acc is not None:
                 terms.append(lang[Literal(acc)])
 
-            output = lang[
-                WhenOp(
-                    lang[OrOp([t.missing() for t in terms])],
-                    **{
-                        "then": self.default,
-                        "else": operators["basic." + self.op](terms),
-                    }
-                )
-            ].partial_eval()
+            output = lang[WhenOp(
+                lang[OrOp([t.missing(lang) for t in terms])],
+                **{"then": self.default, "else": operators["basic." + self.op](terms),}
+            )].partial_eval(lang)
 
         return output
 

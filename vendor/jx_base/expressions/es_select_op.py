@@ -15,7 +15,6 @@ from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.variable import IDENTITY, Variable
 from mo_future import PY2
 from mo_json import OBJECT
-from mo_logs import Log
 
 default_select = ({"name": ".", "value": IDENTITY},)
 
@@ -49,10 +48,10 @@ class ESSelectOp(Expression):
         return self
         # Log.error("not supported")
 
-    def invert(self):
+    def invert(self, lang):
         return FALSE
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def __bool__(self):

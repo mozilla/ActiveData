@@ -8,7 +8,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import jx_expression, simplified
+from jx_base.expressions._utils import jx_expression
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import Literal
@@ -57,11 +57,10 @@ class ConcatOp(Expression):
             }
         )]
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         terms = []
         for t in self.terms:
-            tt = t.partial_eval()
+            tt = t.partial_eval(lang)
             if tt is not NULL:
                 terms.append(tt)
 
@@ -82,8 +81,8 @@ class ConcatOp(Expression):
             output["separator"] = self.separator.__data__()
         return output
 
-    def invert(self):
-        return self.missing()
+    def invert(self, lang):
+        return self.missing(lang)
 
     def vars(self):
         if not self.terms:
@@ -97,7 +96,7 @@ class ConcatOp(Expression):
             self.default.map(map_),
         )]
 
-    def missing(self):
+    def missing(self, lang):
         return self.lang[AndOp(
-            [t.missing() for t in self.terms] + [self.default.missing()]
-        )].partial_eval()
+            [t.missing(lang) for t in self.terms] + [self.default.missing(lang)]
+        )].partial_eval(lang)

@@ -27,27 +27,24 @@ class BasicSubstringOp(Expression):
         self.value, self.start, self.end = terms
 
     def __data__(self):
-        return {
-            "basic.substring": [
-                self.value.__data__(),
-                self.start.__data__(),
-                self.end.__data__(),
-            ]
-        }
+        return {"basic.substring": [
+            self.value.__data__(),
+            self.start.__data__(),
+            self.end.__data__(),
+        ]}
 
     def map(self, map_):
         return self.lang[BasicSubstringOp([
             self.value.map(map_),
             self.start.map(map_),
-            self.end.map(map_)
+            self.end.map(map_),
         ])]
 
     def vars(self):
         return self.value.vars() | self.start.vars() | self.end.vars()
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def invert(self):
+    def invert(self, lang):
         return FALSE
-

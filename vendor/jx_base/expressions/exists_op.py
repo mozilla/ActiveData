@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, TRUE
+from jx_base.expressions._utils import TRUE
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from mo_imports import expect
@@ -35,15 +35,14 @@ class ExistsOp(Expression):
     def map(self, map_):
         return self.lang[ExistsOp(self.expr.map(map_))]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def invert(self):
-        return self.lang[self.expr].missing()
+    def invert(self, lang):
+        return self.lang[self.expr].missing(lang)
 
     def exists(self):
         return TRUE
 
-    @simplified
-    def partial_eval(self):
-        return self.lang[NotOp(self.expr.missing())].partial_eval()
+    def partial_eval(self, lang):
+        return (NotOp(self.expr.missing(lang))).partial_eval(lang)

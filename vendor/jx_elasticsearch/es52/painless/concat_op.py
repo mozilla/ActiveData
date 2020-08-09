@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import ConcatOp as ConcatOp_, NULL
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.length_op import LengthOp
 from jx_elasticsearch.es52.painless.literal import Literal
@@ -24,25 +25,25 @@ class ConcatOp(ConcatOp_):
             return self.default.to_es_script(schema)
 
         acc = []
-        separator = StringOp(self.separator).partial_eval()
+        separator = StringOp(self.separator).partial_eval(Painless)
         sep = separator.to_es_script(schema).expr
         for t in self.terms:
             val = WhenOp(
-                t.missing(),
+                t.missing(Painless),
                 **{
                     "then": Literal(""),
                     "else": EsScript(
                         type=STRING,
                         expr=sep
                         + "+"
-                        + StringOp(t).partial_eval().to_es_script(schema).expr,
+                        + StringOp(t).partial_eval(Painless).to_es_script(schema).expr,
                         frum=t,
                         schema=schema,
                     )
                     # "else": ConcatOp([sep, t])
                 }
             )
-            acc.append("(" + val.partial_eval().to_es_script(schema).expr + ")")
+            acc.append("(" + val.partial_eval(Painless).to_es_script(schema).expr + ")")
         expr_ = (
             "("
             + "+".join(acc)
@@ -53,11 +54,15 @@ class ConcatOp(ConcatOp_):
 
         if self.default is NULL:
             return EsScript(
-                miss=self.missing(), type=STRING, expr=expr_, frum=self, schema=schema
+                miss=self.missing(Painless),
+                type=STRING,
+                expr=expr_,
+                frum=self,
+                schema=schema,
             )
         else:
             return EsScript(
-                miss=self.missing(),
+                miss=self.missing(Painless),
                 type=STRING,
                 expr="(("
                 + expr_

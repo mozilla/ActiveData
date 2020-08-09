@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.null_op import NULL
@@ -34,12 +33,11 @@ class LastOp(Expression):
     def map(self, map_):
         return self.lang[LastOp(self.term.map(map_))]
 
-    def missing(self):
-        return self.term.missing()
+    def missing(self, lang):
+        return self.term.missing(lang)
 
-    @simplified
-    def partial_eval(self):
-        term = self.term.partial_eval()
+    def partial_eval(self, lang):
+        term = self.term.partial_eval(lang)
         if is_op(self.term, LastOp):
             return term
         elif term.type != OBJECT and not term.many:

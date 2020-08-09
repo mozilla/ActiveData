@@ -15,8 +15,8 @@ from jx_python.expressions._utils import Python
 
 class NotRightOp(NotRightOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        v = Python[self.value].to_python()
-        l = Python[self.length].to_python()
+        v = (self.value).to_python()
+        l = (self.length).to_python()
         return (
             "None if "
             + v

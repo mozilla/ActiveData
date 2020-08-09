@@ -10,15 +10,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.language import is_op
-
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.integer_op import IntegerOp
 from jx_base.expressions.literal import ZERO
 from jx_base.expressions.max_op import MaxOp
 from jx_base.expressions.string_op import StringOp
+from jx_base.language import is_op
 from mo_json import INTEGER
 
 
@@ -34,37 +32,34 @@ class BasicIndexOfOp(Expression):
         self.value, self.find, self.start = params
 
     def __data__(self):
-        return {
-            "basic.indexOf": [
-                self.value.__data__(),
-                self.find.__data__(),
-                self.start.__data__(),
-            ]
-        }
+        return {"basic.indexOf": [
+            self.value.__data__(),
+            self.find.__data__(),
+            self.start.__data__(),
+        ]}
 
     def vars(self):
         return self.value.vars() | self.find.vars() | self.start.vars()
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def invert(self):
+    def invert(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
-        start = IntegerOp(MaxOp([ZERO, self.start])).partial_eval()
-        return self.lang[
-            BasicIndexOfOp(
-                [
-                    StringOp(self.value).partial_eval(),
-                    StringOp(self.find).partial_eval(),
-                    start,
-                ]
-            )
-        ]
+    def partial_eval(self, lang):
+        start = IntegerOp(MaxOp([ZERO, self.start])).partial_eval(lang)
+        return self.lang[BasicIndexOfOp([
+            StringOp(self.value).partial_eval(lang),
+            StringOp(self.find).partial_eval(lang),
+            start,
+        ])]
 
     def __eq__(self, other):
         if not is_op(other, BasicIndexOfOp):
             return False
-        return self.value == self.value and self.find == other.find and self.start == other.start
+        return (
+            self.value == self.value
+            and self.find == other.find
+            and self.start == other.start
+        )

@@ -287,7 +287,7 @@ def get_selects(query):
             for pos, (p, script) in enumerate(reversed(list(split_scripts.items()))):
                 es_select = split_select[p]
                 es_select.scripts[select.name] = {"script": text(
-                    Painless[script].partial_eval().to_es_script(schema)
+                    (script).partial_eval(Painless).to_es_script(schema)
                 )}
                 new_select.append({
                     "name": select.name,
@@ -447,4 +447,4 @@ def es_query_proto(selects, op, wheres, schema):
 
         es_where = op([es_query, where])
         es_query = NestedOp(path=Variable(p), query=es_where, select=select)
-    return es_query.partial_eval().to_es(schema)
+    return es_query.partial_eval(lang).to_es(schema)

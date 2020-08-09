@@ -10,21 +10,21 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import WhenOp as WhenOp_, FALSE, TRUE
-from jx_elasticsearch.es52.painless import _utils
 from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.false_op import false_script
 from jx_elasticsearch.es52.painless.true_op import true_script
-from mo_json import INTEGER, NUMBER, NUMBER_TYPES
+from mo_imports import export
+from mo_json import NUMBER, NUMBER_TYPES
 from mo_logs import Log
 
 
 class WhenOp(WhenOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         if self.simplified:
-            when = Painless[self.when].to_es_script(schema)
-            then = Painless[self.then].to_es_script(schema)
-            els_ = Painless[self.els_].to_es_script(schema)
+            when = (self.when).to_es_script(schema)
+            then = (self.then).to_es_script(schema)
+            els_ = (self.els_).to_es_script(schema)
 
             if when is true_script:
                 return then
@@ -32,7 +32,7 @@ class WhenOp(WhenOp_):
                 return els_
             elif then.miss is TRUE:
                 return EsScript(
-                    miss=self.missing(),
+                    miss=self.missing(Painless),
                     type=els_.type,
                     expr=els_.expr,
                     frum=self,
@@ -40,7 +40,7 @@ class WhenOp(WhenOp_):
                 )
             elif els_.miss is TRUE:
                 return EsScript(
-                    miss=self.missing(),
+                    miss=self.missing(Painless),
                     type=then.type,
                     expr=then.expr,
                     frum=self,
@@ -49,7 +49,7 @@ class WhenOp(WhenOp_):
 
             elif then.miss is TRUE or els_.miss is FALSE or then.type == els_.type:
                 return EsScript(
-                    miss=self.missing(),
+                    miss=self.missing(Painless),
                     type=then.type if els_.miss is TRUE else els_.type,
                     expr="("
                     + when.expr
@@ -63,7 +63,7 @@ class WhenOp(WhenOp_):
                 )
             elif then.type in NUMBER_TYPES and els_.type in NUMBER_TYPES:
                 return EsScript(
-                    miss=self.missing(),
+                    miss=self.missing(Painless),
                     type=NUMBER,
                     expr="("
                     + when.expr
@@ -78,7 +78,7 @@ class WhenOp(WhenOp_):
             else:
                 Log.error("do not know how to handle: {{self}}", self=self.__data__())
         else:
-            return self.partial_eval().to_es_script(schema)
+            return self.partial_eval(Painless).to_es_script(schema)
 
 
-_utils.WhenOp = WhenOp
+export("jx_elasticsearch.es52.painless._utils", WhenOp)

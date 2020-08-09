@@ -9,15 +9,14 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_elasticsearch.es52.painless._utils import Painless
-
 from jx_base.expressions import CoalesceOp as CoalesceOp_, FALSE, NULL, TRUE
 from jx_elasticsearch.es52.painless import first_op
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
 from jx_elasticsearch.es52.painless.not_op import NotOp
-from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES
+from mo_json import NUMBER, OBJECT, NUMBER_TYPES
 
 
 class CoalesceOp(CoalesceOp_):
@@ -27,11 +26,11 @@ class CoalesceOp(CoalesceOp_):
         # acc.miss WILL SAY IF THIS COALESCE RETURNS NULL,
         # acc.expr WILL ASSUMED TO BE A VALUE, SO THE LAST TERM IS ASSUMED NOT NULL
         v = self.terms[-1]
-        acc = FirstOp(v).partial_eval().to_es_script(schema)
+        acc = FirstOp(v).partial_eval(Painless).to_es_script(schema)
         for v in reversed(self.terms[:-1]):
-            m = v.missing().partial_eval()
-            e = Painless[NotOp(m).partial_eval()].to_es_script(schema)
-            r = FirstOp(v).partial_eval().to_es_script(schema)
+            m = v.missing(Painless).partial_eval(Painless)
+            e = (NotOp(m).partial_eval(Painless)).to_es_script(schema)
+            r = FirstOp(v).partial_eval(Painless).to_es_script(schema)
 
             if r.miss is TRUE:
                 continue
@@ -46,7 +45,7 @@ class CoalesceOp(CoalesceOp_):
                 new_type = OBJECT
 
             acc = EsScript(
-                miss=AndOp([acc.miss, m]).partial_eval(),
+                miss=AndOp([acc.miss, m]).partial_eval(Painless),
                 type=new_type,
                 expr="(" + e.expr + ") ? (" + r.expr + ") : (" + acc.expr + ")",
                 frum=self,

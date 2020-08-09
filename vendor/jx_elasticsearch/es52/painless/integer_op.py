@@ -17,10 +17,10 @@ from mo_json import BOOLEAN, INTEGER, NUMBER, STRING
 
 class IntegerOp(IntegerOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        value = Painless[self.term].to_es_script(schema)
+        value = (self.term).to_es_script(schema)
         if value.many:
             return IntegerOp(EsScript(
-                miss=value.missing(),
+                miss=value.missing(Painless),
                 type=value.type,
                 expr="(" + value.expr + ")[0]",
                 frum=value.frum,
@@ -28,7 +28,7 @@ class IntegerOp(IntegerOp_):
             )).to_es_script(schema)
         elif value.type == BOOLEAN:
             return EsScript(
-                miss=value.missing(),
+                miss=value.missing(Painless),
                 type=INTEGER,
                 expr=value.expr + " ? 1 : 0",
                 frum=self,
@@ -38,7 +38,7 @@ class IntegerOp(IntegerOp_):
             return value
         elif value.type == NUMBER:
             return EsScript(
-                miss=value.missing(),
+                miss=value.missing(Painless),
                 type=INTEGER,
                 expr="(int)(" + value.expr + ")",
                 frum=self,
@@ -46,7 +46,7 @@ class IntegerOp(IntegerOp_):
             )
         elif value.type == STRING:
             return EsScript(
-                miss=value.missing(),
+                miss=value.missing(Painless),
                 type=INTEGER,
                 expr="Integer.parseInt(" + value.expr + ")",
                 frum=self,
@@ -54,7 +54,7 @@ class IntegerOp(IntegerOp_):
             )
         else:
             return EsScript(
-                miss=value.missing(),
+                miss=value.missing(Painless),
                 type=INTEGER,
                 expr="(("
                 + value.expr

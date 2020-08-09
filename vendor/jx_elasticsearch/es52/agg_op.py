@@ -23,7 +23,7 @@ from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
 from jx_elasticsearch.es52.expressions import split_expression_by_path
-from jx_elasticsearch.es52.expressions.utils import pre_process, query_to_outer_joins
+from jx_elasticsearch.es52.expressions.utils import pre_process, query_to_outer_joins, ES52
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
 from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
@@ -168,7 +168,7 @@ def aggop_to_es_queries(select, query_path, schema, query):
                 acc = d.append_query(path, acc)
                 start += d.num_columns
 
-            where = first(nest.where for nest in outer.nests if nest.path == path).partial_eval()
+            where = first(nest.where for nest in outer.nests if nest.path == path).partial_eval(ES52)
             if where is FALSE:
                 continue
             elif not where or where is TRUE:

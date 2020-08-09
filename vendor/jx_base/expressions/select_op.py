@@ -53,12 +53,10 @@ class SelectOp(Expression):
                             value=t.value,
                         )
                     else:
-                        terms.append(
-                            {
-                                "name": t.value,
-                                "value": _jx_expression(t.value, cls.lang),
-                            }
-                        )
+                        terms.append({
+                            "name": t.value,
+                            "value": _jx_expression(t.value, cls.lang),
+                        })
                 else:
                     Log.error("expecting a name property")
             else:
@@ -66,17 +64,14 @@ class SelectOp(Expression):
         return cls.lang[SelectOp(terms)]
 
     def __data__(self):
-        return {
-            "select": [
-                {"name": t.name, "value": t.value.__data__()}
-                for t in to_data(self.terms)
-            ]
-        }
+        return {"select": [
+            {"name": t.name, "value": t.value.__data__()} for t in to_data(self.terms)
+        ]}
 
     def vars(self):
         return UNION(t.value for t in self.terms)
 
     def map(self, map_):
-        return SelectOp(
-            [{"name": t.name, "value": t.value.map(map_)} for t in self.terms]
-        )
+        return SelectOp([
+            {"name": t.name, "value": t.value.map(map_)} for t in self.terms
+        ])

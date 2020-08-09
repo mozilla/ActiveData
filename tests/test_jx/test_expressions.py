@@ -51,7 +51,7 @@ class TestExpressions(FuzzyTestCase):
         from jx_python.expression_compiler import compile_expression
 
         result = compile_expression(
-            Python[jx_expression(expr).partial_eval()].to_python()
+            (jx_expression(expr).partial_eval(lang)).to_python()
         )(None)
         expected = (Date.today() - MONTH).unix
         self.assertEqual(result, expected)
@@ -59,7 +59,7 @@ class TestExpressions(FuzzyTestCase):
     def test_null_startswith(self):
         filter = jx_expression(
             {"prefix": [{"null": {}}, {"literal": "something"}]}
-        ).partial_eval()
+        ).partial_eval(lang)
         expected = FALSE
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)
@@ -67,7 +67,7 @@ class TestExpressions(FuzzyTestCase):
     def test_null_startswith_null(self):
         filter = jx_expression(
             {"prefix": [{"null": {}}, {"literal": ""}]}
-        ).partial_eval()
+        ).partial_eval(lang)
         expected = TRUE
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)

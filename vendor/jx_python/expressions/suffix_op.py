@@ -17,8 +17,8 @@ class SuffixOp(SuffixOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "("
-            + Python[self.expr].to_python()
+            + (self.expr).to_python()
             + ").endswith("
-            + Python[self.suffix].to_python()
+            + (self.suffix).to_python()
             + ")"
         )

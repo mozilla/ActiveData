@@ -23,9 +23,9 @@ from jx_base.expressions import (
     OuterJoinOp,
     NotOp,
     InnerJoinOp,
-    QueryOp)
+    QueryOp,
+)
 from jx_base.language import Language, is_op
-from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.painless.es_script import es_script
 from mo_dots import Null, to_data, join_field, split_field, coalesce, startswith_field
 from mo_future import first
@@ -34,7 +34,6 @@ from mo_json import EXISTS
 from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE
 from mo_logs import Log
 from mo_math import MAX
-
 
 MATCH_NONE, MATCH_ALL, AndOp, OrOp, NestedOp = expect(
     "MATCH_NONE", "MATCH_ALL", "AndOp", "OrOp", "NestedOp",
@@ -55,7 +54,7 @@ def _inequality_to_esfilter(self, schema):
             )
         return {"range": {lhs: {self.op: self.rhs.value}}}
     else:
-        script = Painless[self].to_es_script(schema)
+        script = (self).to_es_script(schema)
         if script.miss is not FALSE:
             Log.error("inequality must be decisive")
         return {"script": es_script(script.expr)}
@@ -109,12 +108,7 @@ def split_expression(where, query):
     """
     query = QueryOp(frum=query.frum, where=AndOp([where, query.where]))
     all_paths, split_decoders, var_to_columns = pre_process(query)
-    return setop_to_inner_joins(
-        query,
-        all_paths,
-        {},
-        var_to_columns
-    )
+    return setop_to_inner_joins(query, all_paths, {}, var_to_columns)
 
 
 def exists_variable(path):
@@ -151,7 +145,9 @@ def split_nested_inner_variables(where, focal_path, var_to_columns):
                 deepest = c.nested_path[0]
                 for e in wheres:
                     if startswith_field(focal_path, deepest):
-                        more_exprs.append(e.map({v: Variable(c.es_column, type=c.jx_type, multi=c.multi)}))
+                        more_exprs.append(e.map({v: Variable(
+                            c.es_column, type=c.jx_type, multi=c.multi
+                        )}))
                     else:
                         more_exprs.append(e.map({v: NestedOp(
                             path=Variable(deepest),
@@ -200,11 +196,9 @@ def outer_to_inner(expr, paths_to_cols):
                     deeper_conditions = TRUE
                 elif nest_path == deepest_path:
                     # assume the deeper is null
-                    set_null = {
-                        d.es_column: NULL for d in paths_to_cols[deepest_path]
-                    }
+                    set_null = {d.es_column: NULL for d in paths_to_cols[deepest_path]}
                     set_null[deepest_path] = NULL
-                    deeper_exists = nest.where.map(set_null).partial_eval()
+                    deeper_exists = nest.where.map(set_null).partial_eval(ES52)
 
                     if deeper_exists is FALSE:
                         # WHERE CAN NOT BE SATISFIED IF NESTED IS NULL
@@ -212,19 +206,16 @@ def outer_to_inner(expr, paths_to_cols):
                     else:
                         # ENSURE THIS IS NOT "OPTIMIZED" TO FALSE
                         deeper_conditions = NotOp(NestedOp(
-                            path=Variable(nest_path),
-                            where=TRUE,
-                            select=NULL
+                            path=Variable(nest_path), where=TRUE, select=NULL
                         ))
                         deeper_conditions.simplified = True
 
-            inner_join = inner_join.partial_eval()
-            if inner_join.missing() is not TRUE:
+            inner_join = inner_join.partial_eval(ES52)
+            if inner_join.missing(ES52) is not TRUE:
                 output.append(inner_join)
         return ConcatOp(output)
     else:
         Log.error("do not know what to do yet")
-
 
 
 def setop_to_inner_joins(query, all_paths, split_select, var_to_columns):
@@ -246,7 +237,6 @@ def pre_process(query):
     :param query:
     :return: some useful structures for further query manipulation
     """
-    from jx_elasticsearch.es52.set_op import get_selects
 
     schema = query.frum.schema
     where_vars = query.where.vars()
@@ -266,7 +256,7 @@ def pre_process(query):
 def setop_to_es_queries(query, all_paths, split_select, var_to_columns):
     schema = query.frum.schema
     concat_inner = setop_to_inner_joins(query, all_paths, split_select, var_to_columns)
-    es_query = [ES52[t.partial_eval()].to_es(schema) for t in concat_inner.terms]
+    es_query = [(t.partial_eval(ES52)).to_es(schema) for t in concat_inner.terms]
 
     return es_query
 
@@ -276,7 +266,7 @@ def _split_expression(expr, schema, all_paths):
     :param expr: JSON EXPRESSION
     :return: ARRAY INDEX BY (CONCAT, OUTER JOIN, AND)
     """
-    expr = expr.partial_eval()
+    expr = expr.partial_eval(ES52)
 
     if is_op(expr, AndOp):
         acc = [tuple([] for _ in all_paths)]
@@ -297,19 +287,12 @@ def _split_expression(expr, schema, all_paths):
         return output
     elif is_op(expr, NestedOp):
         acc = tuple(
-            [expr.where] if p == expr.path.var else []
-            for i, p in enumerate(all_paths)
+            [expr.where] if p == expr.path.var else [] for i, p in enumerate(all_paths)
         )
         return [acc]
     elif is_op(expr, NotOp):
         acc = [
-            tuple(
-                [
-                    NotOp(a)
-                    for a in o
-                ]
-                for o in t
-            )
+            tuple([NotOp(a) for a in o] for o in t)
             for t in _split_expression(expr.term, schema, all_paths)
         ]
         return acc
@@ -351,7 +334,7 @@ def query_to_outer_joins(query, all_paths, split_select, var_to_columns):
         for p, nest in zip(all_paths, concat):
             select = coalesce(split_select.get(p), NULL)
             nests.append(NestedOp(Variable(p), select=select, where=AndOp(nest)))
-        outer = OuterJoinOp(frum, nests).partial_eval()
+        outer = OuterJoinOp(frum, nests).partial_eval(ES52)
         if outer is not NULL:
             output.append(outer)
 
@@ -432,7 +415,7 @@ def split_expression_by_path(expr, schema, lang=Language):
                 add(nested_exists, first(e))  # REGISTER THE EXISTENCE VARIABLE
                 acc.append(MissingOp(Variable(nested_exists)))
             acc.append(expr.map({v: NULL for v in mapping.keys()}))
-            with_nulls = AndOp(acc).partial_eval()
+            with_nulls = AndOp(acc).partial_eval(ES52)
             if with_nulls is not FALSE:
                 all_paths.add(p)
                 exprs.append(with_nulls)

@@ -33,7 +33,8 @@ class ScriptOp(Expression):
     def define(cls, expr):
         if ALLOW_SCRIPTING:
             Log.warning(
-                "Scripting has been activated:  This has known security holes!!\nscript = {{script|quote}}",
+                "Scripting has been activated:  This has known security holes!!\nscript"
+                " = {{script|quote}}",
                 script=expr.script.term,
             )
             return cls.lang[ScriptOp(expr.script)]

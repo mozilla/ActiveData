@@ -10,9 +10,8 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.boolean_op import BooleanOp
-from jx_base.expressions.expression import Expression, NULL
+from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
@@ -54,19 +53,18 @@ class AndOp(Expression):
     def map(self, map_):
         return self.lang[AndOp([t.map(map_) for t in self.terms])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def invert(self):
-        return self.lang[OrOp([t.invert() for t in self.terms])].partial_eval()
+    def invert(self, lang):
+        return OrOp([t.invert(lang) for t in self.terms]).partial_eval(lang)
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         # MERGE IDENTICAL NESTED QUERIES
         # NEST DEEP NESTED QUERIES
         or_terms = [[]]  # LIST OF TUPLES FOR or-ing and and-ing
         for i, t in enumerate(self.terms):
-            simple = self.lang[BooleanOp(t)].partial_eval()
+            simple = (BooleanOp(t)).partial_eval(lang)
             if simple.type != BOOLEAN:
                 simple = simple.exists()
 
@@ -79,7 +77,7 @@ class AndOp(Expression):
                     for tt in simple.terms:
                         if tt in and_terms:
                             continue
-                        if self.lang[NotOp(tt)].partial_eval() in and_terms:
+                        if (NotOp(tt)).partial_eval(lang) in and_terms:
                             or_terms.remove(and_terms)
                             break
                         and_terms.append(tt)
@@ -89,11 +87,11 @@ class AndOp(Expression):
                     and_terms + ([o] if o not in and_terms else [])
                     for o in simple.terms
                     for and_terms in or_terms
-                    if self.lang[NotOp(o)].partial_eval() not in and_terms
+                    if NotOp(o).partial_eval(lang) not in and_terms
                 ]
                 continue
             for and_terms in list(or_terms):
-                inv = self.lang[NotOp(simple)].partial_eval()
+                inv = NotOp(simple).partial_eval(lang)
                 if inv in and_terms:
                     or_terms.remove(and_terms)
                 elif simple not in and_terms:
@@ -109,11 +107,7 @@ class AndOp(Expression):
             else:
                 return self.lang[AndOp(and_terms)]
 
-        return self.lang[
-            OrOp(
-                [
-                    AndOp(and_terms) if len(and_terms) > 1 else and_terms[0]
-                    for and_terms in or_terms
-                ]
-            )
-        ].partial_eval()
+        return self.lang[OrOp([
+            AndOp(and_terms) if len(and_terms) > 1 else and_terms[0]
+            for and_terms in or_terms
+        ])].partial_eval(lang)

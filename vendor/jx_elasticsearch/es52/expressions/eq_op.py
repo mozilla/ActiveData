@@ -9,29 +9,33 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.and_op import AndOp
-
 from jx_base.expressions import (
     EqOp as EqOp_,
     FALSE,
     TRUE,
     Variable as Variable_,
     is_literal,
-    simplified,
 )
+from jx_base.expressions.and_op import AndOp
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.basic_eq_op import BasicEqOp
-from jx_elasticsearch.es52.expressions.literal import Literal
-from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.case_op import CaseOp
+from jx_elasticsearch.es52.expressions.literal import Literal
 from jx_elasticsearch.es52.expressions.or_op import OrOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 from jx_elasticsearch.es52.expressions.when_op import WhenOp
 from jx_elasticsearch.es52.util import pull_functions
 from jx_python.jx import value_compare
 from mo_dots import Data, is_container
 from mo_future import first
 from mo_imports import expect
-from mo_json import BOOLEAN, python_type_to_json_type, NUMBER_TYPES, same_json_type, OBJECT
+from mo_json import (
+    BOOLEAN,
+    python_type_to_json_type,
+    NUMBER_TYPES,
+    same_json_type,
+    OBJECT,
+)
 from mo_logs import Log
 from pyLibrary.convert import string2boolean
 
@@ -39,10 +43,9 @@ NestedOp = expect("NestedOp")
 
 
 class EqOp(EqOp_):
-    @simplified
-    def partial_eval(self):
-        lhs = ES52[self.lhs].partial_eval()
-        rhs = ES52[self.rhs].partial_eval()
+    def partial_eval(self, lang):
+        lhs = (self.lhs).partial_eval(ES52)
+        rhs = (self.rhs).partial_eval(ES52)
 
         if is_literal(lhs):
             if is_literal(rhs):
@@ -57,7 +60,11 @@ class EqOp(EqOp_):
                 return FALSE
             rhs = Literal(rhs)
             return EqOp([lhs, rhs])
-        if lhs.type != OBJECT and rhs.type != OBJECT and not same_json_type(lhs.type, rhs.type):
+        if (
+            lhs.type != OBJECT
+            and rhs.type != OBJECT
+            and not same_json_type(lhs.type, rhs.type)
+        ):
             # OBJECT MEANS WE REALLY DO NOT KNOW THE TYPE
             return FALSE
         if is_op(lhs, NestedOp):
@@ -97,7 +104,7 @@ class EqOp(EqOp_):
                             OrOp([
                                 EqOp([self.lhs, values]) for t, values in types.items()
                             ])
-                            .partial_eval()
+                            .partial_eval(ES52)
                             .to_es(schema)
                         )
 
@@ -111,10 +118,12 @@ class EqOp(EqOp_):
                     return {"term": {c.es_column: rhs}}
             return FALSE.to_es(schema)
         else:
-            return ES52[
+            return (
                 CaseOp([
-                    WhenOp(self.lhs.missing(), **{"then": self.rhs.missing()}),
-                    WhenOp(self.rhs.missing(), **{"then": FALSE}),
+                    WhenOp(self.lhs.missing(ES52), **{"then": self.rhs.missing(ES52)}),
+                    WhenOp(self.rhs.missing(ES52), **{"then": FALSE}),
                     BasicEqOp([self.lhs, self.rhs]),
-                ]).partial_eval()
-            ].to_es(schema)
+                ])
+                .partial_eval(ES52)
+                .to_es(schema)
+            )

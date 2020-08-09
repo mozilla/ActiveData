@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import MinOp as MinOp_
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.and_op import AndOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.number_op import NumberOp
@@ -18,17 +19,17 @@ from mo_json import NUMBER
 
 class MinOp(MinOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        acc = NumberOp(self.terms[-1]).partial_eval().to_es_script(schema).expr
+        acc = NumberOp(self.terms[-1]).partial_eval(Painless).to_es_script(schema).expr
         for t in reversed(self.terms[0:-1]):
             acc = (
                 "Math.min("
-                + NumberOp(t).partial_eval().to_es_script(schema).expr
+                + NumberOp(t).partial_eval(Painless).to_es_script(schema).expr
                 + " , "
                 + acc
                 + ")"
             )
         return EsScript(
-            miss=AndOp([t.missing() for t in self.terms]),
+            miss=AndOp([t.missing(Painless) for t in self.terms]),
             type=NUMBER,
             expr=acc,
             frum=self,

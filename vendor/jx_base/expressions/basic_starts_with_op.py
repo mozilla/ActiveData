@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.string_op import StringOp
@@ -39,16 +38,17 @@ class BasicStartsWithOp(Expression):
     def vars(self):
         return self.value.vars() | self.prefix.vars()
 
-    def missing(self):
+    def map(self, map_):
+        return self.lang.BasicStartsWithOp([
+            self.value.map(map_),
+            self.prefix.map(map_),
+        ])
+
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
-        return self.lang[
-            BasicStartsWithOp(
-                [
-                    StringOp(self.value).partial_eval(),
-                    StringOp(self.prefix).partial_eval(),
-                ]
-            )
-        ]
+    def partial_eval(self, lang):
+        return self.lang[BasicStartsWithOp([
+            StringOp(self.value).partial_eval(lang),
+            StringOp(self.prefix).partial_eval(lang),
+        ])]

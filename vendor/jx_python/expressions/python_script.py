@@ -18,7 +18,7 @@ from jx_base.expressions import (
     ZERO,
     Expression,
 )
-from jx_python.expressions import _utils
+from jx_python.expressions import _utils, Python
 from mo_dots import coalesce
 from mo_future import PY2, text
 from mo_logs import Log
@@ -41,14 +41,11 @@ class PythonScript(PythonScript_):
         self.many = many  # True if script returns multi-value
         self.frum = frum  # THE ORIGINAL EXPRESSION THAT MADE expr
 
-    @property
-    def type(self):
-        return self.data_type
 
     def __str__(self):
-        missing = self.miss.partial_eval()
+        missing = self.miss.partial_eval(Python)
         if missing is FALSE:
-            return self.partial_eval().to_python().expr
+            return self.partial_eval(Python).to_python().expr
         elif missing is TRUE:
             return "None"
 
@@ -66,7 +63,7 @@ class PythonScript(PythonScript_):
     def to_python(self, not_null=False, boolean=False, many=True):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         return self.miss
 
     def __data__(self):

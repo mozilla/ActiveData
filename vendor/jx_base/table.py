@@ -21,6 +21,6 @@ class Table(object):
     def __data__(self):
         return self.name
 
-    def partial_eval(self):
+    def partial_eval(self, lang):
         return self
 

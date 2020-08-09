@@ -11,15 +11,14 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import (
     FALSE,
-    NULL,
-    TRUE,
 )
 from jx_base.language import Language
-from jx_elasticsearch.es52.painless.es_script import EsScript
-from mo_dots import Null
-from mo_json import BOOLEAN, NUMBER, STRING
+from mo_imports import expect
+from mo_json import BOOLEAN, NUMBER
 
-AndOp, Literal, NumberOp, OrOp, WhenOp = [None] * 5
+EsScript, AndOp, Literal, NumberOp, OrOp, WhenOp = expect(
+    "EsScript", "AndOp", "Literal", "NumberOp", "OrOp", "WhenOp"
+)
 
 
 MAX_INT32 = 2147483647
@@ -55,10 +54,10 @@ return output.toString()
 
 def _binary_to_es_script(self, schema, not_null=False, boolean=False, many=True):
     op, identity = _painless_operators[self.op]
-    lhs = NumberOp(self.lhs).partial_eval().to_es_script(schema)
-    rhs = NumberOp(self.rhs).partial_eval().to_es_script(schema)
+    lhs = NumberOp(self.lhs).partial_eval(Painless).to_es_script(schema)
+    rhs = NumberOp(self.rhs).partial_eval(Painless).to_es_script(schema)
     script = "(" + lhs.expr + ") " + op + " (" + rhs.expr + ")"
-    missing = OrOp([self.lhs.missing(), self.rhs.missing()])
+    missing = OrOp([self.lhs.missing(Painless), self.rhs.missing(Painless)])
 
     return EsScript(
         type=NUMBER, miss=missing, frum=self, expr=script, schema=schema, many=False
@@ -67,17 +66,21 @@ def _binary_to_es_script(self, schema, not_null=False, boolean=False, many=True)
 
 def _inequality_to_es_script(self, schema, not_null=False, boolean=False, many=True):
     op, identity = _painless_operators[self.op]
-    lhs = NumberOp(self.lhs).partial_eval().to_es_script(schema).expr
-    rhs = NumberOp(self.rhs).partial_eval().to_es_script(schema).expr
+    lhs = NumberOp(self.lhs).partial_eval(Painless).to_es_script(schema).expr
+    rhs = NumberOp(self.rhs).partial_eval(Painless).to_es_script(schema).expr
     script = "(" + lhs + ") " + op + " (" + rhs + ")"
 
-    output = WhenOp(
-        OrOp([self.lhs.missing(), self.rhs.missing()]),
-        **{
-            "then": FALSE,
-            "else": EsScript(type=BOOLEAN, expr=script, frum=self, schema=schema),
-        }
-    ).partial_eval().to_es_script(schema)
+    output = (
+        WhenOp(
+            OrOp([self.lhs.missing(Painless), self.rhs.missing(Painless)]),
+            **{
+                "then": FALSE,
+                "else": EsScript(type=BOOLEAN, expr=script, frum=self, schema=schema),
+            }
+        )
+        .partial_eval(Painless)
+        .to_es_script(schema)
+    )
     return output
 
 
@@ -93,9 +96,7 @@ def _basic_binary_op_to_es_script(
         return EsScript(
             type=NUMBER,
             expr=op.join(
-                "("
-                + Painless[t].to_es_script(schema, not_null=True, many=False).expr
-                + ")"
+                "(" + (t).to_es_script(schema, not_null=True, many=False).expr + ")"
                 for t in self.terms
             ),
             frum=self,
@@ -108,32 +109,40 @@ def _multi_to_es_script(self, schema, not_null=False, boolean=False, many=True):
     if self.nulls:
         calc = op.join(
             "(("
-            + Painless[t.missing()].to_es_script(schema).expr
+            + (t.missing(Painless)).to_es_script(schema).expr
             + ") ? "
             + unit
             + " : ("
-            + Painless[NumberOp(t)].partial_eval().to_es_script(schema).expr
+            + (NumberOp(t)).partial_eval(Painless).to_es_script(schema).expr
             + "))"
             for t in self.terms
         )
-        return WhenOp(
-            AndOp([t.missing() for t in self.terms]),
-            **{
-                "then": self.default,
-                "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
-            }
-        ).partial_eval().to_es_script(schema)
+        return (
+            WhenOp(
+                AndOp([t.missing(Painless) for t in self.terms]),
+                **{
+                    "then": self.default,
+                    "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
+                }
+            )
+            .partial_eval(Painless)
+            .to_es_script(schema)
+        )
     else:
         calc = op.join(
             "(" + NumberOp(t).to_es_script(schema).expr + ")" for t in self.terms
         )
-        return WhenOp(
-            OrOp([t.missing() for t in self.terms]),
-            **{
-                "then": self.default,
-                "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
-            }
-        ).partial_eval().to_es_script(schema)
+        return (
+            WhenOp(
+                OrOp([t.missing(Painless) for t in self.terms]),
+                **{
+                    "then": self.default,
+                    "else": EsScript(type=NUMBER, expr=calc, frum=self, schema=schema),
+                }
+            )
+            .partial_eval(Painless)
+            .to_es_script(schema)
+        )
 
 
 Painless = Language("Painless")
@@ -158,8 +167,3 @@ _painless_operators = {
     "lte": ("<=", None),
     "lt": ("<", None),
 }
-
-
-empty_string_script = EsScript(
-    miss=TRUE, type=STRING, expr='""', frum=NULL, schema=Null
-)

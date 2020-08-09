@@ -32,5 +32,5 @@ class UnixOp(Expression):
     def map(self, map_):
         return self.lang[UnixOp(self.value.map(map_))]
 
-    def missing(self):
-        return self.value.missing()
+    def missing(self, lang):
+        return self.value.missing(lang)

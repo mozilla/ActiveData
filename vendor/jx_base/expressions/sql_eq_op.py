@@ -27,7 +27,7 @@ class SqlEqOp(Expression):
     def __data__(self):
         return {"sql.eq": [self.lhs.__data__(), self.rhs.__data__()]}
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def __eq__(self, other):

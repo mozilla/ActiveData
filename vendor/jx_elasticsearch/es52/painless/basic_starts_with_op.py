@@ -10,23 +10,20 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BasicStartsWithOp as BasicStartsWithOp_, FALSE
+from jx_elasticsearch.es52.painless._utils import Painless
+from jx_elasticsearch.es52.painless.es_script import EsScript, empty_string_script
 from jx_elasticsearch.es52.painless.false_op import false_script
-from jx_elasticsearch.es52.painless._utils import (
-    Painless,
-    empty_string_script,
-)
-from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
 from mo_json import BOOLEAN
 
 
 class BasicStartsWithOp(BasicStartsWithOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        expr = Painless[FirstOp(self.value)].partial_eval().to_es_script(schema)
+        expr = (FirstOp(self.value)).partial_eval(Painless).to_es_script(schema)
         if expr is empty_string_script:
             return false_script
 
-        prefix = Painless[self.prefix].to_es_script(schema).partial_eval()
+        prefix = (self.prefix).to_es_script(schema).partial_eval(Painless)
         return EsScript(
             miss=FALSE,
             type=BOOLEAN,

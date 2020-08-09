@@ -9,12 +9,10 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_imports import export
-
 from jx_base.expressions import AndOp as AndOp_
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
-from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_dots import dict_to_data
+from mo_imports import export
 
 
 class AndOp(AndOp_):
@@ -22,7 +20,7 @@ class AndOp(AndOp_):
         if not len(self.terms):
             return MATCH_ALL
         else:
-            return es_and([ES52[t].to_es(schema) for t in self.terms])
+            return es_and([t.to_es(schema) for t in self.terms])
 
 
 def es_and(terms):

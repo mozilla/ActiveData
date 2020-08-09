@@ -30,7 +30,7 @@ class BasicEqOp(Expression):
     def __data__(self):
         return {"basic.eq": [self.lhs.__data__(), self.rhs.__data__()]}
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def vars(self):

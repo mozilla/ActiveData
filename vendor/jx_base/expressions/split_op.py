@@ -51,25 +51,19 @@ class SplitOp(Expression):
             default=self.default.map(map_),
         )
 
-    def missing(self):
+    def missing(self, lang):
         v = self.value.to_es_script(not_null=True)
         find = self.find.to_es_script(not_null=True)
         index = v + ".indexOf(" + find + ", " + self.start.to_es_script() + ")"
 
-        return self.lang[
-            AndOp(
-                [
-                    self.default.missing(),
-                    OrOp(
-                        [
-                            self.value.missing(),
-                            self.find.missing(),
-                            EqOp([ScriptOp(index), Literal(-1)]),
-                        ]
-                    ),
-                ]
-            )
-        ]
+        return self.lang[AndOp([
+            self.default.missing(lang),
+            OrOp([
+                self.value.missing(lang),
+                self.find.missing(lang),
+                EqOp([ScriptOp(index), Literal(-1)]),
+            ]),
+        ])]
 
     def exists(self):
         return TRUE

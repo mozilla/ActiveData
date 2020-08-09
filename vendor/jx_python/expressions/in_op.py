@@ -16,7 +16,7 @@ from jx_python.expressions._utils import Python
 class InOp(InOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
-            Python[self.value].to_python()
+            (self.value).to_python()
             + " in "
-            + Python[self.superset].to_python(many=True)
+            + (self.superset).to_python(many=True)
         )

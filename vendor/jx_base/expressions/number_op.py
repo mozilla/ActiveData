@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.case_op import CaseOp
 from jx_base.expressions.coalesce_op import CoalesceOp
 from jx_base.expressions.expression import Expression
@@ -44,12 +43,11 @@ class NumberOp(Expression):
     def map(self, map_):
         return self.lang[NumberOp(self.term.map(map_))]
 
-    def missing(self):
-        return self.term.missing()
+    def missing(self, lang):
+        return self.term.missing(lang)
 
-    @simplified
-    def partial_eval(self):
-        term = self.lang[FirstOp(self.term)].partial_eval()
+    def partial_eval(self, lang):
+        term = (FirstOp(self.term)).partial_eval(lang)
 
         if is_literal(term):
             if term is NULL:
@@ -67,22 +65,14 @@ class NumberOp(Expression):
             else:
                 Log.error("can not convert {{value|json}} to number", value=term.value)
         elif is_op(term, CaseOp):  # REWRITING
-            return self.lang[
-                CaseOp(
-                    [
-                        WhenOp(t.when, **{"then": NumberOp(t.then)})
-                        for t in term.whens[:-1]
-                    ]
-                    + [NumberOp(term.whens[-1])]
-                )
-            ].partial_eval()
+            return self.lang[CaseOp(
+                [WhenOp(t.when, **{"then": NumberOp(t.then)}) for t in term.whens[:-1]]
+                + [NumberOp(term.whens[-1])]
+            )].partial_eval(lang)
         elif is_op(term, WhenOp):  # REWRITING
-            return self.lang[
-                WhenOp(
-                    term.when,
-                    **{"then": NumberOp(term.then), "else": NumberOp(term.els_)}
-                )
-            ].partial_eval()
+            return self.lang[WhenOp(
+                term.when, **{"then": NumberOp(term.then), "else": NumberOp(term.els_)}
+            )].partial_eval(lang)
         elif is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([NumberOp(t) for t in term.terms])]
         return self.lang[NumberOp(term)]

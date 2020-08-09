@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import CaseOp as CaseOp_
 from jx_elasticsearch.es52.expressions.and_op import AndOp
 from jx_elasticsearch.es52.expressions.or_op import OrOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_json import BOOLEAN
 from mo_logs import Log
 
@@ -23,7 +24,7 @@ class CaseOp(CaseOp_):
                 OrOp(
                     [AndOp([w.when, w.then]) for w in self.whens[:-1]] + self.whens[-1:]
                 )
-                .partial_eval()
+                .partial_eval(ES52)
                 .to_es(schema)
             )
         else:

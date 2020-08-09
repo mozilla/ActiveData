@@ -11,7 +11,6 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import AndOp, FALSE
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.eq_op import EqOp
 from jx_base.expressions.es_select_op import ESSelectOp
 from jx_base.expressions.expression import Expression
@@ -41,21 +40,15 @@ class NestedOp(Expression):
         self.sort = sort
         self.limit = limit
 
-    @simplified
-    def partial_eval(self):
-        if self.missing() is TRUE:
-            return self.lang[
-                NestedOp(
-                    path=self.path.partial_eval(),
-                    where=FALSE
-                )
-            ]
+    def partial_eval(self, lang):
+        if self.missing(lang) is TRUE:
+            return self.lang[NestedOp(path=self.path.partial_eval(lang), where=FALSE)]
         return self.lang[NestedOp(
-            self.path.partial_eval(),
-            self.select.partial_eval(),
-            self.where.partial_eval(),
-            self.sort.partial_eval(),
-            self.limit.partial_eval()
+            self.path.partial_eval(lang),
+            self.select.partial_eval(lang),
+            self.where.partial_eval(lang),
+            self.sort.partial_eval(lang),
+            self.limit.partial_eval(lang),
         )]
 
     def __and__(self, other):
@@ -79,35 +72,21 @@ class NestedOp(Expression):
         elif startswith_field(other.frum.var, self.path.var):
             # WE ACHIEVE INTERSECTION BY LIMITING OURSELF TO ONLY THE DEEP OBJECTS
             # WE ASSUME frum SELECTS WHOLE DOCUMENT, SO self.select IS POSSIBLE
-            return NestedOp(
-                other,
-                self.select,
-                self.where,
-                self.sort,
-                self.limit,
-            )
+            return NestedOp(other, self.select, self.where, self.sort, self.limit,)
 
         elif startswith_field(self.path.var, other.frum.var):
-            return NestedOp(
-                self,
-                other.select,
-                other.where,
-                other.sort,
-                other.limit,
-            )
+            return NestedOp(self, other.select, other.where, other.sort, other.limit,)
         else:
             return AndOp([self, other])
 
     def __data__(self):
-        return {
-            "nested": {
-                "path": self.path.__data__(),
-                "select": self.select.__data__(),
-                "where": self.where.__data__(),
-                "sort": self.sort.__data__(),
-                "limit": self.limit.__data__(),
-            }
-        }
+        return {"nested": {
+            "path": self.path.__data__(),
+            "select": self.select.__data__(),
+            "where": self.where.__data__(),
+            "sort": self.sort.__data__(),
+            "limit": self.limit.__data__(),
+        }}
 
     def __eq__(self, other):
         return (
@@ -137,18 +116,17 @@ class NestedOp(Expression):
             limit=self.limit.map(mapping),
         )
 
-    def invert(self):
-        return self.missing()
+    def invert(self, lang):
+        return self.missing(lang)
 
-    def missing(self):
+    def missing(self, lang):
         return self.lang[OrOp([
             NotOp(self.where),
-            # self.path.missing(), ASSUME PATH TO TABLES, WHICH ASSUMED TO HAVE DATA (EXISTS)
-            # self.select.missing(),
-            EqOp([self.limit, ZERO])
-        ])].partial_eval()
+            # self.path.missing(lang), ASSUME PATH TO TABLES, WHICH ASSUMED TO HAVE DATA (EXISTS)
+            # self.select.missing(lang),
+            EqOp([self.limit, ZERO]),
+        ])].partial_eval(lang)
 
     @property
     def many(self):
         return True
-

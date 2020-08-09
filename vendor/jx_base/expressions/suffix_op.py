@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, unicode_literals
 
 import re
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
@@ -48,7 +47,7 @@ class SuffixOp(Expression):
         else:
             return {"suffix": [self.expr.__data__(), self.suffix.__data__()]}
 
-    def missing(self):
+    def missing(self, lang):
         """
         THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY missing EXPRESSIONS
         OVERRIDE THIS METHOD TO SIMPLIFY
@@ -67,8 +66,7 @@ class SuffixOp(Expression):
         else:
             return self.lang[SuffixOp([self.expr.map(map_), self.suffix.map(map_)])]
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         if self.expr is None:
             return TRUE
         if not is_literal(self.suffix) and self.suffix.type == STRING:
@@ -77,9 +75,10 @@ class SuffixOp(Expression):
         return WhenOp(
             self.lang[AndOp([self.expr.exists(), self.suffix.exists()])],
             **{
-                "then": self.lang[
-                    RegExpOp([self.expr, Literal(".*" + re.escape(self.suffix.value))])
-                ],
+                "then": self.lang[RegExpOp([
+                    self.expr,
+                    Literal(".*" + re.escape(self.suffix.value)),
+                ])],
                 "else": FALSE,
             }
-        ).partial_eval()
+        ).partial_eval(lang)

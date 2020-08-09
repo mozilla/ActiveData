@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import SuffixOp as SuffixOp_, Variable as Variable_, is_literal
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
+from jx_elasticsearch.es52.painless import SuffixOp as PainlessSuffixOp
 from mo_future import first
 from pyLibrary.convert import string2regexp
-from jx_elasticsearch.es52.painless import SuffixOp as PainlessSuffixOp
 
 
 class SuffixOp(SuffixOp_):

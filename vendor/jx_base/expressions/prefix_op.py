@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, jx_expression
+from jx_base.expressions._utils import jx_expression
 from jx_base.expressions.basic_starts_with_op import BasicStartsWithOp
 from jx_base.expressions.case_op import CaseOp
 from jx_base.expressions.expression import Expression
@@ -35,13 +35,11 @@ class PrefixOp(Expression):
         self.expr = expr
         self.prefix = prefix
 
-    _patterns = [
-        {"prefix": {"expr": "prefix"}},
-        {"prefix": ["expr", "prefix"]}
-    ]
+    _patterns = [{"prefix": {"expr": "prefix"}}, {"prefix": ["expr", "prefix"]}]
+
     @classmethod
     def define(cls, expr):
-        term = expr.get('prefix')
+        term = expr.get("prefix")
         if not term:
             return PrefixOp(NULL, NULL)
         elif is_data(term):
@@ -70,20 +68,15 @@ class PrefixOp(Expression):
         else:
             return self.lang[PrefixOp(self.expr.map(map_), self.prefix.map(map_))]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
-        return self.lang[
-            CaseOp(
-                [
-                    WhenOp(self.prefix.missing(), then=TRUE),
-                    WhenOp(self.expr.missing(), then=FALSE),
-                    BasicStartsWithOp([self.expr, self.prefix]),
-                ]
-            )
-        ].partial_eval()
+    def partial_eval(self, lang):
+        return self.lang[CaseOp([
+            WhenOp(self.prefix.missing(lang), then=TRUE),
+            WhenOp(self.expr.missing(lang), then=FALSE),
+            BasicStartsWithOp([self.expr, self.prefix]),
+        ])].partial_eval(lang)
 
     def __eq__(self, other):
         if not is_op(other, PrefixOp):

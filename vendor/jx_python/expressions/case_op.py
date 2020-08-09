@@ -15,13 +15,13 @@ from jx_python.expressions._utils import Python
 
 class CaseOp(CaseOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        acc = Python[self.whens[-1]].to_python()
+        acc = (self.whens[-1]).to_python()
         for w in reversed(self.whens[0:-1]):
             acc = (
                 "("
-                + Python[w.then].to_python()
+                + (w.then).to_python()
                 + ") if ("
-                + Python[w.when].to_python(boolean=True)
+                + (w.when).to_python(boolean=True)
                 + ") else ("
                 + acc
                 + ")"

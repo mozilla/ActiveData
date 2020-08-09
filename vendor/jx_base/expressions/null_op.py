@@ -69,10 +69,10 @@ class NullOp(Literal):
     def map(self, map_):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         return TRUE
 
-    def invert(self):
+    def invert(self, lang):
         return TRUE
 
     def exists(self):
@@ -99,7 +99,6 @@ class NullOp(Literal):
 
     def __nonzero__(self):
         Log.error("Detecting truthiness of NullOp is too confusing to be allowed")
-
 
 
 NULL = NullOp()

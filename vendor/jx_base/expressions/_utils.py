@@ -91,7 +91,7 @@ def _jx_expression(expr, lang):
         new_op = lang[expr]
         if not new_op:
             # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
-            return language[expr.get_id()].partial_eval()
+            return language[expr.get_id()].partial_eval(lang)
         return expr
         # return new_op(expr.args)  # THIS CAN BE DONE, BUT IT NEEDS MORE CODING, AND I WOULD EXPECT IT TO BE SLOW
 
@@ -120,7 +120,7 @@ def _jx_expression(expr, lang):
 
                 # THIS LANGUAGE DOES NOT SUPPORT THIS OPERATOR, GOTO BASE LANGUAGE AND GET THE MACRO
                 class_ = language[op.get_id()]
-                output = class_.define(expr).partial_eval()
+                output = class_.define(expr).partial_eval(lang)
                 return _jx_expression(output, lang)
         else:
             if not items:

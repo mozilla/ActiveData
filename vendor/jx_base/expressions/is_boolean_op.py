@@ -31,5 +31,5 @@ class IsBooleanOp(Expression):
     def map(self, map_):
         return self.lang[IsBooleanOp(self.term.map(map_))]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE

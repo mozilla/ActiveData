@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
@@ -47,14 +46,13 @@ class TupleOp(Expression):
     def map(self, map_):
         return self.lang[TupleOp([t.map(map_) for t in self.terms])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def __call__(self):
         return tuple(t() for t in self.terms)
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         if all(is_literal(t) for t in self.terms):
             return self.lang[Literal([t.value for t in self.terms])]
 

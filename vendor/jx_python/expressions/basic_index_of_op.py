@@ -18,10 +18,10 @@ class BasicIndexOfOp(BasicIndexOfOp_):
         return with_var(
             "f",
             "("
-            + Python[self.value].to_python()
+            + (self.value).to_python()
             + ").find"
             + "("
-            + Python[self.find].to_python()
+            + (self.find).to_python()
             + ")",
             "None if f==-1 else f",
         )

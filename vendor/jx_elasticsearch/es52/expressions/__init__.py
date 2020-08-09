@@ -1,8 +1,3 @@
-from jx_elasticsearch.es52.expressions.utils import (
-    ES52,
-    split_expression_by_path,
-    split_expression_by_depth,
-)
 from jx_elasticsearch.es52.expressions.and_op import AndOp, es_and
 from jx_elasticsearch.es52.expressions.basic_eq_op import BasicEqOp
 from jx_elasticsearch.es52.expressions.basic_starts_with_op import BasicStartsWithOp
@@ -34,6 +29,11 @@ from jx_elasticsearch.es52.expressions.prefix_op import PrefixOp
 from jx_elasticsearch.es52.expressions.reg_exp_op import RegExpOp
 from jx_elasticsearch.es52.expressions.script_op import ScriptOp
 from jx_elasticsearch.es52.expressions.suffix_op import SuffixOp
+from jx_elasticsearch.es52.expressions.utils import (
+    ES52,
+    split_expression_by_path,
+    split_expression_by_depth,
+)
 from jx_elasticsearch.es52.expressions.variable import Variable
 from jx_elasticsearch.es52.expressions.when_op import WhenOp
 from jx_elasticsearch.es52.expressions.when_op import WhenOp

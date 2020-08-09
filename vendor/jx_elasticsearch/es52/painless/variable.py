@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL, Variable as Variable_
 from jx_elasticsearch.es52.painless import first_op
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.coalesce_op import CoalesceOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from mo_json import OBJECT, STRING
@@ -38,7 +39,7 @@ class Variable(Variable_):
                 q = quote(varname)
                 if c.multi > 1:
                     acc.append(EsScript(
-                        miss=frum.missing(),
+                        miss=frum.missing(Painless),
                         type=c.jx_type,
                         expr="doc[" + q + "].values",
                         frum=frum,
@@ -47,7 +48,7 @@ class Variable(Variable_):
                     ))
                 else:
                     acc.append(EsScript(
-                        miss=frum.missing(),
+                        miss=frum.missing(Painless),
                         type=c.jx_type,
                         expr="doc[" + q + "].value",
                         frum=frum,

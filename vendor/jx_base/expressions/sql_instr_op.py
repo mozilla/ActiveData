@@ -28,5 +28,5 @@ class SqlInstrOp(Expression):
     def vars(self):
         return self.value.vars() | self.find.vars()
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE

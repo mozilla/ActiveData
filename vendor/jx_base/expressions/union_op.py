@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, merge_types
+from jx_base.expressions._utils import merge_types
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
@@ -46,15 +46,14 @@ class UnionOp(Expression):
     def map(self, map_):
         return self.lang[UnionOp([t.map(map_) for t in self.terms])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         minimum = None
         terms = []
         for t in self.terms:
-            simple = t.partial_eval()
+            simple = t.partial_eval(lang)
             if simple is NULL:
                 pass
             elif is_op(simple, Literal):

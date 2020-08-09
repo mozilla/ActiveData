@@ -93,7 +93,7 @@ class Variable(Expression):
     def __str__(self):
         return str(self.var)
 
-    def missing(self):
+    def missing(self, lang):
         if self.var == "_id":
             return FALSE
         else:

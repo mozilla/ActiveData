@@ -21,6 +21,6 @@ class RegExpOp(RegExpOp_):
             "re.match("
             + quote(json2value(self.pattern.json) + "$")
             + ", "
-            + Python[self.var].to_python()
+            + (self.var).to_python()
             + ")"
         )

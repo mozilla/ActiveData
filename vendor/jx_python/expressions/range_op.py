@@ -17,10 +17,10 @@ class RangeOp(RangeOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "("
-            + Python[self.then].to_python(not_null=not_null)
+            + (self.then).to_python(not_null=not_null)
             + ") if ("
-            + Python[self.when].to_python(boolean=True)
+            + (self.when).to_python(boolean=True)
             + ") else ("
-            + Python[self.els_].to_python(not_null=not_null)
+            + (self.els_).to_python(not_null=not_null)
             + ")"
         )

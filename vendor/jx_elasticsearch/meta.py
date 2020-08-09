@@ -1188,7 +1188,7 @@ class Table(BaseTable):
         self.container = container
         self.schema = container.namespace.get_schema(full_name)
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
 

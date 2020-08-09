@@ -20,5 +20,5 @@ class AndOp(AndOp_):
             return "True"
         else:
             return " and ".join(
-                "(" + BooleanOp(Python[t]).to_python() + ")" for t in self.terms
+                "(" + BooleanOp(t).to_python() + ")" for t in self.terms
             )

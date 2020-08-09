@@ -45,10 +45,10 @@ class FalseOp(Literal):
     def map(self, map_):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def invert(self):
+    def invert(self, lang):
         return TRUE
 
     def __call__(self, row=None, rownum=None, rows=None):

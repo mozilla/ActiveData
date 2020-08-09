@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import FALSE, TupleOp as TupleOp_
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
 from mo_future import text
@@ -21,7 +22,8 @@ class TupleOp(TupleOp_):
         expr = (
             "new Object[]{"
             + ",".join(
-                text(FirstOp(t).partial_eval().to_es_script(schema)) for t in self.terms
+                text(FirstOp(t).partial_eval(Painless).to_es_script(schema))
+                for t in self.terms
             )
             + "}"
         )

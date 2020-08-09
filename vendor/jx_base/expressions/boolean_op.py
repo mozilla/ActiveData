@@ -10,7 +10,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.null_op import NULL
@@ -34,12 +33,11 @@ class BooleanOp(Expression):
     def map(self, map_):
         return self.lang[BooleanOp(self.term.map(map_))]
 
-    def missing(self):
-        return self.term.missing()
+    def missing(self, lang):
+        return self.term.missing(lang)
 
-    @simplified
-    def partial_eval(self):
-        term = self.lang[self.term].partial_eval()
+    def partial_eval(self, lang):
+        term = (self.term).partial_eval(lang)
         if term is TRUE:
             return TRUE
         elif term in (FALSE, NULL):
@@ -49,5 +47,5 @@ class BooleanOp(Expression):
         elif term is self.term:
             return self
 
-        exists = self.lang[term].exists().partial_eval()
+        exists = self.lang[term].exists().partial_eval(lang)
         return exists

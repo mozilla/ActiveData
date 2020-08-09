@@ -29,12 +29,12 @@ class OrOp(OrOp_):
 
             # OR(x) == NOT(AND(NOT(xi) for xi in x))
             output = es_not(es_and([
-                NotOp(t).partial_eval().to_es(schema) for t in self.terms
+                NotOp(t).partial_eval(ES52).to_es(schema) for t in self.terms
             ]))
             return output
         else:
             # VERSION 6.2+
-            return es_or([ES52[t].partial_eval().to_es(schema) for t in self.terms])
+            return es_or([(t).partial_eval(ES52).to_es(schema) for t in self.terms])
 
 
 def es_or(terms):

@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BooleanOp as BooleanOp_, FALSE
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.not_op import NotOp
 from jx_elasticsearch.es52.painless.when_op import WhenOp
@@ -33,8 +34,10 @@ class BooleanOp(BooleanOp_):
         elif value.type == BOOLEAN:
             miss = value.miss
             value.miss = FALSE
-            return WhenOp(
-                miss, **{"then": FALSE, "else": value}
-            ).partial_eval().to_es_script(schema)
+            return (
+                WhenOp(miss, **{"then": FALSE, "else": value})
+                .partial_eval(Painless)
+                .to_es_script(schema)
+            )
         else:
-            return NotOp(value.miss).partial_eval().to_es_script(schema)
+            return NotOp(value.miss).partial_eval(Painless).to_es_script(schema)

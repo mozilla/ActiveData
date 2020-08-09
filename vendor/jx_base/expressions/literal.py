@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified, value2json
+from jx_base.expressions._utils import value2json
 from jx_base.expressions.expression import Expression
 from mo_dots import Null, is_data, is_many
 from mo_imports import expect, export
@@ -82,15 +82,15 @@ class Literal(Expression):
     def map(self, map_):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         if self._value in [None, Null]:
             return TRUE
         if self.value == "":
             return TRUE
         return FALSE
 
-    def invert(self):
-        return self.missing()
+    def invert(self, lang):
+        return self.missing(lang)
 
     def __call__(self, row=None, rownum=None, rows=None):
         return self.value
@@ -108,10 +108,10 @@ class Literal(Expression):
                 return merge_json_type(*map(typer, v))
             else:
                 return python_type_to_json_type[v.__class__]
+
         return typer(self._value)
 
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         return self
 
     def str(self):
@@ -127,7 +127,7 @@ literal_op_ids = tuple()
 
 def register_literal(op):
     global literal_op_ids
-    literal_op_ids = literal_op_ids+(op.get_id(),)
+    literal_op_ids = literal_op_ids + (op.get_id(),)
 
 
 def is_literal(l):

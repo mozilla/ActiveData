@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import LengthOp as LengthOp_
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.string_op import StringOp
 from mo_json import INTEGER
@@ -18,7 +19,7 @@ from mo_json import INTEGER
 class LengthOp(LengthOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         value = StringOp(self.term).to_es_script(schema)
-        missing = self.term.missing().partial_eval()
+        missing = self.term.missing(Painless).partial_eval(Painless)
         return EsScript(
             miss=missing,
             type=INTEGER,

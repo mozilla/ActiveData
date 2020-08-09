@@ -12,10 +12,10 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base import Column
 from jx_base.expressions import FALSE, TRUE, jx_expression
+from jx_base.language import JX
 from jx_base.queries import is_variable_name
 from jx_python.expressions import Python
 from mo_json import INTEGER, NESTED
-from mo_json.typed_encoder import NESTED_TYPE
 from mo_testing.fuzzytestcase import FuzzyTestCase
 from mo_times import Date, MONTH
 
@@ -51,7 +51,7 @@ class TestExpressions(FuzzyTestCase):
         from jx_python.expression_compiler import compile_expression
 
         result = compile_expression(
-            (jx_expression(expr).partial_eval(lang)).to_python()
+            jx_expression(expr).partial_eval(Python).to_python()
         )(None)
         expected = (Date.today() - MONTH).unix
         self.assertEqual(result, expected)
@@ -59,7 +59,7 @@ class TestExpressions(FuzzyTestCase):
     def test_null_startswith(self):
         filter = jx_expression(
             {"prefix": [{"null": {}}, {"literal": "something"}]}
-        ).partial_eval(lang)
+        ).partial_eval(JX)
         expected = FALSE
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)
@@ -67,7 +67,7 @@ class TestExpressions(FuzzyTestCase):
     def test_null_startswith_null(self):
         filter = jx_expression(
             {"prefix": [{"null": {}}, {"literal": ""}]}
-        ).partial_eval(lang)
+        ).partial_eval(JX)
         expected = TRUE
         self.assertEqual(filter, expected)
         self.assertEqual(expected, filter)

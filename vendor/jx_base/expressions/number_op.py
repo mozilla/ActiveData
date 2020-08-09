@@ -47,7 +47,7 @@ class NumberOp(Expression):
         return self.term.missing(lang)
 
     def partial_eval(self, lang):
-        term = (FirstOp(self.term)).partial_eval(lang)
+        term = FirstOp(self.term).partial_eval(lang)
 
         if is_literal(term):
             if term is NULL:

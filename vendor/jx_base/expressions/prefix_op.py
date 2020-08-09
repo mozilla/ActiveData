@@ -63,7 +63,7 @@ class PrefixOp(Expression):
         return self.expr.vars() | self.prefix.vars()
 
     def map(self, map_):
-        if not self.expr:
+        if self.expr is NULL:
             return self
         else:
             return self.lang[PrefixOp(self.expr.map(map_), self.prefix.map(map_))]

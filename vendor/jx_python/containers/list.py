@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, unicode_literals
 import itertools
 from copy import copy
 
+from jx_base import Column
+from mo_json import NESTED
+
 from jx_base.container import Container
 from jx_base.expressions import TRUE, Variable
 from jx_base.language import is_expression, is_op
@@ -192,9 +195,9 @@ class ListContainer(Container, Namespace, Table):
             select_value = jx_expression_to_function(select.value)
             new_data = list(map(select_value, self.data))
             if is_op(select.value, Variable):
-                column = copy(first(c for c in self.schema.columns if c.name == select.value.var))
-                column.name = '.'
-                new_schema = Schema("from " + self.name, [column])
+                column = dict(**first(c for c in self.schema.columns if c.name == select.value.var))
+                column.update({"name": ".", "jx_type": NESTED, "es_type": "nested", "multi":1001, "cardinality":1})
+                new_schema = Schema("from " + self.name, [Column(**column)])
 
         return ListContainer("from "+self.name, data=new_data, schema=new_schema)
 

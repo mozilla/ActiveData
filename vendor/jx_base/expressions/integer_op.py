@@ -37,7 +37,7 @@ class IntegerOp(Expression):
         return self.term.missing(lang)
 
     def partial_eval(self, lang):
-        term = (FirstOp(self.term)).partial_eval(lang)
+        term = FirstOp(self.term).partial_eval(lang)
         if is_op(term, CoalesceOp):
             return self.lang[CoalesceOp([IntegerOp(t) for t in term.terms])]
         if term.type == INTEGER:

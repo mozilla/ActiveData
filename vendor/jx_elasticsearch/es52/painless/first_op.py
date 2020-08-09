@@ -38,7 +38,7 @@ class FirstOp(FirstOp_):
             #         ]
             #     ).to_es_script(schema)
 
-        term = (self.term).to_es_script(schema)
+        term = self.term.to_es_script(schema)
 
         if is_op(term.frum, CoalesceOp_):
             return CoalesceOp([

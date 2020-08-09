@@ -64,5 +64,7 @@ class BaseBinaryOp(Expression):
         rhs = self.rhs.partial_eval(lang)
         default = self.default.partial_eval(lang)
         if is_literal(lhs) and is_literal(rhs):
+            if lhs is NULL or rhs is NULL:
+                return NULL
             return Literal(builtin_ops[self.op](lhs.value, rhs.value))
         return self.__class__([lhs, rhs], default=default)

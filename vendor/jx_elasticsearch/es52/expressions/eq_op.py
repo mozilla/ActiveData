@@ -68,9 +68,9 @@ class EqOp(EqOp_):
             # OBJECT MEANS WE REALLY DO NOT KNOW THE TYPE
             return FALSE
         if is_op(lhs, NestedOp):
-            return self.lang[NestedOp(
+            return lang.NestedOp(
                 path=lhs.frum, where=AndOp([lhs.where, EqOp([lhs.select, rhs])])
-            )]
+            )
 
         return EqOp([lhs, rhs])
 

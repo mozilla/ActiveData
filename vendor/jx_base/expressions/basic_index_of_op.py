@@ -49,11 +49,11 @@ class BasicIndexOfOp(Expression):
 
     def partial_eval(self, lang):
         start = IntegerOp(MaxOp([ZERO, self.start])).partial_eval(lang)
-        return self.lang[BasicIndexOfOp([
+        return self.lang.BasicIndexOfOp([
             StringOp(self.value).partial_eval(lang),
             StringOp(self.find).partial_eval(lang),
             start,
-        ])]
+        ])
 
     def __eq__(self, other):
         if not is_op(other, BasicIndexOfOp):

@@ -22,6 +22,6 @@ class BooleanOp(BooleanOp_):
         if is_op(self.term, Variable_):
             return es_exists(self.term.var)
         elif is_op(self.term, FindOp):
-            return (self.term).to_es(schema)
+            return self.term.to_es(schema)
         else:
             return (self).to_es_script(schema).to_es(schema)

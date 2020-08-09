@@ -383,7 +383,7 @@ def split_expression_by_path(expr, schema, lang=Language):
 
     expr_vars = expr.vars()
     var_to_columns = {v.var: schema.values(v.var) for v in expr_vars}
-    all_paths = set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
+    used_paths = set(c.nested_path[0] for v in expr_vars for c in var_to_columns[v.var])
 
     def add(v, c):
         cols = var_to_columns.get(v)
@@ -417,13 +417,18 @@ def split_expression_by_path(expr, schema, lang=Language):
             acc.append(expr.map({v: NULL for v in mapping.keys()}))
             with_nulls = AndOp(acc).partial_eval(ES52)
             if with_nulls is not FALSE:
-                all_paths.add(p)
+                used_paths.add(p)
                 exprs.append(with_nulls)
 
-    if len(all_paths) == 0:
-        return AndOp, {".": expr}  # CONSTANTS
-    elif len(all_paths) == 1:
-        return AndOp, {first(all_paths): expr}
+    acc = OrderedDict(((p, []) for p in schema.query_path))
+
+    if len(used_paths) == 0:
+        # CONSTANTS
+        acc['.'].append(expr)
+        return AndOp, acc
+    elif len(used_paths) == 1:
+        acc[first(used_paths)].append(expr)
+        return AndOp, acc
 
     # EXPAND EXPRESSION TO ALL REALIZED COLUMNS
     for v, cols in list(var_to_columns.items()):
@@ -438,21 +443,14 @@ def split_expression_by_path(expr, schema, lang=Language):
                 more_expr.append(e.map({v: col.es_column}))
         exprs = more_expr
 
-    acc = {}
     for e in exprs:
         nestings = list(set(
             c.nested_path[0] for v in e.vars() for c in var_to_columns[v]
         ))
         if not nestings:
-            a = acc.get(".")
-            if not a:
-                acc["."] = a = OrOp([])
-            a.terms.append(e)
+            acc['.'].append(e)
         elif len(nestings) == 1:
-            a = acc.get(nestings[0])
-            if not a:
-                acc[nestings[0]] = a = OrOp([])
-            a.terms.append(e)
+            acc[nestings[0]].append(e)
         else:
             Log.error("Expression is too complex")
 

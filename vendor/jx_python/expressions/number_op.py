@@ -23,10 +23,10 @@ class NumberOp(NumberOp_):
             if term.type in NUMBER_TYPES:
                 return term.to_python(not_null=True)
             else:
-                return "float(" + (self.term).to_python(not_null=True) + ")"
+                return "float(" + self.term.to_python(not_null=True) + ")"
         else:
             exists = self.term.exists()
-            value = (self.term).to_python(not_null=True)
+            value = self.term.to_python(not_null=True)
 
             if exists is TRUE:
                 return "float(" + value + ")"

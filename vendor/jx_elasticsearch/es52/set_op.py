@@ -39,9 +39,10 @@ from mo_dots import (
     unwrap,
     Null,
     list_to_data,
-    unwraplist)
-from mo_future import text
-from mo_json import NESTED, INTERNAL, OBJECT, EXISTS
+    unwraplist,
+)
+from mo_future import text, first
+from mo_json import NESTED, INTERNAL, OBJECT, EXISTS, PRIMITIVE
 from mo_json.typed_encoder import decode_property, untype_path, untyped
 from mo_logs import Log
 from mo_math import AND
@@ -155,6 +156,7 @@ def get_selects(query):
                 value = jx_expression_to_function(join_field(["fields", c.es_column]))
                 name = literal_field(nested_path[0])
                 index = jx_expression_to_function("_nested.offset")
+
                 def pull_nested_field(doc):
                     hits = doc.get(pos, Null).inner_hits[name].hits.hits
                     if not hits:
@@ -195,19 +197,23 @@ def get_selects(query):
         # IF THERE IS A *, THEN INSERT THE EXTRA COLUMNS
         if is_op(select.value, LeavesOp) and is_op(select.value.term, Variable):
             term = select.value.term
+            selected_column = first(schema.values(term.var, exclude_type=PRIMITIVE))
             leaves = schema.leaves(term.var)
             for c in leaves:
                 c_nested_path = c.nested_path[0]
-                simple_name = relative_field(c.es_column, query_path).lstrip(".")
-                name = concat_field(select.name, untype_path(simple_name))
-                put_name = concat_field(
-                    select.name, literal_field(untype_path(simple_name))
-                )
+                rel_name = relative_field(
+                    c.es_column, selected_column.es_column
+                ).lstrip(".")
+                put_name = concat_field(select.name, untype_path(rel_name))
                 split_select[c_nested_path].fields.append(c.es_column)
                 new_select.append({
-                    "name": name,
+                    "name": put_name,
                     "value": Variable(c.es_column),
-                    "put": {"name": put_name, "index": put_index, "child": ".",},
+                    "put": {
+                        "name": literal_field(put_name),
+                        "index": put_index,
+                        "child": ".",
+                    },
                     "pull": get_pull_source(c),
                 })
                 put_index += 1
@@ -224,9 +230,11 @@ def get_selects(query):
                 })
                 continue
 
-            for selected_column in schema.values(
-                select.value.var, exclude_type=(EXISTS, OBJECT)
-            ):
+            selected_columns = [
+                c
+                for c in schema.values(select.value.var, exclude_type=PRIMITIVE)
+            ]
+            for selected_column in selected_columns:
                 if selected_column.jx_type == NESTED:
                     new_select.append({
                         "name": select.name,
@@ -240,9 +248,10 @@ def get_selects(query):
                     })
                     continue
 
+                # LEAVES OF OBJECT
                 leaves = schema.leaves(
                     selected_column.es_column, exclude_type=INTERNAL
-                )  # LEAVES OF OBJECT
+                )
                 if leaves:
                     for c in leaves:
                         if c.es_column == "_id":
@@ -278,27 +287,33 @@ def get_selects(query):
                         "name": select.name,
                         "value": NULL,
                         "put": {"name": select.name, "index": put_index, "child": "."},
+                        "pull": NULL,
                     })
+                put_index += 1
+            if not selected_columns:
+                new_select.append({
+                    "name": select.name,
+                    "value": NULL,
+                    "put": {"name": select.name, "index": put_index, "child": "."},
+                    "pull": NULL,
+                })
                 put_index += 1
         else:
             op, split_scripts = split_expression_by_path(
                 select.value, schema, lang=Painless
             )
-            for pos, (p, script) in enumerate(reversed(list(split_scripts.items()))):
-                es_select = split_select[p]
-                es_select.scripts[select.name] = {"script": text(
-                    (script).partial_eval(Painless).to_es_script(schema)
-                )}
-                new_select.append({
-                    "name": select.name,
-                    "pull": jx_expression_to_function(join_field([
-                        text(pos+1),
-                        "fields",
-                        select.name,
-                    ])),
-                    "put": {"name": select.name, "index": put_index, "child": "."},
-                })
-                put_index += 1
+            for pos, (p, scripts) in enumerate(reversed(list(split_scripts.items()))):
+                for script in scripts:
+                    es_script = script.partial_eval(Painless).to_es_script(schema)
+                    es_select = split_select[p]
+                    es_select.scripts[select.name] = {"script": text(es_script)}
+
+                    new_select.append({
+                        "name": select.name,
+                        "pull": pull_script(text(pos + 1), select.name),
+                        "put": {"name": select.name, "index": put_index, "child": "."},
+                    })
+                    put_index += 1
 
     def inners(query_path, parent_pos):
         """
@@ -400,7 +415,7 @@ def es_setop(es, query):
 
 
 def pull_id(row):
-    return (row["1"]._id,)
+    return row["1"]._id
 
 
 def get_pull(column):
@@ -417,6 +432,16 @@ def get_pull_function(column):
         return lambda doc: untyped(func(doc))
     else:
         return func
+
+
+def pull_script(pos, name):
+    v = Variable(join_field([pos, "fields", name,]))
+
+    def output(row):
+        return v(row)
+
+    return output
+    # return jx_expression_to_function()
 
 
 def get_pull_stats():

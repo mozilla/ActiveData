@@ -37,7 +37,7 @@ class BooleanOp(Expression):
         return self.term.missing(lang)
 
     def partial_eval(self, lang):
-        term = (self.term).partial_eval(lang)
+        term = self.term.partial_eval(lang)
         if term is TRUE:
             return TRUE
         elif term in (FALSE, NULL):

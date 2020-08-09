@@ -39,8 +39,7 @@ class NotOp(NotOp_):
                 return es_or([{"exists": {"field": c.es_column}} for c in cols])
         else:
             if self.simplified:
-                term = self.lang[self.term]
-                return es_not(term.to_es(schema))
+                return es_not(self.term.to_es(schema))
             else:
                 return self.partial_eval(ES52).to_es(schema)
 

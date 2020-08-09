@@ -25,7 +25,7 @@ from mo_future import first
 class BasicEqOp(BasicEqOp_):
     def partial_eval(self, lang):
         if is_op(self.lhs, NestedOp):
-            return self.lang[NestedOp(
+            return lang.NestedOp(
                 path=self.lhs.frum.partial_eval(lang),
                 select=IDENTITY,
                 where=AndOp([
@@ -34,11 +34,11 @@ class BasicEqOp(BasicEqOp_):
                 ]).partial_eval(lang),
                 sort=self.lhs.sort.partial_eval(lang),
                 limit=self.limit.partial_eval(lang),
-            )]
-        return self.lang[BasicEqOp([
+            )
+        return lang.BasicEqOp([
             self.lhs.partial_eval(lang),
             self.rhs.partial_eval(lang),
-        ])]
+        ])
 
     def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):

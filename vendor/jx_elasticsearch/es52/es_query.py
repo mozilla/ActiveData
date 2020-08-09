@@ -146,7 +146,7 @@ class FilterAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filter'] = (self.filter).partial_eval(ES52).to_es(schema)
+        output['filter'] = self.filter.partial_eval(ES52).to_es(schema)
         return output
 
     def copy(self):

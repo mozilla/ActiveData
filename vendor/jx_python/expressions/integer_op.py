@@ -15,4 +15,4 @@ from jx_python.expressions._utils import Python
 
 class IntegerOp(IntegerOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return "int(" + (self.term).to_python() + ")"
+        return "int(" + self.term.to_python() + ")"

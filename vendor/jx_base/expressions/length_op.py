@@ -43,7 +43,7 @@ class LengthOp(Expression):
         return self.term.missing(lang)
 
     def partial_eval(self, lang):
-        term = (self.term).partial_eval(lang)
+        term = self.term.partial_eval(lang)
         if is_literal(term):
             if is_text(term.value):
                 return self.lang[Literal(len(term.value))]

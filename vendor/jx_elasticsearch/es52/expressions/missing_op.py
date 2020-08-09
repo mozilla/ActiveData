@@ -13,7 +13,7 @@ from jx_base.expressions import MissingOp as MissingOp_, Variable as Variable_
 from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.and_op import es_and
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
-from jx_elasticsearch.es52.painless import MissingOp as PainlessMissingOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_future import first
 
 
@@ -27,8 +27,11 @@ class MissingOp(MissingOp_):
                 return es_missing(first(cols).es_column)
             else:
                 return es_and([es_missing(c.es_column) for c in cols])
-        else:
-            return PainlessMissingOp.to_es_script(self, schema).to_es(schema)
+
+        missing = self.expr.missing(ES52).partial_eval(ES52)
+        return missing.to_es(schema)
+        # else:
+        #     return PainlessMissingOp.to_es_script(self, schema).to_es(schema)
 
 
 def es_missing(term):

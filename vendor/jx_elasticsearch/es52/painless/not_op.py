@@ -20,7 +20,7 @@ from mo_json import BOOLEAN
 
 class NotOp(NotOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        value = (self.term).partial_eval(Painless).to_es_script(schema)
+        value = self.term.partial_eval(Painless).to_es_script(schema)
 
         if value is false_script:
             return true_script

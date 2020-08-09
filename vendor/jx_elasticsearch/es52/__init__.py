@@ -268,11 +268,15 @@ class ES52(Container):
             content = "".join(
                 t
                 for r in results.data
+                if len(r) > 0
                 for _id, row in [(r._id, r)]
                 for _ in [row.__setitem__("_id", None)]  # WARNING! DESTRUCTIVE TO row
                 for update in map(value2json, ({"update": {"_id": _id}}, {"doc": row}))
                 for t in (update, "\n")
             )
+            if not content:
+                return
+
             response = self.es.cluster.post(
                 es_index.path + "/" + "_bulk",
                 data=content,
@@ -293,7 +297,7 @@ class ES52(Container):
         # DELETE BY QUERY, IF NEEDED
         if "." in listwrap(command["clear"]):
             es_filter = (
-                ES52Lang[jx_expression(command.where)].partial_eval(lang).to_es(schema)
+                jx_expression(command.where).partial_eval(ES52Lang).to_es(schema)
             )
             self.es.delete_record(es_filter)
             return

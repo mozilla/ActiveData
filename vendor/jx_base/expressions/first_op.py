@@ -40,7 +40,7 @@ class FirstOp(Expression):
         return self.term.missing(lang)
 
     def partial_eval(self, lang):
-        term = (self.term).partial_eval(lang)
+        term = self.term.partial_eval(lang)
         if is_op(term, FirstOp):
             return term
         elif is_op(term, CaseOp):  # REWRITING

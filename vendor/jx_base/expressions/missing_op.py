@@ -56,7 +56,7 @@ class MissingOp(Expression):
         return TRUE
 
     def partial_eval(self, lang):
-        output = (self.expr).partial_eval(lang).missing(lang)
+        output = self.expr.partial_eval(lang).missing(lang)
         if is_op(output, MissingOp):
             return output
         else:

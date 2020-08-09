@@ -15,5 +15,5 @@ from jx_python.expressions._utils import Python
 
 class LengthOp(LengthOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        value = (self.term).to_python()
+        value = self.term.to_python()
         return "len(" + value + ") if (" + value + ") != None else None"

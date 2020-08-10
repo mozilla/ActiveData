@@ -201,13 +201,20 @@ def get_selects(query):
             selected_column = first(schema.values(term.var, exclude_type=PRIMITIVE))
             leaves = schema.leaves(term.var)
             for leaf in leaves:
-                c_nested_path = leaf.nested_path[0]
+                if not selected_column:
+                    selected_column = leaf
                 rel_name = relative_field(
-                    leaf.es_column, selected_column.es_column
+                    leaf.es_column, selected_column.es_column,
                 ).lstrip(".")
                 name = concat_field(select.name, untype_path(rel_name))
-                put_name = concat_field(select.name, literal_field(untype_path(rel_name)))
-                split_select[c_nested_path].fields.append(leaf.es_column)
+
+                select_path = split_field(select.name)
+                if not select_path:  # "."
+                    put_name = literal_field(untype_path(rel_name))
+                else:
+                    put_name = join_field(select_path[:-1] + [concat_field(select_path[-1], untype_path(rel_name))])
+
+                split_select[leaf.nested_path[0]].fields.append(leaf.es_column)
                 new_select.append({
                     "name": name,
                     "value": Variable(leaf.es_column),
@@ -234,8 +241,12 @@ def get_selects(query):
                 continue
 
             selected_column = first(schema.values(select.value.var, exclude_type=PRIMITIVE))
+            # for selected_column in schema.values(select.value.var, exclude_type=PRIMITIVE):
+
             leaves = schema.leaves(select.value.var, exclude_type=(EXISTS, OBJECT))
             for leaf in leaves:
+                if not selected_column:
+                    selected_column = leaf
                 if leaf.jx_type == NESTED:
                     new_select.append({
                         "name": select.name,
@@ -243,8 +254,7 @@ def get_selects(query):
                         "put": {"name": select.name, "index": put_index, "child": "."},
                         "pull": get_pull_source(Data(
                             es_column=leaf.es_column,
-                            nested_path=(leaf.es_column,)
-                            + leaf.nested_path,
+                            nested_path=(leaf.es_column,) + tuple(leaf.nested_path),
                         )),
                     })
                 elif leaf.es_column == "_id":

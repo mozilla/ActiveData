@@ -1104,8 +1104,8 @@ class Schema(jx_base.Schema):
                 if (
                     (c.name != "_id" or clean_name == "_id")
                     and c.cardinality != 0
-                    and c.jx_type not in (OBJECT, EXISTS)
-                    # and startswith_field(query_path, c.nested_path[0])  # NOT DEEPER THAN THE SCHEMA
+                    and c.jx_type not in exclude_type
+                    and startswith_field(query_path, c.nested_path[0])  # NOT DEEPER THAN THE SCHEMA
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
                     )

@@ -214,7 +214,7 @@ class Alias(object):
 
             for details in responses:
                 if details.error:
-                    Log.error(quote2string(details.error))
+                    Log.error("{{error|json}}", error=details.error)
                     if details._shards.failed > 0:
                         Log.error(
                             "{{num}} orf {{total}} shard failures {{failures|indent}}",

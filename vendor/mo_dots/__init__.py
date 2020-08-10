@@ -150,9 +150,9 @@ def concat_field(prefix, suffix):
     if suffix.startswith(".."):
         remainder = suffix.lstrip(".")
         back = len(suffix) - len(remainder) - 1
-        prefix_path=split_field(prefix)
-        if len(prefix_path)>=back:
-            return join_field(split_field(prefix)[:-back]+split_field(remainder))
+        prefix_path = split_field(prefix)
+        if len(prefix_path) >= back:
+            return join_field(split_field(prefix)[:-back] + split_field(remainder))
         else:
             return "." * (back - len(prefix_path)) + "." + remainder
     else:

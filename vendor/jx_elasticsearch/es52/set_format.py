@@ -59,7 +59,10 @@ def doc_formatter(select, query=None):
                 else:
                     if r is None:
                         r = Data()
-                    r[s.put.child] = v
+                    try:
+                        r[s.put.child] = v
+                    except Exception as e:
+                        Log.error("what", e)
 
             return r
         return format_value

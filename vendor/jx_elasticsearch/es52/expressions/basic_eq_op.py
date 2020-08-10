@@ -30,7 +30,7 @@ class BasicEqOp(BasicEqOp_):
                 select=IDENTITY,
                 where=AndOp([
                     self.lhs.where,
-                    BasicEqOp(self.lhs.select, self.rhs),
+                    BasicEqOp([self.lhs.select, self.rhs]),
                 ]).partial_eval(lang),
                 sort=self.lhs.sort.partial_eval(lang),
                 limit=self.limit.partial_eval(lang),

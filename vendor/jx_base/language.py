@@ -97,21 +97,20 @@ def partial_eval(self, lang):
     """
     DISPATCH TO CLASS-SPECIFIC partial_eval(lang)
     """
-    if not isinstance(lang, int):
-        lang = lang.id
-    if self.simplified:
-        return self
-    func = self.lookups["partial_eval"][lang]
-    output = func(self, lang)
-    output.simplified = True
-    return output
+    try:
+        if self.simplified:
+            return self
+        func = self.lookups["partial_eval"][lang.id]
+        output = func(self, lang)
+        output.simplified = True
+        return output
+    except Exception as cause:
+        Log.error("Not expected", cause=cause)
 
 
 def get_dispatcher_for(name):
     def dispatcher(self, lang):
-        if not isinstance(lang, int):
-            lang = lang.id
-        func = self.lookups[name][lang]
+        func = self.lookups[name][lang.id]
         output = func(self, lang)
         return output
 

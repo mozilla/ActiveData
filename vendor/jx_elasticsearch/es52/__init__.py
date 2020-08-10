@@ -268,7 +268,6 @@ class ES52(Container):
             content = "".join(
                 t
                 for r in results.data
-                if len(r) > 0
                 for _id, row in [(r._id, r)]
                 for _ in [row.__setitem__("_id", None)]  # WARNING! DESTRUCTIVE TO row
                 for update in map(value2json, ({"update": {"_id": _id}}, {"doc": row}))

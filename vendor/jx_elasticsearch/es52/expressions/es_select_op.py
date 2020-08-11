@@ -16,9 +16,14 @@ from mo_dots import Data
 class ESSelectOp(_ESSelectOp):
     def to_es(self):
         if self.source_path:
-            return Data(
-                _source=True, script_fields=self.scripts if self.scripts else None,
-            )
+            if self.source_path == self.path:
+                return Data(
+                    _source=True, script_fields=self.scripts if self.scripts else None,
+                )
+            else:
+                return Data(
+                    _source=False, script_fields=self.scripts if self.scripts else None,
+                )
         else:
             return Data(
                 _source=False,

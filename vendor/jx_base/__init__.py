@@ -84,14 +84,12 @@ def DataClass(name, columns, constraint=None):
     :return: The class that has been created
     """
 
-    columns = to_data(
-        [
-            {"name": c, "required": True, "nulls": False, "type": object}
-            if is_text(c)
-            else c
-            for c in columns
-        ]
-    )
+    columns = to_data([
+        {"name": c, "required": True, "nulls": False, "type": object}
+        if is_text(c)
+        else c
+        for c in columns
+    ])
     constraint = {
         "and": [
             {"exists": c.name} for c in columns if not c.nulls and c.default == None
@@ -198,18 +196,20 @@ class {{class_name}}(Mapping):
 """,
         {
             "class_name": name,
-            "slots": "(" + (", ".join(quote(s) for s in slots)) + ")",
-            "required": "{" + (", ".join(quote(s) for s in required)) + "}",
+            "slots": "(" + ", ".join(quote(s) for s in slots) + ")",
+            "required": "{" + ", ".join(quote(s) for s in required) + "}",
             "defaults": Literal(defaults).to_python(),
             "len_slots": len(slots),
-            "dict": "{" + (", ".join(quote(s) + ": self." + s for s in slots)) + "}",
+            "dict": "{" + ", ".join(quote(s) + ": self." + s for s in slots) + "}",
             "assign": "; ".join(
                 "_set(output, " + quote(s) + ", self." + s + ")" for s in slots
             ),
             "types": "{"
-            + (",".join(quote(k) + ": " + v.__name__ for k, v in types.items()))
+            + ",".join(quote(k) + ": " + v.__name__ for k, v in types.items())
             + "}",
-            "constraint_expr":                jx_expression(not ENABLE_CONSTRAINTS or constraint).to_python(),
+            "constraint_expr": jx_expression(
+                not ENABLE_CONSTRAINTS or constraint
+            ).to_python(),
             "constraint": value2json(constraint),
         },
     )
@@ -221,7 +221,13 @@ class {{class_name}}(Mapping):
 
 TableDesc = DataClass(
     "Table",
-    ["name", {"name": "url", "nulls": true}, "query_path", {"name": "last_updated", "nulls": False}, "columns"],
+    [
+        "name",
+        {"name": "url", "nulls": true},
+        "query_path",
+        {"name": "last_updated", "nulls": False},
+        "columns",
+    ],
     constraint={"and": [{"eq": [{"last": "query_path"}, {"literal": "."}]}]},
 )
 
@@ -244,62 +250,69 @@ Column = DataClass(
         {"name": "partitions", "nulls": True},
         "last_updated",
     ],
-    constraint={
-        "and": [
-            {
-                "when": {"ne": {"name": "."}},
-                "then": {"ne": ["name", {"first": "nested_path"}]},
-                "else": True,
-            },
-            {
-                "when": {"eq": {"name": "."}},
-                "then": {"eq": {"jx_type": "nested"}},
-                "else": True,
-            },
-            {"not": {"find": {"es_column": "null"}}},
-            {"not": {"eq": {"es_column": "string"}}},
-            {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
-            {
-                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
-                "then": {"eq": {"jx_type": EXISTS}},
-                "else": True,
-            },
-            {
-                "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
-                "then": {"exists": "cardinality"},
-                "else": True,
-            },
-            {
-                "when": {"eq": {"jx_type": OBJECT}},
-                "then": {"in": {"cardinality": [0, 1]}},
-                "else": True,
-            },
-            {
-                "when": {"eq": {"jx_type": NESTED}},
-                "then": {"in": {"cardinality": [0, 1]}},
-                "else": True,
-            },
-            {"eq": [{"last": "nested_path"}, {"literal": "."}]},
-            {
-                "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},
-                "then": {
-                    "and": [
-                        {"gt": {"multi": 1}},
-                        {"eq": {"jx_type": "nested"}},
-                        {"eq": {"es_type": "nested"}},
-                    ]
-                },
-                "else": True,
-            },
-            {
-                "when": {"gte": [{"count": "nested_path"}, 2]},
-                "then": {
-                    "ne": [{"first": {"right": {"nested_path": 2}}}, {"literal": "."}]
-                },  # SECOND-LAST ELEMENT
-                "else": True,
-            },
-        ]
-    },
+    constraint={"and": [
+        {
+            "when": {"ne": {"name": "."}},
+            "then": {"or": [
+                {"and": [{"eq": {"jx_type": "object"}}, {"eq": {"multi": 1}}]},
+                {"ne": ["name", {"first": "nested_path"}]},
+            ]},
+            "else": True,
+        },
+        {
+            "when": {"eq": {"name": "."}},
+            "then": {"in": {"jx_type": ["nested", "object"]}},
+            "else": True,
+        },
+        {"not": {"find": {"es_column": "null"}}},
+        {"not": {"eq": {"es_column": "string"}}},
+        {"not": {"eq": {"es_type": "object", "jx_type": "exists"}}},
+        {
+            "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+            "then": {"eq": {"jx_type": EXISTS}},
+            "else": True,
+        },
+        {
+            "when": {"suffix": {"es_column": "." + EXISTS_TYPE}},
+            "then": {"exists": "cardinality"},
+            "else": True,
+        },
+        {
+            "when": {"eq": {"jx_type": OBJECT}},
+            "then": {"in": {"cardinality": [0, 1]}},
+            "else": True,
+        },
+        {
+            "when": {"eq": {"jx_type": NESTED}},
+            "then": {"in": {"cardinality": [0, 1]}},
+            "else": True,
+        },
+        {"eq": [{"last": "nested_path"}, {"literal": "."}]},
+        {
+            "when": {"eq": [{"literal": ".~N~"}, {"right": {"es_column": 4}}]},
+            "then": {"or": [
+                {"and": [
+                    {"gt": {"multi": 1}},
+                    {"eq": {"jx_type": "nested"}},
+                    {"eq": {"es_type": "nested"}},
+                ]},
+                {"and": [
+                    {"eq": {"multi": 1}},
+                    {"eq": {"jx_type": "object"}},
+                    {"eq": {"es_type": "object"}},
+                ]},
+            ]},
+            "else": True,
+        },
+        {
+            "when": {"gte": [{"count": "nested_path"}, 2]},
+            "then": {"ne": [
+                {"first": {"right": {"nested_path": 2}}},
+                {"literal": "."},
+            ]},  # SECOND-LAST ELEMENT
+            "else": True,
+        },
+    ]},
 )
 
 export("jx_base.expressions.query_op", Column)

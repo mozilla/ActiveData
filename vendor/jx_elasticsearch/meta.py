@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 import itertools
+from collections import OrderedDict
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -53,7 +54,7 @@ from mo_dots import (
 )
 from mo_dots.lists import last
 from mo_future import first, long, none_type, text, sort_using_key
-from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT
+from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT, NESTED
 from mo_json.typed_encoder import (
     unnest_path,
     untype_path,
@@ -297,20 +298,17 @@ class ElasticsearchMetadata(Namespace):
             # LIST OF EVERY NESTED PATH
             query_paths = [[c.es_column] for c in abs_columns if c.es_type == "nested"]
             for a, b in itertools.product(query_paths, query_paths):
+                if a is b:
+                    continue
                 aa = a[0]
                 bb = b[0]
-                if aa and bb.startswith(aa):
-                    for i, b_prefix in enumerate(b):
-                        if len(b_prefix) > len(aa):
-                            continue
-                        if aa == b_prefix:
-                            break  # SPLIT ALREADY FOUND
-                        b.insert(i, aa)
-                        break
-            for q in query_paths:
-                q.append(".")
-            query_paths.append(ROOT_PATH)
-            query_paths = list(reversed(sort_using_key(query_paths, key=lambda x: x[0])))
+                if startswith_field(bb, aa):
+                    if aa in b:
+                        continue
+                    b.append(aa)
+            query_paths = list(reversed(sort_using_key(
+                [list(reversed(sorted(qp))) for qp in query_paths], key=lambda x: x[0]
+            )))
 
             # ENSURE ALL TABLES HAVE THE QUERY PATHS SET
             self.alias_to_query_paths[alias] = query_paths
@@ -1062,7 +1060,9 @@ class Schema(jx_base.Schema):
             return set(
                 c
                 for c in columns
-                if c.name != "_id" and c.jx_type not in INTERNAL and c.cardinality != 0
+                if c.name != "_id"
+                and c.cardinality != 0
+                and c.jx_type not in exclude_type
             )
 
         if clean_name != column_name:
@@ -1072,8 +1072,8 @@ class Schema(jx_base.Schema):
                     c
                     for c in columns
                     if (
-                        (c.name != "_id" or column_name == "_id")
-                        and c.jx_type not in exclude_type
+                        c.jx_type not in exclude_type
+                        and (c.name != "_id" or column_name == "_id")
                         and startswith_field(relative_field(c.name, path), column_name)
                     )
                 ]
@@ -1090,9 +1090,9 @@ class Schema(jx_base.Schema):
                     c
                     for c in columns
                     if (
-                        (c.name != "_id" or clean_name == "_id")
-                        and c.cardinality != 0
+                        c.cardinality != 0
                         and c.jx_type not in exclude_type
+                        and (c.name != "_id" or clean_name == "_id")
                         and path == c.nested_path[0]  # EVERYTHING AT THIS LEVEL
                     )
                 ]
@@ -1102,10 +1102,12 @@ class Schema(jx_base.Schema):
                 c
                 for c in columns
                 if (
-                    (c.name != "_id" or clean_name == "_id")
-                    and c.cardinality != 0
+                    c.cardinality != 0
                     and c.jx_type not in exclude_type
-                    and startswith_field(query_path, c.nested_path[0])  # NOT DEEPER THAN THE SCHEMA
+                    and (c.name != "_id" or clean_name == "_id")
+                    and startswith_field(
+                        query_path, c.nested_path[0]
+                    )  # NOT DEEPER THAN THE SCHEMA
                     and startswith_field(
                         untype_path(relative_field(c.name, path)), clean_name
                     )
@@ -1114,6 +1116,29 @@ class Schema(jx_base.Schema):
             if output:
                 return set(output)
         return set()
+
+    def split_leaves(self, column, exclude_type=(OBJECT, EXISTS)):
+        """
+        RETURN MULTIPLE SETS OF LEAVES INDEXED BY nested_path
+
+        :param column_name:
+        :param exclude_type: SOME COLUMN TYPES ARE NOT NEEDED
+        :return: ALL COLUMNS THAT START WITH column_name, NOT INCLUDING DEEPER NESTED COLUMNS
+        """
+        columns = self.columns
+        abs_name = column.name
+        nested_path = column.nested_path[0]
+
+        output = []
+        for c in columns:
+            if (
+                c.jx_type not in exclude_type
+                and (c.name != "_id" or abs_name == "_id")
+                and startswith_field(c.name, abs_name)
+                and c.nested_path[0] == nested_path
+            ):
+                output.append(c)
+        return output
 
     def values(self, column_name, exclude_type=STRUCT):
         """
@@ -1151,6 +1176,57 @@ class Schema(jx_base.Schema):
             if output:
                 return output
         return []
+
+    def split_values(self, column_name, exclude_type=(OBJECT, EXISTS)):
+        """
+        RETURN ALL COLUMNS THAT column_name REFERS TO
+        """
+        clean_name = untype_path(column_name)
+        columns = self.columns
+
+        query_path = self.query_path[0]
+        # ANYTHING IN THE SNOWFLAKE ARM IS ALLOWED
+        arm = [
+            p[0]
+            for p in self.snowflake.query_paths
+            if startswith_field(p[0], query_path) or startswith_field(query_path, p[0])
+        ]
+        output = OrderedDict((p, []) for p in arm)
+        search_order = self.query_path + arm[len(self.query_path) :]
+
+        if column_name == "_id":
+            for c in columns:
+                if c.name == "_id":
+                    return {".": [c]}
+
+        if clean_name != column_name:
+            # SPECIFIC FIELD REQUESTED
+            for path in search_order:
+                found = False
+                full_path = concat_field(path, column_name)
+                for c in columns:
+                    if c.name == full_path:
+                        found = True
+                        output[c.nested_path[0]].append(c)
+                if found:
+                    return output
+            return output
+
+        for path in search_order:
+            full_path = untype_path(concat_field(path, column_name))
+            found = False
+            for c in columns:
+                if (
+                    c.cardinality != 0
+                    and c.jx_type not in exclude_type
+                    and untype_path(c.name) == full_path
+                    and (c.name not in self.query_path or c.jx_type != NESTED)
+                ):
+                    found = True
+                    output[c.nested_path[0]].append(c)
+            if found:
+                return output
+        return output
 
     def __getitem__(self, column_name):
         return self.values(column_name)

@@ -154,6 +154,17 @@ class ES52(Container):
                     multi=1001,
                     last_updated=Date.now(),
                 ))
+                self.namespace.meta.columns.add(Column(
+                    name=p,
+                    es_column=p,
+                    es_index=self.name,
+                    es_type="object",
+                    jx_type=OBJECT,
+                    cardinality=1,
+                    nested_path=nested_path_of(p),
+                    multi=1,
+                    last_updated=Date.now(),
+                ))
 
     @property
     def snowflake(self):

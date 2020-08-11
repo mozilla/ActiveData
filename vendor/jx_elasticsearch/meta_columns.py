@@ -617,6 +617,5 @@ def mark_as_deleted(col, after):
         return
     col.count = 0
     col.cardinality = 0
-    col.multi = 1001 if col.es_type == "nested" else 0,
     col.partitions = None
     col.last_updated = after

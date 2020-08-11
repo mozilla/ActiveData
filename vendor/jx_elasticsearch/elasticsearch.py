@@ -1329,6 +1329,17 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
             cardinality=1,
             last_updated=Date.now(),
             nested_path=nested_path,
+            multi=1001
+        ))
+        columns.append(Column(
+            name='.',
+            es_index=parent_index_name,
+            es_column='.',
+            es_type="object",
+            jx_type=OBJECT,
+            cardinality=1,
+            last_updated=Date.now(),
+            nested_path=[parent_index_name]+nested_path,
             multi=1
         ))
 
@@ -1352,6 +1363,17 @@ def parse_properties(parent_index_name, parent_name, nested_path, esProperties):
                 multi=1001,
                 last_updated=Date.now(),
                 nested_path=nested_path
+            ))
+            columns.append(Column(
+                name=jx_name,
+                es_index=index_name,
+                es_column=column_name,
+                es_type="object",
+                jx_type=OBJECT,
+                cardinality=1,
+                multi=1,
+                last_updated=Date.now(),
+                nested_path=[column_name] + nested_path
             ))
 
             continue

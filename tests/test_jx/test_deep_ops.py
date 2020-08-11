@@ -1535,6 +1535,8 @@ class TestDeepOps(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_deep_star(self):
+        # SELECTING * IS LIKE . BUT WITH DIFFERENT COLUMN NAMES
+        #
         test = {
             "data": [{"x": 1, "a": {"_b": [
                 {"q": {"a": 0, "b": 1}},
@@ -1549,9 +1551,34 @@ class TestDeepOps(BaseTestCase):
             "expecting_list": {
                 "meta": {"format": "list"},
                 "data": [
-                    {"q.a": 0, "q.b": 1, "x": 1},
-                    {"q.a": 0, "x": 1},
-                    {"x": 1}
+                    {"q.a": 0, "q.b": 1},
+                    {"q.a": 0},
+                    {}
+                ]
+            }
+        }
+        self.utils.execute_tests(test)
+
+    def test_deep_star_w_parent(self):
+        # SELECTING * IS LIKE . BUT WITH DIFFERENT COLUMN NAMES
+        #
+        test = {
+            "data": [{"x": 1, "a": {"_b": [
+                {"q": {"a": 0, "b": 1}},
+                {"q": {"a": 0}},
+                {"q": {}}
+            ]}}],
+            "query": {
+                "from": TEST_TABLE+".a._b",
+                "select": ["*", {"name": "parent", "value": "..*"}],
+                "format": "list"
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"q.a": 0, "q.b": 1, "parent": {"x": 1}},
+                    {"q.a": 0, "parent": {"x": 1}},
+                    {"parent": {"x": 1}}
                 ]
             }
         }
@@ -1560,15 +1587,15 @@ class TestDeepOps(BaseTestCase):
     def test_deep_select_dot(self):
         test = {
             "data": [
-                {"_a": [
+                {"x": 1, "_a": [
                     {"b": "x", "v": 2},
                     {"b": "y", "v": 3}
                 ]},
-                {"_a": {"b": "x", "v": 5}},
+                {"x": 2, "_a": {"b": "x", "v": 5}},
                 {"_a": [
                     {"b": "x", "v": 7},
                 ]},
-                {"c": "x"}
+                {"x": 3, "c": "x"}
             ],
             "query": {
                 "from": TEST_TABLE + "._a",

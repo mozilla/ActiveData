@@ -12,6 +12,8 @@ from __future__ import absolute_import, division, unicode_literals
 from collections import OrderedDict
 from copy import copy
 
+from jx_elasticsearch.meta import Schema
+
 from jx_base.domains import ALGEBRAIC
 from jx_base.expressions import LeavesOp, Variable, TRUE, NULL
 from jx_base.expressions.query_op import DEFAULT_LIMIT
@@ -148,6 +150,7 @@ def get_selects(query):
 
                 return pull_property
         else:
+            # SELECTING DEEPER NESTED ARRAYS MEANS SOME AGGREGATION
             pos = text(query_level)
 
             if not source_level or nested_level < source_level:
@@ -197,6 +200,14 @@ def get_selects(query):
         if is_op(select.value, LeavesOp) and is_op(select.value.term, Variable):
             term = select.value.term
             split_variable = schema.split_values(term.var, exclude_type=PRIMITIVE)
+            if term.var == ".":
+                # PLAIN * MEANS EVERYTHING
+                for path in schema.query_path[1:]:
+                    parent_schema = Schema(path, schema.snowflake)
+                    part = parent_schema.split_values(term.var, exclude_type=PRIMITIVE + (NESTED,))
+                    for k, v in part.items():
+                        split_variable[k].extend(v)
+
             for nesting, selected_columns in split_variable.items():
                 for selected_column in selected_columns:
                     leaves = schema.split_leaves(
@@ -341,8 +352,13 @@ def get_selects(query):
                 rel_path = relative_field(query_path[-1], source_path)
 
                 def source(acc):
-                    for inner_row in acc[parent_pos]._source[rel_path]:
-                        acc[pos] = inner_row
+                    hits = acc[parent_pos]._source[rel_path]
+                    if hits:
+                        for inner_row in hits:
+                            acc[pos] = inner_row
+                            for tt in more(acc):
+                                yield tt
+                    else:
                         for tt in more(acc):
                             yield tt
 

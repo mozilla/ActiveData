@@ -52,7 +52,7 @@ from mo_dots import (
     unwrap,
     to_data,
 )
-from mo_dots.lists import last
+from mo_dots.lists import last, is_sequence
 from mo_future import first, long, none_type, text, sort_using_key
 from mo_json import BOOLEAN, EXISTS, OBJECT, INTERNAL, STRUCT, NESTED
 from mo_json.typed_encoder import (
@@ -998,7 +998,7 @@ class Schema(jx_base.Schema):
         self.snowflake = snowflake
         try:
             path = first(
-                p for p in snowflake.query_paths if untype_path(p[0]) == query_path
+                p for p in snowflake.query_paths if p[0] == query_path or untype_path(p[0]) == query_path
             )
             if path:
                 # WE DO NOT NEED TO LOOK INTO MULTI-VALUED FIELDS AS A TABLE
@@ -1014,8 +1014,7 @@ class Schema(jx_base.Schema):
                             untype_path(c.name) == query_path
                             and (
                                 c.multi > 1
-                                or last(split_field(c.es_column))
-                                == NESTED_TYPE  # THIS IS TO COMPENSATE FOR BAD c.multi
+                                or last(split_field(c.es_column)) == NESTED_TYPE
                             )
                         )
                     ])
@@ -1038,7 +1037,7 @@ class Schema(jx_base.Schema):
                     )
 
             if (
-                not is_list(self.query_path)
+                not is_sequence(self.query_path)
                 or self.query_path[len(self.query_path) - 1] != "."
             ):
                 Log.error("error")

@@ -43,6 +43,8 @@ from mo_dots import (
     dict_to_data,
     to_data,
     list_to_data,
+    split_field,
+    join_field,
 )
 from mo_future import is_text, text
 from mo_imports import expect
@@ -452,24 +454,22 @@ def _normalize_select_no_context(select, schema=None):
         else:
             return Null
     elif is_text(select.value):
-        if select.value.endswith(".*"):
-            name = select.value[:-2].lstrip(".")
-            output.name = coalesce(select.name, name)
-            output.value = LeavesOp(
-                Variable(name), prefix=coalesce(select.prefix, name)
-            )
+        if select.value.endswith("*"):
+            path = split_field(select.value)
+            var = join_field(path[:-1])
+            name = var.strip(".")
+            if not name:
+                name = "."
+            output.name = coalesce(select.name, select.aggregate, name)
+            output.value = LeavesOp(Variable(var), prefix=select.prefix)
+        elif select.value == ".":
+            output.name = coalesce(select.name, select.aggregate, ".")
+            output.value = jx_expression(select.value, schema=schema)
         else:
-            if select.value == ".":
-                output.name = coalesce(select.name, select.aggregate, ".")
-                output.value = jx_expression(select.value, schema=schema)
-            elif select.value == "*":
-                output.name = coalesce(select.name, select.aggregate, ".")
-                output.value = LeavesOp(Variable("."))
-            else:
-                output.name = coalesce(
-                    select.name, select.value.lstrip("."), select.aggregate
-                )
-                output.value = jx_expression(select.value, schema=schema)
+            output.name = coalesce(
+                select.name, select.value.lstrip("."), select.aggregate
+            )
+            output.value = jx_expression(select.value, schema=schema)
     elif is_number(output.value):
         if not output.name:
             output.name = text(output.value)

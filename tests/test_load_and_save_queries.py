@@ -14,14 +14,14 @@ import hashlib
 
 from active_data.actions import save_query
 from jx_elasticsearch import elasticsearch
-from mo_dots import wrap
+from mo_dots import to_data, dict_to_data
 from mo_future import text
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
+from mo_math import bytes2base64URL, bytes2base64
 from mo_threads import Till
 from mo_times import Timer
-from pyLibrary import convert
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -53,15 +53,15 @@ class TestLoadAndSaveQueries(BaseTestCase):
             "format": "list"
         })
         bytes = json.encode('utf8')
-        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
+        expected_hash = bytes2base64URL(hashlib.sha1(bytes).digest()[0:6])
         Log.note("Flush saved query {{json}} with hash {{hash}}", json=json, hash=expected_hash)
-        wrap(test).expecting_list.meta.saved_as = expected_hash
+        to_data(test).expecting_list.meta.saved_as = expected_hash
 
         self.utils.send_queries(test)
 
         # ENSURE THE QUERY HAS BEEN INDEXED
         container = elasticsearch.Index(index="saved_queries", type=save_query.DATA_TYPE, kwargs=settings)
-        container.flush(forced=True)
+        container.refresh()
         with Timer("wait for 5 seconds"):
             Till(seconds=5).wait()
 
@@ -71,7 +71,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         self.assertEqual(response.all_content, bytes)
 
     def test_recovery_of_empty_string(self):
-        test = wrap({
+        test = dict_to_data({
             "data": [
                 {"a": "bee"}
             ],
@@ -92,7 +92,7 @@ class TestLoadAndSaveQueries(BaseTestCase):
         settings = self.utils.fill_container(test)
 
         bytes = value2json(test.query).encode('utf8')
-        expected_hash = convert.bytes2base64(hashlib.sha1(bytes).digest()[0:6]).replace("/", "_")
+        expected_hash = bytes2base64URL(hashlib.sha1(bytes).digest()[0:6])
         test.expecting_list.meta.saved_as = expected_hash
 
         test.query.meta = {"save": True}
@@ -101,13 +101,17 @@ class TestLoadAndSaveQueries(BaseTestCase):
         # ENSURE THE QUERY HAS BEEN INDEXED
         Log.note("Flush saved query")
         container = elasticsearch.Index(index="saved_queries", kwargs=settings)
-        container.flush(forced=True)
-        with Timer("wait for 5 seconds"):
-            Till(seconds=5).wait()
+        container.refresh()
+        timeout = Till(seconds=5).wait()
 
         url = URL(self.utils.testing.query)
-        response = self.utils.try_till_response(url.scheme + "://" + url.host + ":" + text(url.port) + "/find/" + expected_hash, data=b'')
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.all_content, bytes)
-
-    # TODO: TEST RECOVERY OF QUERY USING {"prefix": {var: ""}} (EMPTY STRING IS NOT RECORDED RIGHT
+        url.path = ""
+        while True:
+            try:
+                response = self.utils.try_till_response(url / "find" / expected_hash, data=b'')
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.all_content, bytes)
+                break
+            except Exception as cause:
+                if timeout:
+                    raise cause

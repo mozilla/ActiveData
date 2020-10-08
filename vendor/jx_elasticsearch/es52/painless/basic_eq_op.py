@@ -20,28 +20,26 @@ from mo_logs import Log
 
 class BasicEqOp(BasicEqOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        simple_rhs = Painless[self.rhs].partial_eval()
-        lhs = Painless[self.lhs].partial_eval().to_es_script(schema)
+        simple_rhs = (self.rhs).partial_eval(Painless)
+        lhs = (self.lhs).partial_eval(Painless).to_es_script(schema)
         rhs = simple_rhs.to_es_script(schema)
 
         if lhs.many:
             if rhs.many:
-                return AndOp(
-                    [
-                        EsScript(
-                            type=BOOLEAN,
-                            expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()",
-                            frum=self,
-                            schema=schema,
-                        ),
-                        EsScript(
-                            type=BOOLEAN,
-                            expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")",
-                            frum=self,
-                            schema=schema,
-                        ),
-                    ]
-                ).to_es_script(schema)
+                return AndOp([
+                    EsScript(
+                        type=BOOLEAN,
+                        expr="(" + lhs.expr + ").size()==(" + rhs.expr + ").size()",
+                        frum=self,
+                        schema=schema,
+                    ),
+                    EsScript(
+                        type=BOOLEAN,
+                        expr="(" + rhs.expr + ").containsAll(" + lhs.expr + ")",
+                        frum=self,
+                        schema=schema,
+                    ),
+                ]).to_es_script(schema)
             else:
                 if lhs.type == BOOLEAN:
                     if is_literal(simple_rhs) and simple_rhs.value in ("F", False):

@@ -26,11 +26,6 @@ def send_contribute():
     """
     try:
         record_request(flask.request, None, flask.request.get_data(), None)
-        return Response(
-            CONTRIBUTE,
-            status=200
-        )
+        return Response(CONTRIBUTE, status=200)
     except Exception as e:
         Log.error("Could not return contribute.json", cause=e)
-
-

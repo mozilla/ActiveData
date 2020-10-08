@@ -141,10 +141,19 @@ The Github repo also included the test suite, and you can run it against
 your service if you wish. **The tests will create indexes on your
 cluster which are filled, queried, and destroyed**
 
+
+**Linux**
+
 ```bash
     cd ~/ActiveData
     export PYTHONPATH=.:vendor
-    # OPTIONAL, TEST_SETTINGS already defaults to this file
-    export TEST_SETTINGS=tests/config/test_simple_settings.json
+    python -m unittest discover -v -s tests
+```
+
+**Windows**
+
+```cmd
+    cd ActiveData
+    SET PYTHONPATH=.:vendor
     python -m unittest discover -v -s tests
 ```

@@ -9,15 +9,15 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import Literal as Literal_, ONE
-from jx_elasticsearch.es52.painless import _utils
-from jx_elasticsearch.es52.painless.null_op import null_script
-from jx_elasticsearch.es52.painless.true_op import true_script
-from jx_elasticsearch.es52.painless.false_op import false_script
+from jx_base.expressions import Literal as Literal_
 from jx_elasticsearch.es52.painless._utils import MIN_INT32, MAX_INT32
 from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.false_op import false_script
+from jx_elasticsearch.es52.painless.null_op import null_script
+from jx_elasticsearch.es52.painless.true_op import true_script
 from mo_dots import FlatList, data_types
 from mo_future import integer_types, text
+from mo_imports import export
 from mo_json import INTEGER, NUMBER, OBJECT, STRING
 from mo_logs.strings import quote
 from mo_times import Date
@@ -73,4 +73,4 @@ class Literal(Literal_):
         return _convert(self._value)
 
 
-_utils.Literal = Literal
+export("jx_elasticsearch.es52.painless._utils", Literal)

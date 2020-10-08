@@ -12,16 +12,15 @@ from __future__ import absolute_import, division, unicode_literals
 
 from unittest import skip, skipIf
 
-from mo_future import text
+from mo_future import first
 
-from jx_base.expressions import NULL
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from mo_dots import wrap
 import mo_math
-from mo_logs.exceptions import get_stacktrace
+from jx_base.expressions import NULL
+from jx_base.expressions.query_op import DEFAULT_LIMIT, MAX_LIMIT
+from mo_dots import to_data, dict_to_data, list_to_data
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
-lots_of_data = wrap([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSetOps(BaseTestCase):
@@ -36,7 +35,7 @@ class TestSetOps(BaseTestCase):
            "expecting_list": {
                "meta": {"format": "list"}, "data": [{"a": 1}]
            }
-       }
+        }
         self.utils.execute_tests(test)
 
     def test_simplest(self):
@@ -622,7 +621,7 @@ class TestSetOps(BaseTestCase):
 
     @skipIf(global_settings.use == "sqlite", "no need for limit when using own resources")
     def test_max_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -633,10 +632,10 @@ class TestSetOps(BaseTestCase):
 
         self.utils.fill_container(test)
         result = self.utils.execute_query(test.query)
-        self.assertEqual(result.meta.es_query.size, MAX_LIMIT)
+        self.assertEqual(first(result.meta.es_query.size), MAX_LIMIT)
 
     def test_default_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -658,7 +657,7 @@ class TestSetOps(BaseTestCase):
         self.assertEqual(len(result.data.value), DEFAULT_LIMIT)
 
     def test_specific_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -681,7 +680,7 @@ class TestSetOps(BaseTestCase):
         self.assertEqual(len(result.data.value), 5)
 
     def test_negative_limit(self):
-        test = wrap({
+        test = dict_to_data({
             "data": lots_of_data,
             "query": {
                 "from": TEST_TABLE,
@@ -1353,11 +1352,58 @@ class TestSetOps(BaseTestCase):
             },
             "expecting_error": "Expecting `value` or `aggregate` in select "
         }
-        subtest = wrap(subtest)
+        subtest = to_data(subtest)
 
         self.utils.fill_container(subtest)
         self.utils.send_queries(subtest)
 
+    def test_prefix_in_deep_where_clause(self):
+        test = {
+            "data": [
+                {"a": "test1"},
+                {"a": "test2"},
+                {"a": "test3"},
+                {"a": {"b": 3}},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"prefix": {"a": "test"}}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "test1"},
+                    {"a": "test2"},
+                    {"a": "test3"},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
 
+    def test_exists_in_where_clause(self):
+        test = {
+            "data": [
+                {"a": "test1"},
+                {"a": 0},
+                {"a": False},
+                {"a": {"b": 3}},
+                {},
+            ],
+            "query": {
+                "from": TEST_TABLE,
+                "where": {"exists": "a"}
+            },
+            "expecting_list": {
+                "meta": {"format": "list"},
+                "data": [
+                    {"a": "test1"},
+                    {"a": 0},
+                    {"a": False},
+                    {"a": {"b": 3}},
+                ]
+            },
+        }
+        self.utils.execute_tests(test)
 
 

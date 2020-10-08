@@ -23,7 +23,7 @@ from tempfile import TemporaryFile
 
 import mo_json
 import mo_math
-from mo_dots import concat_field, unwrap, wrap, is_many
+from mo_dots import concat_field, unwrap, to_data, is_many, list_to_data, listwrap
 from mo_future import HTMLParser, PY3, StringIO, is_binary, is_text, long, text
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
@@ -44,12 +44,7 @@ def string2datetime(value, format=None):
 
 
 def string2boolean(value):
-    if value in ["true", "T"]:
-        return True
-    elif value in ["false", "F"]:
-        return False
-    else:
-        return None
+    return _v2b.get(value)
 
 
 _v2b = {
@@ -150,7 +145,8 @@ def table2list(
     column_names, # tuple of columns names
     rows          # list of tuples
 ):
-    return wrap([dict(zip(column_names, r)) for r in rows])
+    return list_to_data([dict(zip(column_names, r)) for r in rows])
+
 
 def table2tab(
     column_names, # tuple of columns names
@@ -162,19 +158,17 @@ def table2tab(
     return row(column_names)+"\n"+("\n".join(row(r) for r in rows))
 
 
-
-def list2tab(rows):
+def list2tab(rows, separator="\t"):
     columns = set()
-    for r in wrap(rows):
+    for r in listwrap(rows):
         columns |= set(k for k, v in r.leaves())
     keys = list(columns)
 
     output = []
-    for r in wrap(rows):
-        output.append("\t".join(value2json(r[k]) for k in keys))
+    for r in to_data(rows):
+        output.append(separator.join(value2json(r[k]) for k in keys))
 
-    return "\t".join(keys) + "\n" + "\n".join(output)
-
+    return separator.join(keys) + "\n" + "\n".join(output)
 
 
 def value2string(value):
@@ -460,7 +454,7 @@ def ini2value(ini_content):
         output[section]=s = {}
         for k, v in config.items(section):
             s[k]=v
-    return wrap(output)
+    return to_data(output)
 
 
 if PY3:

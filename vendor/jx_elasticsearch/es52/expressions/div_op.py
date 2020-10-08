@@ -11,8 +11,9 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import DivOp as DivOp_
 from jx_elasticsearch.es52.expressions.not_op import NotOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 
 
 class DivOp(DivOp_):
-    def to_esfilter(self, schema):
-        return NotOp(self.missing()).partial_eval().to_esfilter(schema)
+    def to_es(self, schema):
+        return NotOp(self.missing(ES52)).partial_eval(ES52).to_es(schema)

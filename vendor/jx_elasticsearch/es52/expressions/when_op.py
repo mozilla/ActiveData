@@ -14,15 +14,14 @@ from jx_elasticsearch.es52.expressions.and_op import AndOp
 from jx_elasticsearch.es52.expressions.boolean_op import BooleanOp
 from jx_elasticsearch.es52.expressions.not_op import NotOp
 from jx_elasticsearch.es52.expressions.or_op import OrOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 
 
 class WhenOp(WhenOp_):
-    def to_esfilter(self, schema):
-        output = OrOp(
-            [
-                AndOp([self.when, BooleanOp(self.then)]),
-                AndOp([NotOp(self.when), BooleanOp(self.els_)]),
-            ]
-        ).partial_eval()
+    def to_es(self, schema):
+        output = OrOp([
+            AndOp([self.when, BooleanOp(self.then)]),
+            AndOp([NotOp(self.when), BooleanOp(self.els_)]),
+        ]).partial_eval(ES52)
 
-        return output.to_esfilter(schema)
+        return output.to_es(schema)

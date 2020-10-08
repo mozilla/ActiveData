@@ -12,20 +12,21 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import CaseOp as CaseOp_
 from jx_elasticsearch.es52.expressions.and_op import AndOp
 from jx_elasticsearch.es52.expressions.or_op import OrOp
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_json import BOOLEAN
 from mo_logs import Log
 
 
 class CaseOp(CaseOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if self.type == BOOLEAN:
             return (
                 OrOp(
                     [AndOp([w.when, w.then]) for w in self.whens[:-1]] + self.whens[-1:]
                 )
-                .partial_eval()
-                .to_esfilter(schema)
+                .partial_eval(ES52)
+                .to_es(schema)
             )
         else:
             Log.error("do not know how to handle")
-            return self.to_es_script(schema).script(schema).to_esfilter(schema)
+            return self.to_es_script(schema).script(schema).to_es(schema)

@@ -11,52 +11,12 @@ from __future__ import absolute_import, division, unicode_literals
 
 import mo_math
 from jx_base.expressions import Variable
+from jx_base.expressions.query_op import DEFAULT_LIMIT, MAX_LIMIT
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT, MAX_LIMIT
-from jx_elasticsearch.es52.expressions.and_op import es_and
-from mo_dots import wrap, Null, coalesce
-from mo_future import is_text, first
+from mo_dots import Null, coalesce
+from mo_future import first
 from mo_json import BOOLEAN, IS_NULL, NUMBER, OBJECT, STRING, NUMBER_TYPES
-from mo_logs import Log
 from pyLibrary.convert import value2boolean
-
-
-def es_query_template(path):
-    """
-    RETURN TEMPLATE AND PATH-TO-FILTER AS A 2-TUPLE
-    :param path: THE NESTED PATH (NOT INCLUDING TABLE NAME)
-    :return: (es_query, es_filters) TUPLE
-    """
-
-    if not is_text(path):
-        Log.error("expecting path to be a string")
-
-    if path != ".":
-        f0 = {}
-        f1 = {}
-        output = wrap({
-            "query": es_and([
-                f0,
-                {"nested": {
-                    "path": path,
-                    "query": f1,
-                    "inner_hits": {"size": 100000}
-                }}
-            ]),
-            "from": 0,
-            "size": 0,
-            "sort": []
-        })
-        return output, wrap([f0, f1])
-    else:
-        f0 = {}
-        output = wrap({
-            "query": es_and([f0]),
-            "from": 0,
-            "size": 0,
-            "sort": []
-        })
-        return output, wrap([f0])
 
 
 def jx_sort_to_es_sort(sort, schema):

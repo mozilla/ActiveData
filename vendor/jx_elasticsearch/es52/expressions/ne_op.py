@@ -14,12 +14,13 @@ from jx_base.language import is_op
 from jx_elasticsearch.es52.expressions.not_op import es_not
 from jx_elasticsearch.es52.expressions.script_op import ScriptOp
 from jx_elasticsearch.es52.expressions.true_op import MATCH_ALL
+from jx_elasticsearch.es52.expressions.utils import ES52
 from mo_future import first
 from mo_logs import Log
 
 
 class NeOp(NeOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         if is_op(self.lhs, Variable_) and is_literal(self.rhs):
             columns = schema.values(self.lhs.var)
             if len(columns) == 0:
@@ -29,43 +30,41 @@ class NeOp(NeOp_):
             else:
                 Log.error("column split to multiple, not handled")
         else:
-            lhs = self.lhs.partial_eval().to_es_script(schema)
-            rhs = self.rhs.partial_eval().to_es_script(schema)
+            lhs = self.lhs.partial_eval(ES52).to_es_script(schema)
+            rhs = self.rhs.partial_eval(ES52).to_es_script(schema)
 
             if lhs.many:
                 if rhs.many:
                     return es_not(
-                        ScriptOp(
-                            (
-                                "("
-                                + lhs.expr
-                                + ").size()==("
-                                + rhs.expr
-                                + ").size() && "
-                                + "("
-                                + rhs.expr
-                                + ").containsAll("
-                                + lhs.expr
-                                + ")"
-                            )
-                        ).to_esfilter(schema)
+                        ScriptOp((
+                            "("
+                            + lhs.expr
+                            + ").size()==("
+                            + rhs.expr
+                            + ").size() && "
+                            + "("
+                            + rhs.expr
+                            + ").containsAll("
+                            + lhs.expr
+                            + ")"
+                        )).to_es(schema)
                     )
                 else:
                     return es_not(
                         ScriptOp(
                             "(" + lhs.expr + ").contains(" + rhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )
             else:
                 if rhs.many:
                     return es_not(
                         ScriptOp(
                             "(" + rhs.expr + ").contains(" + lhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )
                 else:
                     return es_not(
                         ScriptOp(
                             "(" + lhs.expr + ") != (" + rhs.expr + ")"
-                        ).to_esfilter(schema)
+                        ).to_es(schema)
                     )

@@ -17,8 +17,8 @@ class PrefixOp(PrefixOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "("
-            + Python[self.expr].to_python()
+            + (self.expr).to_python()
             + ").startswith("
-            + Python[self.prefix].to_python()
+            + (self.prefix).to_python()
             + ")"
         )

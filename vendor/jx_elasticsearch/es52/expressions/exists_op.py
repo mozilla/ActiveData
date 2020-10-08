@@ -10,11 +10,12 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import ExistsOp as ExistsOp_
+from jx_elasticsearch.es52.expressions.utils import ES52
 
 
 class ExistsOp(ExistsOp_):
-    def to_esfilter(self, schema):
-        return self.field.exists().partial_eval().to_esfilter(schema)
+    def to_es(self, schema):
+        return self.expr.exists().partial_eval(ES52).to_es(schema)
 
 
 def es_exists(term):

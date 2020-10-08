@@ -141,7 +141,7 @@ The `unittest` records are quite large, and in most cases you will not be intere
 
 ## Grouping
 
-Pulling individual records is unexciting, and it will take forever to get an understanding of the billions records behind it. ActiveData's objective is to provide aggregates fast.
+Pulling individual records is unexciting, and it will take forever to get an understanding of the billions records in ActiveData. ActiveData's objective is to provide aggregates quickly.
 
 ## `groupby` Clause
 

@@ -8,30 +8,20 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import first_op, not_op, eq_op
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
-from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import NULL
+from jx_base.expressions.not_op import NotOp
 from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.when_op import WhenOp
 from jx_base.language import is_op
 from mo_dots import is_sequence
 from mo_future import first
+from mo_imports import export
 from mo_json import OBJECT, BOOLEAN
 from mo_logs import Log
 
@@ -67,20 +57,25 @@ class CaseOp(Expression):
     def map(self, map_):
         return self.lang[CaseOp([w.map(map_) for w in self.whens])]
 
-    def missing(self):
-        m = self.whens[-1].missing()
+    def missing(self, lang):
+        m = self.whens[-1].missing(lang)
         for w in reversed(self.whens[0:-1]):
-            when = w.when.partial_eval()
+            when = w.when.partial_eval(lang)
             if when is FALSE:
                 pass
             elif when is TRUE:
-                m = w.then.partial_eval().missing()
+                m = w.then.partial_eval(lang).missing(lang)
             else:
-                m = self.lang[OrOp([AndOp([when, w.then.partial_eval().missing()]), m])]
-        return m.partial_eval()
+                m = self.lang[OrOp([
+                    AndOp([when, w.then.partial_eval(lang).missing(lang)]),
+                    m,
+                ])]
+        return m.partial_eval(lang)
 
-    @simplified
-    def partial_eval(self):
+    def invert(self, lang):
+        return CaseOp([w.invert(lang) for w in self.whens]).partial_eval(lang)
+
+    def partial_eval(self, lang):
         if self.type == BOOLEAN:
             nots = []
             ors = []
@@ -88,25 +83,29 @@ class CaseOp(Expression):
                 ors.append(AndOp(nots + [w.when, w.then]))
                 nots.append(NotOp(w.when))
             ors.append(AndOp(nots + [self.whens[-1]]))
-            return self.lang[OrOp(ors)].partial_eval()
+            return (OrOp(ors)).partial_eval(lang)
 
         whens = []
         for w in self.whens[:-1]:
-            when = self.lang[w.when].partial_eval()
+            when = (w.when).partial_eval(lang)
             if when is TRUE:
-                whens.append(self.lang[w.then].partial_eval())
+                whens.append((w.then).partial_eval(lang))
                 break
             elif when is FALSE:
                 pass
             else:
-                whens.append(self.lang[WhenOp(when, **{"then": w.then.partial_eval()})])
+                whens.append(self.lang[WhenOp(
+                    when, **{"then": w.then.partial_eval(lang)}
+                )])
         else:
-            whens.append(self.lang[self.whens[-1]].partial_eval())
+            whens.append((self.whens[-1]).partial_eval(lang))
 
         if len(whens) == 1:
             return whens[0]
         elif len(whens) == 2:
-            return self.lang[WhenOp(whens[0].when, **{"then": whens[0].then, "else": whens[1]})]
+            return self.lang[WhenOp(
+                whens[0].when, **{"then": whens[0].then, "else": whens[1]}
+            )]
         else:
             return self.lang[CaseOp(whens)]
 
@@ -119,6 +118,5 @@ class CaseOp(Expression):
             return first(types)
 
 
-first_op.CaseOp = CaseOp
-not_op.CaseOp = CaseOp
-eq_op.CaseOp = CaseOp
+export("jx_base.expressions.eq_op", CaseOp)
+export("jx_base.expressions.first_op", CaseOp)

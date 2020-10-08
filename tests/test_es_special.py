@@ -10,14 +10,15 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_python import jx
-from mo_future import text
-
 from active_data.actions import find_container
+from jx_base.container import type2container
 from jx_base.expressions import NULL
-from mo_dots import Data, wrap, set_default
-from mo_times import Date
+from jx_elasticsearch.es52 import ES52
+from jx_python import jx
+from mo_dots import Data, dict_to_data, list_to_data
+from mo_future import text
 from mo_http import http
+from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
@@ -28,39 +29,25 @@ class TestESSpecial(BaseTestCase):
 
     def test_query_on_es_base_field(self):
         schema = {
-            "settings": {
-                "analysis": {
-                    "analyzer": {
-                        "whiteboard_tokens": {
-                            "type": "custom",
-                            "tokenizer": "whiteboard_tokens_pattern",
-                            "filter": ["stop"],
-                        }
-                    },
-                    "tokenizer": {
-                        "whiteboard_tokens_pattern": {
-                            "type": "pattern",
-                            "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
-                        }
-                    },
-                }
-            },
-            "mappings": {
-                "test_result": {
-                    "properties": {
-                        "status_whiteboard": {
-                            "type": "keyword",
-                            "store": True,
-                            "fields": {
-                                "tokenized": {
-                                    "type": "text",
-                                    "analyzer": "whiteboard_tokens",
-                                }
-                            },
-                        }
-                    }
-                }
-            },
+            "settings": {"analysis": {
+                "analyzer": {"whiteboard_tokens": {
+                    "type": "custom",
+                    "tokenizer": "whiteboard_tokens_pattern",
+                    "filter": ["stop"],
+                }},
+                "tokenizer": {"whiteboard_tokens_pattern": {
+                    "type": "pattern",
+                    "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
+                }},
+            }},
+            "mappings": {"test_result": {"properties": {"status_whiteboard": {
+                "type": "keyword",
+                "store": True,
+                "fields": {"tokenized": {
+                    "type": "text",
+                    "analyzer": "whiteboard_tokens",
+                }},
+            }}}},
         }
 
         test = {
@@ -76,39 +63,25 @@ class TestESSpecial(BaseTestCase):
 
     def test_query_on_es_sub_field(self):
         schema = {
-            "settings": {
-                "analysis": {
-                    "analyzer": {
-                        "whiteboard_tokens": {
-                            "type": "custom",
-                            "tokenizer": "whiteboard_tokens_pattern",
-                            "filter": ["stop"],
-                        }
-                    },
-                    "tokenizer": {
-                        "whiteboard_tokens_pattern": {
-                            "type": "pattern",
-                            "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
-                        }
-                    },
-                }
-            },
-            "mappings": {
-                "test_result": {
-                    "properties": {
-                        "status_whiteboard": {
-                            "type": "keyword",
-                            "store": True,
-                            "fields": {
-                                "tokenized": {
-                                    "type": "text",
-                                    "analyzer": "whiteboard_tokens",
-                                }
-                            },
-                        }
-                    }
-                }
-            },
+            "settings": {"analysis": {
+                "analyzer": {"whiteboard_tokens": {
+                    "type": "custom",
+                    "tokenizer": "whiteboard_tokens_pattern",
+                    "filter": ["stop"],
+                }},
+                "tokenizer": {"whiteboard_tokens_pattern": {
+                    "type": "pattern",
+                    "pattern": "\\s*([,;]*\\[|\\][\\s\\[]*|[;,])\\s*",
+                }},
+            }},
+            "mappings": {"test_result": {"properties": {"status_whiteboard": {
+                "type": "keyword",
+                "store": True,
+                "fields": {"tokenized": {
+                    "type": "text",
+                    "analyzer": "whiteboard_tokens",
+                }},
+            }}}},
         }
 
         test = {
@@ -131,13 +104,10 @@ class TestESSpecial(BaseTestCase):
         self.utils.execute_tests(test)
 
     def test_query_on_null_startswith(self):
-        schema = {
-            "mappings": {
-                "test_result": {
-                    "properties": {"name": {"type": "keyword", "store": True}}
-                }
-            }
-        }
+        schema = {"mappings": {"test_result": {"properties": {"name": {
+            "type": "keyword",
+            "store": True,
+        }}}}}
 
         test = {
             "schema": schema,
@@ -177,7 +147,7 @@ class TestESSpecial(BaseTestCase):
             limit_replicas=True,
             limit_replicas_warning=False,
             read_only=False,
-            typed=False
+            typed=False,
         )
 
         cluster = self.utils._es_cluster
@@ -194,32 +164,26 @@ class TestESSpecial(BaseTestCase):
         # COLUMN WITH ZERO RECORDS
         index1 = cluster.create_index(
             index=index1,
-            schema= {
-                "mappings": {
-                    "test": {
-                        "properties": {"missing_value": {"type": "keyword", "store": True}}
-                    }
-                }
-            },
-            kwargs=common
+            schema={"mappings": {"test": {"properties": {"missing_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
+            kwargs=common,
         )
         index1.add_alias(common.alias)
 
         # INDEX WITH ONE RECORD
         index2 = cluster.create_index(
             index=index2,
-            schema= {
-                "mappings": {
-                    "test": {
-                        "properties": {"one_value": {"type": "keyword", "store": True}}
-                    }
-                }
-            },
-            kwargs=common
+            schema={"mappings": {"test": {"properties": {"one_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
+            kwargs=common,
         )
         index2.add_alias(common.alias)
         index2.add({"value": {"one_value": "a value!"}})
-        index2.flush(forced=True)
+        index2.refresh()
 
         # FORCE metadata MERGE
         c = find_container(common.alias, Date.now())
@@ -230,11 +194,17 @@ class TestESSpecial(BaseTestCase):
         schema2 = indices[index2.settings.index]
 
         # THE one_value GOT PICKED UP
-        self.assertEqual(schema1,
-                         {"mappings": {"test": {"properties": {"one_value": {"type": "keyword", "store": True}}}}})
+        self.assertEqual(
+            schema1,
+            {"mappings": {"test": {"properties": {"one_value": {
+                "type": "keyword",
+                "store": True,
+            }}}}},
+        )
         # THE missing_value DID NOT GET PICKED UP
-        self.assertEqual(schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}})
-
+        self.assertEqual(
+            schema2, {"mappings": {"test": {"properties": {"missing_value": NULL}}}}
+        )
 
         try:
             cluster.delete_index(index1)
@@ -249,23 +219,90 @@ class TestESSpecial(BaseTestCase):
     def test_no_update(self):
         data = jx.sort([{"a": "test" + text(i)} for i in range(10)], "a")
 
-        test = wrap({
+        test = dict_to_data({
             "data": data,
-            "query": {
-                "from": TEST_TABLE,
-                "limit": len(data),
-                "sort": "a"
-            },
+            "query": {"from": TEST_TABLE, "limit": len(data), "sort": "a"},
             "expecting_list": {"data": data},  # DUMMY, TO ENSURE LOADED
         })
         self.utils.execute_tests(test)
         test.query.clear = "."
-        test.query.update = test.query['from']
-        test.query['from'] = None
+        test.query.update = test.query["from"]
+        test.query["from"] = None
 
         def result():
             http.post_json(
-                url=self.utils.testing.query,
-                json=test.query,
+                url=self.utils.testing.query, json=test.query,
             )
+
         self.assertRaises(Exception, result)
+
+    def test_missing_column_removed_from_metadata(self):
+        # MAKE INDEX WITH ALIAS
+        # ADD TWO COLUMNS, USE ONLY ONE
+        # MAKE ANOTHER INDEX
+        # VERIFY NEW INDEX GETS USED COLUMN
+        # VERIFY NEW INDEX DOES NOT HAVE UNUSED COLUMN
+        # DROP OLD INDEX
+        # VERIFY UNUSED COLUMN IS DROPPED FROM METADATA
+        # VERIFY "USED" COLUMN STILL EXISTS (BUT HAS ZERO CARDINALITY)
+        pass
+
+    def test_columns_not_leaked(self):
+        alias = "testing_replace"
+        index_name = "testing_replace-20200527_000000"
+        cluster = self.utils._es_cluster
+        common = Data(
+            alias=alias,
+            limit_replicas=True,
+            limit_replicas_warning=False,
+            read_only=False,
+            typed=True,
+            type=cluster.settings.type,
+            schema={},
+        )
+
+        # MAKE INDEX WITH ALIAS
+        try:
+            cluster.delete_index(index_name)
+        except Exception:
+            pass
+        index1 = cluster.create_index(index=index_name, kwargs=common)
+        index1.add_alias(common.alias)
+
+        # ADD DATA
+        index1.add({"value": {"a": 1}})
+        index1.refresh()
+        # REGISTER JX QUERIES TO OPERATE ON ES
+        type2container.setdefault("elasticsearch", ES52)
+        # FORCE RELOAD
+        found_container = find_container(alias, after=Date.now())
+
+        # VERIFY SCHEMA OF DATA
+        columns = found_container.snowflake.columns
+        self.assertEqual(columns.get("es_column"), {".", "_id", "a", "a.~n~", "~e~"})
+
+        # DROP INDEX
+        try:
+            cluster.delete_index(index_name)
+        except Exception:
+            pass
+
+        # MAKE NEW INDEX, WITH SAME NAME
+        index1 = cluster.create_index(index=index_name, kwargs=common)
+        index1.add_alias(common.alias)
+
+        # ADD OTHER DATA
+        index1.add({"value": {"b": 2}})
+        index1.refresh()
+
+        while index1.search({"query": {"match_all": {}}, "size": 0}).hits.total < 1:
+            pass
+
+        # FORCE RELOAD
+        new_found_container = find_container(alias, after=Date.now())
+
+        # VERIFY OLD SCHEMA DOES NOT EXIST
+        columns = list_to_data([
+            c for c in new_found_container.snowflake.columns if c.cardinality != 0
+        ])
+        self.assertEqual(columns.get("es_column"), {".", "_id", "b", "b.~n~", "~e~"})

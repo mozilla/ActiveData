@@ -9,27 +9,26 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import (
-    InOp as InOp_,
-    TupleOp,
-    Variable as Variable_,
-    is_literal,
-)
+from jx_base.expressions import NULL, InOp as BaseInOp, is_literal, TupleOp
 from jx_base.language import is_op
-from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
-from jx_elasticsearch.es52.painless import Painless
 from jx_elasticsearch.es52.expressions.eq_op import EqOp
+from jx_elasticsearch.es52.expressions.false_op import MATCH_NONE
+from jx_elasticsearch.es52.expressions.nested_op import NestedOp
 from jx_elasticsearch.es52.expressions.or_op import OrOp
+from jx_elasticsearch.es52.expressions.utils import ES52
+from jx_elasticsearch.es52.expressions.variable import Variable
+from jx_elasticsearch.es52.painless import AndOp
 from mo_dots import is_many
 from mo_future import first
 from mo_json import BOOLEAN
 from pyLibrary.convert import value2boolean
 
 
-class InOp(InOp_):
-    def to_esfilter(self, schema):
-        if is_op(self.value, Variable_):
-            var = self.value.var
+class InOp(BaseInOp):
+    def to_es(self, schema):
+        value = self.value
+        if is_op(value, Variable):
+            var = value.var
             cols = schema.leaves(var)
             if not cols:
                 return MATCH_NONE
@@ -41,7 +40,9 @@ class InOp(InOp_):
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: value2boolean(self.superset.value)}}
                     else:
-                        return {"terms": {var: list(map(value2boolean, self.superset.value))}}
+                        return {"terms": {var: list(map(
+                            value2boolean, self.superset.value
+                        ))}}
                 else:
                     if is_literal(self.superset) and not is_many(self.superset.value):
                         return {"term": {var: self.superset.value}}
@@ -49,9 +50,25 @@ class InOp(InOp_):
                         return {"terms": {var: self.superset.value}}
             elif is_op(self.superset, TupleOp):
                 return (
-                    OrOp([EqOp([self.value, s]) for s in self.superset.terms])
-                    .partial_eval()
-                    .to_esfilter(schema)
+                    OrOp([EqOp([value, s]) for s in self.superset.terms])
+                    .partial_eval(ES52)
+                    .to_es(schema)
                 )
+        if (
+            is_op(value, NestedOp)
+            and is_literal(self.superset)
+            and is_op(value.select, Variable)
+        ):
+            output = (
+                NestedOp(
+                    path=value.path,
+                    select=NULL,
+                    where=AndOp([value.where, InOp([value.select, self.superset])]),
+                )
+                .exists()
+                .partial_eval(ES52)
+                .to_es(schema)
+            )
+            return output
         # THE HARD WAY
-        return Painless[self].to_es_script(schema).to_esfilter(schema)
+        return (self).to_es_script(schema).to_es(schema)

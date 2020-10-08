@@ -15,4 +15,4 @@ from jx_python.expressions._utils import Python
 
 class MissingOp(MissingOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return Python[self.expr].to_python() + " == None"
+        return (self.expr).to_python() + " == None"

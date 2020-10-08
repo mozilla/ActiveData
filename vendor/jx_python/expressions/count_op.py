@@ -17,6 +17,6 @@ class CountOp(CountOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "sum(((0 if v==None else 1) for v in "
-            + Python[self.terms].to_python(not_null=False, boolean=False, many=True)
+            + (self.terms).to_python(not_null=False, boolean=False, many=True)
             + "), 0)"
         )

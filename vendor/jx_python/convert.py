@@ -10,7 +10,7 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import wrap, unwraplist
+from mo_dots import unwraplist, dict_to_data
 from mo_future import text
 from mo_json import value2json
 from mo_logs.strings import expand_template
@@ -26,7 +26,7 @@ def list2cube(rows, column_names=None):
         keys = list(columns)
 
     data = {k: [] for k in keys}
-    output = wrap({
+    output = dict_to_data({
         "meta": {"format": "cube"},
         "edges": [
             {
@@ -55,12 +55,11 @@ def list2table(rows, column_names=None):
 
     output = [[unwraplist(r.get(k)) for k in keys] for r in rows]
 
-    return wrap({
+    return dict_to_data({
         "meta": {"format": "table"},
         "header": keys,
         "data": output
     })
-
 
 def table2csv(table_data):
     """

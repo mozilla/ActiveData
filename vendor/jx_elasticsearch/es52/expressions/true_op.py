@@ -11,12 +11,15 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import TrueOp, extend
-from mo_dots import wrap
+from mo_dots import dict_to_data
+from mo_imports import export
 
 
 @extend(TrueOp)
-def to_esfilter(self, schema):
+def to_es(self, schema):
     return MATCH_ALL
 
 
-MATCH_ALL = wrap({"match_all": {}})
+MATCH_ALL = dict_to_data({"match_all": {}})
+
+export("jx_elasticsearch.es52.expressions.utils", MATCH_ALL)

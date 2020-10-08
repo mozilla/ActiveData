@@ -12,7 +12,7 @@ import os
 import platform
 import subprocess
 
-from mo_dots import set_default, wrap, Null
+from mo_dots import set_default, to_data, Null
 from mo_future import text
 from mo_logs import Log, strings
 from mo_logs.exceptions import Except
@@ -247,7 +247,7 @@ class Command(object):
     def __init__(self, name, params, cwd=None, env=None, debug=False, shell=False, bufsize=-1):
         shell = True
         self.name = name
-        self.key = (cwd, wrap(env), debug, shell)
+        self.key = (cwd, to_data(env), debug, shell)
         self.stdout = Queue("stdout for "+name)
         self.stderr = Queue("stderr for "+name)
 

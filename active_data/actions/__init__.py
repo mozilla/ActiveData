@@ -16,11 +16,11 @@ from active_data.actions import save_query
 from jx_base import container
 from jx_elasticsearch import meta
 from jx_elasticsearch.meta import ElasticsearchMetadata
-from jx_python.containers.list_usingPythonList import ListContainer
+from jx_python.containers.list import ListContainer
 from mo_dots import is_container, join_field
 from mo_dots import is_data, set_default, split_field
 from mo_future import is_text, first
-from mo_json import STRUCT, value2json
+from mo_json import INTERNAL, value2json
 from mo_logs import Log
 from mo_threads import Till
 from mo_times import Timer
@@ -80,14 +80,12 @@ def test_mode_wait(query, please_stop):
             while not timeout:
                 # GET FRESH VERSIONS
                 cols = metadata_manager.get_columns(
-                    table_name=alias,
-                    after=after,
-                    timeout=timeout
+                    table_name=alias, after=after, timeout=timeout
                 )
                 not_ready = [
                     c
                     for c in cols
-                    if c.jx_type not in STRUCT
+                    if c.jx_type not in INTERNAL
                     and (
                         after >= c.last_updated
                         or (require_cardinality and c.cardinality == None)
@@ -95,7 +93,10 @@ def test_mode_wait(query, please_stop):
                 ]
                 if not_ready:
                     Log.note(
-                        "wait for column (table={{col.es_index}}, name={{col.es_column}}, cardinality={{col.cardinality|json}}, last_updated={{col.last_updated|datetime}}) metadata to arrive",
+                        "wait for column (table={{col.es_index}},"
+                        " name={{col.es_column}}, cardinality={{col.cardinality|json}},"
+                        " last_updated={{col.last_updated|datetime}}) metadata to"
+                        " arrive",
                         col=first(not_ready),
                     )
                 else:
@@ -120,7 +121,8 @@ def find_container(frum, after):
     if not namespace:
         if not container.config.default.settings:
             Log.error(
-                "expecting jx_base.container.config.default.settings to contain default elasticsearch connection info"
+                "expecting jx_base.container.config.default.settings to contain default"
+                " elasticsearch connection info"
             )
         namespace = ElasticsearchMetadata(container.config.default.settings)
     if not frum:
@@ -160,7 +162,7 @@ def find_container(frum, after):
             Log.error("Expecting from clause to have a 'type' property")
         return container.type2container[frum.type](frum.settings)
     elif is_data(frum) and (frum["from"] or is_container(frum["from"])):
-        from jx_base.query import QueryOp
+        from jx_base.expressions import QueryOp
 
         return QueryOp.wrap(frum)
     elif is_container(frum):

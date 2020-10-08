@@ -25,22 +25,25 @@ from mmap import mmap
 from numbers import Number
 from tempfile import TemporaryFile
 
-from mo_files import mimetype
+from requests import Response, sessions
+from urllib3.util import url
 
 import mo_math
-from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, wrap, is_sequence
+from mo_dots import Data, Null, coalesce, is_list, set_default, unwrap, to_data, is_sequence
+from mo_files import mimetype
 from mo_files.url import URL
 from mo_future import PY2, is_text, text
 from mo_future import StringIO
+from mo_http.big_data import ibytes2ilines, icompressed2ibytes, safe_size, ibytes2icompressed, bytes2zip, zip2bytes
 from mo_json import json2value, value2json
 from mo_kwargs import override
 from mo_logs import Log
 from mo_logs.exceptions import Except
 from mo_threads import Lock, Till
 from mo_times import Timer, Duration
-from requests import Response, sessions
 
-from mo_http.big_data import ibytes2ilines, icompressed2ibytes, safe_size, ibytes2icompressed, bytes2zip, zip2bytes
+# WE WANT TO SEND INVALID URL PATHS
+url._remove_path_dot_segments = lambda path: path
 
 DEBUG = False
 FILE_SIZE_LIMIT = 100 * 1024 * 1024
@@ -127,7 +130,7 @@ def request(method, url, headers=None, data=None, json=None, zip=None, retry=Non
             _to_ascii_dict(headers)
 
             # RETRY
-            retry = wrap(retry)
+            retry = to_data(retry)
             if retry == None:
                 retry = set_default({}, DEFAULTS['retry'])
             elif isinstance(retry, Number):

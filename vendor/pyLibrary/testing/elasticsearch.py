@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_python import jx
-from mo_dots import Data, Null, is_list, unwrap, wrap
+from mo_dots import Data, Null, is_list, unwrap, to_data, dict_to_data, list_to_data
 from mo_files import File
 import mo_json
 from mo_kwargs import override
@@ -59,20 +59,20 @@ class FakeES():
     def __init__(self, filename, host="fake", index="fake", kwargs=None):
         self.settings = kwargs
         self.file = File(filename)
-        self.cluster= Null
+        self.cluster = Null
         try:
             self.data = mo_json.json2value(self.file.read())
         except Exception as e:
             self.data = Data()
 
     def search(self, query):
-        query = wrap(query)
+        query = to_data(query)
         f = jx.get(query.query.filtered.filter)
-        filtered = wrap([{"_id": i, "_source": d} for i, d in self.data.items() if f(d)])
+        filtered = list_to_data([{"_id": i, "_source": d} for i, d in self.data.items() if f(d)])
         if query.fields:
-            return wrap({"hits": {"total": len(filtered), "hits": [{"_id": d._id, "fields": unwrap(jx.select([unwrap(d._source)], query.fields)[0])} for d in filtered]}})
+            return dict_to_data({"hits": {"total": len(filtered), "hits": [{"_id": d._id, "fields": unwrap(jx.select([unwrap(d._source)], query.fields)[0])} for d in filtered]}})
         else:
-            return wrap({"hits": {"total": len(filtered), "hits": filtered}})
+            return dict_to_data({"hits": {"total": len(filtered), "hits": filtered}})
 
     def extend(self, records):
         """
@@ -99,7 +99,7 @@ class FakeES():
 
     def delete_record(self, filter):
         f = esfilter2where(filter)
-        self.data = wrap({k: v for k, v in self.data.items() if not f(v)})
+        self.data = dict_to_data({k: v for k, v in self.data.items() if not f(v)})
 
     def refresh(self, *args, **kwargs):
         data_as_json = mo_json.value2json(self.data, pretty=True)

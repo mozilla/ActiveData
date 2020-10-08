@@ -12,15 +12,15 @@ from __future__ import absolute_import, division, unicode_literals
 from jx_base.expressions import NotOp as NotOp_
 from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
-from jx_elasticsearch.es52.painless.null_op import null_script
 from jx_elasticsearch.es52.painless.false_op import false_script
+from jx_elasticsearch.es52.painless.null_op import null_script
 from jx_elasticsearch.es52.painless.true_op import true_script
 from mo_json import BOOLEAN
 
 
 class NotOp(NotOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        value = Painless[self.term].partial_eval().to_es_script(schema)
+        value = self.term.partial_eval(Painless).to_es_script(schema)
 
         if value is false_script:
             return true_script
@@ -30,10 +30,5 @@ class NotOp(NotOp_):
             return null_script
 
         return EsScript(
-            type=BOOLEAN,
-            expr="!("
-            + value.expr
-            + ")",
-            frum=self,
-            schema=schema,
+            type=BOOLEAN, expr="!(" + value.expr + ")", frum=self, schema=schema,
         )

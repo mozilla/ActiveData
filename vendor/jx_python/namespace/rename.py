@@ -13,10 +13,10 @@ from copy import copy
 
 from jx_base.dimensions import Dimension
 from jx_base.utils import is_variable_name
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_base.language import is_op
 from jx_python.namespace import Namespace, convert_list
-from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, wrap, is_many
+from mo_dots import Data, coalesce, is_data, is_list, listwrap, set_default, unwraplist, to_data, is_many, dict_to_data
 from mo_future import is_text
 from mo_logs import Log
 from mo_math import is_number
@@ -29,7 +29,7 @@ class Rename(Namespace):
         """
         EXPECTING A LIST OF {"name":name, "value":value} OBJECTS TO PERFORM A MAPPING
         """
-        dimensions = wrap(dimensions)
+        dimensions = to_data(dimensions)
         if is_data(dimensions) and dimensions.name == None:
             # CONVERT TO A REAL DIMENSION DEFINITION
             dimensions = {"name": ".", "type": "set", "edges":[{"name": k, "field": v} for k, v in dimensions.items()]}
@@ -59,13 +59,13 @@ class Rename(Namespace):
                 return self._convert_query(expr)
             elif len(expr) >= 2:
                 #ASSUME WE HAVE A NAMED STRUCTURE, NOT AN EXPRESSION
-                return wrap({name: self.convert(value) for name, value in expr.leaves()})
+                return dict_to_data({name: self.convert(value) for name, value in expr.leaves()})
             else:
                 # ASSUME SINGLE-CLAUSE EXPRESSION
                 k, v = expr.items()[0]
                 return converter_map.get(k, self._convert_bop)(self, k, v)
         elif is_many(expr):
-            return wrap([self.convert(value) for value in expr])
+            return list_to_data([self.convert(value) for value in expr])
         else:
             return expr
 
@@ -119,7 +119,7 @@ class Rename(Namespace):
         """
         JSON QUERY EXPRESSIONS HAVE MANY CLAUSES WITH SIMILAR COLUMN DELCARATIONS
         """
-        clause = wrap(clause)
+        clause = to_data(clause)
 
         if clause == None:
             return None

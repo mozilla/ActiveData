@@ -14,14 +14,14 @@ import os
 from unittest import skip
 
 import mo_json_config
-from mo_dots import wrap
+from mo_dots import dict_to_data
 from mo_future import text
+from mo_http import http
 from mo_json import json2value, value2json
 from mo_logs import Except, Log
 from mo_times.dates import Date, Duration
 from mo_times.durations import DAY
 from mo_times.timer import Timer
-from mo_http import http
 from tests import error
 from tests.test_jx import BaseTestCase, global_settings
 
@@ -68,7 +68,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
@@ -105,7 +105,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
@@ -142,7 +142,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
@@ -199,7 +199,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
@@ -236,7 +236,7 @@ class TestUnittests(BaseTestCase):
         if self.not_real_service():
             return
 
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "from": {
                 "type": "elasticsearch",
                 "settings": {
@@ -275,7 +275,7 @@ class TestUnittests(BaseTestCase):
 
 
     def test_longest_running_tests(self):
-        test = wrap({"query": {
+        test = dict_to_data({"query": {
             "sort": {"sort": -1, "field": "avg"},
             "from": {
                 "from": "unittest",

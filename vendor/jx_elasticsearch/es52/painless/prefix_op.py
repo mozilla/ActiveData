@@ -23,9 +23,9 @@ class PrefixOp(PrefixOp_):
             return EsScript(
                 type=BOOLEAN,
                 expr="("
-                + self.expr.to_es_script(schema).script(schema)
+                + str(self.expr.to_es_script(schema))
                 + ").startsWith("
-                + self.prefix.to_es_script(schema).script(schema)
+                + str(self.prefix.to_es_script(schema))
                 + ")",
                 frum=self,
                 schema=schema,

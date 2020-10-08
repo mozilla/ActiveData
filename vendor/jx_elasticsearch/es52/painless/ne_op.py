@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NeOp as NeOp_
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.basic_eq_op import BasicEqOp
 from jx_elasticsearch.es52.painless.case_op import CaseOp
 from jx_elasticsearch.es52.painless.not_op import NotOp
@@ -19,13 +20,17 @@ from jx_elasticsearch.es52.painless.when_op import WhenOp
 class NeOp(NeOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return (
-            CaseOp(
-                [
-                    WhenOp(self.lhs.missing(), **{"then": NotOp(self.rhs.missing())}),
-                    WhenOp(self.rhs.missing(), **{"then": NotOp(self.lhs.missing())}),
-                    NotOp(BasicEqOp([self.lhs, self.rhs])),
-                ]
-            )
-            .partial_eval()
+            CaseOp([
+                WhenOp(
+                    self.lhs.missing(Painless),
+                    **{"then": NotOp(self.rhs.missing(Painless))}
+                ),
+                WhenOp(
+                    self.rhs.missing(Painless),
+                    **{"then": NotOp(self.lhs.missing(Painless))}
+                ),
+                NotOp(BasicEqOp([self.lhs, self.rhs])),
+            ])
+            .partial_eval(Painless)
             .to_es_script(schema)
         )

@@ -13,14 +13,11 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import allocate_lock as _allocate_lock
-from mo_math.randoms import Random
+from mo_future import allocate_lock as _allocate_lock, decorate
+from mo_math import randoms
 from mo_threads.signals import Signal
 
-_Log = None
-_Except = None
-_Thread = None
-_extract_stack = None
+_Log, _Except, _Thread, _extract_stack = [None] * 4
 
 DEBUG = False
 DEBUG_SIGNAL = False
@@ -40,10 +37,7 @@ def _late_import():
     from mo_threads.threads import Thread as _Thread
     from mo_logs import Log as _Log
 
-    _ = _Log
-    _ = _Except
-    _ = _Thread
-    _ = _extract_stack
+    _keep_imports = _Log, _Except, _Thread, _extract_stack
 
 
 class Lock(object):
@@ -62,7 +56,7 @@ class Lock(object):
         self.waiting = None
 
     def __enter__(self):
-        if self.sample and Random.int(100) == 0:
+        if self.sample and randoms.int(100) == 0:
             _Log.warning("acquire  lock {{name|quote}}", name=self.name)
 
         self.debug and _Log.note("acquire  lock {{name|quote}}", name=self.name)
@@ -116,3 +110,15 @@ class Lock(object):
             pass
 
         return bool(waiter)
+
+
+def locked(func):
+    """
+    WRAP func WITH A Lock, TO ENSURE JUST ONE THREAD AT A TIME
+    """
+    lock = Lock()
+    @decorate(func)
+    def output(*args, **kwargs):
+        with lock:
+            return func(*args, **kwargs)
+    return output

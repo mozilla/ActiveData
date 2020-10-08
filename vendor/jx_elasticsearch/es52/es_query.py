@@ -8,7 +8,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.es52.expressions import ES52
-from mo_dots import is_data, is_list, startswith_field
+from mo_dots import is_data, is_list, startswith_field, dict_to_data
 from mo_future import text
 from mo_json import value2json
 from mo_logs import Log
@@ -26,11 +26,11 @@ class Aggs(object):
 
     def to_es(self, schema, query_path="."):
         if self.children:
-            return {"aggs": {
+            return dict_to_data({"aggs": {
                 name: t.to_es(schema, query_path)
                 for i, t in enumerate(self.children)
                 for name in [t.name if t.name else "_" + text(i)]
-            }}
+            }})
         else:
             return {}
 
@@ -65,6 +65,12 @@ class Aggs(object):
 class ExprAggs(Aggs):
 
     def __init__(self, name, expr, select):
+        """
+        USED TO BUILD GENERAL {key: value} ES QUERY OBJECT
+        :param name: property name
+        :param expr: property value (as Data)
+        :param select:
+        """
         Aggs.__init__(self, name)
         self.expr = expr
         if not select:
@@ -97,13 +103,17 @@ class ExprAggs(Aggs):
 
 
 class CountAggs(Aggs):
-    # DO A DOC COUNT
+    def __init__(self, select=None):
+        """
+        A DOCUMENT COUNT
 
-    def __init__(self, select):
+        :param select: Anything, but will not be used
+        """
         Aggs.__init__(self, None)
         if not select:
-            Log.error("Expecting a select")
-        self.selects = [select]
+            self.selects = []
+        else:
+            self.selects = [select]
 
     def __eq__(self, other):
         if self is other:
@@ -136,7 +146,7 @@ class FilterAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filter'] = ES52[self.filter].partial_eval().to_esfilter(schema)
+        output['filter'] = self.filter.partial_eval(ES52).to_es(schema)
         return output
 
     def copy(self):
@@ -167,7 +177,7 @@ class FiltersAggs(Aggs):
 
     def to_es(self, schema, query_path="."):
         output = Aggs.to_es(self, schema, query_path)
-        output['filters'] = {"filters": [f.partial_eval().to_esfilter(schema) for f in self.filters]}
+        output['filters'] = {"filters": [f.partial_eval(ES52).to_es(schema) for f in self.filters]}
         return output
 
     def copy(self):

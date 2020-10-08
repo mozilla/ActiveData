@@ -8,27 +8,17 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.last_op import LastOp
 from jx_base.expressions.literal import is_literal
 from jx_base.language import is_op
+from mo_imports import expect
 from mo_json import OBJECT
 from mo_logs import Log
 
-CaseOp = None
-WhenOp = None
+CaseOp, WhenOp = expect("CaseOp", "WhenOp")
 
 
 class FirstOp(Expression):
@@ -46,31 +36,22 @@ class FirstOp(Expression):
     def map(self, map_):
         return self.lang[LastOp(self.term.map(map_))]
 
-    def missing(self):
-        return self.term.missing()
+    def missing(self, lang):
+        return self.term.missing(lang)
 
-    @simplified
-    def partial_eval(self):
-        term = self.lang[self.term].partial_eval()
+    def partial_eval(self, lang):
+        term = self.term.partial_eval(lang)
         if is_op(term, FirstOp):
             return term
         elif is_op(term, CaseOp):  # REWRITING
-            return self.lang[
-                CaseOp(
-                    [
-                        WhenOp(t.when, **{"then": FirstOp(t.then)})
-                        for t in term.whens[:-1]
-                    ]
-                    + [FirstOp(term.whens[-1])]
-                )
-            ].partial_eval()
+            return self.lang[CaseOp(
+                [WhenOp(t.when, **{"then": FirstOp(t.then)}) for t in term.whens[:-1]]
+                + [FirstOp(term.whens[-1])]
+            )].partial_eval(lang)
         elif is_op(term, WhenOp):
-            return self.lang[
-                WhenOp(
-                    term.when,
-                    **{"then": FirstOp(term.then), "else": FirstOp(term.els_)}
-                )
-            ].partial_eval()
+            return self.lang[WhenOp(
+                term.when, **{"then": FirstOp(term.then), "else": FirstOp(term.els_)}
+            )].partial_eval(lang)
         elif term.type != OBJECT and not term.many:
             return term
         elif is_literal(term):

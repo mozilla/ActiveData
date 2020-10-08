@@ -8,21 +8,12 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 import operator
 
 from jx_base.language import is_expression, Language
-from mo_dots import Null, is_sequence
+from mo_dots import is_sequence
 from mo_future import (
     first,
     get_function_name,
@@ -31,6 +22,7 @@ from mo_future import (
     text,
     utf8_json_encoder,
 )
+from mo_imports import expect
 from mo_json import BOOLEAN, INTEGER, IS_NULL, NUMBER, OBJECT, STRING, scrub
 from mo_logs import Except, Log
 from mo_math import is_number
@@ -39,7 +31,10 @@ from mo_times import Date
 ALLOW_SCRIPTING = False
 EMPTY_DICT = {}
 
-Literal, TRUE, NULL, TupleOp, Variable = [None] * 5
+Literal, TRUE, FALSE, NULL, TupleOp, Variable = expect(
+    "Literal", "TRUE", "FALSE", "NULL", "TupleOp", "Variable"
+)
+
 
 def extend(cls):
     """
@@ -96,7 +91,7 @@ def _jx_expression(expr, lang):
         new_op = lang[expr]
         if not new_op:
             # CAN NOT BE FOUND, TRY SOME PARTIAL EVAL
-            return language[expr.get_id()].partial_eval()
+            return language[expr.get_id()].partial_eval(lang)
         return expr
         # return new_op(expr.args)  # THIS CAN BE DONE, BUT IT NEEDS MORE CODING, AND I WOULD EXPECT IT TO BE SLOW
 
@@ -111,7 +106,7 @@ def _jx_expression(expr, lang):
     elif is_sequence(expr):
         return lang[TupleOp([_jx_expression(e, lang) for e in expr])]
 
-    # expr = wrap(expr)
+    # expr = to_data(expr)
     try:
         items = items_(expr)
 
@@ -125,7 +120,7 @@ def _jx_expression(expr, lang):
 
                 # THIS LANGUAGE DOES NOT SUPPORT THIS OPERATOR, GOTO BASE LANGUAGE AND GET THE MACRO
                 class_ = language[op.get_id()]
-                output = class_.define(expr).partial_eval()
+                output = class_.define(expr).partial_eval(lang)
                 return _jx_expression(output, lang)
         else:
             if not items:

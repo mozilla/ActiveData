@@ -22,7 +22,7 @@ class UnionOp(UnionOp_):
         return output.toArray();
         """
         parts = [
-            Painless[t].partial_eval().to_es_script(schema, many=True)
+            (t).partial_eval(Painless).to_es_script(schema, many=True)
             for t in self.terms
         ]
         loops = ["for (v in " + p.expr + ") output.add(v);" for p in parts]

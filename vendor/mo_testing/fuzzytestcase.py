@@ -15,7 +15,7 @@ import unittest
 
 from mo_collections.unique_index import UniqueIndex
 import mo_dots
-from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, wrap, is_data, is_many
+from mo_dots import coalesce, is_container, is_list, literal_field, unwrap, to_data, is_data, is_many
 from mo_future import is_text, zip_longest
 from mo_logs import Except, Log, suppress_exception
 from mo_logs.strings import expand_template, quote
@@ -83,7 +83,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
     test = unwrap(test)
     expected = unwrap(expected)
     try:
-        if test is None and (is_null(expected) or expected is None):
+        if test is None and (is_null_op(expected) or expected is None):
             return
         elif test is expected:
             return
@@ -109,7 +109,7 @@ def assertAlmostEqual(test, expected, digits=None, places=None, msg=None, delta=
                     t = test[k]
                 assertAlmostEqual(t, e, msg=msg, digits=digits, places=places, delta=delta)
         elif is_container(test) and isinstance(expected, set):
-            test = set(wrap(t) for t in test)
+            test = set(to_data(t) for t in test)
             if len(test) != len(expected):
                 Log.error(
                     "Sets do not match, element count different:\n{{test|json|indent}}\nexpecting{{expectedtest|json|indent}}",
@@ -158,7 +158,7 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     """
     Snagged from unittest/case.py, then modified (Aug2014)
     """
-    if is_null(expected):
+    if is_null_op(expected):
         if test == None:  # pandas dataframes reject any comparision with an exception!
             return
         else:
@@ -233,5 +233,5 @@ def assertAlmostEqualValue(test, expected, digits=None, places=None, msg=None, d
     raise AssertionError(coalesce(msg, "") + ": (" + standardMsg + ")")
 
 
-def is_null(v):
+def is_null_op(v):
     return v.__class__.__name__ == "NullOp"

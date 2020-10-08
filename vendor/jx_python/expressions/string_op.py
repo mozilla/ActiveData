@@ -15,6 +15,6 @@ from jx_python.expressions._utils import Python
 
 class StringOp(StringOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        missing = Python[self.term.missing()].to_python(boolean=True)
-        value = Python[self.term].to_python(not_null=True)
+        missing = (self.term.missing(Python)).to_python(boolean=True)
+        value = self.term.to_python(not_null=True)
         return "null if (" + missing + ") else text(" + value + ")"

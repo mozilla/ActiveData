@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 import functools
 
-from mo_dots import Data, FlatList, coalesce, is_data, is_list, split_field, wrap
+from mo_dots import Data, FlatList, coalesce, is_data, is_list, split_field, to_data
 from mo_future import is_text
 from mo_logs import Log
 from mo_math import MIN
@@ -67,7 +67,7 @@ class PartFlatList(list):
                 short_key = keys[depth:]
 
                 output = FlatList()
-                _select1((wrap(d[depth]) for d in self.data), short_key, 0, output)
+                _select1((to_data(d[depth]) for d in self.data), short_key, 0, output)
                 return output
 
         if is_list(fields):

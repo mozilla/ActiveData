@@ -15,7 +15,7 @@ from jx_python.expressions._utils import Python, with_var
 
 class RightOp(RightOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        v = Python[self.value].to_python()
-        l = Python[self.length].to_python()
+        v = (self.value).to_python()
+        l = (self.length).to_python()
 
         return with_var("v", v, "None if v == None else v[max(0, len(v)-int(" + l + ")):]")

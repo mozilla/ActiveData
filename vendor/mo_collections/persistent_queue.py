@@ -10,12 +10,13 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_dots import Data, wrap
+from mo_json import json2value
+
+from mo_dots import Data, to_data
 from mo_files import File
-import mo_json
 from mo_logs import Log
 from mo_logs.exceptions import suppress_exception
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Lock, Signal, THREAD_STOP
 
 DEBUG = True
@@ -44,7 +45,7 @@ class PersistentQueue(object):
         if self.file.exists:
             for line in self.file:
                 with suppress_exception:
-                    delta = mo_json.json2value(line)
+                    delta = json2value(line)
                     apply_delta(self.db, delta)
             if self.db.status.start == None:  # HAPPENS WHEN ONLY ADDED TO QUEUE, THEN CRASH
                 self.db.status.start = 0
@@ -71,14 +72,13 @@ class PersistentQueue(object):
             DEBUG and Log.note("New persistent queue {{name}}", name=self.file.abspath)
 
     def _add_pending(self, delta):
-        delta = wrap(delta)
+        delta = to_data(delta)
         self.pending.append(delta)
 
     def _apply_pending(self):
         for delta in self.pending:
             apply_delta(self.db, delta)
         self.pending = []
-
 
     def __iter__(self):
         """
@@ -172,7 +172,7 @@ class PersistentQueue(object):
                 for i in range(self.db.status.start, self.start):
                     self._add_pending({"remove": str(i)})
 
-                if self.db.status.end - self.start < 10 or Random.range(0, 1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
+                if self.db.status.end - self.start < 10 or randoms.range(0, 1000) == 0:  # FORCE RE-WRITE TO LIMIT FILE SIZE
                     # SIMPLY RE-WRITE FILE
                     if DEBUG:
                         Log.note("Re-write {{num_keys}} keys to persistent queue", num_keys=self.db.status.end - self.start)
@@ -181,14 +181,14 @@ class PersistentQueue(object):
                                 continue
                             Log.error("Not expecting {{key}}", key=k)
                     self._commit()
-                    self.file.write(mo_json.value2json({"add": self.db}) + "\n")
+                    self.file.write(value2json({"add": self.db}) + "\n")
                 else:
                     self._commit()
             except Exception as e:
                 raise e
 
     def _commit(self):
-        self.file.append("\n".join(mo_json.value2json(p) for p in self.pending))
+        self.file.append("\n".join(value2json(p) for p in self.pending))
         self._apply_pending()
 
     def close(self):
@@ -208,7 +208,7 @@ class PersistentQueue(object):
                     self._add_pending({"add": {"status.start": self.start}})
                     for i in range(self.db.status.start, self.start):
                         self._add_pending({"remove": str(i)})
-                    self.file.write(mo_json.value2json({"add": self.db}) + "\n" + ("\n".join(mo_json.value2json(p) for p in self.pending)) + "\n")
+                    self.file.write(value2json({"add": self.db}) + "\n" + ("\n".join(value2json(p) for p in self.pending)) + "\n")
                     self._apply_pending()
                 except Exception as e:
                     raise e

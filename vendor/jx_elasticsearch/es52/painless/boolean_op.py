@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import BooleanOp as BooleanOp_, FALSE
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.not_op import NotOp
 from jx_elasticsearch.es52.painless.when_op import WhenOp
@@ -18,24 +19,25 @@ from mo_json import BOOLEAN
 
 class BooleanOp(BooleanOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        value = self.lang[self.term].to_es_script(schema)
+        try:
+            value = self.term.to_es_script(schema)
+        except Exception as e:
+            raise e
         if value.many:
-            return BooleanOp(
-                EsScript(
-                    miss=value.miss,
-                    type=value.type,
-                    expr="(" + value.expr + ")[0]",
-                    frum=value.frum,
-                    schema=schema,
-                )
-            ).to_es_script(schema)
+            return BooleanOp(EsScript(
+                miss=value.miss,
+                type=value.type,
+                expr="(" + value.expr + ")[0]",
+                frum=value.frum,
+                schema=schema,
+            )).to_es_script(schema)
         elif value.type == BOOLEAN:
             miss = value.miss
             value.miss = FALSE
             return (
                 WhenOp(miss, **{"then": FALSE, "else": value})
-                .partial_eval()
+                .partial_eval(Painless)
                 .to_es_script(schema)
             )
         else:
-            return NotOp(value.miss).partial_eval().to_es_script(schema)
+            return NotOp(value.miss).partial_eval(Painless).to_es_script(schema)

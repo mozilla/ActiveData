@@ -15,7 +15,7 @@ import re
 
 from mo_future import string_types, text, first, long, is_text
 
-from moz_sql_parser.keywords import RESERVED, join_keywords, precedence, binary_ops
+from moz_sql_parser.keywords import RESERVED, reserved_keywords, join_keywords, precedence, binary_ops
 
 VALID = re.compile(r'^[a-zA-Z_]\w*$')
 
@@ -33,7 +33,7 @@ def should_quote(identifier):
     """
     return (
         identifier != '*' and (
-            not VALID.match(identifier) or identifier in RESERVED))
+            not VALID.match(identifier) or identifier in reserved_keywords))
 
 
 def split_field(field):
@@ -112,6 +112,7 @@ def Operator(op):
 class Formatter:
 
     clauses = [
+        'with_',
         'select',
         'from_',
         'where',
@@ -244,8 +245,11 @@ class Formatter:
         parts = ['CASE']
         for check in checks:
             if isinstance(check, dict):
-                parts.extend(['WHEN', self.dispatch(check['when'])])
-                parts.extend(['THEN', self.dispatch(check['then'])])
+                if 'when' in check and 'then' in check:
+                    parts.extend(['WHEN', self.dispatch(check['when'])])
+                    parts.extend(['THEN', self.dispatch(check['then'])])
+                else:
+                    parts.extend(['ELSE', self.dispatch(check)])
             else:
                 parts.extend(['ELSE', self.dispatch(check)])
         parts.append('END')
@@ -294,6 +298,17 @@ class Formatter:
             for part in [getattr(self, clause)(json)]
             if part
         )
+
+    def with_(self, json):
+        if 'with' in json:
+            with_ = json['with']
+            if not isinstance(with_, list):
+                with_ = [with_]
+            parts = ', '.join(
+                '{0} AS {1}'.format(part['name'], self.dispatch(part['value']))
+                for part in with_
+            )
+            return 'WITH {0}'.format(parts)
 
     def select(self, json):
         if 'select' in json:

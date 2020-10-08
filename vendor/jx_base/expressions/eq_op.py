@@ -8,18 +8,8 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.basic_eq_op import BasicEqOp
 from jx_base.expressions.expression import Expression
@@ -29,11 +19,11 @@ from jx_base.expressions.true_op import TRUE
 from jx_base.expressions.variable import Variable
 from jx_base.language import is_op, value_compare
 from mo_dots import is_many
+from mo_imports import expect
 from mo_json import BOOLEAN
 
-CaseOp = None
-InOp = None
-WhneOp = None
+CaseOp, InOp, WhenOp = expect("CaseOp", "InOp", "WhenOp")
+
 
 class EqOp(Expression):
     has_simple_form = True
@@ -64,7 +54,7 @@ class EqOp(Expression):
 
     def __data__(self):
         if is_op(self.lhs, Variable) and is_literal(self.rhs):
-            return {"eq": {self.lhs.var, self.rhs.value}}
+            return {"eq": {self.lhs.var: self.rhs.value}}
         else:
             return {"eq": [self.lhs.__data__(), self.rhs.__data__()]}
 
@@ -79,26 +69,21 @@ class EqOp(Expression):
     def map(self, map_):
         return self.lang[EqOp([self.lhs.map(map_), self.rhs.map(map_)])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def exists(self):
         return TRUE
 
-    @simplified
-    def partial_eval(self):
-        lhs = self.lang[self.lhs].partial_eval()
-        rhs = self.lang[self.rhs].partial_eval()
+    def partial_eval(self, lang):
+        lhs = (self.lhs).partial_eval(lang)
+        rhs = (self.rhs).partial_eval(lang)
 
         if is_literal(lhs) and is_literal(rhs):
             return FALSE if value_compare(lhs.value, rhs.value) else TRUE
         else:
-            return self.lang[
-                self.lang[CaseOp(
-                    [
-                        WhenOp(lhs.missing(), **{"then": rhs.missing()}),
-                        WhenOp(rhs.missing(), **{"then": FALSE}),
-                        BasicEqOp([lhs, rhs]),
-                    ]
-                )]
-            ].partial_eval()
+            return self.lang[self.lang[CaseOp([
+                WhenOp(lhs.missing(lang), **{"then": rhs.missing(lang)}),
+                WhenOp(rhs.missing(lang), **{"then": FALSE}),
+                BasicEqOp([lhs, rhs]),
+            ])]].partial_eval(lang)

@@ -11,7 +11,6 @@
 
 from __future__ import absolute_import, division, unicode_literals
 
-from mo_future import is_text, is_binary
 from boto.ses import connect_to_region
 
 from mo_dots import Data, listwrap, literal_field, unwrap
@@ -20,7 +19,7 @@ from mo_logs import Log, suppress_exception
 from mo_logs.exceptions import ALARM, NOTE
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import expand_template
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_threads import Lock
 from mo_times import Date, Duration, HOUR, MINUTE
 
@@ -105,7 +104,7 @@ class StructuredLogger_usingSES(StructuredLogger):
         except Exception as e:
             Log.warning("Could not send", e)
         finally:
-            self.next_send = Date.now() + self.settings.average_interval * (2 * Random.float())
+            self.next_send = Date.now() + self.settings.average_interval * (2 * randoms.float())
 
 
 class Emailer(object):

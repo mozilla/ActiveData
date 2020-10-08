@@ -9,6 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
+from jx_elasticsearch.es52.painless._utils import Painless
+
 from jx_base.expressions import DivOp as DivOp_, ZERO
 from jx_elasticsearch.es52.painless.eq_op import EqOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
@@ -20,8 +22,8 @@ from mo_json import NUMBER
 
 class DivOp(DivOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        lhs = NumberOp(self.lhs).partial_eval()
-        rhs = NumberOp(self.rhs).partial_eval()
+        lhs = NumberOp(self.lhs).partial_eval(Painless)
+        rhs = NumberOp(self.rhs).partial_eval(Painless)
         script = (
             "("
             + lhs.to_es_script(schema).expr
@@ -32,7 +34,7 @@ class DivOp(DivOp_):
 
         output = (
             WhenOp(
-                OrOp([lhs.missing(), rhs.missing(), EqOp([rhs, ZERO])]),
+                OrOp([lhs.missing(Painless), rhs.missing(Painless), EqOp([rhs, ZERO])]),
                 **{
                     "then": self.default,
                     "else": EsScript(
@@ -40,7 +42,7 @@ class DivOp(DivOp_):
                     ),
                 }
             )
-            .partial_eval()
+            .partial_eval(Painless)
             .to_es_script(schema)
         )
 

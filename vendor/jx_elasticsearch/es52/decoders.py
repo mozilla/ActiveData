@@ -11,19 +11,21 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.dimensions import Dimension
 from jx_base.domains import DefaultDomain, PARTITION, SimpleSetDomain
-from jx_base.expressions import ExistsOp, FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable
+from jx_base.expressions import FirstOp, GtOp, GteOp, LeavesOp, LtOp, LteOp, MissingOp, TupleOp, Variable, TRUE
+from jx_base.expressions.query_op import DEFAULT_LIMIT
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, FiltersAggs, NestedAggs, RangeAggs, TermsAggs
 from jx_elasticsearch.es52.expressions import AndOp, InOp, Literal, NotOp
+from jx_elasticsearch.es52.expressions.utils import split_expression, ES52
 from jx_elasticsearch.es52.painless import LIST_TO_PIPE, Painless
 from jx_elasticsearch.es52.util import pull_functions, temper_limit
 from jx_elasticsearch.meta import KNOWN_MULTITYPES
 from jx_python import jx
-from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, wrap
+from mo_dots import Data, coalesce, concat_field, is_data, literal_field, relative_field, set_default, dict_to_data, \
+    list_to_data
 from mo_future import first, is_text, text, transpose
-from mo_json import EXISTS, OBJECT, STRING
-from mo_json.typed_encoder import EXISTS_TYPE, NESTED_TYPE, untype_path, unnest_path
+from mo_json import STRING
+from mo_json.typed_encoder import untype_path, unnest_path
 from mo_logs import Log
 from mo_logs.strings import expand_template, quote
 from mo_math import MAX, MIN
@@ -60,7 +62,7 @@ class AggsDecoder(object):
                 cols = schema.leaves(e.value.var)
                 if not cols:
                     return object.__new__(DefaultDecoder)
-                if len(cols) != 1:
+                if len(cols) > 1:
                     return object.__new__(ObjectDecoder)
                 col = first(cols)
                 limit = coalesce(e.domain.limit, query.limit, DEFAULT_LIMIT)
@@ -176,18 +178,17 @@ class SetDecoder(AggsDecoder):
     def append_query(self, query_path, es_query):
         domain = self.domain
         domain_key = domain.key
-        value = Painless[self.edge.value]
+        value = self.edge.value
         cnv = pull_functions[value.type]
         include = tuple(cnv(p[domain_key]) for p in domain.partitions)
 
-        exists = Painless[AndOp([
-            InOp([value, Literal(include)])
-        ])].partial_eval()
+        schema = self.schema
+        exists = InOp([value, Literal(include)]).partial_eval(ES52)
 
         limit = coalesce(self.limit, len(domain.partitions))
 
         if is_op(value, Variable):
-            es_field = first(self.query.frum.schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
+            es_field = first(schema.leaves(value.var)).es_column  # ALREADY CHECKED THERE IS ONLY ONE
             match = TermsAggs(
                 "_match",
                 {
@@ -201,7 +202,7 @@ class SetDecoder(AggsDecoder):
             match = TermsAggs(
                 "_match",
                 {
-                    "script": text(value.to_es_script(self.schema)),
+                    "script": text((value).to_es_script(schema)),
                     "size": limit
                 },
                 self
@@ -209,25 +210,16 @@ class SetDecoder(AggsDecoder):
         output = Aggs().add(FilterAggs("_filter", exists, None).add(match.add(es_query)))
 
         if self.edge.allowNulls:
-            # FIND NULLS AT EACH NESTED LEVEL
-            for p in self.schema.query_path:
-                if p == query_path:
-                    # MISSING AT THE QUERY DEPTH
-                    output.add(
-                        NestedAggs(p).add(FilterAggs("_missing0", NotOp(exists), self).add(es_query))
-                    )
-                else:
-                    # PARENT HAS NO CHILDREN, SO MISSING
-                    column = first(self.schema.values(query_path, (OBJECT, EXISTS)))
-                    output.add(
-                        NestedAggs(column.nested_path[0]).add(
-                            FilterAggs(
-                                "_missing1",
-                                NotOp(ExistsOp(Variable(column.es_column.replace(NESTED_TYPE, EXISTS_TYPE)))),
-                                self
-                            ).add(es_query)
-                        )
-                    )
+            # IF ALL NESTED COLUMNS ARE NULL, DOES THE FILTER PASS?
+            # MISSING AT THE QUERY DEPTH
+            # columns = schema[value.var]
+            concat_inner = split_expression(NotOp(exists), self.query)
+            for i, term in enumerate(concat_inner.terms):
+                acc = es_query
+                for nest in term.nests:
+                    if nest.where is not TRUE:
+                        acc = NestedAggs(nest.path.var).add(FilterAggs("_missing" + text(i), nest.where, self).add(acc))
+                output.add(acc)
         return output
 
     def get_value(self, index):
@@ -262,14 +254,14 @@ def _range_composer(self, edge, domain, es_query, to_float, schema):
                 edge.value.exists(),
                 GteOp([edge.value, Literal(to_float(_min))]),
                 LtOp([edge.value, Literal(to_float(_max))])
-            ]).partial_eval()),
+            ]).partial_eval(ES52)),
             self
         ).add(es_query))
 
     if is_op(edge.value, Variable):
         calc = {"field": first(schema.leaves(edge.value.var)).es_column}
     else:
-        calc = {"script": text(Painless[edge.value].to_es_script(schema))}
+        calc = {"script": text((edge.value).to_es_script(schema))}
     calc['ranges'] = [{"from": to_float(p.min), "to": to_float(p.max)} for p in domain.partitions]
 
     return output.add(RangeAggs("_match", calc, self).add(es_query))
@@ -368,7 +360,7 @@ class GeneralSetDecoder(AggsDecoder):
             notty.append(NotOp(w))
 
         output = Aggs().add(FiltersAggs("_match", filters, self).add(es_query))
-        if self.edge.allowNulls:  # TODO: Use Expression.missing().esfilter() TO GET OPTIMIZED FILTER
+        if self.edge.allowNulls:  # TODO: Use Expression.missing(ES52).esfilter() TO GET OPTIMIZED FILTER
             output.add(FilterAggs("_missing", AndOp(notty), self).add(es_query))
 
         return output
@@ -510,7 +502,7 @@ class ObjectDecoder(AggsDecoder):
             for c in query.frum.schema.leaves(prefix)
         ])
 
-        self.domain = self.edge.domain = wrap({"dimension": {"fields": self.fields}})
+        self.domain = self.edge.domain = dict_to_data({"dimension": {"fields": self.fields}})
         self.domain.limit = temper_limit(self.domain.limit, query)
         self.parts = list()
         self.key2index = {}
@@ -587,10 +579,10 @@ class DefaultDecoder(SetDecoder):
         self.parts = list()
         self.key2index = {}
         self.computed_domain = False
-        self.script = Painless[self.edge.value].partial_eval().to_es_script(self.schema)
+        self.script = self.edge.value.partial_eval(Painless).to_es_script(self.schema)
         self.pull = pull_functions[self.script.data_type]
-        self.missing = self.script.miss.partial_eval()
-        self.exists = NotOp(self.missing).partial_eval()
+        self.missing = self.script.miss.partial_eval(ES52)
+        self.exists = NotOp(self.missing).partial_eval(ES52)
 
         # WHEN SORT VALUE AND EDGE VALUE MATCHES, WE SORT BY TERM
         sort_candidates = [s for s in query.sort if s.value == edge.value]
@@ -686,7 +678,7 @@ class DimFieldListDecoder(SetDecoder):
     def append_query(self, query_path, es_query):
         decoder = self
         for i, v in enumerate(self.fields):
-            exists = v.exists().partial_eval()
+            exists = v.exists().partial_eval(ES52)
             nest = Aggs()
             nest.add(TermsAggs("_match", {
                 "field": first(self.schema.leaves(v.var)).es_column,
@@ -708,7 +700,7 @@ class DimFieldListDecoder(SetDecoder):
 
     def done_count(self):
         columns = list(map(text, range(len(self.fields))))
-        parts = wrap([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
+        parts = list_to_data([{text(i): p for i, p in enumerate(part)} for part in set(self.parts)])
         self.parts = None
         sorted_parts = jx.sort(parts, columns)
 

@@ -13,7 +13,7 @@ from jx_base.expressions import LeavesOp
 from jx_base.language import is_op
 from jx_python.containers.cube import Cube
 from mo_collections.matrix import Matrix
-from mo_dots import Data, is_data, is_list, unwrap, unwraplist, wrap, listwrap
+from mo_dots import Data, is_data, is_list, unwrap, unwraplist, to_data, listwrap
 from mo_files import mimetype
 from mo_future import transpose
 from mo_logs import Log
@@ -31,7 +31,10 @@ def doc_formatter(select, query=None):
                 v = unwraplist(s.pull(doc))
                 if v is not None:
                     try:
-                        r[s.put.name][s.put.child] = v
+                        if s.put.child == '.':
+                            r[s.put.name] = v
+                        else:
+                            r[s.put.name][s.put.child] = v
                     except Exception as e:
                         Log.error("what's happening here?", cause=e)
             return r if r else None
@@ -56,7 +59,10 @@ def doc_formatter(select, query=None):
                 else:
                     if r is None:
                         r = Data()
-                    r[s.put.child] = v
+                    try:
+                        r[s.put.child] = v
+                    except Exception as e:
+                        Log.error("what", e)
 
             return r
         return format_value
@@ -155,8 +161,8 @@ def format_cube(T, select, query=None):
 
 
 def scrub_select(select):
-    return wrap(
-        [{k: v for k, v in s.items() if k not in ["pull", "put"]} for s in select]
+    return to_data(
+        [{"name": s.name} for s in select]
     )
 
 set_formatters = {

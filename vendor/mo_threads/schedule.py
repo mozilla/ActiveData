@@ -122,4 +122,4 @@ def monitor(please_stop=True):
 
 
 Log.alert("Job scheduler started...")
-Thread.run("Monitor scheduled tasks", monitor)
+Thread.run("Monitor scheduled tasks", monitor_thread)

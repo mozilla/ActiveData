@@ -12,25 +12,27 @@ from __future__ import absolute_import, division, unicode_literals
 from collections import deque
 
 from jx_base.domains import SetDomain
-from jx_base.expressions import NULL, Variable as Variable_
+from jx_base.expressions import Variable as Variable_, Variable
+from jx_base.expressions.false_op import FALSE
+from jx_base.expressions.query_op import DEFAULT_LIMIT
+from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
-from jx_base.query import DEFAULT_LIMIT
-from jx_elasticsearch.es52 import agg_format
 from jx_elasticsearch.es52.agg_format import agg_formatters
 from jx_elasticsearch.es52.agg_op_field import agg_field
 from jx_elasticsearch.es52.agg_op_formula import agg_formula
 from jx_elasticsearch.es52.decoders import AggsDecoder
 from jx_elasticsearch.es52.es_query import Aggs, FilterAggs, NestedAggs, simplify
-from jx_elasticsearch.es52.expressions import AndOp, ES52, split_expression_by_path
+from jx_elasticsearch.es52.expressions import split_expression_by_path
+from jx_elasticsearch.es52.expressions.utils import pre_process, query_to_outer_joins, ES52
 from jx_elasticsearch.es52.painless import Painless
 from jx_python import jx
-from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, wrap
-from mo_future import first, next
+from mo_dots import Data, Null, coalesce, listwrap, literal_field, unwrap, unwraplist, to_data
+from mo_future import first, next, text
+from mo_imports import export
 from mo_logs import Log
 from mo_times.timer import Timer
 
 DEBUG = False
-
 
 
 def is_aggsop(es, query):
@@ -39,14 +41,13 @@ def is_aggsop(es, query):
     return False
 
 
-def get_decoders_by_path(query):
+def get_decoders_by_path(query, schema):
     """
     RETURN MAP FROM QUERY PATH TO LIST OF DECODER ARRAYS
 
     :param query:
     :return:
     """
-    schema = query.frum.schema
     output = {}
 
     if query.edges:
@@ -57,34 +58,34 @@ def get_decoders_by_path(query):
         if query.sort and query.format != "cube":
             query.groupby = sort_edges(query, "groupby")
 
-    for edge in wrap(coalesce(query.edges, query.groupby, [])):
+    for edge in to_data(coalesce(query.edges, query.groupby, [])):
         limit = coalesce(edge.domain.limit, query.limit, DEFAULT_LIMIT)
-        if edge.value != None and not edge.value is NULL:
-            edge = edge.copy()
-            vars_ = edge.value.vars()
-            for v in vars_:
-                if not schema.leaves(v.var):
-                    Log.error("{{var}} does not exist in schema", var=v)
-        elif edge.range:
-            vars_ = edge.range.min.vars() | edge.range.max.vars()
+        vars_ = coalesce(edge.value.vars(), set())
+
+        if edge.range:
+            vars_ |= edge.range.min.vars() | edge.range.max.vars()
             for v in vars_:
                 if not schema[v.var]:
                     Log.error("{{var}} does not exist in schema", var=v)
         elif edge.domain.dimension:
-            vars_ = edge.domain.dimension.fields
+            vars_ |= set(Variable(v) for v in edge.domain.dimension.fields)
             edge.domain.dimension = edge.domain.dimension.copy()
-            edge.domain.dimension.fields = [schema[v].es_column for v in vars_]
-        elif all(edge.domain.partitions.where):
-            vars_ = set()
+            edge.domain.dimension.fields = [c.es_column for v in vars_ for c in schema[v.var]]
+        elif edge.domain.partitions.where and all(edge.domain.partitions.where):
             for p in edge.domain.partitions:
                 vars_ |= p.where.vars()
+        else:
+            # SIMPLE edge.value
+            decoder = AggsDecoder(edge, query, limit)
+            depths = set(c.nested_path[0] for v in vars_ for c in schema.leaves(v.var))
+            output.setdefault(first(depths), []).append(decoder)
+            continue
 
-        vars_ |= edge.value.vars()
         depths = set(c.nested_path[0] for v in vars_ for c in schema.leaves(v.var))
         if not depths:
             Log.error(
                 "Do not know of column {{column}}",
-                column=unwraplist([v for v in vars_ if schema[v] == None])
+                column=unwraplist([v for v in vars_ if schema[v.var] == None])
             )
         if len(depths) > 1:
             Log.error("expression {{expr|quote}} spans tables, can not handle", expr=edge.value)
@@ -131,7 +132,7 @@ def extract_aggs(select, query_path, schema):
             else:
                 new_select[literal_field(s.value.var)] += [s]
         elif s.aggregate:
-            split_select = split_expression_by_path(s.value, schema, lang=Painless)
+            op, split_select = split_expression_by_path(s.value, schema, lang=Painless)
             for si_key, si_value in split_select.items():
                 if si_value:
                     if s.query_path:
@@ -145,31 +146,41 @@ def extract_aggs(select, query_path, schema):
     return acc
 
 
-def build_es_query(select, query_path, schema, query):
-    acc = extract_aggs(select, query_path, schema)
-    acc = NestedAggs(query_path).add(acc)
-    split_decoders = get_decoders_by_path(query)
-    split_wheres = split_expression_by_path(query.where, schema=schema, lang=ES52)
+def aggop_to_es_queries(select, query_path, schema, query):
+    base_agg = extract_aggs(select, query_path, schema)
+    base_agg = NestedAggs(query_path).add(base_agg)
+
+    all_paths, split_decoders, var_to_columns = pre_process(query)
+
+    # WE LET EACH DIMENSION ADD ITS OWN CODE FOR HANDLING INNER JOINS
+    concat_outer = query_to_outer_joins(query, all_paths, {}, var_to_columns)
+
     start = 0
     decoders = [None] * (len(query.edges) + len(query.groupby))
-    paths = list(reversed(sorted(set(split_wheres.keys()) | set(split_decoders.keys()))))
-    for path in paths:
-        decoder = split_decoders.get(path, Null)
-        where = split_wheres.get(path, Null)
+    output = NestedAggs(".")
+    for i, outer in enumerate(concat_outer.terms):
+        acc = base_agg
+        for p, path in enumerate(all_paths):
+            decoder = split_decoders.get(path, Null)
 
-        for d in decoder:
-            decoders[d.edge.dim] = d
-            acc = d.append_query(path, acc)
-            start += d.num_columns
+            for d in decoder:
+                decoders[d.edge.dim] = d
+                acc = d.append_query(path, acc)
+                start += d.num_columns
 
-        if where:
-            acc = FilterAggs("_filter", AndOp(where), None).add(acc)
-        acc = NestedAggs(path).add(acc)
-    acc = NestedAggs('.').add(acc)
-    acc = simplify(acc)
-    es_query = wrap(acc.to_es(schema))
+            where = first(nest.where for nest in outer.nests if nest.path == path).partial_eval(ES52)
+            if where is FALSE:
+                continue
+            elif not where or where is TRUE:
+                pass
+            else:
+                acc = FilterAggs("_filter" + text(i) + text(p), where, None).add(acc)
+            acc = NestedAggs(path).add(acc)
+        output.add(acc)
+    output = simplify(output)
+    es_query = to_data(output.to_es(schema))
     es_query.size = 0
-    return acc, decoders, es_query
+    return output, decoders, es_query
 
 
 def es_aggsop(es, frum, query):
@@ -178,18 +189,17 @@ def es_aggsop(es, frum, query):
     query_path = schema.query_path[0]
     selects = listwrap(query.select)
 
-    acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
+    acc, decoders, es_query = aggop_to_es_queries(selects, query_path, schema, query)
 
     with Timer("ES query time", verbose=DEBUG) as es_duration:
         result = es.search(es_query)
 
-    # Log.note("{{result}}", result=result)
-
     try:
         format_time = Timer("formatting", verbose=DEBUG)
         with format_time:
-            # result.aggregations.doc_count = coalesce(result.aggregations.doc_count, result.hits.total)
-            # IT APPEARS THE OLD doc_count IS GONE
+            if result.aggregations.doc_count == None:
+                # IT APPEARS THE OLD doc_count IS GONE
+                result.aggregations.doc_count = result.hits.total
             aggs = unwrap(result.aggregations)
 
             edges_formatter, groupby_formatter, value_fomratter, mime_type = agg_formatters[query.format]
@@ -213,15 +223,6 @@ def es_aggsop(es, frum, query):
 
 EMPTY = {}
 EMPTY_LIST = []
-
-
-def drill(agg):
-    while True:
-        deeper = agg.get("_filter")
-        if deeper:
-            agg = deeper
-            continue
-        return agg
 
 
 def _children(agg, children):
@@ -338,6 +339,5 @@ def count_dim(aggs, es_query, decoders):
     return [d.edge for d in decoders]
 
 
-# EXPORT
-agg_format.aggs_iterator = aggs_iterator
-agg_format.count_dim = count_dim
+export("jx_elasticsearch.es52.agg_format", aggs_iterator)
+export("jx_elasticsearch.es52.agg_format", count_dim)

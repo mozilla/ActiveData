@@ -212,7 +212,6 @@ class Matrix(object):
 
         return func(self.num, self.cube)
 
-
     def forall(self, method):
         """
         IT IS EXPECTED THE method ACCEPTS (value, coord, cube), WHERE

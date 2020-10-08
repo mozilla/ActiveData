@@ -13,5 +13,5 @@ from jx_base.expressions import CoalesceOp as CoalesceOp_
 
 
 class CoalesceOp(CoalesceOp_):
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         return {"bool": {"should": [{"exists": {"field": v}} for v in self.terms]}}

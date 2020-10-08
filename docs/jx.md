@@ -221,7 +221,7 @@ provided a simpler interface. It is still in use now by
 perfectly functional, ES cluster.
 
 ElasticSearch now has aggregations, and the JSON expression translation layer
-is simplified, but the pivot table extraction, and expression simplification
+is but the pivot table extraction, and expression simplification
 is still required.
 
 ### Exploring Possible Expression Formats

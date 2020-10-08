@@ -11,16 +11,15 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from active_data import OVERVIEW
-from mo_dots import wrap
+from mo_dots import dict_to_data
+from mo_http import http
 from mo_json import value2json
 from mo_json_config import URL
 from mo_logs import Log
-from mo_http import http
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
 
 class TestBasicRequests(BaseTestCase):
-
     def test_empty_request(self):
         response = self.utils.try_till_response(self.utils.testing.query, data=b"")
         self.assertEqual(response.status_code, 400)
@@ -34,7 +33,7 @@ class TestBasicRequests(BaseTestCase):
         url = str(url)
         response = self.utils.try_till_response(url, data=b"")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.all_content, OVERVIEW)
+        self.assertEqual(response.content, OVERVIEW)
 
     def test_favicon(self):
         url = URL(self.utils.testing.query)
@@ -61,7 +60,7 @@ class TestBasicRequests(BaseTestCase):
 
         response = self.utils.try_till_response(str(url), data=b"")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.all_content, OVERVIEW)
+        self.assertEqual(response.content, OVERVIEW)
 
     def test_rest_get(self):
         data = [
@@ -71,7 +70,7 @@ class TestBasicRequests(BaseTestCase):
             {"a": 1, "b": 1}
         ]
 
-        test = wrap({
+        test = dict_to_data({
             "data": data,
             "query": {"from": TEST_TABLE},
             "expecting_list": {"data": data}

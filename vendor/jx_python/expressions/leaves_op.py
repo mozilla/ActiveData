@@ -15,4 +15,4 @@ from jx_python.expressions._utils import Python
 
 class LeavesOp(LeavesOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        return "Data(" + Python[self.term].to_python() + ").leaves()"
+        return "Data(" + self.term.to_python() + ").leaves()"

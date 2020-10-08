@@ -10,6 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import FALSE, FloorOp as FloorOp_, ONE, ZERO
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.eq_op import EqOp
 from jx_elasticsearch.es52.painless.es_script import EsScript
 from jx_elasticsearch.es52.painless.first_op import FirstOp
@@ -20,8 +21,8 @@ from mo_json import NUMBER
 
 class FloorOp(FloorOp_):
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
-        lhs = FirstOp(self.lhs).partial_eval()
-        rhs = FirstOp(self.rhs).partial_eval()
+        lhs = FirstOp(self.lhs).partial_eval(Painless)
+        rhs = FirstOp(self.rhs).partial_eval(Painless)
 
         if rhs == ONE:
             script = "(int)Math.floor(" + lhs.to_es_script(schema).expr + ")"
@@ -39,7 +40,11 @@ class FloorOp(FloorOp_):
 
         output = (
             WhenOp(
-                OrOp([lhs.missing(), rhs.missing(), EqOp([self.rhs, ZERO])]),
+                OrOp([
+                    lhs.missing(Painless),
+                    rhs.missing(Painless),
+                    EqOp([self.rhs, ZERO]),
+                ]),
                 **{
                     "then": self.default,
                     "else": EsScript(
@@ -47,7 +52,7 @@ class FloorOp(FloorOp_):
                     ),
                 }
             )
-            .partial_eval()
+            .partial_eval(Painless)
             .to_es_script(schema)
         )
         return output

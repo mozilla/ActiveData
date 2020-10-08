@@ -18,6 +18,6 @@ class TupleOp(TupleOp_):
         if len(self.terms) == 0:
             return "tuple()"
         elif len(self.terms) == 1:
-            return "(" + Python[self.terms[0]].to_python() + ",)"
+            return "(" + (self.terms[0]).to_python() + ",)"
         else:
-            return "(" + (",".join(Python[t].to_python() for t in self.terms)) + ")"
+            return "(" + (",".join((t).to_python() for t in self.terms)) + ")"

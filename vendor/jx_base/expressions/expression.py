@@ -8,25 +8,24 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import operators, jx_expression, _jx_expression, simplified
+from jx_base.expressions._utils import (
+    operators,
+    jx_expression,
+    _jx_expression,
+)
 from jx_base.language import BaseExpression, ID, is_expression, is_op
 from mo_dots import is_data, is_sequence, is_container
 from mo_future import items as items_, text
+from mo_imports import expect
 from mo_json import BOOLEAN, OBJECT, value2json
 from mo_logs import Log
+from mo_threads import register_thread
 
-FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = [None]*7
+TRUE, FALSE, Literal, is_literal, MissingOp, NotOp, NULL, Variable = expect(
+    "TRUE", "FALSE", "Literal", "is_literal", "MissingOp", "NotOp", "NULL", "Variable"
+)
 
 
 class Expression(BaseExpression):
@@ -122,7 +121,7 @@ class Expression(BaseExpression):
     def map(self, map):
         raise Log.error("{{type}} has no `map` method", type=self.__class__.__name__)
 
-    def missing(self):
+    def missing(self, lang):
         """
         THERE IS PLENTY OF OPPORTUNITY TO SIMPLIFY missing EXPRESSIONS
         OVERRIDE THIS METHOD TO SIMPLIFY
@@ -130,7 +129,7 @@ class Expression(BaseExpression):
         """
         if self.type == BOOLEAN:
             Log.error("programmer error")
-        return self.lang[MissingOp(self)]
+        return self.lang.MissingOp(self)
 
     def exists(self):
         """
@@ -138,22 +137,21 @@ class Expression(BaseExpression):
         OVERRIDE THIS METHOD TO SIMPLIFY
         :return:
         """
-        return self.lang[NotOp(self.missing()).partial_eval()]
+        return self.lang.NotOp(self.missing(self.lang)).partial_eval(self.lang)
 
-    def is_true(self):
+    def invert(self, lang):
         """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN true
+        :return: TRUE IF FALSE
         """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
+        inv = self.partial_eval(lang)
+        if inv is TRUE:
+            return FALSE
+        elif inv is FALSE:
+            return TRUE
+        else:
+            return self.lang[NotOp(inv)]
 
-    def is_false(self):
-        """
-        :return: True, IF THIS EXPRESSION ALWAYS RETURNS BOOLEAN false
-        """
-        return FALSE  # GOOD DEFAULT ASSUMPTION
-
-    @simplified
-    def partial_eval(self):
+    def partial_eval(self, lang):
         """
         ATTEMPT TO SIMPLIFY THE EXPRESSION:
         PREFERABLY RETURNING A LITERAL, BUT MAYBE A SIMPLER EXPRESSION, OR self IF NOT POSSIBLE
@@ -173,6 +171,14 @@ class Expression(BaseExpression):
         Log.note("this is slow on {{type}}", type=text(self_class.__name__))
         return self.__data__() == other.__data__()
 
+    @register_thread
     def __str__(self):
         return value2json(self.__data__(), pretty=True)
 
+    def __getattr__(self, item):
+        Log.error(
+            "{{type}} object has no attribute {{item}}, did you .register_ops() for"
+            " {{type}}?",
+            type=self.__class__.__name__,
+            item=item,
+        )

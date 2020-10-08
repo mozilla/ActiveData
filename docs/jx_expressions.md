@@ -173,7 +173,7 @@ For counting the number of not-null values.
 
 ### `add` Operator (commutative)
 
-For adding the result of many expressions. Also known as `add`.
+For adding the result of many expressions.
 
         {"sum": [expr1, expr2, ... exprN]}
         
@@ -194,9 +194,9 @@ Subtract two expressions. Also known as `subtract` and `minus`
         {"sub": [expr_a, expr_b]}
 
 
-### `mult` Operator (commutative)
+### `mul` Operator (commutative)
 
-Multiply multiple values. Also known as `multiply` and `mul`
+Multiply multiple values. Also known as `mult` and `multiply`
 
         {"mult": [expr1, expr2, ... exprN]}
 

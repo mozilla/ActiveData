@@ -15,11 +15,11 @@ from jx_base.expressions import (
     Variable as Variable_,
 )
 from jx_base.language import is_op
-from jx_elasticsearch.es52.painless import Painless
-from jx_elasticsearch.es52.painless.null_op import null_script
+from jx_elasticsearch.es52.painless._utils import Painless
 from jx_elasticsearch.es52.painless.es_script import EsScript
+from jx_elasticsearch.es52.painless.null_op import null_script
 
-CoalesceOp, Variable = [None]*2
+CoalesceOp, Variable = [None] * 2
 
 
 class FirstOp(FirstOp_):
@@ -38,15 +38,13 @@ class FirstOp(FirstOp_):
             #         ]
             #     ).to_es_script(schema)
 
-        term = Painless[self.term].to_es_script(schema)
+        term = self.term.to_es_script(schema)
 
         if is_op(term.frum, CoalesceOp_):
-            return CoalesceOp(
-                [
-                    FirstOp(t.partial_eval().to_es_script(schema))
-                    for t in term.frum.terms
-                ]
-            ).to_es_script(schema)
+            return CoalesceOp([
+                FirstOp(t.partial_eval(Painless).to_es_script(schema))
+                for t in term.frum.terms
+            ]).to_es_script(schema)
 
         if term.many:
             return EsScript(

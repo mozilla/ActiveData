@@ -40,9 +40,9 @@ class QueryStats(object):
     def record(self, query):
         try:
             vars_record = get_stats(query)
+            self.todo.extend({"value": v} for v in vars_record)
         except Exception as e:
             Log.warning("problem processing query stats", cause=e)
-        self.todo.extend({"value": v} for v in vars_record)
 
 
 def get_stats(query):
@@ -72,3 +72,5 @@ SCHEMA = {
     "settings": {"index.number_of_shards": 1, "index.number_of_replicas": 2},
     "mappings": {"stats": {"properties": {}}},
 }
+
+

@@ -9,7 +9,7 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from mo_dots import is_data
 
 
@@ -57,5 +57,4 @@ def convert_list(operator, operand):
         return operator(operand)
     else:
         return list(map(operator, operand))
-
 

@@ -23,7 +23,7 @@ class CountOp(CountOp_):
             type=INTEGER,
             expr=expand_template(
                 _count_template,
-                {"expr": Painless[self.terms].partial_eval().to_es_script(schema).expr},
+                {"expr": (self.terms).partial_eval(Painless).to_es_script(schema).expr},
             ),
             frum=self,
             schema=schema,

@@ -19,11 +19,12 @@ from string import ascii_lowercase
 import jx_elasticsearch
 import mo_json_config
 from jx_base import container as jx_containers
-from jx_base.query import QueryOp
+from jx_base.expressions import QueryOp
 from jx_elasticsearch.elasticsearch import Cluster
 from jx_elasticsearch.meta import ElasticsearchMetadata
 from jx_python import jx
-from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, wrap, is_many
+from mo_dots import Data, coalesce, is_list, listwrap, literal_field, unwrap, to_data, is_many, dict_to_data, \
+    list_to_data
 from mo_files.url import URL
 from mo_future import is_text, text, transpose
 from mo_json import json2value, value2json
@@ -158,7 +159,7 @@ class ESUtils(object):
         return self.settings.fastTesting
 
     def execute_tests(self, subtest, typed=True, places=6):
-        subtest = wrap(subtest)
+        subtest = dict_to_data(subtest)
         subtest.name = text(get_stacktrace()[1]['method'])
 
         self.fill_container(subtest, typed=typed)
@@ -168,7 +169,7 @@ class ESUtils(object):
         """
         RETURN SETTINGS THAT CAN BE USED TO POINT TO THE INDEX THAT'S FILLED
         """
-        subtest = wrap(subtest)
+        subtest = dict_to_data(subtest)
         _settings = self._es_test_settings  # ALREADY COPIED AT setUp()
 
         try:
@@ -195,7 +196,7 @@ class ESUtils(object):
             if '"null"' in value2json(subtest.data):
                 Log.error("not expected")
             container.extend([{"value": d} for d in subtest.data])
-            container.flush()
+            container.refresh()
 
             now = Date.now()
             namespace = ElasticsearchMetadata(self._es_cluster.settings)
@@ -216,7 +217,7 @@ class ESUtils(object):
         return _settings
 
     def send_queries(self, subtest, places=6):
-        subtest = wrap(subtest)
+        subtest = dict_to_data(subtest)
 
         try:
             # EXECUTE QUERY
@@ -257,7 +258,10 @@ class ESUtils(object):
                 query = QueryOp.wrap(subtest.query, container, container.namespace)
                 if is_many(expected.data) and len(result.data) != len(expected.data):
                     Log.error(
-                        "expecting data (len={{rlen}}) to have length of {{elen}}",
+                        # "expecting data (len={{rlen}}) to have length of {{elen}}",
+                        "{{test|json|limit(10000)}} does not match length of expected {{expected|json|limit(10000)}}",
+                        test=result.data,
+                        expected=expected.data,
                         rlen=len(result.data),
                         elen=len(expected.data)
                     )
@@ -273,7 +277,7 @@ class ESUtils(object):
             Log.error("Failed test {{name|quote}}", name=subtest.name, cause=e)
 
     def execute_query(self, query):
-        query = wrap(query)
+        query = dict_to_data(query)
 
         try:
             query.meta.testing = True
@@ -316,8 +320,8 @@ class ESUtils(object):
 
 
 def compare_to_expected(query, result, expect, places):
-    query = wrap(query)
-    expect = wrap(expect)
+    query = to_data(query)
+    expect = to_data(expect)
 
     if result.meta.format == "table":
         try:
@@ -405,7 +409,7 @@ def sort_table(result):
     """
     SORT ROWS IN TABLE, EVEN IF ELEMENTS ARE JSON
     """
-    data = wrap([{text(i): v for i, v in enumerate(row) if v != None} for row in result.data])
+    data = list_to_data([{text(i): v for i, v in enumerate(row) if v != None} for row in result.data])
     sort_columns = jx.sort(set(jx.get_columns(data, leaves=True).name))
     data = jx.sort(data, sort_columns)
     result.data = [tuple(row[text(i)] for i in range(len(result.header))) for row in data]
@@ -451,7 +455,7 @@ class FakeHttp(object):
         body = kwargs.get("data")
 
         if not body:
-            return wrap({
+            return dict_to_data({
                 "status_code": 400
             })
 
@@ -459,7 +463,7 @@ class FakeHttp(object):
         data = json2value(text)
         result = jx.run(data)
         output_bytes = value2json(result).encode('utf8')
-        return wrap({
+        return dict_to_data({
             "status_code": 200,
             "all_content": output_bytes,
             "content": output_bytes

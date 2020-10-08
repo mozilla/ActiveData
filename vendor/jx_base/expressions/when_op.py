@@ -8,19 +8,8 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import first_op, eq_op, not_op
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.and_op import AndOp
 from jx_base.expressions.boolean_op import BooleanOp
 from jx_base.expressions.expression import Expression
@@ -32,7 +21,8 @@ from jx_base.expressions.or_op import OrOp
 from jx_base.expressions.true_op import TRUE
 from jx_base.language import is_op
 from mo_dots import coalesce
-from mo_json import INTEGER, NUMBER, OBJECT, NUMBER_TYPES
+from mo_imports import export
+from mo_json import OBJECT, same_json_type, merge_json_type
 from mo_logs import Log
 
 
@@ -48,10 +38,8 @@ class WhenOp(Expression):
             self.data_type = self.els_.type
         elif self.els_ is NULL:
             self.data_type = self.then.type
-        elif self.then.type == self.els_.type:
-            self.data_type = self.then.type
-        elif self.then.type in NUMBER_TYPES and self.els_.type in NUMBER_TYPES:
-            self.data_type = NUMBER
+        elif same_json_type(self.then.type, self.els_.type):
+            self.data_type = merge_json_type(self.then.type, self.els_.type)
         else:
             self.data_type = OBJECT
 
@@ -59,43 +47,42 @@ class WhenOp(Expression):
         return {
             "when": self.when.__data__(),
             "then": None if self.then is NULL else self.then.__data__(),
-            "else": None if self.els_ is NULL else self.els_.__data__()
+            "else": None if self.els_ is NULL else self.els_.__data__(),
         }
 
     def vars(self):
         return self.when.vars() | self.then.vars() | self.els_.vars()
 
     def map(self, map_):
-        return self.lang[
-            WhenOp(
-                self.when.map(map_),
-                **{"then": self.then.map(map_), "else": self.els_.map(map_)}
-            )
-        ]
+        return self.lang[WhenOp(
+            self.when.map(map_),
+            **{"then": self.then.map(map_), "else": self.els_.map(map_)}
+        )]
 
-    def missing(self):
-        return self.lang[
-            OrOp(
-                [
-                    AndOp([self.when, self.then.missing()]),
-                    AndOp([NotOp(self.when), self.els_.missing()]),
-                ]
-            )
-        ].partial_eval()
+    def missing(self, lang):
+        return self.lang[OrOp([
+            AndOp([self.when, self.then.missing(lang)]),
+            AndOp([NotOp(self.when), self.els_.missing(lang)]),
+        ])].partial_eval(lang)
 
-    @simplified
-    def partial_eval(self):
-        when = self.lang[BooleanOp(self.when)].partial_eval()
+    def invert(self, lang):
+        return self.lang[OrOp([
+            AndOp([self.when, self.then.invert(lang)]),
+            AndOp([NotOp(self.when), self.els_.invert(lang)]),
+        ])].partial_eval(lang)
+
+    def partial_eval(self, lang):
+        when = (BooleanOp(self.when)).partial_eval(lang)
 
         if when is TRUE:
-            return self.lang[self.then].partial_eval()
+            return (self.then).partial_eval(lang)
         elif when in [FALSE, NULL]:
-            return self.lang[self.els_].partial_eval()
+            return (self.els_).partial_eval(lang)
         elif is_op(when, Literal):
             Log.error("Expecting `when` clause to return a Boolean, or `null`")
 
-        then = self.lang[self.then].partial_eval()
-        els_ = self.lang[self.els_].partial_eval()
+        then = (self.then).partial_eval(lang)
+        els_ = (self.els_).partial_eval(lang)
 
         if then is TRUE:
             if els_ is FALSE:
@@ -106,11 +93,10 @@ class WhenOp(Expression):
             if els_ is FALSE:
                 return FALSE
             elif els_ is TRUE:
-                return self.lang[NotOp(when)].partial_eval()
+                return (NotOp(when)).partial_eval(lang)
 
         return self.lang[WhenOp(when, **{"then": then, "else": els_})]
 
 
-first_op.WhenOp = WhenOp
-eq_op.WhenOp = WhenOp
-not_op.WhenOp = WhenOp
+export("jx_base.expressions.first_op", WhenOp)
+export("jx_base.expressions.eq_op", WhenOp)

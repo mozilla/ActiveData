@@ -19,7 +19,7 @@ from mo_logs import strings
 
 class RowsOp(RowsOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
-        agg = "rows[rownum+" + Python[IntegerOp(self.offset)].to_python() + "]"
+        agg = "rows[rownum+" + (IntegerOp(self.offset)).to_python() + "]"
         path = split_field(json2value(self.var.json))
         if not path:
             return agg

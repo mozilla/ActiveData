@@ -9,11 +9,12 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import EsScript as EsScript_, FALSE, NULL, ONE, TRUE, ZERO
-from mo_dots import coalesce, wrap
+from jx_base.expressions import EsScript as EsScript_, FALSE, NULL, TRUE
+from jx_elasticsearch.es52.painless._utils import Painless
+from mo_dots import coalesce, dict_to_data, Null
 from mo_future import PY2, text
-from mo_json import BOOLEAN, INTEGER, NUMBER
-from mo_logs import Log
+from mo_imports import export
+from mo_json import BOOLEAN, INTEGER, NUMBER, STRING
 
 
 class EsScript(EsScript_):
@@ -22,9 +23,9 @@ class EsScript(EsScript_):
     def __init__(self, type, expr, frum, schema, miss=None, many=False):
         self.simplified = True
         object.__init__(self)
-        if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
-            if frum.lang != miss.lang:
-                Log.error("logic error")
+        # if miss not in [None, NULL, FALSE, TRUE, ONE, ZERO]:
+        #     if frum.lang != miss.lang:
+        #         Log.error("logic error")
 
         self.miss = coalesce(
             miss, FALSE
@@ -45,9 +46,9 @@ class EsScript(EsScript_):
         :param schema:
         :return:
         """
-        missing = self.miss.partial_eval()
+        missing = self.miss.partial_eval(Painless)
         if missing is FALSE:
-            return self.partial_eval().to_es_script(self.schema).expr
+            return self.partial_eval(Painless).to_es_script(self.schema).expr
         elif missing is TRUE:
             return "null"
 
@@ -64,13 +65,13 @@ class EsScript(EsScript_):
     if PY2:
         __unicode__ = __str__
 
-    def to_esfilter(self, schema):
+    def to_es(self, schema):
         return {"script": es_script(text(self))}
 
     def to_es_script(self, schema, not_null=False, boolean=False, many=True):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         return self.miss
 
     def __data__(self):
@@ -101,6 +102,11 @@ def box(script):
 
 
 def es_script(term):
-    return wrap({"script": {"lang": "painless", "source": term}})
+    return dict_to_data({"script": {"lang": "painless", "source": term}})
 
 
+empty_string_script = EsScript(
+    miss=TRUE, type=STRING, expr='""', frum=NULL, schema=Null
+)
+
+export("jx_elasticsearch.es52.painless._utils", EsScript)

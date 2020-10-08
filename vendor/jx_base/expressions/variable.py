@@ -8,43 +8,44 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import _utils, expression
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.missing_op import MissingOp
 from jx_base.language import is_op
 from jx_base.utils import get_property_name
-from mo_dots import coalesce, is_sequence, split_field
+from mo_dots import is_sequence, split_field
 from mo_dots.lists import last
 from mo_future import is_text
+from mo_imports import export
 from mo_json.typed_encoder import inserter_type_to_json_type
 
 
 class Variable(Expression):
-    def __init__(self, var):
+    def __init__(self, var, type=None, multi=None):
         """
-        :param var:  DOT DELIMITED PATH INTO A DOCUMENT
 
+        :param var:   DOT DELIMITED PATH INTO A DOCUMENT
+        :param type:  JSON TYPE, IF KNOWN
+        :param multi: NUMBER OF DISTINCT VALUES IN A SLOT
         """
         Expression.__init__(self, None)
 
         # if self.lang != self.__class_.lang:
         #     pass
         self.var = get_property_name(var)
-        jx_type = inserter_type_to_json_type.get(last(split_field(var)))
-        if jx_type:
-            self.data_type = jx_type
+
+        if type == None:
+            jx_type = inserter_type_to_json_type.get(last(split_field(var)))
+            if jx_type:
+                self.data_type = jx_type
+        else:
+            self.data_type = type
+
+        self._many = False
+        if multi and multi > 1:
+            self._many = True
 
     def __call__(self, row, rownum=None, rows=None):
         path = split_field(self.var)
@@ -61,13 +62,20 @@ class Variable(Expression):
 
     @property
     def many(self):
-        return True
+        return self._many
 
     def vars(self):
         return {self}
 
     def map(self, map_):
-        return Variable(coalesce(map_.get(self.var), self.var))
+        replacement = map_.get(self.var)
+        if replacement != None:
+            if is_text(replacement):
+                return Variable(replacement)
+            else:
+                return replacement
+        else:
+            return self
 
     def __hash__(self):
         return self.var.__hash__()
@@ -85,7 +93,7 @@ class Variable(Expression):
     def __str__(self):
         return str(self.var)
 
-    def missing(self):
+    def missing(self, lang):
         if self.var == "_id":
             return FALSE
         else:
@@ -94,5 +102,5 @@ class Variable(Expression):
 
 IDENTITY = Variable(".")
 
-_utils.Variable = Variable
-expression.Variable = Variable
+export("jx_base.expressions._utils", Variable)
+export("jx_base.expressions.expression", Variable)

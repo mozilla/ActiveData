@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 
 from active_data.actions.sql import parse_sql
 from jx_base.expressions import NULL
-from mo_dots import Data, wrap
+from mo_dots import Data, to_data
 from mo_files.url import URL
 from mo_json import json2value, value2json
 from mo_logs import Log
@@ -25,50 +25,34 @@ simple_test_data = [
     {"v": 3},
     {"a": "b"},
     {"a": "c", "v": 7},
-    {"a": "c", "v": 11}
+    {"a": "c", "v": 11},
 ]
 
 
 class TestSQL(BaseTestCase):
-
     def test_count(self):
-        sql = 'select a as "a", count(1) as "count" from '+TEST_TABLE+' group by a'
+        sql = 'select a as "a", count(1) as "count" from ' + TEST_TABLE + " group by a"
         expected = {
             "meta": {"format": "table"},
             "header": ["a", "count"],
-            "data": [
-                ["b", 2],
-                ["c", 3],
-                [NULL, 1]
-            ]
+            "data": [["b", 2], ["c", 3], [NULL, 1]],
         }
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
     def test_filter(self):
-        sql = 'select * from '+TEST_TABLE+' where v>=3'
+        sql = "select * from " + TEST_TABLE + " where v>=3"
         expected = {
             "meta": {"format": "table"},
             "header": ["a", "v"],
-            "data": [
-                ["c", 13],
-                [NULL, 3],
-                ["c", 7],
-                ["c", 11]
-            ]
+            "data": [["c", 13], [NULL, 3], ["c", 7], ["c", 11]],
         }
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
     def test_select_from_dual(self):
         sql = "SELECT 1"
-        expected = {
-            "meta": {"format": "table"},
-            "header": ["."],
-            "data": [
-                [1]
-            ]
-        }
+        expected = {"meta": {"format": "table"}, "header": ["."], "data": [[1]]}
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
@@ -95,19 +79,24 @@ class TestSQL(BaseTestCase):
             "select": [
                 {"name": "count", "value": "result.value", "aggregate": "count"},
                 {"name": "median", "value": "result.value", "aggregate": "median"},
-                {"name": "90th", "value": "result.value", "aggregate": "percentile", "percentile": 0.9}
+                {
+                    "name": "90th",
+                    "value": "result.value",
+                    "aggregate": "percentile",
+                    "percentile": 0.9,
+                },
             ],
             "from": "perf",
             "groupby": {
                 "name": "date",
-                "value": {"floor": {"div": ["run.timestamp", 86400]}}
+                "value": {"floor": {"div": ["run.timestamp", 86400]}},
             },
             "where": {"and": [
                 {"gte": ["run.timestamp", {"date": {"literal": "today-month"}}]},
                 {"eq": ["run.framework.name", {"literal": "vcs"}]},
-                {"eq": ["run.suite", {"literal": "clone"}]}
+                {"eq": ["run.suite", {"literal": "clone"}]},
             ]},
-            "sort": {"value": {"floor": {"div": ["run.timestamp", 86400]}}}
+            "sort": {"value": {"floor": {"div": ["run.timestamp", 86400]}}},
         }
 
         result = parse_sql(sql)
@@ -118,24 +107,14 @@ class TestSQL(BaseTestCase):
         expected = {
             "meta": {"format": "table"},
             "header": ["a", "v"],
-            "data": [
-                ["c", 13],
-                ["b", 2],
-                ["b", None],
-                ["c", 7],
-                ["c", 11]
-            ]
+            "data": [["c", 13], ["b", 2], ["b", None], ["c", 7], ["c", 11]],
         }
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
     def test_empty_count(self):
         sql = "select count() from " + TEST_TABLE
-        expected = {
-            "meta": {"format": "table"},
-            "header": ["count"],
-            "data": [[6]]
-        }
+        expected = {"meta": {"format": "table"}, "header": ["count"], "data": [[6]]}
         result = self._run_sql_query(sql)
         compare_to_expected(result.meta.jx_query, result, expected, places=6)
 
@@ -155,20 +134,18 @@ class TestSQL(BaseTestCase):
             "format": "table",
             "from": "debug-etl",
             "groupby": {"name": "date", "value": {"floor": ["timestamp", 86400]}},
-            "select": [
-                {"aggregate": "count", "name": "error_count", "value": 1}
-            ],
+            "select": [{"aggregate": "count", "name": "error_count", "value": 1}],
             "where": {"and": [
                 {"gt": ["timestamp", {"date": "today-month"}]},
-                {"eq": ["template", {"literal": "TUID service has problems."}]}
-            ]}
+                {"eq": ["template", {"literal": "TUID service has problems."}]},
+            ]},
         }
         self.assertAlmostEqual(jx_query, expected, places=6)
 
     def execute(self, test):
-        test = wrap(test)
+        test = to_data(test)
         self.utils.fill_container(test)
-        test.query.sql = test.query.sql.replace(TEST_TABLE, test.query['from'])
+        test.query.sql = test.query.sql.replace(TEST_TABLE, test.query["from"])
         self.utils.send_queries(test)
 
     def _run_sql_query(self, sql):
@@ -177,12 +154,14 @@ class TestSQL(BaseTestCase):
 
         test = Data(data=simple_test_data)
         self.utils.fill_container(test)
-        sql = sql.replace(TEST_TABLE, test.query['from'])
+        sql = sql.replace(TEST_TABLE, test.query["from"])
 
         url = URL(self.utils.testing.sql)
-        response = self.utils.post_till_response(str(url), json={"meta": {"testing": True}, "sql": sql})
+        response = self.utils.post_till_response(
+            str(url), json={"meta": {"testing": True}, "sql": sql}
+        )
         self.assertEqual(response.status_code, 200)
-        return json2value(response.content.decode('utf8'))
+        return json2value(response.content.decode("utf8"))
 
 
 _ = value2json

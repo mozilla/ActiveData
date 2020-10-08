@@ -11,11 +11,11 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions import NULL
-from mo_dots import wrap
+from mo_dots import list_to_data
 from mo_json import null
 from tests.test_jx import BaseTestCase, TEST_TABLE
 
-lots_of_data = wrap([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSetOps(BaseTestCase):
@@ -127,11 +127,7 @@ class TestSetOps(BaseTestCase):
                 "meta": {"format": "list"},
                 "data": [
                     {"a": 0, "b": 1},
-                    {"a": 0},
                     {"a": 1, "b": 0},
-                    {"a": 1},
-                    {"b": 0},
-                    {"b": 1},
                 ],
             },
         }

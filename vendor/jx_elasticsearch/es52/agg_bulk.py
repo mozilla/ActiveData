@@ -14,15 +14,15 @@ from copy import deepcopy
 import mo_math
 from jx_base.expressions import Variable, TRUE
 from jx_base.language import is_op
-from jx_base.query import _normalize_group
+from jx_base.expressions.query_op import _normalize_group
 from jx_elasticsearch.es52.agg_format import format_list_from_groupby, format_table_from_groupby
-from jx_elasticsearch.es52.agg_op import build_es_query
-from mo_dots import listwrap, unwrap, Null, wrap, coalesce
+from jx_elasticsearch.es52.agg_op import aggop_to_es_queries
+from mo_dots import listwrap, unwrap, Null, to_data, coalesce
 from mo_files import TempFile, URL, mimetype
 from mo_future import first
 from mo_json import value2json
 from mo_logs import Log, Except
-from mo_math.randoms import Random
+from mo_math import randoms
 from mo_testing.fuzzytestcase import assertAlmostEqual
 from mo_threads import Thread
 from mo_times import Timer, Date
@@ -53,6 +53,7 @@ def is_bulk_agg(esq, query):
 
 
 def es_bulkaggsop(esq, frum, query):
+    # https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_filtering_values_with_partitions
     query = query.copy()  # WE WILL MARK UP THIS QUERY
 
     chunk_size = min(coalesce(query.chunk_size, MAX_CHUNK_SIZE), MAX_CHUNK_SIZE)
@@ -101,8 +102,8 @@ def es_bulkaggsop(esq, frum, query):
         if num_partitions == 0:
             num_partitions = 1
 
-        acc, decoders, es_query = build_es_query(selects, query_path, schema, query)
-        guid = Random.base64(32, extra="-_")
+        acc, decoders, es_query = aggop_to_es_queries(selects, query_path, schema, query)
+        guid = randoms.base64(32, extra="-_")
         abs_limit = mo_math.MIN((query.limit, first(query.groupby).domain.limit))
         formatter = formatters[query.format](abs_limit)
 
@@ -123,7 +124,7 @@ def es_bulkaggsop(esq, frum, query):
             parent_thread=Null,
         ).release()
 
-    output = wrap(
+    output = to_data(
         {
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),
@@ -177,7 +178,7 @@ def extractor(
                         Log.error("request to shutdown!")
                     is_last = i == num_partitions - 1
                     first(query.groupby).allowNulls = is_last
-                    acc, decoders, es_query = build_es_query(
+                    acc, decoders, es_query = aggop_to_es_queries(
                         selects, query_path, schema, query
                     )
                     # REACH INTO THE QUERY TO SET THE partitions

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, unicode_literals
 import datetime
 import re
 
-from mo_dots import get_module, wrap
+from mo_dots import get_module, dict_to_data
 from mo_future import is_text, text
 from mo_math import MIN, is_nan, is_number, abs, floor, round
 from mo_times.vendor.dateutil.relativedelta import relativedelta
@@ -359,7 +359,7 @@ def parse(value):
     return output
 
 
-MILLI_VALUES = wrap({
+MILLI_VALUES = dict_to_data({
     "year": float(52 * 7 * 24 * 60 * 60 * 1000),  # 52weeks
     "quarter": float(13 * 7 * 24 * 60 * 60 * 1000),  # 13weeks
     "month": float(28 * 24 * 60 * 60 * 1000),  # 4weeks
@@ -372,7 +372,7 @@ MILLI_VALUES = wrap({
     "zero": float(0)
 })
 
-MONTH_VALUES = wrap({
+MONTH_VALUES = dict_to_data({
     "year": 12,
     "quarter": 3,
     "month": 1,

@@ -8,19 +8,10 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.expression import Expression
+from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.true_op import TrueOp
 from jx_base.expressions.tuple_op import TupleOp
 from mo_dots import is_many
@@ -48,7 +39,7 @@ class CountOp(Expression):
     def map(self, map_):
         return self.lang[CountOp(self.terms.map(map_))]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
     def exists(self):

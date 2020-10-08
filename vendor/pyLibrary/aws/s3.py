@@ -17,7 +17,7 @@ from boto.s3.connection import Location
 from bs4 import BeautifulSoup
 
 import mo_files
-from mo_dots import Data, Null, coalesce, unwrap, wrap, is_many
+from mo_dots import Data, Null, coalesce, unwrap, to_data, is_many, list_to_data
 from mo_files import mimetype
 from mo_files.url import value2url_param
 from mo_future import StringIO, is_binary, text
@@ -190,7 +190,7 @@ class Bucket(object):
         """
         try:
             metas = list(self.bucket.list(prefix=str(key)))
-            metas = wrap([m for m in metas if text(m.name).find(".json") != -1])
+            metas = list_to_data([m for m in metas if text(m.name).find(".json") != -1])
 
             perfect = Null
             favorite = Null
@@ -281,7 +281,7 @@ class Bucket(object):
             )
             if i >= limit:
                 break
-        return wrap(output)
+        return to_data(output)
 
     def read(self, key):
         source = self.get_meta(key)
@@ -526,7 +526,7 @@ class PublicBucket(object):
         while state.get_more:
             content = more()
             for c in content:
-                yield wrap(c)
+                yield to_data(c)
 
     def read_lines(self, key):
         url = self.url + "/" + key

@@ -330,10 +330,7 @@ def pretty_json(value):
 
             if len(value) == 1:
                 j = pretty_json(value[0])
-                if j.find("\n") >= 0:
-                    return "[\n" + indent(j) + "\n]"
-                else:
-                    return "[" + j + "]"
+                return "[" + j + "]"
 
             js = [pretty_json(v) for v in value]
             max_len = max(*[len(j) for j in js])

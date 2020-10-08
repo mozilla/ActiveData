@@ -8,15 +8,6 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.eq_op import EqOp
@@ -57,16 +48,16 @@ class FloorOp(Expression):
         return self.lhs.vars() | self.rhs.vars() | self.default.vars()
 
     def map(self, map_):
-        return self.lang[
-            FloorOp(
-                [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_)
-            )
-        ]
+        return self.lang[FloorOp(
+            [self.lhs.map(map_), self.rhs.map(map_)], default=self.default.map(map_)
+        )]
 
-    def missing(self):
+    def missing(self, lang):
         if self.default.exists():
             return FALSE
         else:
-            return self.lang[
-                OrOp([self.lhs.missing(), self.rhs.missing(), EqOp([self.rhs, ZERO])])
-            ]
+            return self.lang[OrOp([
+                self.lhs.missing(lang),
+                self.rhs.missing(lang),
+                EqOp([self.rhs, ZERO]),
+            ])]

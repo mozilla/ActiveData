@@ -7,13 +7,9 @@
 #
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
-
-
 from __future__ import absolute_import, division, unicode_literals
 
-import sys
-
-from mo_future import PY3, allocate_lock
+from mo_future import PY3, allocate_lock, STDERR, STDOUT
 from mo_logs.log_usingNothing import StructuredLogger
 from mo_logs.strings import CR, expand_template
 
@@ -23,27 +19,29 @@ class StructuredLogger_usingStream(StructuredLogger):
         try:
             self.locker = allocate_lock()
             self.flush = stream.flush
-            if stream in (sys.stdout, sys.stderr):
-                if PY3:
+            if stream in (STDOUT, STDERR) and PY3:
+                try:
                     stream = stream.buffer
+                except Exception:
+                    # SOMETIMES STDOUT IS REPLACED BY SOMETHING ELSE
+                    pass
             self.writer = _UTF8Encoder(stream).write
         except Exception as _:
+            import sys
+
             sys.stderr.write("can not handle")
 
     def write(self, template, params):
         value = expand_template(template, params)
-        self.locker.acquire()
-        try:
+        with self.locker:
             self.writer(value + CR)
-        finally:
-            self.locker.release()
+            self.flush()
 
     def stop(self):
         self.flush()
 
 
 class _UTF8Encoder(object):
-
     def __init__(self, stream):
         self.stream = stream
 
@@ -52,4 +50,6 @@ class _UTF8Encoder(object):
             self.stream.write(v.encode('utf8'))
             self.stream.flush()
         except Exception:
+            import sys
+
             sys.stderr.write("can not handle")

@@ -8,18 +8,9 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions._utils import builtin_ops, simplified
+from jx_base.expressions._utils import builtin_ops
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
@@ -59,13 +50,12 @@ class BaseInequalityOp(Expression):
     def map(self, map_):
         return self.__class__([self.lhs.map(map_), self.rhs.map(map_)])
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
-        lhs = self.lhs.partial_eval()
-        rhs = self.rhs.partial_eval()
+    def partial_eval(self, lang):
+        lhs = self.lhs.partial_eval(lang)
+        rhs = self.rhs.partial_eval(lang)
 
         if is_literal(lhs) and is_literal(rhs):
             return Literal(builtin_ops[self.op](lhs, rhs))

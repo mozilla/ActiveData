@@ -8,24 +8,14 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import _utils
-from jx_base.expressions._utils import simplified
 from jx_base.expressions.expression import Expression
 from jx_base.expressions.false_op import FALSE
 from jx_base.expressions.literal import Literal
 from jx_base.expressions.literal import is_literal
 from mo_dots import is_many
+from mo_imports import export
 from mo_json import OBJECT
 
 
@@ -56,15 +46,17 @@ class TupleOp(Expression):
     def map(self, map_):
         return self.lang[TupleOp([t.map(map_) for t in self.terms])]
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    @simplified
-    def partial_eval(self):
+    def __call__(self):
+        return tuple(t() for t in self.terms)
+
+    def partial_eval(self, lang):
         if all(is_literal(t) for t in self.terms):
             return self.lang[Literal([t.value for t in self.terms])]
 
         return self
 
 
-_utils.TupleOp=TupleOp
+export("jx_base.expressions._utils", TupleOp)

@@ -11,16 +11,15 @@ from __future__ import absolute_import, division, unicode_literals
 
 from jx_elasticsearch.es52 import agg_bulk
 from jx_elasticsearch.es52.agg_bulk import write_status, upload, URL_PREFIX
-from jx_elasticsearch.es52.expressions import split_expression_by_path, ES52
+from jx_elasticsearch.es52.expressions.utils import setop_to_es_queries, pre_process
 from jx_elasticsearch.es52.set_format import doc_formatter, row_formatter, format_table_header
-from jx_elasticsearch.es52.set_op import get_selects, es_query_proto
+from jx_elasticsearch.es52.set_op import es_query_proto, get_selects
 from jx_elasticsearch.es52.util import jx_sort_to_es_sort
-from mo_dots import wrap, Null
+from mo_dots import to_data, Null
 from mo_files import TempFile
 from mo_json import value2json
 from mo_logs import Log, Except
-from mo_math import MIN
-from mo_math.randoms import Random
+from mo_math import MIN, randoms
 from mo_threads import Thread
 from mo_times import Date, Timer
 
@@ -44,13 +43,13 @@ def is_bulk_set(esq, query):
 
 def es_bulksetop(esq, frum, query):
     abs_limit = MIN([query.limit, MAX_DOCUMENTS])
-    guid = Random.base64(32, extra="-_")
+    guid = randoms.base64(32, extra="-_")
 
-    schema = query.frum.schema
-    query_path = schema.query_path[0]
-    new_select, split_select = get_selects(query)
-    split_wheres = split_expression_by_path(query.where, schema, lang=ES52)
-    es_query = es_query_proto(query_path, split_select, split_wheres, schema)
+    schema = frum.schema
+    all_paths, split_decoders, var_to_columns = pre_process(query)
+    new_select, split_select, flatten = get_selects(query)
+    op, split_wheres = setop_to_es_queries(query, all_paths, split_select, var_to_columns)
+    es_query = es_query_proto(split_select, op, split_wheres, schema)
     es_query.size = MIN([query.chunk_size, MAX_CHUNK_SIZE])
     es_query.sort = jx_sort_to_es_sort(query.sort, schema)
     if not es_query.sort:
@@ -69,7 +68,7 @@ def es_bulksetop(esq, frum, query):
         parent_thread=Null,
     ).release()
 
-    output = wrap(
+    output = to_data(
         {
             "url": URL_PREFIX / (guid + ".json"),
             "status": URL_PREFIX / (guid + ".status.json"),

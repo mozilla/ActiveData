@@ -51,7 +51,16 @@ class SQL(object):
             return ConcatSQL(self, other)
 
     def __radd__(self, other):
-        return self.__add__(other)
+        if not isinstance(other, SQL):
+            if (
+                    is_text(other)
+                    and ENABLE_TYPE_CHECKING
+                    and all(c not in other for c in ('"', "'", "`", "\\"))
+            ):
+                return ConcatSQL(SQL(other), self)
+            Log.error("Can only concat other SQL")
+        else:
+            return ConcatSQL(other, self)
 
     def join(self, list_):
         return JoinSQL(self, list_)

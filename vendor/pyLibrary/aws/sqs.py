@@ -14,7 +14,7 @@ from boto.sqs.message import Message
 
 import mo_json
 import mo_math
-from mo_dots import unwrap, wrap
+from mo_dots import unwrap, to_data
 from mo_json import value2json
 from mo_kwargs import override
 from mo_logs import Log
@@ -59,7 +59,7 @@ class Queue(object):
         return int(attrib['ApproximateNumberOfMessages'])
 
     def add(self, message):
-        message = wrap(message)
+        message = to_data(message)
         m = Message()
         m.set_body(value2json(message))
         self.queue.write(m)

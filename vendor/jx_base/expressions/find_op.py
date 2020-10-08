@@ -8,15 +8,6 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions.expression import Expression
@@ -24,7 +15,7 @@ from jx_base.expressions.literal import ZERO
 from jx_base.expressions.literal import is_literal
 from jx_base.expressions.null_op import NULL
 from jx_base.expressions.variable import Variable
-from jx_base.language import is_op
+from jx_base.language import is_op, JX
 from mo_json import INTEGER
 
 
@@ -40,14 +31,14 @@ class FindOp(Expression):
         Expression.__init__(self, term)
         self.value, self.find = term
         self.default = kwargs.get("default", NULL)
-        self.start = kwargs.get("start", ZERO).partial_eval()
+        self.start = kwargs.get("start", ZERO).partial_eval(JX)
         if self.start is NULL:
             self.start = ZERO
 
     def __data__(self):
         if is_op(self.value, Variable) and is_literal(self.find):
             output = {
-                "find": {self.value.var, self.find.value},
+                "find": {self.value.var: self.find.value},
                 "start": self.start.__data__(),
             }
         else:

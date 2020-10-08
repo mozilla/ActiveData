@@ -17,8 +17,8 @@ class EqOp(EqOp_):
     def to_python(self, not_null=False, boolean=False, many=False):
         return (
             "("
-            + Python[self.rhs].to_python()
+            + (self.rhs).to_python()
             + ") in listwrap("
-            + Python[self.lhs].to_python()
+            + (self.lhs).to_python()
             + ")"
         )

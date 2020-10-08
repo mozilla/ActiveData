@@ -8,20 +8,11 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import literal, false_op, _utils
-from jx_base.expressions.literal import Literal
 from jx_base.expressions.false_op import FALSE
+from jx_base.expressions.literal import Literal
+from mo_imports import export
 from mo_json import BOOLEAN
 
 
@@ -53,13 +44,10 @@ class TrueOp(Literal):
     def map(self, map_):
         return self
 
-    def missing(self):
+    def missing(self, lang):
         return FALSE
 
-    def is_true(self):
-        return TRUE
-
-    def is_false(self):
+    def invert(self, lang):
         return FALSE
 
     def __call__(self, row=None, rownum=None, rows=None):
@@ -74,9 +62,14 @@ class TrueOp(Literal):
     def __bool__(self):
         return True
 
+    def __nonzero__(self):
+        return True
+
 
 TRUE = TrueOp()
 
-literal.TRUE = TRUE
-false_op.TRUE = TRUE
-_utils.TRUE = TRUE
+
+export("jx_base.expressions.literal", TRUE)
+export("jx_base.expressions.false_op", TRUE)
+export("jx_base.expressions._utils", TRUE)
+export("jx_base.expressions.expression", TRUE)

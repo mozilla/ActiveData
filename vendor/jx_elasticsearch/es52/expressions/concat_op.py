@@ -9,16 +9,8 @@
 #
 from __future__ import absolute_import, division, unicode_literals
 
-from jx_base.expressions import ConcatOp as ConcatOp_, Variable as Variable_, is_literal
-from jx_base.language import is_op
-from pyLibrary.convert import string2regexp
+from jx_base.expressions import ConcatOp as ConcatOp_
 
 
 class ConcatOp(ConcatOp_):
-    def to_esfilter(self, schema):
-        if is_op(self.value, Variable_) and is_literal(self.find):
-            return {
-                "regexp": {self.value.var: ".*" + string2regexp(self.find.value) + ".*"}
-            }
-        else:
-            return self.to_es_script(schema).script(schema).to_esfilter(schema)
+    pass

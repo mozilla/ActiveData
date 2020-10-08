@@ -18,18 +18,40 @@ import string
 from datetime import date, datetime as builtin_datetime, timedelta
 from json.encoder import encode_basestring
 
-from mo_dots import Data, coalesce, get_module, is_data, is_list, wrap, is_sequence, NullType
-from mo_future import PY3, get_function_name, is_text, round as _round, text, transpose, xrange, zip_longest, \
-    binary_type, Mapping
-from mo_logs.convert import datetime2string, datetime2unix, milli2datetime, unix2datetime, value2json
+from mo_dots import (
+    Data,
+    coalesce,
+    get_module,
+    is_data,
+    is_list,
+    to_data,
+    is_sequence,
+    NullType,
+    is_many,
+)
+from mo_future import (
+    PY3,
+    get_function_name,
+    is_text,
+    round as _round,
+    text,
+    transpose,
+    xrange,
+    zip_longest,
+    binary_type,
+)
+from mo_logs.convert import (
+    datetime2string,
+    datetime2unix,
+    milli2datetime,
+    unix2datetime,
+    value2json,
+)
 
 FORMATTERS = {}
 CR = text("\n")
 
-_json_encoder = None
-_Log = None
-_Except = None
-_Duration = None
+_json_encoder, _Log, _Except, _Duration = [None] * 4  # EXPECTED IMPORT
 
 
 def _late_import():
@@ -44,6 +66,7 @@ def _late_import():
         _json_encoder = lambda value, pretty: _json.dumps(value)
     from mo_logs import Log as _Log
     from mo_logs.exceptions import Except as _Except
+
     try:
         from mo_times.durations import Duration as _Duration
     except Exception as e:
@@ -85,6 +108,7 @@ def datetime(value):
         return output[:-3]
     else:
         return output
+
 
 @formatter
 def unicode(value):
@@ -197,12 +221,8 @@ def tab(value):
     :return:
     """
     if is_data(value):
-        h, d = transpose(*wrap(value).leaves())
-        return (
-            "\t".join(map(value2json, h)) +
-            CR +
-            "\t".join(map(value2json, d))
-        )
+        h, d = transpose(*to_data(value).leaves())
+        return "\t".join(map(value2json, h)) + CR + "\t".join(map(value2json, d))
     else:
         text(value)
 
@@ -222,11 +242,13 @@ def indent(value, prefix=u"\t", indent=None):
     value = toString(value)
     try:
         content = value.rstrip()
-        suffix = value[len(content):]
+        suffix = value[len(content) :]
         lines = content.splitlines()
         return prefix + (CR + prefix).join(lines) + suffix
     except Exception as e:
-        raise Exception(u"Problem with indent of value (" + e.message + u")\n" + text(toString(value)))
+        raise Exception(
+            u"Problem with indent of value (" + e.message + u")\n" + text(toString(value))
+        )
 
 
 @formatter
@@ -346,7 +368,7 @@ def strip(value):
 
     for i in reversed(range(s, e)):
         if ord(value[i]) > 32:
-            return value[s:i + 1]
+            return value[s : i + 1]
 
     return ""
 
@@ -391,7 +413,9 @@ def between(value, prefix=None, suffix=None, start=0):
         if e == -1:
             return None
 
-    s = value.rfind(prefix, start, e) + len(prefix)  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
+    s = value.rfind(prefix, start, e) + len(
+        prefix
+    )  # WE KNOW THIS EXISTS, BUT THERE MAY BE A RIGHT-MORE ONE
 
     return value[s:e]
 
@@ -519,6 +543,7 @@ def limit(value, length):
             _late_import()
         _Log.error("Not expected", cause=e)
 
+
 @formatter
 def split(value, sep=CR):
     # GENERATOR VERSION OF split()
@@ -533,6 +558,7 @@ def split(value, sep=CR):
     yield value[s:]
     value = None
 
+
 """
 THE REST OF THIS FILE IS TEMPLATE EXPANSION CODE USED BY mo-logs 
 """
@@ -545,7 +571,7 @@ def expand_template(template, value):
     :return: UNICODE STRING WITH VARIABLES EXPANDED
     """
     try:
-        value = wrap(value)
+        value = to_data(value)
         if is_text(template):
             return _simple_expand(template, (value,))
 
@@ -568,9 +594,11 @@ def find_first(value, find_arr, start=0):
     i = len(value)
     for f in find_arr:
         temp = value.find(f, start)
-        if temp == -1: continue
+        if temp == -1:
+            continue
         i = min(i, temp)
-    if i == len(value): return -1
+    if i == len(value):
+        return -1
     return i
 
 
@@ -581,7 +609,9 @@ def is_hex(value):
 if PY3:
     delchars = "".join(c for c in map(chr, range(256)) if not c.isalnum())
 else:
-    delchars = "".join(c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum())
+    delchars = "".join(
+        c.decode("latin1") for c in map(chr, range(256)) if not c.decode("latin1").isalnum()
+    )
 
 
 def deformat(value):
@@ -612,7 +642,7 @@ def _expand(template, seq):
     elif is_data(template):
         # EXPAND LISTS OF ITEMS USING THIS FORM
         # {"from":from, "template":template, "separator":separator}
-        template = wrap(template)
+        template = to_data(template)
         assert template["from"], "Expecting template to have 'from' attribute"
         assert template.template, "Expecting template to have 'template' attribute"
 
@@ -674,7 +704,7 @@ def _simple_expand(template, seq):
                 _Log.warning(
                     "Can not expand " + "|".join(ops) + " in template: {{template_|json}}",
                     template_=template,
-                    cause=e
+                    cause=e,
                 )
             return "[template expansion error: (" + str(e.message) + ")]"
 
@@ -687,7 +717,7 @@ def toString(val):
 
     if val == None:
         return ""
-    elif isinstance(val, (Mapping, list, set)):
+    elif is_data(val) or is_many(val):
         return _json_encoder(val, pretty=True)
     elif hasattr(val, "__json__"):
         return val.__json__()
@@ -737,7 +767,9 @@ def edit_distance(s1, s2):
     for i, c1 in enumerate(s1):
         current_row = [i + 1]
         for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1  # j+1 instead of j since previous_row and current_row are one character longer
+            insertions = (
+                previous_row[j + 1] + 1
+            )  # j+1 instead of j since previous_row and current_row are one character longer
             deletions = current_row[j] + 1  # than s2
             substitutions = previous_row[j] + (c1 != c2)
             current_row.append(min(insertions, deletions, substitutions))
@@ -775,21 +807,32 @@ def apply_diff(text, diff, reverse=False, verify=True):
         return text
     output = text
     hunks = [
-        (new_diff[start_hunk], new_diff[start_hunk+1:end_hunk])
-        for new_diff in [[d.lstrip() for d in diff if d.lstrip() and d != "\\ No newline at end of file"] + ["@@"]]  # ANOTHER REPAIR
-        for start_hunk, end_hunk in pairwise(i for i, l in enumerate(new_diff) if l.startswith('@@'))
+        (new_diff[start_hunk], new_diff[start_hunk + 1 : end_hunk])
+        for new_diff in [
+            [d.lstrip() for d in diff if d.lstrip() and d != "\\ No newline at end of file"]
+            + ["@@"]
+        ]  # ANOTHER REPAIR
+        for start_hunk, end_hunk in pairwise(
+            i for i, l in enumerate(new_diff) if l.startswith('@@')
+        )
     ]
-    for header, hunk_body in (reversed(hunks) if reverse else hunks):
+    for header, hunk_body in reversed(hunks) if reverse else hunks:
         matches = DIFF_PREFIX.match(header.strip())
         if not matches:
             if not _Log:
                 _late_import()
 
-            _Log.error("Can not handle \n---\n{{diff}}\n---\n",  diff=diff)
+            _Log.error("Can not handle \n---\n{{diff}}\n---\n", diff=diff)
 
-        removes = tuple(int(i.strip()) for i in matches.group(1).split(","))  # EXPECTING start_line, length TO REMOVE
-        remove = Data(start=removes[0], length=1 if len(removes) == 1 else removes[1])  # ASSUME FIRST LINE
-        adds = tuple(int(i.strip()) for i in matches.group(2).split(","))  # EXPECTING start_line, length TO ADD
+        removes = tuple(
+            int(i.strip()) for i in matches.group(1).split(",")
+        )  # EXPECTING start_line, length TO REMOVE
+        remove = Data(
+            start=removes[0], length=1 if len(removes) == 1 else removes[1]
+        )  # ASSUME FIRST LINE
+        adds = tuple(
+            int(i.strip()) for i in matches.group(2).split(",")
+        )  # EXPECTING start_line, length TO ADD
         add = Data(start=adds[0], length=1 if len(adds) == 1 else adds[1])
 
         if add.length == 0 and add.start == 0:
@@ -802,9 +845,7 @@ def apply_diff(text, diff, reverse=False, verify=True):
             # DETECT THIS PROBLEM FOR THIS HUNK AND FIX THE DIFF
             if reverse:
                 last_lines = [
-                    o
-                    for b, o in zip(reversed(hunk_body), reversed(output))
-                    if b != "+" + o
+                    o for b, o in zip(reversed(hunk_body), reversed(output)) if b != "+" + o
                 ]
                 if not last_lines:
                     return hunk_body
@@ -834,24 +875,25 @@ def apply_diff(text, diff, reverse=False, verify=True):
                     return hunk_body
 
             new_hunk_body = (
-                hunk_body[:problem_index] +
-                [problem_line[:split_point], problem_line[split_point:]] +
-                hunk_body[problem_index + 1:]
+                hunk_body[:problem_index]
+                + [problem_line[:split_point], problem_line[split_point:]]
+                + hunk_body[problem_index + 1 :]
             )
             return new_hunk_body
+
         hunk_body = repair_hunk(hunk_body)
 
         if reverse:
             new_output = (
-                output[:add.start - 1] +
-                [d[1:] for d in hunk_body if d and d[0] == '-'] +
-                output[add.start + add.length - 1:]
+                output[: add.start - 1]
+                + [d[1:] for d in hunk_body if d and d[0] == '-']
+                + output[add.start + add.length - 1 :]
             )
         else:
             new_output = (
-                output[:add.start - 1] +
-                [d[1:] for d in hunk_body if d and d[0] == '+'] +
-                output[add.start + remove.length - 1:]
+                output[: add.start - 1]
+                + [d[1:] for d in hunk_body if d and d[0] == '+']
+                + output[add.start + remove.length - 1 :]
             )
         output = new_output
 

@@ -13,13 +13,13 @@ from __future__ import absolute_import, division, unicode_literals
 from unittest import skipIf
 
 from jx_base.expressions import NULL
-from mo_dots import wrap
+from mo_dots import to_data, list_to_data
 from mo_logs import Log
 from mo_logs.exceptions import get_stacktrace
 from mo_times import Date
 from tests.test_jx import BaseTestCase, TEST_TABLE, global_settings
 
-lots_of_data = wrap([{"a": i} for i in range(30)])
+lots_of_data = list_to_data([{"a": i} for i in range(30)])
 
 
 class TestSorting(BaseTestCase):
@@ -162,11 +162,11 @@ class TestSorting(BaseTestCase):
             }
         }
 
-        subtest = wrap(test)
+        subtest = to_data(test)
         subtest.name = get_stacktrace()[0]['method']
         self.utils.fill_container(test)
 
-        test = wrap(test)
+        test = to_data(test)
         self.utils.send_queries({"query": test.query, "expecting_list": test.expecting_list})
         self.utils.send_queries({"query": test.query, "expecting_table": test.expecting_table})
         try:

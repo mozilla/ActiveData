@@ -10,7 +10,7 @@
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.domains import ALGEBRAIC, Domain, KNOWN
-from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, wrap
+from mo_dots import Data, FlatList, Null, coalesce, is_data, is_list, join_field, listwrap, split_field, to_data, list_to_data
 import mo_dots as dot
 from mo_future import transpose
 from mo_logs import Log
@@ -24,7 +24,7 @@ class Dimension(object):
     __slots__ = ["name", "full_name", "where", "type", "limit", "index", "parent", "edges", "partitions", "fields"]
 
     def __init__(self, dim, parent, jx):
-        dim = wrap(dim)
+        dim = to_data(dim)
 
         self.name = dim.name
         self.parent = coalesce(parent)
@@ -45,18 +45,18 @@ class Dimension(object):
             new_e = Dimension(e, self, jx)
             self.edges[new_e.full_name] = new_e
 
-        self.partitions = wrap(coalesce(dim.partitions, []))
+        self.partitions = to_data(coalesce(dim.partitions, []))
         parse_partition(self)
 
         fields = coalesce(dim.field, dim.fields)
         if not fields:
             return  # NO FIELDS TO SEARCH
         elif is_data(fields):
-            self.fields = wrap(fields)
-            edges = wrap([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
+            self.fields = to_data(fields)
+            edges = list_to_data([{"name": k, "value": v, "allowNulls": False} for k, v in self.fields.items()])
         else:
             self.fields = listwrap(fields)
-            edges = wrap([{"name": f, "value": f, "index": i, "allowNulls": False} for i, f in enumerate(self.fields)])
+            edges = list_to_data([{"name": f, "value": f, "index": i, "allowNulls": False} for i, f in enumerate(self.fields)])
 
         if dim.partitions:
             return  # ALREADY HAVE PARTS
@@ -112,7 +112,7 @@ class Dimension(object):
             self.value = "name"  # USE THE "name" ATTRIBUTE OF PARTS
 
             # SIMPLE LIST OF PARTS RETURNED, BE SURE TO INTERRELATE THEM
-            self.partitions = wrap([
+            self.partitions = list_to_data([
                 {
                     "name": str(d.partitions[i].name),  # CONVERT TO STRING
                     "value": d.getEnd(d.partitions[i]),
@@ -138,7 +138,7 @@ class Dimension(object):
                 else:
                     return tuple(values)
 
-            self.partitions = wrap([
+            self.partitions = list_to_data([
                 {
                     "name": str(d.partitions[i].name),  # CONVERT TO STRING
                     "value": d.getEnd(d.partitions[i]),
@@ -186,7 +186,7 @@ class Dimension(object):
 
     def getDomain(self, **kwargs):
         # kwargs.depth IS MEANT TO REACH INTO SUB-PARTITIONS
-        kwargs = wrap(kwargs)
+        kwargs = to_data(kwargs)
         kwargs.depth = coalesce(kwargs.depth, len(self.fields)-1 if is_list(self.fields) else None)
 
         if not self.partitions and self.edges:
@@ -250,7 +250,7 @@ class Dimension(object):
         return Domain(
             type=self.type,
             name=self.name,
-            partitions=wrap(partitions),
+            partitions=to_data(partitions),
             min=self.min,
             max=self.max,
             interval=self.interval,

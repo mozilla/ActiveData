@@ -8,15 +8,6 @@
 # Contact: Kyle Lahnakoski (kyle@lahnakoski.com)
 #
 
-"""
-# NOTE:
-
-THE self.lang[operator] PATTERN IS CASTING NEW OPERATORS TO OWN LANGUAGE;
-KEEPING Python AS# Python, ES FILTERS AS ES FILTERS, AND Painless AS
-Painless. WE COULD COPY partial_eval(), AND OTHERS, TO THIER RESPECTIVE
-LANGUAGE, BUT WE KEEP CODE HERE SO THERE IS LESS OF IT
-
-"""
 from __future__ import absolute_import, division, unicode_literals
 
 from jx_base.expressions._utils import operators
@@ -34,14 +25,10 @@ class RangeOp(Expression):
     def __new__(cls, term, *args):
         Expression.__new__(cls, *args)
         field, comparisons = term  # comparisons IS A Literal()
-        return cls.lang[
-            AndOp(
-                [
-                    getattr(cls.lang, operators[op])([field, Literal(value)])
-                    for op, value in comparisons.value.items()
-                ]
-            )
-        ]
+        return cls.lang[AndOp([
+            getattr(cls.lang, operators[op])([field, Literal(value)])
+            for op, value in comparisons.value.items()
+        ])]
 
     def __init__(self, term):
         Log.error("Should never happen!")

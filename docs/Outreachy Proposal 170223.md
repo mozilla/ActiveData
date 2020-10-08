@@ -5,8 +5,8 @@
 
 ActiveData is a publicly accessible data warehouse holding many billions of records, for some dozen+ datasets concerning Mozilla's testing infrastructure: This includes test results, job results, code coverage, and extracts from other systems. The ActiveData code itself is really only a stateless query translation layer; leaving the hard work of high speed filtering and aggregation to Elasticsearch.
 
-* ActiveData accepts [JSON Query Expressions](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md)
-* [ActiveData Tutorial](https://github.com/klahnakoski/ActiveData/blob/dev/docs/GettingStarted.md) will help you understand how it is used.
+* ActiveData accepts [JSON Query Expressions](https://github.com/mozilla/ActiveData/blob/dev/docs/jx.md)
+* [ActiveData Tutorial](https://github.com/mozilla/ActiveData/blob/dev/docs/GettingStarted.md) will help you understand how it is used.
 
 
 ## Background
@@ -62,7 +62,7 @@ Some particular experience will make this task easier (most important first):
 
 **What is the first step?**
 
->Clone the [master branch of ActiveData](https://github.com/klahnakoski/ActiveData/tree/master), follow the directions and ensure the tests pass. The tests take about 9 minutes on my machine. Feel free to ask questions if something goes wrong.
+>Clone the [master branch of ActiveData](https://github.com/mozilla/ActiveData/tree/master), follow the directions and ensure the tests pass. The tests take about 9 minutes on my machine. Feel free to ask questions if something goes wrong.
 >
 >Once the tests pass. Upgrade your local Elasticsearch from 1.7.x to version 5.x.  Run the tests again to see all the failures. 
 >
@@ -82,7 +82,7 @@ Some particular experience will make this task easier (most important first):
 >
 ><pre>    {"a": 1}<br>    {"a": [{"b":1}, {"b":2}]}</pre>
 >
-> How can we make them fit into one schema? Can we somehow re-write the JSON to a new format so they will fit into ES.  How do we change the Elasticsearch queries to work with the new format? [I have added a test that ensure these schemas can be merged](https://github.com/klahnakoski/ActiveData/blob/dev/tests/test_jx/test_schema_merging.py#L22)
+> How can we make them fit into one schema? Can we somehow re-write the JSON to a new format so they will fit into ES.  How do we change the Elasticsearch queries to work with the new format? [I have added a test that ensure these schemas can be merged](https://github.com/mozilla/ActiveData/blob/dev/tests/test_jx/test_schema_merging.py#L22)
 
 **What branch do I work off of?**
 

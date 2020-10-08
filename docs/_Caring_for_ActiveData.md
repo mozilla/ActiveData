@@ -24,7 +24,7 @@ Once you are familiar with this doc, then you will only need the reference doc:
 Tending to ActiveData will require
 
 * **ActiveData code** - `git clone https://github.com/mozilla/ActiveData.git`
-* **ActiveData-ETL code** - `git clone https://github.com/klahnakoski/ActiveData-ETL.git`
+* **ActiveData-ETL code** - `git clone https://github.com/mozilla/ActiveData-ETL.git`
 * **Elasticsearch Head** - `git clone https://github.com/mobz/elasticsearch-head.git`
 * **esShardBalancer** - `git clone https://github.com/klahnakoski/esShardBalancer.git`
 
@@ -208,8 +208,8 @@ Updating the web server is relatively easy
 
 Overall, the **Manager** machine is responsible for running CRON jobs against ActiveData.  The code for these jobs are found on multiple repositories, under the `manager` branch.  
 
-* The [Manager setup](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
-* [CRON jobs](https://github.com/klahnakoski/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
+* The [Manager setup](https://github.com/mozilla/ActiveData-ETL/blob/manager/resources/scripts/setup_manager.sh) reveals the repositories being used 
+* [CRON jobs](https://github.com/mozilla/ActiveData-ETL/blob/manager/resources/cron/manager.cron) is the list of actions being performed
 * Logs are found at `/data1/logs`
 
 #### Shard Balancer
@@ -234,8 +234,8 @@ This is a simple machine running a simple program the listens to the taskcluster
 
 The ETL is covered by two projects
 
-* [ActiveData-ETL](https://github.com/klahnakoski/ActiveData-ETL) (using the `etl` branch) - is the main program
-* [SpotManager](https://github.com/klahnakoski/SpotManager) (using the `manager` branch) - responsible for deploying instances of the above
+* [ActiveData-ETL](https://github.com/mozilla/ActiveData-ETL) (using the `etl` branch) - is the main program
+* [SpotManager](https://github.com/mozilla/ActiveData-SpotManager) (using the `manager` branch) - responsible for deploying instances of the above
 
 #### Upgrading existing pipelines
 

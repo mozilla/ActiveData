@@ -57,9 +57,9 @@ Knowing the column names and types is not enough.  Knowing the set-of-values tha
 
 <div style="text-align:right;"><a href="http://activedata.allizom.org/tools/query.html#query_id=IkrCzx5d">http://activedata.allizom.org/tools/query.html#query_id=IkrCzx5d</a></div>
 
-ActiveData accepts [JSON Query Expressions](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md), which are JSON objects with multiple properties, called "clauses" in tribute to the SQL language it tries to mimic. The above query is the simplest query you can send ActiveData: It has one clause, the `from` clause, and it returns (limited to 10) JSON documents found in the `jobs` table. In this case, ActiveData returns JSON documents, but we will always call them "records" to stay consistent with database terminology.   
+ActiveData accepts [JSON Query Expressions](https://github.com/mozilla/ActiveData/blob/dev/docs/jx.md), which are JSON objects with multiple properties, called "clauses" in tribute to the SQL language it tries to mimic. The above query is the simplest query you can send ActiveData: It has one clause, the `from` clause, and it returns (limited to 10) JSON documents found in the `jobs` table. In this case, ActiveData returns JSON documents, but we will always call them "records" to stay consistent with database terminology.   
 
-The records returned from ActiveData are usually quite large, so you will need a large-screen JSON formatting tool to view the query result.  There is a page that has [details about what is in a `jobs` record](https://github.com/klahnakoski/ActiveData/blob/dev/docs/Jobs%20Schema.md), but we will focus on just a few columns for now.
+The records returned from ActiveData are usually quite large, so you will need a large-screen JSON formatting tool to view the query result.  There is a page that has [details about what is in a `jobs` record](https://github.com/mozilla/ActiveData/blob/dev/docs/Jobs%20Schema.md), but we will focus on just a few columns for now.
 
 Here is an example result, with the `data` property collapsed:
   
@@ -98,7 +98,7 @@ There are four major properties:
 * **data** - the result of the query, in the format specified by the `meta.format` property.
 
 > ActiveData's columns are not limited to primitive types; JSON objects are treated as
-> values too. You can read more about [how to use the `select` clause to shape data](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_clause_select.md), 
+> values too. You can read more about [how to use the `select` clause to shape data](https://github.com/mozilla/ActiveData/blob/dev/docs/jx_clause_select.md), 
 > but it is not necessary for the purpose of this guide.
 
 Expanding the `data` property a couple of levels, we can see: 
@@ -279,9 +279,9 @@ Let us restrict ourselves to `mozilla-inbound`, the principal branch for Firefox
 
 Individual records are useful for understanding the data and building a query. They are also useful to the people that are familiar with the events that produced those records. But, you will need aggregate statistics to get a better holistic understanding of trends.
 
-Once you are confident your `where` clause is focused on the records you're interested in, you can start requesting aggregates. Up to this point in this guide, ActiveData has either returned individual records, or provided a `count` (which is the default aggregate). [We can request many other aggregates](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_reference.md#selectaggregate-subclause)
+Once you are confident your `where` clause is focused on the records you're interested in, you can start requesting aggregates. Up to this point in this guide, ActiveData has either returned individual records, or provided a `count` (which is the default aggregate). [We can request many other aggregates](https://github.com/mozilla/ActiveData/blob/dev/docs/jx_reference.md#selectaggregate-subclause)
 
-In the following query we are going to use `edges`, which acts much like `groupby`, [see more](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_clause_edges.md), but accepts an explicit `domain` to join-and-group the data. In this case, we are bucketing the past month of `action.start_time` to days.  We also define a `select` clause to give us the `average` duration, and the `count` for each of those buckets. 
+In the following query we are going to use `edges`, which acts much like `groupby`, [see more](https://github.com/mozilla/ActiveData/blob/dev/docs/jx_clause_edges.md), but accepts an explicit `domain` to join-and-group the data. In this case, we are bucketing the past month of `action.start_time` to days.  We also define a `select` clause to give us the `average` duration, and the `count` for each of those buckets. 
 
     {
         "from":"jobs",
@@ -341,4 +341,4 @@ Similarly for other languages and tools.
 
 ## Summary
 
-I hope I have given you a good sense for how to explore the ActiveData schema, and how to build a query that will give you the data you are interested in.  More specific documentation regarding the intricacies of JSON Query Expressions, and ActiveData, is all centrally linked on the [main documentation page](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx.md)
+I hope I have given you a good sense for how to explore the ActiveData schema, and how to build a query that will give you the data you are interested in.  More specific documentation regarding the intricacies of JSON Query Expressions, and ActiveData, is all centrally linked on the [main documentation page](https://github.com/mozilla/ActiveData/blob/dev/docs/jx.md)

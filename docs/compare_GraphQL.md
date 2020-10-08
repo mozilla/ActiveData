@@ -268,7 +268,7 @@ with variables...
       "withFriends": false
     }
 
-JSON Queries do not have directives. Instead, use a standard expression, albeit with constants.  The [`when` expression](https://github.com/klahnakoski/ActiveData/blob/dev/docs/jx_expressions.md#when-operator) can provide identical switching logic used by the `@include(if: .)` idiom:
+JSON Queries do not have directives. Instead, use a standard expression, albeit with constants.  The [`when` expression](https://github.com/mozilla/ActiveData/blob/dev/docs/jx_expressions.md#when-operator) can provide identical switching logic used by the `@include(if: .)` idiom:
 
     vars = {
       "episode": "JEDI",

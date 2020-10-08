@@ -69,7 +69,7 @@ you should expect something like
 
 There is no PyPi install. Please clone `master` branch off of Github:
 
-    git clone https://github.com/klahnakoski/ActiveData.git
+    git clone https://github.com/mozilla/ActiveData.git
     git checkout master
 
 and install your requirements:
